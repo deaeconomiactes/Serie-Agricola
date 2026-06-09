@@ -17,6 +17,25 @@ const PALETTE = [
 const PALETTE_ALPHA = PALETTE.map(c => c + '33');
 
 // ─── Variety normalization map ──────────────────────────────────────────
+// ─── Species normalization map ──────────────────────────────────────────
+const SPECIES_MAP = {
+    'CEB.VERDEO': 'CEBOLLA DE VERDEO',
+    'CILANDRO': 'CILANTRO',
+    'DURAZONO': 'DURAZNO',
+    'HOR.PRO.VS': 'HORTALIZAS VARIAS',
+    'REP.BRUSEL': 'REPOLLITOS DE BRUSELAS',
+    'RESTO FRU': 'RESTO FRUTAS',
+    'RTO.HORTAL': 'RESTO HORTALIZAS',
+    'SIA.GRANEL': 'FRUTAS A GRANEL'
+};
+
+function normalizeEspecie(especie) {
+    if (SPECIES_MAP[especie] !== undefined) {
+        return SPECIES_MAP[especie];
+    }
+    return especie;
+}
+
 // Key: "ESPECIE|VARIEDAD" (raw) → normalized variedad
 // When the CORRIENTES market uses "TOMATE CHERRY" as variedad for especie TOMATE,
 // we normalize it to just "CHERRY" to match the BSAS format.
@@ -25,7 +44,7 @@ const VARIETY_MAP = {
     'TOMATE|TOMATE CHERRY': 'CHERRY',
     'TOMATE|TOMATE PERITA': 'PERITA',
     'TOMATE|TOMATE REDONDO': 'REDONDO',
-    'TOMATE|TOMATE': 'SIN VARIED',
+    'TOMATE|TOMATE': 'SIN VARIEDAD',
     'TOMATE|LARGA VIDA': 'LARGA VIDA',
 
     // PIMIENTO
@@ -34,70 +53,78 @@ const VARIETY_MAP = {
     'PIMIENTO|PIMIENTO MORRON AMARILLO': 'MORRON AMARILLO',
     'PIMIENTO|PIMIENTO AJI VINAGRE': 'VINAGRE',
     'PIMIENTO|AJI PICANTE': 'PICANTE',
-    'PIMIENTO|MORRON': 'MORRON',
+    'PIMIENTO|MORRON': 'MORRÓN',
 
     // NARANJA
     'NARANJA|NARANJA VALENCIA': 'VALENCIA',
-    'NARANJA|NARANJA VALENCIA LATE': 'VALEN.LATE',
-    'NARANJA|NARANJA VALENCIA SEEDLES': 'VAL.SEEDLE',
+    'NARANJA|NARANJA VALENCIA LATE': 'VALENCIA LATE',
+    'NARANJA|NARANJA VALENCIA SEEDLES': 'VALENCIA SEEDLESS',
     'NARANJA|NARANJA SALUSTIANA': 'SALUSTIANA',
     'NARANJA|NARANJA OMBLIGO': 'OMBLIGO',
     'NARANJA|NARANJA NAVELINA': 'NAVELINA',
     'NARANJA|MIDK NIGTH': 'MIDKNIGHT',
-    'NARANJA|VAL. FROST': 'VALEN.FROS',
-    'NARANJA|R. NAVEL': 'W.NAVEL',
+    'NARANJA|VAL. FROST': 'VALENCIA FROST',
+    'NARANJA|R. NAVEL': 'WASHINGTON NAVEL',
     'NARANJA|NAVEL LATE': 'LANE LATE',
+    'NARANJA|VAL.SEEDLE': 'VALENCIA SEEDLESS',
+    'NARANJA|VALEN.FROS': 'VALENCIA FROST',
+    'NARANJA|VALEN.LATE': 'VALENCIA LATE',
 
     // LIMON
-    'LIMON|LIMON': 'SIN VARIED',
-    'LIMON|LIMON COMERCIAL': 'SIN VARIED',
+    'LIMON|LIMON': 'SIN VARIEDAD',
+    'LIMON|LIMON COMERCIAL': 'SIN VARIEDAD',
     'LIMON|LIMON ELEGIDO': 'ELEGIDO',
     'LIMON|LIMONEIRA': 'EUREKA',
 
     // MANDARINA
-    'MANDARINA|MANDARINA OKITSU': 'OKITZU',
+    'MANDARINA|MANDARINA OKITSU': 'OKITSU',
     'MANDARINA|AFURE': 'AFOURER',
+    'MANDARINA|W.MURCOT': 'W. MURCOTT',
 
     // POMELO
     'POMELO|POMELO ROSADO': 'ROSADO',
+    'POMELO|MARSH.SEED': 'MARSH SEEDLESS',
 
     // SANDIA
-    'SANDIA|SANDIA': 'SIN VARIED',
+    'SANDIA|SANDIA': 'SIN VARIEDAD',
     'SANDIA|SANDIA REDONDA RAYADA': 'REDONDA RAYADA',
 
     // FRUTILLA
-    'FRUTILLA|FRUTILLA': 'SIN VARIED',
+    'FRUTILLA|FRUTILLA': 'SIN VARIEDAD',
 
     // PALTA
-    'PALTA|PALTA': 'SIN VARIED',
+    'PALTA|PALTA': 'SIN VARIEDAD',
 
     // MELON
     'MELON|MELON CRIOLLO': 'CRIOLLO',
-    'MELON|MELON ROCIO DE MIEL': 'ROCIO MIEL',
-    'MELON|ROCIO MIEL': 'ROCIO MIEL',
+    'MELON|MELON ROCIO DE MIEL': 'ROCIO DE MIEL',
+    'MELON|ROCIO MIEL': 'ROCIO DE MIEL',
+    'MELON|SWEET HEAR': 'SWEET HEART',
 
     // BATATA
     'BATATA|BATATA BLANCA': 'BLANCA',
     'BATATA|BATATA COLORADA': 'COLORADA',
 
     // BERENJENA
-    'BERENJENA|BERENJENA': 'SIN VARIED',
-    'BERENJENA|BCA.MED.LA': 'VTA.MED.LA',
-    'BERENJENA|VTA.LARGA': 'VTA.MED.LA',
+    'BERENJENA|BERENJENA': 'SIN VARIEDAD',
+    'BERENJENA|BCA.MED.LA': 'VIOLETA MEDIA LARGA',
+    'BERENJENA|VTA.LARGA': 'VIOLETA MEDIA LARGA',
+    'BERENJENA|VTA.MED.LA': 'VIOLETA MEDIA LARGA',
 
     // PEPINO
-    'PEPINO|PEPINO': 'SIN VARIED',
+    'PEPINO|PEPINO': 'SIN VARIEDAD',
 
     // ZAPALLITO
     'ZAPALLITO|ZAPALLITO TRONCO': 'TRONCO',
-    'ZAPALLITO|ZAPALLITO ZUCHINI': 'LARGO',
-    'ZAPALLITO|ZAPALLITO': 'SIN VARIED',
+    'ZAPALLITO|ZAPALLITO ZUCHINI': 'ZUCCHINI',
+    'ZAPALLITO|ZAPALLITO': 'SIN VARIEDAD',
 
     // ZAPALLO
     'ZAPALLO|ZAPALLO COREANO': 'COREANO',
     'ZAPALLO|ZAPALLO INGLES': 'INGLES',
     'ZAPALLO|ZAPALLO PLOMO': 'PLOMO',
-    'ZAPALLO|ZAPALLO TETSUKABUTO': 'TETSUKAB.',
+    'ZAPALLO|ZAPALLO TETSUKABUTO': 'TETSUKABUTO',
+    'ZAPALLO|TETSUKAB.': 'TETSUKABUTO',
     'ZAPALLO|COQUENA': 'ANQUITO',
 
     // REPOLLO
@@ -108,7 +135,7 @@ const VARIETY_MAP = {
     'CHAUCHA|CHAUCHA MUSICA': 'MUSICA',
     'CHAUCHA|CHAUCHA POR METRO': 'POR METRO',
     'CHAUCHA|CHAUCHA ROLLIZA': 'ROLLIZA',
-    'CHAUCHA|CONTRANCHA': 'SIN VARIED',
+    'CHAUCHA|CONTRANCHA': 'SIN VARIEDAD',
 
     // LECHUGA
     'LECHUGA|LECHUGA CRESPA': 'CRESPA',
@@ -121,65 +148,65 @@ const VARIETY_MAP = {
     'CHOCLO|CHOCLO CRIOLLO': 'CRIOLLO',
 
     // ACELGA
-    'ACELGA|ACELGA': 'SIN VARIED',
+    'ACELGA|ACELGA': 'SIN VARIEDAD',
 
-    // CEB.VERDEO
-    'CEB.VERDEO|CEBOLLITA DE VERDEO': 'SIN VARIED',
+    // CEBOLLA DE VERDEO
+    'CEBOLLA DE VERDEO|CEBOLLITA DE VERDEO': 'SIN VARIEDAD',
 
     // ALBAHACA
-    'ALBAHACA|ALBAHACA': 'SIN VARIED',
+    'ALBAHACA|ALBAHACA': 'SIN VARIEDAD',
 
     // PEREJIL
-    'PEREJIL|PEREJIL': 'SIN VARIED',
+    'PEREJIL|PEREJIL': 'SIN VARIEDAD',
 
     // RUCULA
-    'RUCULA|RUCULA': 'SIN VARIED',
+    'RUCULA|RUCULA': 'SIN VARIEDAD',
 
     // ESPINACA
-    'ESPINACA|ESPINACA': 'SIN VARIED',
+    'ESPINACA|ESPINACA': 'SIN VARIEDAD',
 
     // BROCOLI
-    'BROCOLI|BROCOLI': 'SIN VARIED',
+    'BROCOLI|BROCOLI': 'SIN VARIEDAD',
 
     // MANDIOCA
-    'MANDIOCA|MANDIOCA': 'SIN VARIED',
-    'MANDIOCA|MANDIOCA CORRIENTES': 'SIN VARIED',
+    'MANDIOCA|MANDIOCA': 'SIN VARIEDAD',
+    'MANDIOCA|MANDIOCA CORRIENTES': 'SIN VARIEDAD',
 
     // ACHICORIA
-    'ACHICORIA|ACHICORIA': 'SIN VARIED',
+    'ACHICORIA|ACHICORIA': 'SIN VARIEDAD',
 
     // APIO
-    'APIO|APIO DE HOJA': 'SIN VARIED',
+    'APIO|APIO DE HOJA': 'SIN VARIEDAD',
 
     // ARVEJA
-    'ARVEJA|ARVEJA': 'SIN VARIED',
+    'ARVEJA|ARVEJA': 'SIN VARIEDAD',
 
     // REMOLACHA
-    'REMOLACHA|REMOLACHA': 'SIN VARIED',
+    'REMOLACHA|REMOLACHA': 'SIN VARIEDAD',
 
     // RABANITO
-    'RABANITO|RABANITO': 'SIN VARIED',
+    'RABANITO|RABANITO': 'SIN VARIEDAD',
 
     // PUERRO
-    'PUERRO|PUERRO': 'SIN VARIED',
+    'PUERRO|PUERRO': 'SIN VARIEDAD',
 
-    // CILANDRO
-    'CILANDRO|CILANTRO': 'SIN VARIED',
+    // CILANTRO
+    'CILANTRO|CILANTRO': 'SIN VARIEDAD',
 
     // MENTA
-    'MENTA|MENTA': 'SIN VARIED',
+    'MENTA|MENTA': 'SIN VARIEDAD',
 
     // COLIFLOR
-    'COLIFLOR|COLIFLOR': 'SIN VARIED',
+    'COLIFLOR|COLIFLOR': 'SIN VARIEDAD',
 
     // KINOTO
-    'KINOTO|KINOTO': 'SIN VARIED',
+    'KINOTO|KINOTO': 'SIN VARIEDAD',
 
     // POROTO
     'POROTO|POROTO SEÑORITA': 'SEÑORITA',
 
     // AROMATICAS
-    'AROMATICAS|OREGANO': 'OREGANO',
+    'AROMATICAS|OREGANO': 'ORÉGANO',
     'AROMATICAS|LAUREL': 'LAUREL',
 
     // PAPA
@@ -193,13 +220,19 @@ const VARIETY_MAP = {
     'DURAZNO|DURAZNO 1633': '1633',
 
     // PERA
-    'PERA|PERA PACKAMS  COMERCIAL': 'PACKAMS',
-    'PERA|PERA PACKAMS ELEGIGA': 'PACKAMS',
+    'PERA|PERA PACKAMS  COMERCIAL': "PACKHAM'S",
+    'PERA|PERA PACKAMS ELEGIGA': "PACKHAM'S",
+
+    // MANGO
+    'MANGO|TOMMY ATKI': 'TOMMY ATKINS',
 };
 
 function normalizeVariedad(especie, variedad) {
     const key = especie + '|' + variedad;
     if (VARIETY_MAP[key] !== undefined) return VARIETY_MAP[key];
+    if (variedad === 'SIN VARIED' || variedad === 'SIN VARIEDAD' || variedad === especie) {
+        return 'SIN VARIEDAD';
+    }
     return variedad;
 }
 
@@ -209,6 +242,7 @@ let charts = {};
 // ─── State ──────────────────────────────────────────────────────────────
 let rawData = [];
 let filteredData = [];
+let heatmapFilter = 'TODOS';
 
 // ─── Boot ───────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', init);
@@ -263,7 +297,8 @@ function parseCSV(text) {
         if (isNaN(peso) || peso <= 0) continue;
 
         const mercado = (cols[1] || '').trim().toUpperCase();
-        const especie = (cols[3] || '').trim().toUpperCase();
+        const rawEspecie = (cols[3] || '').trim().toUpperCase();
+        const especie = normalizeEspecie(rawEspecie);
         const rawVariedad = (cols[4] || '').trim().toUpperCase();
         const procedencia = (cols[5] || '').trim().toUpperCase();
 
@@ -325,6 +360,19 @@ function wireFilters() {
         updateEspecieFilter();
         applyFilters();
     });
+
+    // Heatmap filter tabs
+    const heatmapTabs = document.getElementById('heatmapTabs');
+    if (heatmapTabs) {
+        heatmapTabs.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                heatmapTabs.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                heatmapFilter = e.target.getAttribute('data-value');
+                renderHeatmap();
+            });
+        });
+    }
 }
 
 /** Populate all filters initially based on rawData */
@@ -700,7 +748,14 @@ function renderTop10() {
 // ─── Chart 5: Heatmap ───────────────────────────────────────────────────
 function renderHeatmap() {
     const container = document.getElementById('heatmapContainer');
-    const byEspecie = groupSum(filteredData, 'especie');
+    
+    // Filtrar los datos localmente según la solapa seleccionada (Frutas, Hortalizas o Todas)
+    let dataForHeatmap = filteredData;
+    if (heatmapFilter !== 'TODOS') {
+        dataForHeatmap = filteredData.filter(r => r.serie === heatmapFilter);
+    }
+    
+    const byEspecie = groupSum(dataForHeatmap, 'especie');
     const sorted = Object.entries(byEspecie).sort((a, b) => b[1] - a[1]).slice(0, 20);
     const especies = sorted.map(s => s[0]);
 
@@ -709,7 +764,7 @@ function renderHeatmap() {
     let globalMax = 0;
     especies.forEach(esp => {
         matrix[esp] = new Array(12).fill(0);
-        filteredData.filter(r => r.especie === esp).forEach(r => {
+        dataForHeatmap.filter(r => r.especie === esp).forEach(r => {
             matrix[esp][r.month - 1] += r.peso;
         });
         matrix[esp].forEach(v => { if (v > globalMax) globalMax = v; });
