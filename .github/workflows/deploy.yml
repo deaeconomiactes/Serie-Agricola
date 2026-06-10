@@ -29,7 +29,7 @@ jobs:
         # Usa OpenSSL para recuperar el CSV usando la contraseña guardada en los Secrets
         run: |
           openssl enc -aes-256-cbc -d -in "REGISTRO 2025.csv.enc" -out "REGISTRO 2025.csv" \
-          -pass pass:"${{ secrets.CSV_PASSWORD }}" -pbkdf2
+          -pass pass:"${{ secrets.CSV_PASSWORD }}" -pbkdf2 -iter 10000
           
       - name: Setup Pages
         uses: actions/configure-pages@v4
