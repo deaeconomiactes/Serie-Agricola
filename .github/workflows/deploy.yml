@@ -27,9 +27,11 @@ jobs:
 
       - name: Desencriptar CSV de datos
         # Usa OpenSSL para recuperar el CSV usando la contraseña guardada en los Secrets
+        env:
+          DECRYPT_PASSWORD: ${{ secrets.CSV_PASSWORD }}
         run: |
           openssl enc -aes-256-cbc -d -in "REGISTRO 2025.csv.enc" -out "REGISTRO 2025.csv" \
-          -pass pass:"${{ secrets.CSV_PASSWORD }}" -pbkdf2 -iter 10000
+          -pass env:DECRYPT_PASSWORD -pbkdf2 -iter 10000
           
       - name: Setup Pages
         uses: actions/configure-pages@v4
