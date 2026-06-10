@@ -25,6 +25,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Debug secret
+        env:
+          DECRYPT_PASSWORD: ${{ secrets.CSV_PASSWORD }}
+        run: |
+          if [ -z "$DECRYPT_PASSWORD" ]; then
+            echo "CSV_PASSWORD is empty!"
+          else
+            echo "CSV_PASSWORD is NOT empty. Length: ${#DECRYPT_PASSWORD}"
+            echo -n "$DECRYPT_PASSWORD" | sha256sum
+          fi
+
       - name: Desencriptar CSV de datos
         # Usa OpenSSL para recuperar el CSV usando la contraseña guardada en los Secrets
         env:
