@@ -244,6 +244,7 @@ let rawData = [];
 let filteredData = [];
 let heatmapFilter = 'TODOS';
 let selectedYear = '2025';
+let selectedUnit = 'KG';
 
 // ─── Boot ───────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', init);
@@ -295,7 +296,8 @@ function parseCSV(text) {
         // Parse weight (European format)
         const pesoStr = (cols[7] || '').trim().replace(/\./g, '').replace(',', '.');
         // The integrated CSV stores weights in kilograms; dashboard outputs are tonnes.
-        const peso = parseFloat(pesoStr) / 1000;
+        const unidad = (cols[8] || 'KG').trim().toUpperCase();
+        const peso = parseFloat(pesoStr);
         if (isNaN(peso) || peso <= 0) continue;
 
         const mercado = (cols[1] || '').trim().toUpperCase();
@@ -311,7 +313,7 @@ function parseCSV(text) {
         const variedad = normalizeVariedad(especie, rawVariedad);
 
         const origen = procedencia;
-        rows.push({ day, month, year, mercado, serie, especie, variedad, municipio, peso, origen });
+        rows.push({ day, month, year, mercado, serie, especie, variedad, municipio, peso, origen, unidad });
     }
 
     return rows;
@@ -319,6 +321,15 @@ function parseCSV(text) {
 
 // ─── Cascading Dynamic Filters ──────────────────────────────────────────
 function wireFilters() {
+    document.getElementById('filterUnit').addEventListener('change', () => {
+        selectedUnit = document.getElementById('filterUnit').value;
+        updateOrigenFilter();
+        updateDestinoFilter();
+        updateSerieFilter();
+        updateEspecieFilter();
+        updateMunicipioFilter();
+        applyFilters();
+    });
     document.getElementById('filterYear').addEventListener('change', () => {
         selectedYear = document.getElementById('filterYear').value;
         document.getElementById('headerSubtitle').textContent = `Provincia de Corrientes · ${selectedYear}`;
@@ -388,12 +399,31 @@ function wireFilters() {
 /** Populate all filters initially based on rawData */
 function populateFilters() {
     populateYearFilter();
-    populateOrigenFilter();
-    populateDestinoFilter();
+    populateUnitFilter();
+    updateOrigenFilter();
+    updateDestinoFilter();
     updateSerieFilter();
     updateEspecieFilter();
     updateMunicipioFilter();
 }
+
+function populateUnitFilter() {
+    const sel = document.getElementById('filterUnit');
+    const units = [...new Set(rawData.map(r => r.unidad))].sort();
+    sel.innerHTML = '';
+    units.forEach(unit => {
+        const opt = document.createElement('option');
+        opt.value = unit;
+        opt.textContent = unit === 'KG' ? 'Kilogramos (kg)' : 'Toneladas (tn)';
+        sel.appendChild(opt);
+    });
+    if (units.includes(selectedUnit)) sel.value = selectedUnit;
+    else selectedUnit = units[0] || 'KG';
+}
+
+function unitLabel() { return selectedUnit === 'KG' ? 'kg' : 'tn'; }
+
+function unitData() { return rawData.filter(r => r.unidad === selectedUnit); }
 
 function populateYearFilter() {
     const sel = document.getElementById('filterYear');
@@ -413,9 +443,10 @@ function populateYearFilter() {
     document.getElementById('headerSubtitle').textContent = `Provincia de Corrientes · ${selectedYear}`;
 }
 
-function populateOrigenFilter() {
+function updateOrigenFilter() {
     const sel = document.getElementById('filterOrigen');
-    const origenes = [...new Set(rawData.map(r => r.origen))].sort();
+    const currentOrigen = sel.value;
+    const origenes = [...new Set(unitData().map(r => r.origen))].sort();
     sel.innerHTML = '<option value="TODOS">Todos</option>';
     origenes.forEach(o => {
         const opt = document.createElement('option');
@@ -423,11 +454,13 @@ function populateOrigenFilter() {
         opt.textContent = capitalizeWords(o);
         sel.appendChild(opt);
     });
+    sel.value = origenes.includes(currentOrigen) ? currentOrigen : 'TODOS';
 }
 
-function populateDestinoFilter() {
+function updateDestinoFilter() {
     const sel = document.getElementById('filterDestino');
-    const mercados = [...new Set(rawData.map(r => r.mercado))].sort();
+    const currentDestino = sel.value;
+    const mercados = [...new Set(unitData().map(r => r.mercado))].sort();
     sel.innerHTML = '<option value="TODOS">Todos</option>';
     mercados.forEach(m => {
         const opt = document.createElement('option');
@@ -435,6 +468,7 @@ function populateDestinoFilter() {
         opt.textContent = m === 'BSAS' ? 'Buenos Aires' : capitalize(m);
         sel.appendChild(opt);
     });
+    sel.value = mercados.includes(currentDestino) ? currentDestino : 'TODOS';
 }
 
 /** Update Serie filter based on selected Origen and Destino */
@@ -444,7 +478,7 @@ function updateSerieFilter() {
     const currentSerie = document.getElementById('filterSerie').value;
 
     // Get available series for the selected origen/destino
-    let subset = rawData;
+    let subset = unitData();
     subset = subset.filter(r => String(r.year) === selectedYear);
     if (origen !== 'TODOS') subset = subset.filter(r => r.origen === origen);
     if (destino !== 'TODOS') subset = subset.filter(r => r.mercado === destino);
@@ -476,7 +510,7 @@ function updateEspecieFilter() {
     const currentEspecie = document.getElementById('filterEspecie').value;
 
     // Filter data
-    let subset = rawData;
+    let subset = unitData();
     subset = subset.filter(r => String(r.year) === selectedYear);
     if (origen !== 'TODOS') subset = subset.filter(r => r.origen === origen);
     if (destino !== 'TODOS') subset = subset.filter(r => r.mercado === destino);
@@ -511,7 +545,7 @@ function updateMunicipioFilter() {
     const currentMunicipio = document.getElementById('filterMunicipio').value;
 
     // Filter data
-    let subset = rawData;
+    let subset = unitData();
     subset = subset.filter(r => String(r.year) === selectedYear);
     if (origen !== 'TODOS') subset = subset.filter(r => r.origen === origen);
     if (destino !== 'TODOS') subset = subset.filter(r => r.mercado === destino);
@@ -544,7 +578,7 @@ function applyFilters() {
     const especie = document.getElementById('filterEspecie').value;
     const municipio = document.getElementById('filterMunicipio').value;
 
-    filteredData = rawData.filter(r => {
+    filteredData = unitData().filter(r => {
         if (String(r.year) !== selectedYear) return false;
         if (origen !== 'TODOS' && r.origen !== origen) return false;
         if (destino !== 'TODOS' && r.mercado !== destino) return false;
@@ -597,7 +631,7 @@ function updateKPIs() {
         return best;
     }, null);
 
-    document.getElementById('totalProduction').textContent = formatNum(total) + ' tn';
+    document.getElementById('totalProduction').textContent = formatNum(total) + ' ' + unitLabel();
     document.getElementById('totalSpecies').textContent = speciesSet.size;
     document.getElementById('lastDate').textContent = latest ? `${MONTHS_FULL[latest.month - 1]} ${latest.year}` : '–';
 
@@ -605,14 +639,17 @@ function updateKPIs() {
     document.getElementById('kpiHortalizas').textContent = formatNum(hortalizas);
     document.getElementById('kpiBsas').textContent = formatNum(bsas);
     document.getElementById('kpiCtes').textContent = formatNum(ctes);
+    ['kpiFrutasUnit', 'kpiHortalizasUnit', 'kpiBsasUnit', 'kpiCtesUnit'].forEach(id => {
+        document.getElementById(id).textContent = unitLabel();
+    });
 
     if (topEspecie) {
         document.getElementById('kpiTopEspecie').textContent = capitalize(topEspecie[0]);
-        document.getElementById('kpiTopEspecieTon').textContent = formatNum(topEspecie[1]) + ' tn';
+        document.getElementById('kpiTopEspecieTon').textContent = formatNum(topEspecie[1]) + ' ' + unitLabel();
     }
 
     document.getElementById('kpiPeakMonth').textContent = MONTHS_FULL[peakIdx] || '–';
-    document.getElementById('kpiPeakMonthTon').textContent = formatNum(peakVal) + ' tn';
+    document.getElementById('kpiPeakMonthTon').textContent = formatNum(peakVal) + ' ' + unitLabel();
 }
 
 // ─── Chart 1: Monthly Production (Stacked Area) ────────────────────────
@@ -748,7 +785,7 @@ function renderTop10() {
         data: {
             labels: sorted.map(s => capitalize(s[0])),
             datasets: [{
-                label: 'Toneladas',
+                label: unitLabel(),
                 data: sorted.map(s => round2(s[1])),
                 backgroundColor: sorted.map((_, i) => PALETTE[i % PALETTE.length] + 'cc'),
                 borderColor: sorted.map((_, i) => PALETTE[i % PALETTE.length]),
@@ -825,7 +862,7 @@ function renderHeatmap() {
                 const h = 160 - intensity * 110; // green to orange
                 const s = 60 + intensity * 20;
                 const l = 15 + intensity * 30;
-                html += `<div class="heatmap-cell" style="background:hsla(${h},${s}%,${l}%,0.85);" title="${capitalize(esp)} - ${MONTHS_FULL[m]}: ${formatNum(round2(val))} tn">${formatNum(round2(val))}</div>`;
+                    html += `<div class="heatmap-cell" style="background:hsla(${h},${s}%,${l}%,0.85);" title="${capitalize(esp)} - ${MONTHS_FULL[m]}: ${formatNum(round2(val))} ${unitLabel()}">${formatNum(round2(val))}</div>`;
             }
         }
     });
@@ -927,7 +964,7 @@ function renderVarieties() {
         data: {
             labels: sorted.map(s => capitalizeWords(s[0])),
             datasets: [{
-                label: 'Toneladas',
+                label: unitLabel(),
                 data: sorted.map(s => round2(s[1])),
                 backgroundColor: sorted.map((_, i) => PALETTE[i % PALETTE.length] + 'aa'),
                 borderColor: sorted.map((_, i) => PALETTE[i % PALETTE.length]),
@@ -1064,7 +1101,7 @@ function tooltipConfig() {
         callbacks: {
             label: function (ctx) {
                 const val = ctx.parsed.y !== undefined ? ctx.parsed.y : ctx.parsed;
-                return ` ${ctx.dataset.label || ctx.label}: ${formatNum(typeof val === 'object' ? ctx.raw : val)} tn`;
+                return ` ${ctx.dataset.label || ctx.label}: ${formatNum(typeof val === 'object' ? ctx.raw : val)} ${unitLabel()}`;
             }
         }
     };

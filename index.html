@@ -56,6 +56,13 @@
                 </select>
             </div>
             <div class="filter-group">
+                <label class="filter-label">Unidad de medida</label>
+                <select id="filterUnit" class="filter-select">
+                    <option value="KG">Kilogramos (kg)</option>
+                    <option value="TN">Toneladas (tn)</option>
+                </select>
+            </div>
+            <div class="filter-group">
                 <label class="filter-label">Origen</label>
                 <select id="filterOrigen" class="filter-select">
                     <option value="TODOS">Todos</option>
@@ -84,7 +91,7 @@
                 </select>
             </div>
             <div class="filter-group">
-                <label class="filter-label">Especie</label>
+                <label class="filter-label">Especie normalizada</label>
                 <select id="filterEspecie" class="filter-select">
                     <option value="TODOS">Todas</option>
                 </select>
@@ -100,7 +107,7 @@
                 <div class="kpi-content">
                     <span class="kpi-label">Frutas</span>
                     <span class="kpi-value" id="kpiFrutas">–</span>
-                    <span class="kpi-unit">toneladas</span>
+                    <span class="kpi-unit" id="kpiFrutasUnit">kg</span>
                 </div>
             </div>
             <div class="kpi-card kpi-hortalizas">
@@ -108,7 +115,7 @@
                 <div class="kpi-content">
                     <span class="kpi-label">Hortalizas</span>
                     <span class="kpi-value" id="kpiHortalizas">–</span>
-                    <span class="kpi-unit">toneladas</span>
+                    <span class="kpi-unit" id="kpiHortalizasUnit">kg</span>
                 </div>
             </div>
             <div class="kpi-card kpi-bsas">
@@ -116,7 +123,7 @@
                 <div class="kpi-content">
                     <span class="kpi-label">Mercado BSAS</span>
                     <span class="kpi-value" id="kpiBsas">–</span>
-                    <span class="kpi-unit">toneladas</span>
+                    <span class="kpi-unit" id="kpiBsasUnit">kg</span>
                 </div>
             </div>
             <div class="kpi-card kpi-ctes">
@@ -124,7 +131,7 @@
                 <div class="kpi-content">
                     <span class="kpi-label">Mercado Corrientes</span>
                     <span class="kpi-value" id="kpiCtes">–</span>
-                    <span class="kpi-unit">toneladas</span>
+                    <span class="kpi-unit" id="kpiCtesUnit">kg</span>
                 </div>
             </div>
             <div class="kpi-card kpi-top">
@@ -264,6 +271,7 @@
     <!-- Footer -->
     <footer class="footer">
         <p>Tránsito y Comercialización Frutihortícola · Serie 2024-2025</p>
+        <p class="footer-note">Los datos se muestran en la unidad original de la fuente. Seleccioná kg o tn para evitar mezclar unidades.</p>
     </footer>
 
     <script src="app.js"></script>

@@ -15,6 +15,7 @@ MONTHS = {
     "mayo": 5, "junio": 6, "julio": 7, "agosto": 8,
     "septiembre": 9, "octubre": 10, "noviembre": 11, "diciembre": 12,
 }
+ALLOWED_ORIGINS = {"BUENOS AIRES", "CORRIENTES"}
 
 
 def text(value):
@@ -74,7 +75,8 @@ def append_monthly_rows(rows, workbook_path):
                     "VARIEDAD": variety,
                     "PROCEDENCIA": origin,
                     "MUNICIPIO": "",
-                    "PESO": f"{tons * 1000:.3f}".replace(".", ","),
+                    "PESO": f"{tons:.3f}".replace(".", ","),
+                    "UNIDAD": "TN",
                 })
 
 
@@ -101,7 +103,8 @@ def append_v_rows(rows, workbook_path, sheet_name, series, year, months):
                 "VARIEDAD": variety,
                 "PROCEDENCIA": origin,
                 "MUNICIPIO": "",
-                "PESO": f"{tons * 1000:.3f}".replace(".", ","),
+                "PESO": f"{tons:.3f}".replace(".", ","),
+                "UNIDAD": "TN",
             })
 
 
@@ -109,6 +112,8 @@ def main():
     rows = []
     with open(CURRENT_CSV, encoding="utf-8-sig", newline="") as handle:
         rows.extend(csv.DictReader(handle, delimiter=";"))
+    for row in rows:
+        row["UNIDAD"] = row.get("UNIDAD") or "KG"
 
     monthly_rows = []
     append_monthly_rows(monthly_rows, os.path.join(BASE_DIR, "2025 FRUTAS Y HORTALIZAS (mensual).xlsx"))
@@ -134,12 +139,13 @@ def main():
             merged[f"late-{len(new_keys)}"] = row
             new_keys.add(dedupe_key)
 
-    fields = ["FECHA", "MERCADO", "SERIE", "ESPECIE", "VARIEDAD", "PROCEDENCIA", "MUNICIPIO", "PESO"]
+    rows = [row for row in merged.values() if normalize_origin(row.get("PROCEDENCIA")) in ALLOWED_ORIGINS]
+    fields = ["FECHA", "MERCADO", "SERIE", "ESPECIE", "VARIEDAD", "PROCEDENCIA", "MUNICIPIO", "PESO", "UNIDAD"]
     with open(OUTPUT_CSV, "w", encoding="utf-8-sig", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields, delimiter=";")
         writer.writeheader()
-        writer.writerows(merged.values())
-    print(f"current={len(rows)} monthly={len(monthly_rows)} late={len(late_rows)} integrated={len(merged)}")
+        writer.writerows(rows)
+    print(f"current={len(rows)} monthly={len(monthly_rows)} late={len(late_rows)} integrated={len(rows)}")
 
 
 if __name__ == "__main__":
