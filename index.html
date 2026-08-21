@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tránsito y Comercialización Frutihortícola – Corrientes 2025</title>
+    <title>Tránsito y Comercialización Frutihortícola – Serie 2024-2025</title>
     <meta name="description" content="Dashboard interactivo de tránsito y comercialización de frutas y hortalizas (frutihortícola) de la provincia de Corrientes, Argentina.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,7 +26,7 @@
                 </div>
                 <div>
                     <h1 class="header-title">Tránsito y Comercialización Frutihortícola</h1>
-                    <p class="header-subtitle">Provincia de Corrientes · 2025</p>
+            <p class="header-subtitle" id="headerSubtitle">Provincia de Corrientes · 2025</p>
                 </div>
             </div>
             <div class="header-right">
@@ -49,6 +49,12 @@
     <!-- Filters -->
     <section class="filters-section">
         <div class="filters-inner">
+            <div class="filter-group">
+                <label class="filter-label">Año</label>
+                <select id="filterYear" class="filter-select">
+                    <option value="2025">2025</option>
+                </select>
+            </div>
             <div class="filter-group">
                 <label class="filter-label">Origen</label>
                 <select id="filterOrigen" class="filter-select">
@@ -257,7 +263,7 @@
 
     <!-- Footer -->
     <footer class="footer">
-        <p>Tránsito y Comercialización Frutihortícola · Corrientes 2025</p>
+        <p>Tránsito y Comercialización Frutihortícola · Serie 2024-2025</p>
     </footer>
 
     <script src="app.js"></script>

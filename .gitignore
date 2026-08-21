@@ -2,11 +2,13 @@
 *.csv
 *.xlsx
 *.xls
+!REGISTRO 2025 INTEGRADO.csv
 
 # Python
 *.py
 __pycache__/
 *.pyc
+!integrar_bases_2025.py
 
 # OS
 .DS_Store

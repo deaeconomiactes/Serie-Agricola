@@ -5,7 +5,7 @@
 // ─── Constants ──────────────────────────────────────────────────────────
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 const MONTHS_FULL = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-const CSV_PATH = 'REGISTRO 2025.csv';
+const CSV_PATH = 'REGISTRO 2025 INTEGRADO.csv';
 
 // Chart.js color palette
 const PALETTE = [
@@ -243,6 +243,7 @@ let charts = {};
 let rawData = [];
 let filteredData = [];
 let heatmapFilter = 'TODOS';
+let selectedYear = '2025';
 
 // ─── Boot ───────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', init);
@@ -293,7 +294,8 @@ function parseCSV(text) {
 
         // Parse weight (European format)
         const pesoStr = (cols[7] || '').trim().replace(/\./g, '').replace(',', '.');
-        const peso = parseFloat(pesoStr);
+        // The integrated CSV stores weights in kilograms; dashboard outputs are tonnes.
+        const peso = parseFloat(pesoStr) / 1000;
         if (isNaN(peso) || peso <= 0) continue;
 
         const mercado = (cols[1] || '').trim().toUpperCase();
@@ -317,6 +319,14 @@ function parseCSV(text) {
 
 // ─── Cascading Dynamic Filters ──────────────────────────────────────────
 function wireFilters() {
+    document.getElementById('filterYear').addEventListener('change', () => {
+        selectedYear = document.getElementById('filterYear').value;
+        document.getElementById('headerSubtitle').textContent = `Provincia de Corrientes · ${selectedYear}`;
+        updateSerieFilter();
+        updateEspecieFilter();
+        updateMunicipioFilter();
+        applyFilters();
+    });
     document.getElementById('filterOrigen').addEventListener('change', () => {
         const origen = document.getElementById('filterOrigen').value;
         const btnMunicipio = document.getElementById('filterMunicipio');
@@ -377,11 +387,30 @@ function wireFilters() {
 
 /** Populate all filters initially based on rawData */
 function populateFilters() {
+    populateYearFilter();
     populateOrigenFilter();
     populateDestinoFilter();
     updateSerieFilter();
     updateEspecieFilter();
     updateMunicipioFilter();
+}
+
+function populateYearFilter() {
+    const sel = document.getElementById('filterYear');
+    const years = [...new Set(rawData.map(r => String(r.year)))].sort().reverse();
+    sel.innerHTML = '';
+    years.forEach(year => {
+        const opt = document.createElement('option');
+        opt.value = year;
+        opt.textContent = year;
+        sel.appendChild(opt);
+    });
+    if (years.includes(selectedYear)) sel.value = selectedYear;
+    else {
+        selectedYear = years[0] || '2025';
+        sel.value = selectedYear;
+    }
+    document.getElementById('headerSubtitle').textContent = `Provincia de Corrientes · ${selectedYear}`;
 }
 
 function populateOrigenFilter() {
@@ -416,6 +445,7 @@ function updateSerieFilter() {
 
     // Get available series for the selected origen/destino
     let subset = rawData;
+    subset = subset.filter(r => String(r.year) === selectedYear);
     if (origen !== 'TODOS') subset = subset.filter(r => r.origen === origen);
     if (destino !== 'TODOS') subset = subset.filter(r => r.mercado === destino);
     const series = [...new Set(subset.map(r => r.serie))].sort();
@@ -447,6 +477,7 @@ function updateEspecieFilter() {
 
     // Filter data
     let subset = rawData;
+    subset = subset.filter(r => String(r.year) === selectedYear);
     if (origen !== 'TODOS') subset = subset.filter(r => r.origen === origen);
     if (destino !== 'TODOS') subset = subset.filter(r => r.mercado === destino);
     if (serie !== 'TODOS') subset = subset.filter(r => r.serie === serie);
@@ -481,6 +512,7 @@ function updateMunicipioFilter() {
 
     // Filter data
     let subset = rawData;
+    subset = subset.filter(r => String(r.year) === selectedYear);
     if (origen !== 'TODOS') subset = subset.filter(r => r.origen === origen);
     if (destino !== 'TODOS') subset = subset.filter(r => r.mercado === destino);
     if (serie !== 'TODOS') subset = subset.filter(r => r.serie === serie);
@@ -513,6 +545,7 @@ function applyFilters() {
     const municipio = document.getElementById('filterMunicipio').value;
 
     filteredData = rawData.filter(r => {
+        if (String(r.year) !== selectedYear) return false;
         if (origen !== 'TODOS' && r.origen !== origen) return false;
         if (destino !== 'TODOS' && r.mercado !== destino) return false;
         if (serie !== 'TODOS' && r.serie !== serie) return false;
@@ -559,11 +592,14 @@ function updateKPIs() {
     const speciesSet = new Set(filteredData.map(r => r.especie));
 
     // Last date
-    const maxMonth = filteredData.reduce((m, r) => Math.max(m, r.month), 0);
+    const latest = filteredData.reduce((best, r) => {
+        if (!best || r.month > best.month || (r.month === best.month && r.day > best.day)) return r;
+        return best;
+    }, null);
 
     document.getElementById('totalProduction').textContent = formatNum(total) + ' tn';
     document.getElementById('totalSpecies').textContent = speciesSet.size;
-    document.getElementById('lastDate').textContent = maxMonth > 0 ? MONTHS_FULL[maxMonth - 1] : '–';
+    document.getElementById('lastDate').textContent = latest ? `${MONTHS_FULL[latest.month - 1]} ${latest.year}` : '–';
 
     document.getElementById('kpiFrutas').textContent = formatNum(frutas);
     document.getElementById('kpiHortalizas').textContent = formatNum(hortalizas);
