@@ -7,6 +7,33 @@ const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', '
 const MONTHS_FULL = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const CSV_PATH = 'REGISTRO 2025 INTEGRADO.csv';
 
+// Canonical names used by filters, aggregations and chart data. The keys are
+// compact location keys so accents, punctuation and spacing cannot create
+// duplicate locations.
+const LOCATION_EQUIVALENCES = {
+    BUENOSAIRES: 'Buenos Aires', BSAS: 'Buenos Aires',
+    CABA: 'Ciudad Autónoma de Buenos Aires',
+    CAPITALFEDERAL: 'Ciudad Autónoma de Buenos Aires',
+    CIUDADAUTONOMADEBUENOSAIRES: 'Ciudad Autónoma de Buenos Aires',
+    MDPLAT: 'Mar del Plata', MDP: 'Mar del Plata', MARDELPLATA: 'Mar del Plata',
+    PTORICO: 'Puerto Rico', PUERTORICO: 'Puerto Rico',
+    SBSAS: 'Buenos Aires',
+    CORDOBA: 'Córdoba', CBA: 'Córdoba',
+    ERIOS: 'Entre Ríos', ENTRERIOS: 'Entre Ríos',
+    GRLBELG: 'General Belgrano', GRALBELGRANO: 'General Belgrano', GENERALBELGRANO: 'General Belgrano',
+    SPEDRO: 'San Pedro', SANPEDRO: 'San Pedro',
+    CATAMARC: 'Catamarca', RNEGRO: 'Río Negro',
+    NEUQUEN: 'Neuquén', TUCUMAN: 'Tucumán', MEXICO: 'México', PERU: 'Perú',
+    SGODELESTERO: 'Santiago del Estero', SGOEST: 'Santiago del Estero', SANTIAGODELESTERO: 'Santiago del Estero',
+    STACRUZ: 'Santa Cruz',
+    LARIOJA: 'La Rioja', LAPAMPA: 'La Pampa', JUJUY: 'Jujuy', SALTA: 'Salta', MENDOZA: 'Mendoza',
+    MISIONES: 'Misiones', FORMOSA: 'Formosa', CHUBUT: 'Chubut', CHACO: 'Chaco', CORRIENTES: 'Corrientes',
+    SANJUAN: 'San Juan', SANLUIS: 'San Luis', SANTAFE: 'Santa Fe', TIERRADELFUEGO: 'Tierra del Fuego',
+    CHILE: 'Chile', CHINA: 'China', COLOMBIA: 'Colombia', ECUADOR: 'Ecuador', ESPANA: 'España',
+    GRECIA: 'Grecia', ITALIA: 'Italia', PARAGUAY: 'Paraguay', PORTUGAL: 'Portugal', URUGUAY: 'Uruguay',
+    BRASIL: 'Brasil'
+};
+
 // Chart.js color palette
 const PALETTE = [
     '#34d399', '#60a5fa', '#fb923c', '#a78bfa', '#fb7185',
@@ -33,6 +60,8 @@ function normalizeEspecie(especie) {
     if (SPECIES_MAP[especie] !== undefined) {
         return SPECIES_MAP[especie];
     }
+    const equivalent = Object.entries(SPECIES_MAP).find(([key]) => normalizeText(key) === normalizeText(especie));
+    if (equivalent) return equivalent[1];
     return especie;
 }
 
@@ -230,6 +259,12 @@ const VARIETY_MAP = {
 function normalizeVariedad(especie, variedad) {
     const key = especie + '|' + variedad;
     if (VARIETY_MAP[key] !== undefined) return VARIETY_MAP[key];
+    const equivalent = Object.entries(VARIETY_MAP).find(([mapKey]) => {
+        const [mapEspecie, mapVariedad] = mapKey.split('|');
+        return normalizeText(mapEspecie) === normalizeText(especie)
+            && normalizeText(mapVariedad) === normalizeText(variedad);
+    });
+    if (equivalent) return equivalent[1];
     if (variedad === 'SIN VARIED' || variedad === 'SIN VARIEDAD' || variedad === especie) {
         return 'SIN VARIEDAD';
     }
@@ -272,7 +307,7 @@ function parseCSV(text) {
         const cols = lines[i].split(';');
         if (cols.length < 7) continue;
 
-        const rawSerie = (cols[2] || '').trim().toUpperCase();
+        const rawSerie = normalizeText(cols[2]);
         // Skip duplicate TOMATE / PIMIENTO series
         if (rawSerie === 'TOMATE' || rawSerie === 'PIMIENTO') continue;
 
@@ -296,17 +331,17 @@ function parseCSV(text) {
         // Parse weight (European format)
         const pesoStr = (cols[7] || '').trim().replace(/\./g, '').replace(',', '.');
         // The integrated CSV stores weights in kilograms; dashboard outputs are tonnes.
-        const unidad = (cols[8] || 'KG').trim().toUpperCase();
+        const unidad = normalizeText(cols[8] || 'KG');
         const peso = parseFloat(pesoStr);
         if (isNaN(peso) || peso <= 0) continue;
 
-        const mercado = (cols[1] || '').trim().toUpperCase();
-        const rawEspecie = (cols[3] || '').trim().toUpperCase();
+        const mercado = normalizeLocation(cols[1]);
+        const rawEspecie = normalizeText(cols[3]);
         const especie = normalizeEspecie(rawEspecie);
-        const rawVariedad = (cols[4] || '').trim().toUpperCase();
-        const procedencia = (cols[5] || '').trim().toUpperCase();
+        const rawVariedad = normalizeText(cols[4]);
+        const procedencia = normalizeLocation(cols[5]);
 
-        let municipio = (cols[6] || '').trim().toUpperCase();
+        let municipio = normalizeLocation(cols[6]);
         if (!municipio) municipio = procedencia;
 
         // Normalize variedad
@@ -323,7 +358,7 @@ function parseCSV(text) {
 function wireFilters() {
     document.getElementById('filterYear').addEventListener('change', () => {
         selectedYear = document.getElementById('filterYear').value;
-        document.getElementById('headerSubtitle').textContent = `Provincia de Corrientes · ${selectedYear}`;
+        updateHeaderSubtitle();
         updateSerieFilter();
         updateEspecieFilter();
         updateMunicipioFilter();
@@ -334,7 +369,7 @@ function wireFilters() {
         const btnMunicipio = document.getElementById('filterMunicipio');
         const grpMunicipio = document.getElementById('filterGroupMunicipio');
         
-        if (origen === 'CORRIentes' || origen === 'CORRIENTES') {
+        if (normalizeText(origen) === 'CORRIENTES') {
             grpMunicipio.style.display = 'flex';
             btnMunicipio.disabled = false;
         } else {
@@ -366,7 +401,7 @@ function wireFilters() {
     document.getElementById('filterMunicipio').addEventListener('change', () => {
         const selMunicipio = document.getElementById('filterMunicipio').value;
         if (selMunicipio !== 'TODOS') {
-            document.getElementById('filterOrigen').value = 'CORRIENTES';
+            document.getElementById('filterOrigen').value = 'Corrientes';
             updateSerieFilter();
         }
         updateEspecieFilter();
@@ -403,48 +438,56 @@ function unitData() { return rawData; }
 
 function populateYearFilter() {
     const sel = document.getElementById('filterYear');
-    const years = [...new Set(rawData.map(r => String(r.year)))].sort().reverse();
-    sel.innerHTML = '';
+    const years = getUniqueSortedValues(rawData, r => r.year, (a, b) => a - b);
+    sel.innerHTML = '<option value="TODOS">Todos</option>';
     years.forEach(year => {
         const opt = document.createElement('option');
-        opt.value = year;
-        opt.textContent = year;
+        opt.value = String(year);
+        opt.textContent = String(year);
         sel.appendChild(opt);
     });
-    if (years.includes(selectedYear)) sel.value = selectedYear;
+    if (years.map(String).includes(selectedYear)) sel.value = selectedYear;
     else {
-        selectedYear = years[0] || '2025';
+        selectedYear = years.length ? String(years[years.length - 1]) : 'TODOS';
         sel.value = selectedYear;
     }
-    document.getElementById('headerSubtitle').textContent = `Provincia de Corrientes · ${selectedYear}`;
+    updateHeaderSubtitle();
 }
 
 function updateOrigenFilter() {
     const sel = document.getElementById('filterOrigen');
     const currentOrigen = sel.value;
-    const origenes = [...new Set(unitData().map(r => r.origen))].sort();
-    sel.innerHTML = '<option value="TODOS">Todos</option>';
-    origenes.forEach(o => {
-        const opt = document.createElement('option');
-        opt.value = o;
-        opt.textContent = capitalizeWords(o);
-        sel.appendChild(opt);
-    });
+    const origenes = getUniqueSortedValues(unitData(), r => r.origen);
+    populateSelect(sel, origenes, 'Todos', formatLabel);
     sel.value = origenes.includes(currentOrigen) ? currentOrigen : 'TODOS';
 }
 
 function updateDestinoFilter() {
     const sel = document.getElementById('filterDestino');
     const currentDestino = sel.value;
-    const mercados = [...new Set(unitData().map(r => r.mercado))].sort();
-    sel.innerHTML = '<option value="TODOS">Todos</option>';
-    mercados.forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m;
-        opt.textContent = m === 'BSAS' ? 'Buenos Aires' : capitalize(m);
-        sel.appendChild(opt);
-    });
+    const mercados = getUniqueSortedValues(unitData(), r => r.mercado);
+    populateSelect(sel, mercados, 'Todos', formatLabel);
     sel.value = mercados.includes(currentDestino) ? currentDestino : 'TODOS';
+}
+
+function getUniqueSortedValues(records, valueGetter, compareFn = (a, b) => String(a).localeCompare(String(b), 'es')) {
+    return [...new Set(records.map(valueGetter).filter(value => value !== undefined && value !== null && String(value).trim() !== ''))]
+        .sort(compareFn);
+}
+
+function populateSelect(select, values, allLabel, formatValue = value => value) {
+    select.innerHTML = `<option value="TODOS">${allLabel}</option>`;
+    values.forEach(value => {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = formatValue(value);
+        select.appendChild(opt);
+    });
+}
+
+function updateHeaderSubtitle() {
+    const yearLabel = selectedYear === 'TODOS' ? 'Todos los años' : selectedYear;
+    document.getElementById('headerSubtitle').textContent = `Provincia de Corrientes · ${yearLabel}`;
 }
 
 /** Update Serie filter based on selected Origen and Destino */
@@ -455,7 +498,7 @@ function updateSerieFilter() {
 
     // Get available series for the selected origen/destino
     let subset = unitData();
-    subset = subset.filter(r => String(r.year) === selectedYear);
+    if (selectedYear !== 'TODOS') subset = subset.filter(r => String(r.year) === selectedYear);
     if (origen !== 'TODOS') subset = subset.filter(r => r.origen === origen);
     if (destino !== 'TODOS') subset = subset.filter(r => r.mercado === destino);
     const series = [...new Set(subset.map(r => r.serie))].sort();
@@ -465,7 +508,7 @@ function updateSerieFilter() {
     series.forEach(s => {
         const opt = document.createElement('option');
         opt.value = s;
-        opt.textContent = capitalize(s);
+        opt.textContent = formatLabel(s);
         sel.appendChild(opt);
     });
 
@@ -487,7 +530,7 @@ function updateEspecieFilter() {
 
     // Filter data
     let subset = unitData();
-    subset = subset.filter(r => String(r.year) === selectedYear);
+    if (selectedYear !== 'TODOS') subset = subset.filter(r => String(r.year) === selectedYear);
     if (origen !== 'TODOS') subset = subset.filter(r => r.origen === origen);
     if (destino !== 'TODOS') subset = subset.filter(r => r.mercado === destino);
     if (serie !== 'TODOS') subset = subset.filter(r => r.serie === serie);
@@ -500,7 +543,7 @@ function updateEspecieFilter() {
     especies.forEach(e => {
         const opt = document.createElement('option');
         opt.value = e;
-        opt.textContent = capitalize(e);
+        opt.textContent = formatLabel(e);
         sel.appendChild(opt);
     });
 
@@ -522,7 +565,7 @@ function updateMunicipioFilter() {
 
     // Filter data
     let subset = unitData();
-    subset = subset.filter(r => String(r.year) === selectedYear);
+    if (selectedYear !== 'TODOS') subset = subset.filter(r => String(r.year) === selectedYear);
     if (origen !== 'TODOS') subset = subset.filter(r => r.origen === origen);
     if (destino !== 'TODOS') subset = subset.filter(r => r.mercado === destino);
     if (serie !== 'TODOS') subset = subset.filter(r => r.serie === serie);
@@ -535,7 +578,7 @@ function updateMunicipioFilter() {
     municipios.forEach(m => {
         const opt = document.createElement('option');
         opt.value = m;
-        opt.textContent = capitalizeWords(m);
+        opt.textContent = formatLabel(m);
         sel.appendChild(opt);
     });
 
@@ -555,7 +598,7 @@ function applyFilters() {
     const municipio = document.getElementById('filterMunicipio').value;
 
     filteredData = unitData().filter(r => {
-        if (String(r.year) !== selectedYear) return false;
+        if (selectedYear !== 'TODOS' && String(r.year) !== selectedYear) return false;
         if (origen !== 'TODOS' && r.origen !== origen) return false;
         if (destino !== 'TODOS' && r.mercado !== destino) return false;
         if (serie !== 'TODOS' && r.serie !== serie) return false;
@@ -586,8 +629,8 @@ function updateKPIs() {
     const total = sumPeso(filteredData);
     const frutas = sumPeso(filteredData.filter(r => r.serie === 'FRUTAS'));
     const hortalizas = sumPeso(filteredData.filter(r => r.serie === 'HORTALIZAS'));
-    const bsas = sumPeso(filteredData.filter(r => r.mercado === 'BSAS'));
-    const ctes = sumPeso(filteredData.filter(r => r.mercado === 'CORRIENTES'));
+    const bsas = sumPeso(filteredData.filter(r => r.mercado === 'Buenos Aires'));
+    const ctes = sumPeso(filteredData.filter(r => r.mercado === 'Corrientes'));
 
     // Top especie
     const byEspecie = groupSum(filteredData, 'especie');
@@ -607,28 +650,28 @@ function updateKPIs() {
         return best;
     }, null);
 
-    document.getElementById('totalProduction').textContent = formatNum(total) + ' ' + unitLabel();
+    document.getElementById('totalProduction').textContent = formatWeight(total);
     document.getElementById('totalSpecies').textContent = speciesSet.size;
     document.getElementById('lastDate').textContent = latest ? `${MONTHS_FULL[latest.month - 1]} ${latest.year}` : '–';
 
-    document.getElementById('kpiFrutas').textContent = formatNum(frutas);
-    document.getElementById('kpiHortalizas').textContent = formatNum(hortalizas);
-    document.getElementById('kpiBsas').textContent = formatNum(bsas);
-    document.getElementById('kpiCtes').textContent = formatNum(ctes);
+    document.getElementById('kpiFrutas').textContent = formatNumber(frutas);
+    document.getElementById('kpiHortalizas').textContent = formatNumber(hortalizas);
+    document.getElementById('kpiBsas').textContent = formatNumber(bsas);
+    document.getElementById('kpiCtes').textContent = formatNumber(ctes);
     ['kpiFrutasUnit', 'kpiHortalizasUnit', 'kpiBsasUnit', 'kpiCtesUnit'].forEach(id => {
         document.getElementById(id).textContent = unitLabel();
     });
 
     if (topEspecie) {
-        document.getElementById('kpiTopEspecie').textContent = capitalize(topEspecie[0]);
-        document.getElementById('kpiTopEspecieTon').textContent = formatNum(topEspecie[1]) + ' ' + unitLabel();
+        document.getElementById('kpiTopEspecie').textContent = formatLabel(topEspecie[0]);
+        document.getElementById('kpiTopEspecieTon').textContent = formatWeight(topEspecie[1]);
     } else {
         document.getElementById('kpiTopEspecie').textContent = '–';
         document.getElementById('kpiTopEspecieTon').textContent = 'Sin datos';
     }
 
     document.getElementById('kpiPeakMonth').textContent = filteredData.length ? MONTHS_FULL[peakIdx] : '–';
-    document.getElementById('kpiPeakMonthTon').textContent = filteredData.length ? formatNum(peakVal) + ' ' + unitLabel() : 'Sin datos';
+    document.getElementById('kpiPeakMonthTon').textContent = filteredData.length ? formatWeight(peakVal) : 'Sin datos';
 }
 
 // ─── Chart 1: Monthly Production (Stacked Area) ────────────────────────
@@ -681,8 +724,8 @@ function renderMonthlyChart() {
 
 // ─── Chart 2: Market Donut ──────────────────────────────────────────────
 function renderMarketDonut() {
-    const bsas = sumPeso(filteredData.filter(r => r.mercado === 'BSAS'));
-    const ctes = sumPeso(filteredData.filter(r => r.mercado === 'CORRIENTES'));
+    const bsas = sumPeso(filteredData.filter(r => r.mercado === 'Buenos Aires'));
+    const ctes = sumPeso(filteredData.filter(r => r.mercado === 'Corrientes'));
 
     const cfg = {
         type: 'doughnut',
@@ -762,7 +805,7 @@ function renderTop10() {
     const cfg = {
         type: 'bar',
         data: {
-            labels: sorted.map(s => capitalize(s[0])),
+        labels: sorted.map(s => formatLabel(s[0])),
             datasets: [{
                 label: unitLabel(),
                 data: sorted.map(s => round2(s[1])),
@@ -779,7 +822,7 @@ function renderTop10() {
             scales: {
                 x: {
                     grid: { color: 'rgba(255,255,255,0.04)' },
-                    ticks: { color: '#94a3b8', font: { family: "'Inter'", size: 11 }, callback: v => formatNum(v) }
+                    ticks: { color: '#94a3b8', font: { family: "'Inter'", size: 11 }, callback: v => formatNumber(v) }
                 },
                 y: {
                     grid: { display: false },
@@ -831,7 +874,7 @@ function renderHeatmap() {
 
     // Rows
     especies.forEach(esp => {
-        html += `<div class="heatmap-row-label" title="${esp}">${capitalize(esp)}</div>`;
+        html += `<div class="heatmap-row-label" title="${esp}">${formatLabel(esp)}</div>`;
         for (let m = 0; m < 12; m++) {
             const val = matrix[esp][m];
             if (val === 0) {
@@ -841,7 +884,7 @@ function renderHeatmap() {
                 const h = 160 - intensity * 110; // green to orange
                 const s = 60 + intensity * 20;
                 const l = 15 + intensity * 30;
-                    html += `<div class="heatmap-cell" style="background:hsla(${h},${s}%,${l}%,0.85);" title="${capitalize(esp)} - ${MONTHS_FULL[m]}: ${formatNum(round2(val))} ${unitLabel()}">${formatNum(round2(val))}</div>`;
+                    html += `<div class="heatmap-cell" style="background:hsla(${h},${s}%,${l}%,0.85);" title="${formatLabel(esp)} - ${MONTHS_FULL[m]}: ${formatWeight(round2(val))}">${formatNumber(round2(val))}</div>`;
             }
         }
     });
@@ -852,8 +895,8 @@ function renderHeatmap() {
 
 // ─── Chart 6: Market Monthly (Stacked) ──────────────────────────────────
 function renderMarketMonthly() {
-    const bsasMonthly = monthlyTotals(filteredData.filter(r => r.mercado === 'BSAS'));
-    const ctesMonthly = monthlyTotals(filteredData.filter(r => r.mercado === 'CORRIENTES'));
+    const bsasMonthly = monthlyTotals(filteredData.filter(r => r.mercado === 'Buenos Aires'));
+    const ctesMonthly = monthlyTotals(filteredData.filter(r => r.mercado === 'Corrientes'));
 
     const cfg = {
         type: 'bar',
@@ -901,7 +944,7 @@ function renderSpeciesDonut() {
     const cfg = {
         type: 'doughnut',
         data: {
-            labels: top8.map(e => capitalize(e[0])),
+            labels: top8.map(e => formatLabel(e[0])),
             datasets: [{
                 data: top8.map(e => round2(e[1])),
                 backgroundColor: top8.map((_, i) => PALETTE[i % PALETTE.length] + 'cc'),
@@ -941,7 +984,7 @@ function renderVarieties() {
     const cfg = {
         type: 'bar',
         data: {
-            labels: sorted.map(s => capitalizeWords(s[0])),
+            labels: sorted.map(s => formatLabel(s[0])),
             datasets: [{
                 label: unitLabel(),
                 data: sorted.map(s => round2(s[1])),
@@ -958,7 +1001,7 @@ function renderVarieties() {
             scales: {
                 x: {
                     grid: { color: 'rgba(255,255,255,0.04)' },
-                    ticks: { color: '#94a3b8', font: { family: "'Inter'", size: 11 }, callback: v => formatNum(v) }
+                    ticks: { color: '#94a3b8', font: { family: "'Inter'", size: 11 }, callback: v => formatNumber(v) }
                 },
                 y: {
                     grid: { display: false },
@@ -1000,7 +1043,7 @@ function renderSeasonalityTable() {
         const vals = matrix[esp];
         const total = vals.reduce((s, v) => s + v, 0);
         const maxVal = Math.max(...vals);
-        html += `<tr><td>${capitalize(esp)}</td>`;
+        html += `<tr><td>${formatLabel(esp)}</td>`;
         for (let m = 0; m < 12; m++) {
             const v = vals[m];
             const pct = maxVal > 0 ? (v / maxVal) * 100 : 0;
@@ -1012,13 +1055,13 @@ function renderSeasonalityTable() {
 
             html += `<td class="${cls}">`;
             if (v > 0) {
-                html += `${formatNum(round2(v))}<br><span class="season-bar" style="width:${Math.max(pct, 5)}%"></span>`;
+                html += `${formatNumber(round2(v))}<br><span class="season-bar" style="width:${Math.max(pct, 5)}%"></span>`;
             } else {
                 html += `-`;
             }
             html += `</td>`;
         }
-        html += `<td class="total-col">${formatNum(round2(total))}</td></tr>`;
+        html += `<td class="total-col">${formatNumber(round2(total))}</td></tr>`;
     });
 
     html += '</tbody></table>';
@@ -1026,6 +1069,60 @@ function renderSeasonalityTable() {
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────
+function normalizeText(value) {
+    return String(value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[.,;:_/\\()[\]{}'"-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toUpperCase();
+}
+
+function makeLocationKey(value) {
+    return String(value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLocaleLowerCase('es-AR')
+        .replace(/[^\p{L}\p{N}]+/gu, '')
+        .toUpperCase();
+}
+
+function normalizeLocation(value) {
+    const key = makeLocationKey(value);
+    return LOCATION_EQUIVALENCES[key] || formatLabel(value);
+}
+
+function formatLabel(value) {
+    if (value === undefined || value === null) return '';
+    const words = String(value)
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLocaleLowerCase('es-AR')
+        .split(/(\s+|[-'])/);
+    let firstWord = true;
+    return words.map(word => {
+        if (!word || /^\s+$/.test(word) || word === '-' || word === "'") return word;
+        const lowerCaseConnector = /^(a|al|de|del|la|las|los|y|e|da|do)$/i.test(word);
+        if (!firstWord && lowerCaseConnector) return word;
+        firstWord = false;
+        return word.charAt(0).toLocaleUpperCase('es-AR') + word.slice(1);
+    }).join('');
+}
+
+function formatNumber(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return '–';
+    return number.toLocaleString('es-AR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 1
+    });
+}
+
+function formatWeight(value) {
+    return `${formatNumber(value)} ${unitLabel()}`;
+}
+
 function sumPeso(arr) { return arr.reduce((s, r) => s + r.peso, 0); }
 
 function groupSum(arr, key) {
@@ -1041,24 +1138,6 @@ function monthlyTotals(arr) {
 }
 
 function round2(n) { return Math.round(n * 100) / 100; }
-
-function formatNum(n) {
-    if (n === undefined || n === null || isNaN(n)) return '–';
-    return n.toLocaleString('es-AR', { maximumFractionDigits: 1 });
-}
-
-function capitalize(str) {
-    if (!str) return '';
-    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-}
-
-function capitalizeWords(str) {
-    if (!str) return '';
-    return str.split(/(\s+|–)/).map(w => {
-        if (w === '–' || w.trim() === '') return w;
-        return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
-    }).join('');
-}
 
 function recreateChart(canvasId, existingChart, config) {
     if (existingChart) existingChart.destroy();
@@ -1080,7 +1159,7 @@ function tooltipConfig() {
         callbacks: {
             label: function (ctx) {
                 const val = ctx.parsed.y !== undefined ? ctx.parsed.y : ctx.parsed;
-                return ` ${ctx.dataset.label || ctx.label}: ${formatNum(typeof val === 'object' ? ctx.raw : val)} ${unitLabel()}`;
+                return ` ${formatLabel(ctx.dataset.label || ctx.label)}: ${formatWeight(typeof val === 'object' ? ctx.raw : val)}`;
             }
         }
     };
@@ -1098,7 +1177,7 @@ function defaultLineOptions() {
             },
             y: {
                 grid: { color: 'rgba(255,255,255,0.04)' },
-                ticks: { color: '#94a3b8', font: { family: "'Inter'", size: 11 }, callback: v => formatNum(v) }
+                    ticks: { color: '#94a3b8', font: { family: "'Inter'", size: 11 }, callback: v => formatNumber(v) }
             }
         },
         plugins: {
@@ -1124,7 +1203,7 @@ function defaultBarOptions(stacked) {
             y: {
                 stacked: !!stacked,
                 grid: { color: 'rgba(255,255,255,0.04)' },
-                ticks: { color: '#94a3b8', font: { family: "'Inter'", size: 11 }, callback: v => formatNum(v) }
+                    ticks: { color: '#94a3b8', font: { family: "'Inter'", size: 11 }, callback: v => formatNumber(v) }
             }
         },
         plugins: {

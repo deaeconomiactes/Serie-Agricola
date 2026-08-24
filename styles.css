@@ -199,6 +199,8 @@ body {
     background-position: right 10px center;
     transition: var(--transition);
     min-width: 140px;
+    max-width: 260px;
+    text-overflow: ellipsis;
 }
 
 .filter-select:hover {
@@ -290,6 +292,8 @@ body {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    flex: 1 1 auto;
+    gap: 2px;
 }
 
 .kpi-label {
@@ -306,15 +310,19 @@ body {
     color: var(--text-primary);
     font-variant-numeric: tabular-nums;
     line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    text-align: right;
+    letter-spacing: -0.2px;
 }
 
 .kpi-unit {
     font-size: 0.7rem;
     color: var(--text-secondary);
     font-weight: 500;
+    text-align: right;
 }
 
 /* ===== CHARTS SECTION ===== */

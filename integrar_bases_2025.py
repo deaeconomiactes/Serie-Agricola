@@ -15,9 +15,6 @@ MONTHS = {
     "mayo": 5, "junio": 6, "julio": 7, "agosto": 8,
     "septiembre": 9, "octubre": 10, "noviembre": 11, "diciembre": 12,
 }
-ALLOWED_ORIGINS = {"BUENOS AIRES", "CORRIENTES"}
-
-
 def text(value):
     return "" if value is None else str(value).strip().upper()
 
@@ -33,7 +30,9 @@ def normalize_origin(value):
 
 
 def market_from_origin(origin):
-    return {"BUENOS AIRES": "BSAS", "CORRIENTES": "CORRIENTES"}.get(origin, "BSAS")
+    # Preserve the existing market codes while keeping every other province
+    # as its own destination instead of collapsing it into Buenos Aires.
+    return {"BUENOS AIRES": "BSAS", "CORRIENTES": "CORRIENTES"}.get(origin, origin)
 
 
 def parse_weight(value):
@@ -147,7 +146,7 @@ def main():
             merged[f"late-{len(new_keys)}"] = row
             new_keys.add(dedupe_key)
 
-    rows = [row for row in merged.values() if normalize_origin(row.get("PROCEDENCIA")) in ALLOWED_ORIGINS]
+    rows = list(merged.values())
     fields = ["FECHA", "MERCADO", "SERIE", "ESPECIE", "VARIEDAD", "PROCEDENCIA", "MUNICIPIO", "PESO", "UNIDAD"]
     with open(OUTPUT_CSV, "w", encoding="utf-8-sig", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields, delimiter=";")
