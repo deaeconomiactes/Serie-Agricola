@@ -212,6 +212,19 @@ body {
     box-shadow: 0 0 0 3px var(--accent-green-dim);
 }
 
+.unit-indicator .unit-value {
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+    padding: 0 16px;
+    border: 1px solid rgba(52, 211, 153, 0.55);
+    border-radius: 8px;
+    color: #f1f5f9;
+    background: #1a2438;
+    font-size: 14px;
+    font-weight: 600;
+}
+
 /* ===== KPI CARDS ===== */
 .kpi-section {
     max-width: 1400px;

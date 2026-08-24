@@ -244,7 +244,7 @@ let rawData = [];
 let filteredData = [];
 let heatmapFilter = 'TODOS';
 let selectedYear = '2025';
-let selectedUnit = 'KG';
+const selectedUnit = 'TN';
 
 // ─── Boot ───────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', init);
@@ -321,15 +321,6 @@ function parseCSV(text) {
 
 // ─── Cascading Dynamic Filters ──────────────────────────────────────────
 function wireFilters() {
-    document.getElementById('filterUnit').addEventListener('change', () => {
-        selectedUnit = document.getElementById('filterUnit').value;
-        updateOrigenFilter();
-        updateDestinoFilter();
-        updateSerieFilter();
-        updateEspecieFilter();
-        updateMunicipioFilter();
-        applyFilters();
-    });
     document.getElementById('filterYear').addEventListener('change', () => {
         selectedYear = document.getElementById('filterYear').value;
         document.getElementById('headerSubtitle').textContent = `Provincia de Corrientes · ${selectedYear}`;
@@ -399,7 +390,6 @@ function wireFilters() {
 /** Populate all filters initially based on rawData */
 function populateFilters() {
     populateYearFilter();
-    populateUnitFilter();
     updateOrigenFilter();
     updateDestinoFilter();
     updateSerieFilter();
@@ -407,23 +397,9 @@ function populateFilters() {
     updateMunicipioFilter();
 }
 
-function populateUnitFilter() {
-    const sel = document.getElementById('filterUnit');
-    const units = [...new Set(rawData.map(r => r.unidad))].sort();
-    sel.innerHTML = '';
-    units.forEach(unit => {
-        const opt = document.createElement('option');
-        opt.value = unit;
-        opt.textContent = unit === 'KG' ? 'Kilogramos (kg)' : 'Toneladas (tn)';
-        sel.appendChild(opt);
-    });
-    if (units.includes(selectedUnit)) sel.value = selectedUnit;
-    else selectedUnit = units[0] || 'KG';
-}
+function unitLabel() { return 'tn'; }
 
-function unitLabel() { return selectedUnit === 'KG' ? 'kg' : 'tn'; }
-
-function unitData() { return rawData.filter(r => r.unidad === selectedUnit); }
+function unitData() { return rawData; }
 
 function populateYearFilter() {
     const sel = document.getElementById('filterYear');
@@ -646,10 +622,13 @@ function updateKPIs() {
     if (topEspecie) {
         document.getElementById('kpiTopEspecie').textContent = capitalize(topEspecie[0]);
         document.getElementById('kpiTopEspecieTon').textContent = formatNum(topEspecie[1]) + ' ' + unitLabel();
+    } else {
+        document.getElementById('kpiTopEspecie').textContent = '–';
+        document.getElementById('kpiTopEspecieTon').textContent = 'Sin datos';
     }
 
-    document.getElementById('kpiPeakMonth').textContent = MONTHS_FULL[peakIdx] || '–';
-    document.getElementById('kpiPeakMonthTon').textContent = formatNum(peakVal) + ' ' + unitLabel();
+    document.getElementById('kpiPeakMonth').textContent = filteredData.length ? MONTHS_FULL[peakIdx] : '–';
+    document.getElementById('kpiPeakMonthTon').textContent = filteredData.length ? formatNum(peakVal) + ' ' + unitLabel() : 'Sin datos';
 }
 
 // ─── Chart 1: Monthly Production (Stacked Area) ────────────────────────

@@ -32,6 +32,10 @@ def normalize_origin(value):
     }.get(value, value)
 
 
+def market_from_origin(origin):
+    return {"BUENOS AIRES": "BSAS", "CORRIENTES": "CORRIENTES"}.get(origin, "BSAS")
+
+
 def parse_weight(value):
     return float((value or "0").replace(".", "").replace(",", "."))
 
@@ -69,7 +73,7 @@ def append_monthly_rows(rows, workbook_path):
                     continue
                 rows.append({
                     "FECHA": f"01/{month:02d}/2025",
-                    "MERCADO": "BSAS",
+                    "MERCADO": market_from_origin(origin),
                     "SERIE": series,
                     "ESPECIE": species,
                     "VARIEDAD": variety,
@@ -97,7 +101,7 @@ def append_v_rows(rows, workbook_path, sheet_name, series, year, months):
                 continue
             rows.append({
                 "FECHA": f"01/{month:02d}/{year}",
-                "MERCADO": "BSAS",
+                "MERCADO": market_from_origin(origin),
                 "SERIE": series,
                 "ESPECIE": species,
                 "VARIEDAD": variety,
@@ -113,7 +117,11 @@ def main():
     with open(CURRENT_CSV, encoding="utf-8-sig", newline="") as handle:
         rows.extend(csv.DictReader(handle, delimiter=";"))
     for row in rows:
-        row["UNIDAD"] = row.get("UNIDAD") or "KG"
+        # The detailed register is stored in kilograms; the dashboard uses one
+        # common unit, tonnes, for all years and markets.
+        if (row.get("UNIDAD") or "KG").upper() == "KG":
+            row["PESO"] = f"{parse_weight(row['PESO']) / 1000:.3f}".replace(".", ",")
+        row["UNIDAD"] = "TN"
 
     monthly_rows = []
     append_monthly_rows(monthly_rows, os.path.join(BASE_DIR, "2025 FRUTAS Y HORTALIZAS (mensual).xlsx"))
