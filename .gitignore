@@ -3,12 +3,14 @@
 *.xlsx
 *.xls
 !REGISTRO 2025 INTEGRADO.csv
+!PRECIOS_MAYORISTAS_2026_INTEGRADO.csv
 
 # Python
 *.py
 __pycache__/
 *.pyc
 !integrar_bases_2025.py
+!integrar_precios_2026.py
 
 # OS
 .DS_Store
