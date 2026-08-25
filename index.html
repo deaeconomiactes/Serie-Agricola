@@ -263,10 +263,65 @@
         </div>
     </main>
 
+    <!-- Independent wholesale prices module: it must not be combined with quantity data. -->
+    <section class="prices-section" id="pricesSection">
+        <div class="prices-heading">
+            <div>
+                <span class="section-eyebrow">Fuente operativa independiente</span>
+                <h2 class="prices-title">Precios Mayoristas 2026</h2>
+                <p class="prices-subtitle">Seguimiento operativo de precios diarios de frutas y hortalizas</p>
+            </div>
+        </div>
+
+        <div class="price-filters" aria-label="Filtros de precios mayoristas">
+            <div class="filter-group">
+                <label class="filter-label" for="priceFilterRubro">Rubro</label>
+                <select id="priceFilterRubro" class="filter-select"><option value="TODOS">Todos</option></select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="priceFilterMes">Mes</label>
+                <select id="priceFilterMes" class="filter-select"><option value="TODOS">Todos</option></select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="priceFilterEspecie">Especie</label>
+                <select id="priceFilterEspecie" class="filter-select"><option value="TODOS">Todas</option></select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="priceFilterVariedad">Variedad</label>
+                <select id="priceFilterVariedad" class="filter-select"><option value="TODOS">Todas</option></select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="priceFilterMercado">Mercado</label>
+                <select id="priceFilterMercado" class="filter-select"><option value="TODOS">Todos</option></select>
+            </div>
+        </div>
+
+        <div id="priceStatus" class="price-status" role="status" aria-live="polite"></div>
+
+        <div class="price-kpi-grid">
+            <div class="kpi-card price-kpi-average"><div class="kpi-icon">$</div><div class="kpi-content"><span class="kpi-label">Precio promedio</span><span class="kpi-value" id="priceKpiAverage">–</span><span class="kpi-unit">por kg</span></div></div>
+            <div class="kpi-card price-kpi-max"><div class="kpi-icon">↗</div><div class="kpi-content"><span class="kpi-label">Precio máximo</span><span class="kpi-value" id="priceKpiMax">–</span><span class="kpi-unit" id="priceKpiMaxDetail">Sin datos</span></div></div>
+            <div class="kpi-card price-kpi-min"><div class="kpi-icon">↘</div><div class="kpi-content"><span class="kpi-label">Precio mínimo</span><span class="kpi-value" id="priceKpiMin">–</span><span class="kpi-unit" id="priceKpiMinDetail">Sin datos</span></div></div>
+            <div class="kpi-card price-kpi-species"><div class="kpi-icon">✦</div><div class="kpi-content"><span class="kpi-label">Especies relevadas</span><span class="kpi-value" id="priceKpiSpecies">–</span><span class="kpi-unit">dentro del filtro</span></div></div>
+            <div class="kpi-card price-kpi-last"><div class="kpi-icon">◷</div><div class="kpi-content"><span class="kpi-label">Último registro</span><span class="kpi-value" id="priceKpiLast">–</span><span class="kpi-unit">fecha o mes disponible</span></div></div>
+        </div>
+
+        <div class="prices-charts-row">
+            <div class="chart-card chart-card-medium">
+                <div class="chart-header"><h2 class="chart-title">Evolución mensual del precio promedio</h2><p class="chart-desc">Promedio mensual de precios mayoristas según filtros seleccionados</p></div>
+                <div class="chart-body"><canvas id="priceChartMonthly"></canvas></div>
+            </div>
+            <div class="chart-card chart-card-medium">
+                <div class="chart-header"><h2 class="chart-title">Ranking de especies por precio promedio</h2><p class="chart-desc">Especies con mayor precio promedio dentro del período seleccionado</p></div>
+                <div class="chart-body"><canvas id="priceChartRanking"></canvas></div>
+            </div>
+        </div>
+    </section>
+
     <!-- Footer -->
     <footer class="footer">
         <p>Tránsito y Comercialización Frutihortícola · Serie 2024-2025</p>
-        <p class="footer-note">Todos los valores del dashboard se expresan en toneladas (tn).</p>
+        <p class="footer-note">Las cantidades se expresan en toneladas (tn). Los precios 2026 corresponden a una fuente mayorista independiente.</p>
     </footer>
 
     <script src="app.js"></script>
