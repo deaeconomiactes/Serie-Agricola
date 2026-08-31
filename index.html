@@ -46,6 +46,12 @@
         </div>
     </header>
 
+    <nav class="module-nav" aria-label="Módulos del dashboard">
+        <button class="module-tab is-active" type="button" data-module="quantityView" aria-controls="quantityView" aria-selected="true">Cantidades transadas</button>
+        <button class="module-tab" type="button" data-module="priceView" aria-controls="priceView" aria-selected="false">Precios mayoristas</button>
+    </nav>
+
+    <div id="quantityView" class="module-view is-active">
     <!-- Filters -->
     <section class="filters-section">
         <div class="filters-inner">
@@ -91,8 +97,17 @@
                     <option value="TODOS">Todas</option>
                 </select>
             </div>
+            <div class="filter-group">
+                <label class="filter-label" for="filterFrequency">Frecuencia</label>
+                <select id="filterFrequency" class="filter-select">
+                    <option value="mensual">Mensual</option>
+                    <option value="anual">Anual</option>
+                    <option value="diaria">Diaria</option>
+                </select>
+            </div>
         </div>
     </section>
+    <p class="method-note quantity-method-note">Datos de cantidades transadas / tránsito / comercialización. Unidad principal: toneladas. Las agregaciones mensuales y anuales corresponden a sumas.</p>
 
     <!-- KPI Cards -->
     <section class="kpi-section">
@@ -154,7 +169,7 @@
         <div class="charts-row">
             <div class="chart-card chart-card-large">
                 <div class="chart-header">
-                    <h2 class="chart-title">Producción Mensual Total</h2>
+                    <h2 class="chart-title" id="quantityTimeSeriesTitle">Producción Mensual Total</h2>
                     <p class="chart-desc">Evolución de la producción por mes – componente estacional</p>
                 </div>
                 <div class="chart-body">
@@ -262,11 +277,124 @@
             </div>
         </div>
     </main>
+    </div>
+
+    <!-- Independent wholesale prices module: it must not be combined with quantity data. -->
+    <div id="priceView" class="module-view">
+    <section class="prices-section" id="pricesSection">
+        <div class="prices-heading">
+            <div>
+                <span class="section-eyebrow">Fuente operativa independiente</span>
+                <h2 class="prices-title">Precios Mayoristas</h2>
+                <p class="prices-subtitle">Evolución operativa de precios por producto, mercado y procedencia</p>
+            </div>
+        </div>
+
+        <div class="price-filters" aria-label="Filtros de precios mayoristas">
+            <div class="filter-group">
+                <label class="filter-label" for="priceFilterYear">Año</label>
+                <select id="priceFilterYear" class="filter-select"><option value="TODOS">Todos los años</option></select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="priceFilterRubro">Rubro</label>
+                <select id="priceFilterRubro" class="filter-select"><option value="TODOS">Todos</option></select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="priceFilterMes">Mes</label>
+                <select id="priceFilterMes" class="filter-select"><option value="TODOS">Todos</option></select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="priceFilterEspecie">Especie</label>
+                <select id="priceFilterEspecie" class="filter-select"><option value="TODOS">Todas</option></select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="priceFilterVariedad">Variedad</label>
+                <select id="priceFilterVariedad" class="filter-select"><option value="TODOS">Todas</option></select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="priceFilterMercado">Mercado</label>
+                <select id="priceFilterMercado" class="filter-select"><option value="TODOS">Todos</option></select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="priceFilterProcedencia">Procedencia</label>
+                <select id="priceFilterProcedencia" class="filter-select"><option value="TODOS">Todas</option></select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="priceFilterUnidad">Unidad</label>
+                <select id="priceFilterUnidad" class="filter-select"><option value="TODOS">Todas</option></select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="priceFilterFrequency">Frecuencia</label>
+                <select id="priceFilterFrequency" class="filter-select">
+                    <option value="mensual">Mensual</option>
+                    <option value="diaria">Diaria</option>
+                    <option value="anual">Anual</option>
+                </select>
+            </div>
+        </div>
+        <div id="priceFrequencyStatus" class="price-inline-status" role="status" aria-live="polite"></div>
+
+        <div id="priceStatus" class="price-status" role="status" aria-live="polite"></div>
+
+        <div class="price-kpi-grid">
+            <div class="kpi-card price-kpi-average"><div class="kpi-icon">$</div><div class="kpi-content"><span class="kpi-label">Precio promedio</span><span class="kpi-value" id="priceKpiAverage">–</span><span class="kpi-unit">por kg</span></div></div>
+            <div class="kpi-card price-kpi-max"><div class="kpi-icon">↗</div><div class="kpi-content"><span class="kpi-label">Precio máximo</span><span class="kpi-value" id="priceKpiMax">–</span><span class="kpi-unit" id="priceKpiMaxDetail">Sin datos</span></div></div>
+            <div class="kpi-card price-kpi-min"><div class="kpi-icon">↘</div><div class="kpi-content"><span class="kpi-label">Precio mínimo</span><span class="kpi-value" id="priceKpiMin">–</span><span class="kpi-unit" id="priceKpiMinDetail">Sin datos</span></div></div>
+            <div class="kpi-card price-kpi-species"><div class="kpi-icon">✦</div><div class="kpi-content"><span class="kpi-label">Especies relevadas</span><span class="kpi-value" id="priceKpiSpecies">–</span><span class="kpi-unit">dentro del filtro</span></div></div>
+            <div class="kpi-card price-kpi-varieties"><div class="kpi-icon">◇</div><div class="kpi-content"><span class="kpi-label">Variedades relevadas</span><span class="kpi-value" id="priceKpiVarieties">–</span><span class="kpi-unit">dentro del filtro</span></div></div>
+            <div class="kpi-card price-kpi-last"><div class="kpi-icon">◷</div><div class="kpi-content"><span class="kpi-label">Último dato válido</span><span class="kpi-value" id="priceKpiLast">–</span><span class="kpi-unit">según filtros aplicados</span></div></div>
+            <div class="kpi-card price-kpi-variation"><div class="kpi-icon">↗</div><div class="kpi-content"><span class="kpi-label" id="priceKpiIncreaseLabel">Mayor suba</span><span class="kpi-value" id="priceKpiIncrease">–</span><span class="kpi-unit" id="priceKpiIncreaseDetail">del período</span></div></div>
+            <div class="kpi-card price-kpi-variation"><div class="kpi-icon">↘</div><div class="kpi-content"><span class="kpi-label" id="priceKpiDecreaseLabel">Mayor baja</span><span class="kpi-value" id="priceKpiDecrease">–</span><span class="kpi-unit" id="priceKpiDecreaseDetail">del período</span></div></div>
+        </div>
+
+        <div class="prices-charts-grid">
+            <div class="chart-card price-chart-card full-width">
+                <div class="chart-header"><h2 class="chart-title" id="priceTimeSeriesTitle">Evolución mensual del precio promedio</h2><p class="chart-desc">Promedio por período de precios mayoristas según filtros seleccionados</p></div>
+                <div class="chart-body price-chart-canvas"><canvas id="priceChartMonthly"></canvas><div id="priceTimeSeriesStatus" class="price-inline-status"></div></div>
+            </div>
+        </div>
+        <div class="prices-charts-grid">
+            <div id="priceRankingCard" class="chart-card price-chart-card compact">
+                <div class="chart-header"><h2 class="chart-title" id="priceRankingTitle">Ranking de especies por precio promedio</h2><p class="chart-desc" id="priceRankingDesc">Especies con mayor precio promedio dentro del período seleccionado</p></div>
+                <div class="chart-body price-chart-canvas"><canvas id="priceChartRanking"></canvas><div id="priceRankingStatus" class="price-inline-status"></div></div>
+            </div>
+            <div id="priceVariationCard" class="chart-card price-chart-card compact">
+                <div class="chart-header"><h2 class="chart-title" id="priceVariationTitle">Variación mensual de precios</h2><p class="chart-desc" id="priceVariationDesc">Cambio porcentual respecto al mes anterior</p></div>
+                <div class="chart-body price-chart-canvas"><canvas id="priceChartVariation"></canvas><div id="priceVariationStatus" class="price-inline-status"></div></div>
+            </div>
+        </div>
+        <div class="prices-charts-grid">
+            <div id="priceMarketCard" class="chart-card price-chart-card compact full-width" hidden>
+                <div class="chart-header"><h2 class="chart-title">Comparación de precios por mercado</h2><p class="chart-desc">Precio promedio por mercado/fuente según filtros seleccionados</p></div>
+                <div class="chart-body price-chart-canvas"><canvas id="priceChartMarket"></canvas><div id="priceMarketStatus" class="price-inline-status"></div></div>
+            </div>
+        </div>
+        <p class="method-note price-method-note">Los precios se muestran como promedios simples por período. No están ponderados por cantidades salvo que exista un ponderador explícito. Las visualizaciones respetan la frecuencia original y no desagregan datos artificialmente.</p>
+        <p class="method-note price-method-note">Mercado indica la fuente o mercado de referencia del precio. Procedencia indica el origen del producto cuando la fuente lo informa. No se calculan relaciones precio-cantidad ni inferencias de escasez.</p>
+        <p id="priceDailyMethodNote" class="method-note price-method-note" hidden>En vista diaria se muestra la evolución del precio promedio. Las variaciones se resumen entre la primera y última fecha disponible para evitar ruido diario.</p>
+        <div id="priceAccumulatedSummary" class="price-accumulated-summary" hidden>
+            <div><span class="kpi-label">Variación acumulada</span><strong id="priceAccumulatedValue">–</strong></div>
+            <div><span>Precio inicial</span><strong id="priceAccumulatedFirst">–</strong></div>
+            <div><span>Precio final</span><strong id="priceAccumulatedLast">–</strong></div>
+            <small id="priceAccumulatedPeriod">–</small>
+        </div>
+        <div class="prices-charts-grid">
+            <div id="priceIncreaseCard" class="chart-card price-chart-card compact">
+                <div class="chart-header"><h2 class="chart-title" id="priceIncreaseTitle">Ranking de mayores subas</h2><p class="chart-desc" id="priceIncreaseDesc">Productos con mayor aumento entre el primer y último período</p></div>
+                <div class="chart-body price-chart-canvas"><canvas id="priceChartIncreases"></canvas><div id="priceIncreaseStatus" class="price-inline-status"></div></div>
+            </div>
+            <div id="priceDecreaseCard" class="chart-card price-chart-card compact">
+                <div class="chart-header"><h2 class="chart-title" id="priceDecreaseTitle">Ranking de mayores bajas</h2><p class="chart-desc" id="priceDecreaseDesc">Productos con mayor disminución entre el primer y último período</p></div>
+                <div class="chart-body price-chart-canvas"><canvas id="priceChartDecreases"></canvas><div id="priceDecreaseStatus" class="price-inline-status"></div></div>
+            </div>
+        </div>
+    </section>
+    </div>
 
     <!-- Footer -->
     <footer class="footer">
         <p>Tránsito y Comercialización Frutihortícola · Serie 2024-2025</p>
-        <p class="footer-note">Todos los valores del dashboard se expresan en toneladas (tn).</p>
+        <p class="footer-note">Las cantidades se expresan en toneladas (tn). Los precios corresponden a una fuente mayorista independiente.</p>
     </footer>
 
     <script src="app.js"></script>
