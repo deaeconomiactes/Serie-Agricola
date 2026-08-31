@@ -227,6 +227,51 @@ body {
     font-weight: 600;
 }
 
+/* ===== MODULE NAVIGATION ===== */
+.module-nav {
+    align-items: center;
+    background: #0d1525;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    padding: 10px 32px;
+    position: sticky;
+    top: 77px;
+    z-index: 90;
+}
+
+.module-tab {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: .8rem;
+    font-weight: 700;
+    padding: 9px 20px;
+    transition: var(--transition);
+}
+
+.module-tab:hover,
+.module-tab.is-active {
+    background: var(--accent-green-dim);
+    border-color: rgba(52, 211, 153, .35);
+    color: var(--accent-green);
+}
+
+.module-view { display: none; }
+.module-view.is-active { display: block; }
+
+.method-note {
+    color: var(--text-muted);
+    font-size: .72rem;
+    margin: 10px auto 0;
+    max-width: 1400px;
+    padding: 0 32px;
+}
+
 /* ===== KPI CARDS ===== */
 .kpi-section {
     max-width: 1400px;
@@ -482,7 +527,9 @@ body {
 .price-kpi-max::before { background: linear-gradient(90deg, #fb923c, #fbbf24); }
 .price-kpi-min::before { background: linear-gradient(90deg, #60a5fa, #a78bfa); }
 .price-kpi-species::before { background: linear-gradient(90deg, #a78bfa, #f472b6); }
+.price-kpi-varieties::before { background: linear-gradient(90deg, #f472b6, #fb7185); }
 .price-kpi-last::before { background: linear-gradient(90deg, #22d3ee, #60a5fa); }
+.price-kpi-quality::before { background: linear-gradient(90deg, #4ade80, #34d399); }
 
 .prices-charts-row {
     display: flex;
@@ -493,6 +540,25 @@ body {
 .prices-charts-row .chart-card { flex: 1 1 420px; min-width: 0; }
 
 .prices-charts-row .chart-body { min-height: 340px; }
+
+.price-inline-status {
+    color: var(--text-muted);
+    display: none;
+    font-size: .8rem;
+    padding: 30px 0;
+    text-align: center;
+}
+
+.price-inline-status.is-visible { display: block; }
+
+.price-series-card { flex: 1 1 100% !important; }
+.price-series-table { border-collapse: collapse; font-size: .75rem; min-width: 900px; width: 100%; }
+.price-series-table th { color: var(--text-muted); font-size: .66rem; letter-spacing: .5px; padding: 10px 8px; text-align: left; text-transform: uppercase; }
+.price-series-table td { border-top: 1px solid var(--border-color); color: var(--text-secondary); padding: 10px 8px; white-space: nowrap; }
+.price-series-table tr:hover td { background: rgba(255,255,255,.025); color: var(--text-primary); }
+.quality-badge { border-radius: 999px; font-size: .68rem; font-weight: 700; padding: 4px 8px; }
+.quality-alta { background: rgba(52,211,153,.14); color: var(--accent-green); }
+.quality-media { background: rgba(251,191,36,.14); color: var(--accent-amber); }
 
 /* ===== CHART HEADER FLEX & TABS ===== */
 .chart-header-flex {
@@ -731,6 +797,7 @@ body {
     .header-inner {
         padding: 14px 20px;
     }
+    .module-nav { padding-left: 20px; padding-right: 20px; top: 72px; }
     .filters-inner {
         padding: 0 20px;
     }
@@ -740,6 +807,7 @@ body {
         padding-left: 20px;
         padding-right: 20px;
     }
+    .method-note { padding-left: 20px; padding-right: 20px; }
 
     .price-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

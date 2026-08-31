@@ -277,10 +277,13 @@ let charts = {};
 
 // ─── State ──────────────────────────────────────────────────────────────
 let rawData = [];
+let quantityData = [];
 let filteredData = [];
 // Price data is intentionally independent from quantity data.
 let priceData = [];
 let filteredPriceData = [];
+let priceSeriesData = [];
+let priceQualityMap = new Map();
 let heatmapFilter = 'TODOS';
 let selectedYear = '2025';
 const selectedUnit = 'TN';
@@ -290,14 +293,9 @@ document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
     showLoading();
+    wireModuleTabs();
     try {
-        const text = await fetch(CSV_PATH).then(response => {
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            return response.text();
-        });
-        rawData = parseCSV(text);
-        populateFilters();
-        applyFilters();
+        await loadQuantityData();
         wireFilters();
     } catch (e) {
         console.error('Error loading CSV:', e);
@@ -311,10 +309,43 @@ async function init() {
     hideLoading();
 }
 
+async function loadQuantityData() {
+    const response = await fetch(CSV_PATH);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    quantityData = parseCSV(await response.text());
+    rawData = quantityData;
+    initQuantityFilters();
+    applyQuantityFilters();
+}
+
+function initQuantityFilters() { populateFilters(); }
+function applyQuantityFilters() { applyFilters(); }
+function renderQuantityDashboard() { updateDashboard(); }
+function updateQuantityDashboard() { updateDashboard(); }
+
+function wireModuleTabs() {
+    document.querySelectorAll('.module-tab').forEach(button => {
+        button.addEventListener('click', () => {
+            document.querySelectorAll('.module-tab').forEach(tab => {
+                const active = tab === button;
+                tab.classList.toggle('is-active', active);
+                tab.setAttribute('aria-selected', String(active));
+            });
+            document.querySelectorAll('.module-view').forEach(view => view.classList.toggle('is-active', view.id === button.dataset.module));
+            window.dispatchEvent(new Event('resize'));
+        });
+    });
+}
+
 // ─── Independent wholesale prices module ───────────────────────────────
 async function loadPriceData() {
     const response = await fetch(PRICE_CSV_PATH);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const qualityResponse = await fetch('RESUMEN_SERIES_UTILIZABLES_PRECIOS_2026.csv').catch(() => null);
+    if (qualityResponse?.ok) {
+        priceSeriesData = parsePriceCSV(await qualityResponse.text());
+        priceQualityMap = new Map(priceSeriesData.map(row => [priceSeriesKey(row), row.indicador_serie_utilizable || '']));
+    }
     priceData = processPriceData(parsePriceCSV(await response.text()));
     populatePriceFilters();
     updatePriceDashboard();
@@ -371,19 +402,24 @@ function processPriceData(rows) {
             fecha: date, year: Number(row.año || row.ano) || 2026, month: monthNumber,
             mes: monthNumber >= 1 && monthNumber <= 12 ? MONTHS_FULL[monthNumber - 1] : normalizeText(row.mes),
             rubro, especie: formatLabel(row.especie), variedad: formatLabel(row.variedad),
-            mercado: formatLabel(row.mercado), precio: parsePriceNumber(row.precio),
-            precioMin: minimum, precioMax: maximum, precioPromedio: average
+            mercado: formatLabel(row.mercado), procedencia: formatLabel(row.procedencia), unidad: formatLabel(row.unidad) || 'Sin especificar', precio: parsePriceNumber(row.precio),
+            precioMin: minimum, precioMax: maximum, precioPromedio: average,
+            calidad: priceQualityMap.get(priceSeriesKey({ ...row, rubro, especie: row.especie, variedad: row.variedad })) || ''
         };
     }).filter(row => row.rubro && row.especie && row.precioPromedio !== null);
 }
 
 function populatePriceFilters() {
     const definitions = [
+        ['priceFilterYear', priceData.map(row => row.year), 'Todos los años'],
         ['priceFilterRubro', priceData.map(row => row.rubro), 'Todos'],
         ['priceFilterMes', priceData.map(row => row.mes), 'Todos los meses'],
         ['priceFilterEspecie', priceData.map(row => row.especie), 'Todas las especies'],
-        ['priceFilterVariedad', priceData.map(row => row.variedad), 'Todas las variedades'],
-        ['priceFilterMercado', priceData.map(row => row.mercado), 'Todos los mercados']
+        ['priceFilterVariedad', priceData.filter(row => row.especie === document.getElementById('priceFilterEspecie').value || document.getElementById('priceFilterEspecie').value === 'TODOS').map(row => row.variedad || 'Sin especificar'), 'Todas las variedades'],
+        ['priceFilterMercado', priceData.map(row => row.mercado), 'Todos los mercados'],
+        ['priceFilterProcedencia', priceData.map(row => row.procedencia), 'Todas'],
+        ['priceFilterUnidad', priceData.map(row => row.unidad), 'Todas'],
+        ['priceFilterCalidad', priceSeriesData.length ? ['Alta', 'Media'] : [], 'Todas']
     ];
     definitions.forEach(([id, values, allLabel]) => {
         const select = document.getElementById(id);
@@ -393,8 +429,19 @@ function populatePriceFilters() {
         else unique.sort((a, b) => String(a).localeCompare(String(b), 'es'));
         populateSelect(select, unique, allLabel, value => value);
         if (unique.includes(current)) select.value = current;
-        select.onchange = updatePriceDashboard;
+        select.onchange = () => {
+            if (id === 'priceFilterEspecie') updatePriceVarietyFilter();
+            updatePriceDashboard();
+        };
     });
+}
+
+function updatePriceVarietyFilter() { populatePriceFilters(); }
+
+function priceSeriesKey(row) {
+    return [row.rubro, row.mercado, row.procedencia, row.especie, row.variedad, row.unidad]
+        .map(value => normalizePriceHeader(value || '(sin informar)'))
+        .join('|');
 }
 
 function monthNumber(value) {
@@ -405,10 +452,14 @@ function monthNumber(value) {
 function getFilteredPriceData() {
     const filters = {
         rubro: document.getElementById('priceFilterRubro').value,
+        year: document.getElementById('priceFilterYear').value,
         mes: document.getElementById('priceFilterMes').value,
         especie: document.getElementById('priceFilterEspecie').value,
         variedad: document.getElementById('priceFilterVariedad').value,
-        mercado: document.getElementById('priceFilterMercado').value
+        mercado: document.getElementById('priceFilterMercado').value,
+        procedencia: document.getElementById('priceFilterProcedencia').value,
+        unidad: document.getElementById('priceFilterUnidad').value,
+        calidad: document.getElementById('priceFilterCalidad').value
     };
     return priceData.filter(row => Object.entries(filters).every(([key, value]) => value === 'TODOS' || row[key] === value));
 }
@@ -430,9 +481,11 @@ function setPriceStatus(message, visible) {
 function updatePriceKPIs() {
     const values = filteredPriceData.map(row => row.precioPromedio).filter(Number.isFinite);
     const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
-    const maximum = filteredPriceData.reduce((best, row) => row.precioMax !== null && (!best || row.precioMax > best.value) ? { value: row.precioMax, row } : best, null);
-    const minimum = filteredPriceData.reduce((best, row) => row.precioMin !== null && (!best || row.precioMin < best.value) ? { value: row.precioMin, row } : best, null);
+    const maximum = filteredPriceData.reduce((best, row) => { const value = row.precioMax ?? row.precioPromedio; return value !== null && (!best || value > best.value) ? { value, row } : best; }, null);
+    const minimum = filteredPriceData.reduce((best, row) => { const value = row.precioMin ?? row.precioPromedio; return value !== null && (!best || value < best.value) ? { value, row } : best; }, null);
     const species = new Set(filteredPriceData.map(row => row.especie).filter(Boolean));
+    const varieties = new Set(filteredPriceData.map(row => row.variedad || 'Sin especificar').filter(Boolean));
+    const highQuality = new Set(filteredPriceData.filter(row => row.calidad === 'Alta').map(row => priceSeriesKey(row)));
     const dated = filteredPriceData.filter(row => row.fecha).sort((a, b) => a.fecha.localeCompare(b.fecha));
     const latest = dated.length ? dated[dated.length - 1].fecha.split('-').reverse().join('/') : (filteredPriceData.length ? filteredPriceData.reduce((best, row) => monthNumber(row.mes) > monthNumber(best.mes) ? row : best).mes : '–');
     document.getElementById('priceKpiAverage').textContent = formatCurrency(average);
@@ -441,6 +494,8 @@ function updatePriceKPIs() {
     document.getElementById('priceKpiMaxDetail').textContent = maximum ? `${maximum.row.especie}${maximum.row.variedad ? ` · ${maximum.row.variedad}` : ''}` : 'Sin datos';
     document.getElementById('priceKpiMinDetail').textContent = minimum ? `${minimum.row.especie}${minimum.row.variedad ? ` · ${minimum.row.variedad}` : ''}` : 'Sin datos';
     document.getElementById('priceKpiSpecies').textContent = species.size || '–';
+    document.getElementById('priceKpiVarieties').textContent = varieties.size || '–';
+    document.getElementById('priceKpiHighQuality').textContent = highQuality.size || '–';
     document.getElementById('priceKpiLast').textContent = latest;
 }
 
@@ -449,6 +504,12 @@ function formatCurrency(value) {
 }
 
 function formatPrice(value) { return formatCurrency(value); }
+function formatCurrencyARS(value) { return formatCurrency(value); }
+function formatPercent(value) { return Number.isFinite(Number(value)) ? `${formatNumber(value)}%` : '–'; }
+function formatDate(value) {
+    const parts = String(value).split('-');
+    return parts.length === 3 ? `${parts[2]}/${parts[1]}` : String(value);
+}
 
 function renderPriceCharts() {
     const monthly = new Map();
@@ -458,21 +519,51 @@ function renderPriceCharts() {
             bucket.push(row.precioPromedio); monthly.set(row.month, bucket);
         }
     });
-    const monthLabels = [...monthly.keys()].sort((a, b) => a - b).map(month => MONTHS_FULL[month - 1]);
-    const monthValues = [...monthly.keys()].sort((a, b) => a - b).map(month => {
+    const sortedMonths = [...monthly.keys()].sort((a, b) => a - b);
+    const selectedSpecies = document.getElementById('priceFilterEspecie').value !== 'TODOS';
+    const dated = filteredPriceData.filter(row => row.fecha).sort((a, b) => a.fecha.localeCompare(b.fecha));
+    const daily = new Map();
+    if (selectedSpecies) dated.forEach(row => { const values = daily.get(row.fecha) || []; values.push(row.precioPromedio); daily.set(row.fecha, values); });
+    const dailyKeys = [...daily.keys()].sort();
+    const useDaily = selectedSpecies && dailyKeys.length > 0;
+    const lineLabels = useDaily ? dailyKeys.map(date => formatDate(date)) : sortedMonths.map(month => MONTHS_FULL[month - 1]);
+    const lineValues = useDaily ? dailyKeys.map(key => daily.get(key).reduce((sum, value) => sum + value, 0) / daily.get(key).length) : sortedMonths.map(month => {
         const values = monthly.get(month); return values.reduce((sum, value) => sum + value, 0) / values.length;
     });
     const grouped = {};
     filteredPriceData.forEach(row => { (grouped[row.especie] ||= []).push(row.precioPromedio); });
     const ranking = Object.entries(grouped).map(([species, values]) => [species, values.reduce((sum, value) => sum + value, 0) / values.length]).sort((a, b) => b[1] - a[1]).slice(0, 10);
     charts.priceMonthly = recreatePriceChart('priceChartMonthly', charts.priceMonthly, {
-        type: 'line', data: { labels: monthLabels, datasets: [{ label: 'Precio promedio', data: monthValues, borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,.16)', fill: true, tension: .3, pointRadius: 4 }] },
+        type: 'line', data: { labels: lineLabels, datasets: [{ label: useDaily ? 'Precio promedio diario' : 'Precio promedio mensual', data: lineValues, borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,.16)', fill: true, tension: .3, pointRadius: useDaily ? 2 : 4 }] },
         options: priceChartOptions('Precio promedio')
     });
     charts.priceRanking = recreatePriceChart('priceChartRanking', charts.priceRanking, {
         type: 'bar', data: { labels: ranking.map(item => item[0]), datasets: [{ label: 'Precio promedio', data: ranking.map(item => item[1]), backgroundColor: PALETTE }] },
         options: priceChartOptions('Precio promedio', true)
     });
+    const variation = useDaily ? [] : sortedMonths.map((month, index) => index === 0 ? null : ((lineValues[index] - lineValues[index - 1]) / lineValues[index - 1]) * 100);
+    const variationReady = !useDaily && sortedMonths.length >= 2;
+    charts.priceVariation = recreatePriceChart('priceChartVariation', charts.priceVariation, {
+        type: 'bar', data: { labels: sortedMonths.map(month => MONTHS_FULL[month - 1]), datasets: [{ label: 'Variación mensual', data: variation, backgroundColor: variation.map(value => value === null ? 'transparent' : value >= 0 ? '#fb923c' : '#60a5fa') }] },
+        options: { ...priceChartOptions('Variación mensual'), scales: { ...priceChartOptions('Variación mensual').scales, y: { ...priceChartOptions('Variación mensual').scales.y, ticks: { callback: value => formatPercent(value) } } } }
+    });
+    const variationStatus = document.getElementById('priceVariationStatus');
+    variationStatus.textContent = variationReady ? '' : 'Se requieren al menos dos meses para calcular la variación.';
+    variationStatus.classList.toggle('is-visible', !variationReady);
+    renderPriceSeriesTable();
+}
+
+function renderPriceSeriesTable() {
+    const table = document.getElementById('priceSeriesTable');
+    const selected = getFilteredPriceData();
+    const keys = new Map();
+    selected.forEach(row => {
+        const key = priceSeriesKey(row); const item = keys.get(key) || { ...row, observations: 0, dates: new Set(), months: new Set() };
+        item.observations++; if (row.fecha) item.dates.add(row.fecha); if (row.month) item.months.add(`${row.year}-${row.month}`); keys.set(key, item);
+    });
+    const rows = [...keys.values()].filter(row => !row.calidad || row.calidad === 'Alta' || row.calidad === 'Media').sort((a, b) => (a.calidad || 'Baja').localeCompare(b.calidad || 'Baja') || b.observations - a.observations).slice(0, 100);
+    if (!rows.length) { table.innerHTML = '<div class="price-inline-status is-visible">No hay series disponibles para los filtros seleccionados.</div>'; return; }
+    table.innerHTML = `<table class="price-series-table"><thead><tr><th>Mercado</th><th>Procedencia</th><th>Rubro</th><th>Especie</th><th>Variedad</th><th>Unidad</th><th>Observaciones</th><th>Fechas</th><th>Meses</th><th>Calidad</th></tr></thead><tbody>${rows.map(row => `<tr><td title="${row.mercado}">${row.mercado || 'Sin especificar'}</td><td>${row.procedencia || 'Sin especificar'}</td><td>${row.rubro}</td><td>${row.especie}</td><td>${row.variedad || 'Sin especificar'}</td><td>${row.unidad}</td><td>${row.observations}</td><td>${row.dates.size}</td><td>${row.months.size}</td><td><span class="quality-badge quality-${(row.calidad || 'Baja').toLowerCase()}">${row.calidad || 'Sin clasificar'}</span></td></tr>`).join('')}</tbody></table>`;
 }
 
 function priceChartOptions(axisLabel, horizontal = false) {
