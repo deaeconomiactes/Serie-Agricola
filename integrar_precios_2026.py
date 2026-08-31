@@ -41,7 +41,7 @@ MONTHS = {
 }
 MONTH_NAMES = {number: name.title() for name, number in MONTHS.items() if name != "setiembre"}
 FIELDS = [
-    "fecha", "año", "mes", "rubro", "especie", "variedad", "mercado",
+    "fecha", "año", "mes", "rubro", "especie", "variedad", "mercado", "procedencia",
     "unidad", "precio", "precio_min", "precio_max", "precio_promedio",
     "archivo_origen",
 ]
@@ -105,7 +105,42 @@ def normalize_variety(value: Any) -> str:
 
 
 def normalize_market(value: Any) -> str:
-    return normalize_text(value)
+    text = normalize_text(value)
+    key = _key(text)
+    if key.upper() in {"MCBA", "MERCADOCENTRALBSAS", "MERCADOCENTRALDEBUENOSAIRES"}:
+        return "Mercado Central de Buenos Aires"
+    return text
+
+
+def normalize_location(value: Any) -> str:
+    text = normalize_text(value)
+    equivalents = {
+        "Bs As": "Buenos Aires", "Bs. As.": "Buenos Aires", "Caba": "Ciudad Autónoma de Buenos Aires",
+        "Entre Rios": "Entre Ríos", "E. Rios": "Entre Ríos", "Cordoba": "Córdoba", "R Negro": "Río Negro",
+        "R. Negro": "Río Negro", "Ctes.": "Corrientes", "Ctes": "Corrientes", "M.D.Plat": "Mar del Plata",
+        "Tucuman": "Tucumán", "Sgo. Est.": "Santiago del Estero", "S. Pedro": "San Pedro", "Peru": "Perú",
+    }
+    return equivalents.get(text, text)
+
+
+def normalize_procedencia(value: Any) -> str:
+    return normalize_location(value)
+
+
+def infer_market_from_source(filename: str, sheet_name: str | None = None) -> str:
+    """Infer the commercial market from monthly 2026 fruit/vegetable lists.
+
+    These lists are known to come from MCBA. This inference is intentionally
+    separate from ``procedencia``, which is the geographic origin of a product
+    when the original table explicitly reports it.
+    """
+    text = _ascii(f"{filename} {sheet_name or ''}")
+    has_category = any(token in text for token in ("frutas", "frutras", "fruta", "hortalizas", "hortaliza"))
+    has_2026 = "2026" in text or re.search(r"(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)[ _-]*26", text)
+    has_month = any(month in text for month in MONTHS)
+    if has_category and has_2026 and has_month:
+        return "Mercado Central de Buenos Aires"
+    return ""
 
 
 def normalize_unit(value: Any) -> str:
@@ -226,28 +261,42 @@ def _date_from_source(source: str) -> str:
 
 def _make_rows(raw_rows: list[dict[str, Any]], source: str, container: str) -> list[dict[str, Any]]:
     filename = f"{container} {source}"
+    inferred_market = infer_market_from_source(filename)
     rubro = infer_rubro_from_filename(filename)
     month = infer_month_from_filename(source) or infer_month_from_filename(container)
     year = infer_year_from_filename(source) or infer_year_from_filename(container) or 2026
-    exact_date = _date_from_source(source) or normalize_date(_find(raw_rows[0], ("fecha", "date"))) if raw_rows else ""
     output = []
     for raw in raw_rows:
-        species = normalize_species(_find(raw, ("especie", "esp", "producto", "articulo")))
+        row_date = normalize_date(_find(raw, ("fecha", "date"))) or _date_from_source(source)
+        row_year = int(row_date[:4]) if row_date else year
+        row_month = MONTH_NAMES.get(int(row_date[5:7]), month) if row_date else month
+        row_rubro = rubro
+        raw_type = normalize_text(_find(raw, ("rubro", "tipo", "serie")))
+        if not row_rubro and raw_type:
+            type_key = _key(raw_type).upper()
+            row_rubro = "Hortalizas" if "HORTAL" in type_key else "Frutas" if "FRUT" in type_key else raw_type
+        species = normalize_species(_find(raw, ("especie", "esp", "producto", "productos", "articulo")))
         if not species or _key(species) in {"total", "totales"}:
             continue
-        avg = parse_argentine_price(_find(raw, ("precio_promedio", "promedio", "mopk", "precio")))
-        minimum = parse_argentine_price(_find(raw, ("precio_min", "minimo", "mipk")))
-        maximum = parse_argentine_price(_find(raw, ("precio_max", "maximo", "mapk")))
+        avg = parse_argentine_price(_find(raw, ("precio_promedio", "promedio", "mopk", "precio", "precio_publico")))
+        minimum = parse_argentine_price(_find(raw, ("precio_min", "minimo", "mipk", "precio_publico_minimo")))
+        maximum = parse_argentine_price(_find(raw, ("precio_max", "maximo", "mapk", "precio_publico_maximo")))
         if avg is None and minimum is None and maximum is None:
             continue
+        if "martin micelli" in _ascii(filename) and row_year != 2026:
+            continue
+        if "martin micelli" in _ascii(filename) and row_rubro not in {"Frutas", "Hortalizas"}:
+            continue
         row = {
-            "fecha": exact_date,
-            "año": year if not exact_date else exact_date[:4],
-            "mes": month if not exact_date else MONTH_NAMES.get(int(exact_date[5:7]), month),
-            "rubro": rubro,
+            "fecha": row_date,
+            "año": row_year,
+            "mes": row_month,
+            "rubro": row_rubro,
             "especie": species,
-            "variedad": normalize_variety(_find(raw, ("variedad", "var", "tipo"))),
-            "mercado": normalize_market(_find(raw, ("mercado", "market"))),
+            # In MARTIN MICELLI, TIPO is the product category (rubro), not a variety.
+            "variedad": normalize_variety(_find(raw, ("variedad", "var"))),
+            "mercado": inferred_market or normalize_market(_find(raw, ("mercado", "market"))),
+            "procedencia": normalize_procedencia(_find(raw, ("procedencia", "proc", "origen"))),
             "unidad": normalize_unit(_find(raw, ("unidad", "unit"))) or "$/Kg",
             "precio": avg if avg is not None else (minimum if minimum is not None else maximum),
             "precio_min": minimum,
@@ -255,7 +304,6 @@ def _make_rows(raw_rows: list[dict[str, Any]], source: str, container: str) -> l
             "precio_promedio": avg,
             "archivo_origen": f"{container}/{source}" if container else source,
         }
-        # PROC is origin/provenance, not a market. Keep the market independent.
         output.append(row)
     return output
 
@@ -290,7 +338,6 @@ def _read_entry(entry: Any, name: str) -> list[dict[str, Any]]:
     if isinstance(entry, Path):
         return read_price_file(entry)
     suffix = Path(name).suffix.lower()
-    temp = io.BytesIO(entry)
     # read_price_file uses paths to support openpyxl/xlrd; use a named temporary
     # file only for archive members and remove it immediately after reading.
     import tempfile
@@ -335,6 +382,12 @@ def main() -> int:
     print(f"Archivos procesados correctamente: {processed}")
     print(f"Archivos con error: {errors}")
     print(f"Filas integradas: {len(rows)}")
+    markets = sorted({row["mercado"] for row in rows if row["mercado"]})
+    procedencias = sorted({row["procedencia"] for row in rows if row["procedencia"]})
+    print(f"Mercados detectados: {', '.join(markets) or '(ninguno)'}")
+    print(f"Porcentaje de mercado informado: {100 * sum(bool(row['mercado']) for row in rows) / len(rows):.1f}%" if rows else "Porcentaje de mercado informado: 0.0%")
+    print(f"Procedencias detectadas: {', '.join(procedencias) or '(ninguna)'}")
+    print(f"Porcentaje de procedencia informada: {100 * sum(bool(row['procedencia']) for row in rows) / len(rows):.1f}%" if rows else "Porcentaje de procedencia informada: 0.0%")
     print(f"Meses detectados: {', '.join(sorted(months)) or '(ninguno)'}")
     print(f"Rubros detectados: {', '.join(sorted(rubros)) or '(ninguno)'}")
     print(f"Especies únicas: {len(species)}")
