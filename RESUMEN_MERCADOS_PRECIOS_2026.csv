@@ -1,3 +1,3 @@
 ﻿mercado;cantidad_registros;cantidad_fechas_disponibles;fecha_minima;fecha_maxima;cantidad_meses_disponibles;especies_unicas;precio_promedio;precio_min;precio_max;coeficiente_variacion;porcentaje_precios_validos
 Mercado Central de Buenos Aires;61744;155;2026-01-02;2026-08-24;8;102;3257.7348;144.4400;119167.0000;1.6217;100.0000
-(sin informar);16701;156;2026-01-02;2026-12-25;9;118;15100.0942;3.0000;400000.0000;0.8391;100.0000
+Mercado de Corrientes;46587;401;2024-12-29;2026-12-25;22;184;13271.8832;3.0000;400000.0000;0.8432;99.8798

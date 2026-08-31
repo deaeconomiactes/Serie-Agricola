@@ -1,4 +1,4 @@
-"""Integra listas de precios mayoristas diarios de 2026.
+"""Integra listas de precios mayoristas preservando su fecha real.
 
 Coloque los archivos fuente en ``data/precios_2026/`` para usar la carpeta
 interna, o pase otra carpeta como argumento. Ejemplos::
@@ -6,11 +6,12 @@ interna, o pase otra carpeta como argumento. Ejemplos::
     python integrar_precios_2026.py
     python integrar_precios_2026.py "C:\\Users\\acer\\Oficina\\Info. para Serie Agricola"
 
-El resultado se escribe en la raíz del proyecto como
-``PRECIOS_MAYORISTAS_2026_INTEGRADO.csv``.
+El resultado principal se escribe en la raíz del proyecto como
+``PRECIOS_MAYORISTAS_INTEGRADO.csv``. También se actualiza una copia legacy
+con el nombre ``PRECIOS_MAYORISTAS_2026_INTEGRADO.csv`` para compatibilidad.
 
 Esta base de precios se mantiene separada de la base de cantidades 2024/2025:
-los precios 2026 no se cruzan con cantidades, ni se usan para calcular
+los precios no se cruzan con cantidades, ni se usan para calcular
 elasticidades o relaciones precio-cantidad.
 """
 
@@ -21,17 +22,19 @@ import csv
 import contextlib
 import io
 import re
+import shutil
 import sys
 import unicodedata
 import zipfile
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Iterable
 
 
 PROJECT_DIR = Path(__file__).resolve().parent
 DEFAULT_INPUT_DIR = PROJECT_DIR / "data" / "precios_2026"
-OUTPUT_PATH = PROJECT_DIR / "PRECIOS_MAYORISTAS_2026_INTEGRADO.csv"
+OUTPUT_PATH = PROJECT_DIR / "PRECIOS_MAYORISTAS_INTEGRADO.csv"
+LEGACY_OUTPUT_PATH = PROJECT_DIR / "PRECIOS_MAYORISTAS_2026_INTEGRADO.csv"
 
 MONTHS = {
     "enero": 1, "febrero": 2, "marzo": 3, "abril": 4,
@@ -42,7 +45,7 @@ MONTHS = {
 MONTH_NAMES = {number: name.title() for name, number in MONTHS.items() if name != "setiembre"}
 FIELDS = [
     "fecha", "año", "mes", "rubro", "especie", "variedad", "mercado", "procedencia",
-    "unidad", "precio", "precio_min", "precio_max", "precio_promedio",
+    "localidad_corrientes", "envase", "kg_bulto", "total_kilos", "unidad", "precio", "precio_min", "precio_max", "precio_promedio",
     "archivo_origen",
 ]
 TABULAR_EXTENSIONS = {".csv", ".xlsx", ".xls"}
@@ -128,13 +131,16 @@ def normalize_procedencia(value: Any) -> str:
 
 
 def infer_market_from_source(filename: str, sheet_name: str | None = None) -> str:
-    """Infer the commercial market from monthly 2026 fruit/vegetable lists.
+    """Infer the commercial market from the known price-list sources.
 
-    These lists are known to come from MCBA. This inference is intentionally
+    Martin Micelli is the Corrientes market source; the monthly fruit and
+    vegetable lists are known to come from MCBA. This inference is intentionally
     separate from ``procedencia``, which is the geographic origin of a product
     when the original table explicitly reports it.
     """
     text = _ascii(f"{filename} {sheet_name or ''}")
+    if "martin micelli" in text:
+        return "Mercado de Corrientes"
     has_category = any(token in text for token in ("frutas", "frutras", "fruta", "hortalizas", "hortaliza"))
     has_2026 = "2026" in text or re.search(r"(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)[ _-]*26", text)
     has_month = any(month in text for month in MONTHS)
@@ -178,22 +184,48 @@ def parse_argentine_price(value: Any) -> float | None:
         return None
 
 
-def normalize_date(value: Any, fallback_month: str | None = None, fallback_year: int | str | None = None) -> str:
+def parse_date_strict(value: Any) -> str:
+    """Return an ISO date only when the source value contains a real date.
+
+    Supports Excel/pandas datetimes, DD-MM-YYYY, DD/MM/YYYY, ISO dates and
+    Excel serial dates. A filename is deliberately never considered here.
+    """
+    if value is None or (isinstance(value, float) and value != value):
+        return ""
     if isinstance(value, (datetime, date)):
         return value.strftime("%Y-%m-%d")
-    text = normalize_text(value)
-    if text:
-        for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d", "%d/%m/%y", "%d-%m-%y"):
-            try:
-                return datetime.strptime(text, fmt).strftime("%Y-%m-%d")
-            except ValueError:
-                pass
-        match = re.search(r"(\d{2})[./-](\d{2})[./-](\d{2,4})", text)
-        if match:
-            year = int(match.group(3)); year += 2000 if year < 100 else 0
-            return f"{year:04d}-{int(match.group(2)):02d}-{int(match.group(1)):02d}"
-    # Deliberately leave the day empty when only month/year are known.
+    if hasattr(value, "to_pydatetime"):
+        try:
+            return value.to_pydatetime().strftime("%Y-%m-%d")
+        except (AttributeError, ValueError, TypeError):
+            pass
+    if isinstance(value, (int, float)) and 1 <= float(value) <= 100000:
+        try:
+            return (datetime(1899, 12, 30) + timedelta(days=float(value))).strftime("%Y-%m-%d")
+        except (OverflowError, ValueError):
+            return ""
+    text = str(value).strip()
+    if not text or text.lower() in {"nan", "nat", "none", "null"}:
+        return ""
+    text = text.split(" ", 1)[0]
+    for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d", "%d/%m/%y", "%d-%m-%y"):
+        try:
+            return datetime.strptime(text, fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            pass
     return ""
+
+
+def derive_year_month_from_date(iso_date: str) -> tuple[int | str, str]:
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(iso_date or "")):
+        return "", ""
+    month = int(iso_date[5:7])
+    return int(iso_date[:4]), MONTH_NAMES.get(month, "")
+
+
+def normalize_date(value: Any, fallback_month: str | None = None, fallback_year: int | str | None = None) -> str:
+    """Backward-compatible wrapper; fallbacks never invent a day."""
+    return parse_date_strict(value)
 
 
 def _key(value: Any) -> str:
@@ -222,6 +254,11 @@ def read_price_file(path: Path) -> list[dict[str, Any]]:
         from openpyxl import load_workbook
         workbook = load_workbook(path, read_only=True, data_only=True)
         sheet = workbook.active
+        if "martin micelli" in _ascii(path.name):
+            print(f"Martin Micelli - hojas detectadas: {workbook.sheetnames}")
+            preferred = next((name for name in workbook.sheetnames if _key(name) == "cargadedatos"), workbook.sheetnames[0])
+            sheet = workbook[preferred]
+            print(f"Martin Micelli - hoja analizada: {preferred}")
         values = list(sheet.values)
         workbook.close()
     elif suffix == ".xls":
@@ -240,6 +277,9 @@ def read_price_file(path: Path) -> list[dict[str, Any]]:
     if not values:
         return []
     headers = [str(v).strip() if v is not None else "" for v in values[0]]
+    if "martin micelli" in _ascii(path.name):
+        print(f"Martin Micelli - columnas detectadas: {headers}")
+        print(f"Martin Micelli - filas leídas: {max(len(values) - 1, 0)}")
     return [dict(zip(headers, row)) for row in values[1:] if any(v not in (None, "") for v in row)]
 
 
@@ -247,6 +287,12 @@ def _find(row: dict[str, Any], names: Iterable[str]) -> Any:
     wanted = {_key(name) for name in names}
     for name, value in row.items():
         if _key(name) in wanted:
+            return value
+    # Source workbooks often use labels such as "Precio Público Mínimo".
+    # Use a conservative substring match only after exact matching fails.
+    for name, value in row.items():
+        candidate = _key(name)
+        if any(candidate.startswith(item) or item in candidate for item in wanted if len(item) >= 5):
             return value
     return ""
 
@@ -261,15 +307,24 @@ def _date_from_source(source: str) -> str:
 
 def _make_rows(raw_rows: list[dict[str, Any]], source: str, container: str) -> list[dict[str, Any]]:
     filename = f"{container} {source}"
+    is_martin = "martin micelli" in _ascii(filename)
     inferred_market = infer_market_from_source(filename)
     rubro = infer_rubro_from_filename(filename)
     month = infer_month_from_filename(source) or infer_month_from_filename(container)
-    year = infer_year_from_filename(source) or infer_year_from_filename(container) or 2026
+    year_fallback = infer_year_from_filename(source) or infer_year_from_filename(container) or ""
+    price_candidates = ("precio_promedio", "precio promedio", "precio publico", "precio", "importe", "mopk", "precio_publico")
+    if is_martin:
+        print(f"Martin Micelli - columnas candidatas de precio: {price_candidates}")
     output = []
+    parsed_dates = []
+    valid_price_count = 0
     for raw in raw_rows:
-        row_date = normalize_date(_find(raw, ("fecha", "date"))) or _date_from_source(source)
-        row_year = int(row_date[:4]) if row_date else year
-        row_month = MONTH_NAMES.get(int(row_date[5:7]), month) if row_date else month
+        source_date = parse_date_strict(_find(raw, ("fecha", "date")))
+        # Filename inference is allowed only when the table has no valid date.
+        row_date = source_date or _date_from_source(source)
+        row_year, row_month = derive_year_month_from_date(source_date)
+        if not source_date:
+            row_year, row_month = year_fallback, month
         row_rubro = rubro
         raw_type = normalize_text(_find(raw, ("rubro", "tipo", "serie")))
         if not row_rubro and raw_type:
@@ -278,15 +333,23 @@ def _make_rows(raw_rows: list[dict[str, Any]], source: str, container: str) -> l
         species = normalize_species(_find(raw, ("especie", "esp", "producto", "productos", "articulo")))
         if not species or _key(species) in {"total", "totales"}:
             continue
-        avg = parse_argentine_price(_find(raw, ("precio_promedio", "promedio", "mopk", "precio", "precio_publico")))
+        avg = parse_argentine_price(_find(raw, price_candidates))
         minimum = parse_argentine_price(_find(raw, ("precio_min", "minimo", "mipk", "precio_publico_minimo")))
         maximum = parse_argentine_price(_find(raw, ("precio_max", "maximo", "mapk", "precio_publico_maximo")))
-        if avg is None and minimum is None and maximum is None:
-            continue
-        if "martin micelli" in _ascii(filename) and row_year != 2026:
-            continue
-        if "martin micelli" in _ascii(filename) and row_rubro not in {"Frutas", "Hortalizas"}:
-            continue
+        if avg is not None or minimum is not None or maximum is not None:
+            valid_price_count += 1
+        if source_date:
+            parsed_dates.append(source_date)
+        if is_martin and not any(parse_argentine_price(_find(raw, candidates)) is not None for candidates in (price_candidates, ("precio_min", "minimo", "mipk", "precio_publico_minimo"), ("precio_max", "maximo", "mapk", "precio_publico_maximo"))):
+            # Keep the row and its real date; do not manufacture a price.
+            pass
+        locality = _find(raw, ("localidad_corrientes", "localidad de corrientes"))
+        if is_martin:
+            row_rubro_key = _key(raw_type).upper()
+            if "HORTAL" in row_rubro_key:
+                row_rubro = "Hortalizas"
+            elif "FRUT" in row_rubro_key:
+                row_rubro = "Frutas"
         row = {
             "fecha": row_date,
             "año": row_year,
@@ -297,6 +360,10 @@ def _make_rows(raw_rows: list[dict[str, Any]], source: str, container: str) -> l
             "variedad": normalize_variety(_find(raw, ("variedad", "var"))),
             "mercado": inferred_market or normalize_market(_find(raw, ("mercado", "market"))),
             "procedencia": normalize_procedencia(_find(raw, ("procedencia", "proc", "origen"))),
+            "localidad_corrientes": normalize_location(locality),
+            "envase": normalize_text(_find(raw, ("envase",))),
+            "kg_bulto": _find(raw, ("kg_bulto", "kg/bulto", "kg bulto")),
+            "total_kilos": _find(raw, ("total_kilos", "total de kilos")),
             "unidad": normalize_unit(_find(raw, ("unidad", "unit"))) or "$/Kg",
             "precio": avg if avg is not None else (minimum if minimum is not None else maximum),
             "precio_min": minimum,
@@ -305,6 +372,13 @@ def _make_rows(raw_rows: list[dict[str, Any]], source: str, container: str) -> l
             "archivo_origen": f"{container}/{source}" if container else source,
         }
         output.append(row)
+    if is_martin:
+        print(f"Martin Micelli - fecha mínima parseada: {min(parsed_dates) if parsed_dates else 'n/d'}")
+        print(f"Martin Micelli - fecha máxima parseada: {max(parsed_dates) if parsed_dates else 'n/d'}")
+        print(f"Martin Micelli - años detectados desde fecha: {sorted({d[:4] for d in parsed_dates}) or []}")
+        print(f"Martin Micelli - precios válidos: {valid_price_count}")
+        if not valid_price_count:
+            print("ADVERTENCIA: no se detectaron precios en MARTIN MICELLI; no se inventarán valores.", file=sys.stderr)
     return output
 
 
@@ -378,10 +452,26 @@ def main() -> int:
         writer = csv.DictWriter(handle, fieldnames=FIELDS, delimiter=";")
         writer.writeheader()
         writer.writerows(rows)
+    shutil.copyfile(OUTPUT_PATH, LEGACY_OUTPUT_PATH)
     print(f"Archivos encontrados: {found}")
     print(f"Archivos procesados correctamente: {processed}")
     print(f"Archivos con error: {errors}")
     print(f"Filas integradas: {len(rows)}")
+    years = sorted({row["año"] for row in rows if row["año"]})
+    dated = sorted(row["fecha"] for row in rows if row["fecha"])
+    print(f"Archivo principal generado: {OUTPUT_PATH}")
+    print(f"Filas por año: { {year: sum(row['año'] == year for row in rows) for year in years} }")
+    print(f"Fecha mínima: {dated[0] if dated else 'n/d'}")
+    print(f"Fecha máxima: {dated[-1] if dated else 'n/d'}")
+    martin_rows = [row for row in rows if "martin micelli" in _ascii(row["archivo_origen"])]
+    martin_dates = sorted(row["fecha"] for row in martin_rows if row["fecha"])
+    print(f"Filas provenientes de Martin Micelli: {len(martin_rows)}")
+    print(f"Fecha mínima Martin Micelli: {martin_dates[0] if martin_dates else 'n/d'}")
+    print(f"Fecha máxima Martin Micelli: {martin_dates[-1] if martin_dates else 'n/d'}")
+    print(f"Años Martin Micelli: {sorted({row['año'] for row in martin_rows if row['año']})}")
+    valid_prices = [row for row in rows if parse_argentine_price(row["precio_promedio"]) and parse_argentine_price(row["precio_promedio"]) > 0]
+    print(f"Registros con precio válido: {len(valid_prices)}")
+    print(f"Registros sin precio válido: {len(rows) - len(valid_prices)}")
     markets = sorted({row["mercado"] for row in rows if row["mercado"]})
     procedencias = sorted({row["procedencia"] for row in rows if row["procedencia"]})
     print(f"Mercados detectados: {', '.join(markets) or '(ninguno)'}")
@@ -392,6 +482,7 @@ def main() -> int:
     print(f"Rubros detectados: {', '.join(sorted(rubros)) or '(ninguno)'}")
     print(f"Especies únicas: {len(species)}")
     print(f"CSV generado: {OUTPUT_PATH}")
+    print(f"Copia legacy actualizada: {LEGACY_OUTPUT_PATH}")
     return 0
 
 

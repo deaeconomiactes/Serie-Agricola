@@ -1,4 +1,4 @@
-"""Audita la base independiente de precios mayoristas 2026.
+"""Audita la base independiente de precios mayoristas.
 
 La auditoría distingue mercado (fuente comercial/lista) de procedencia (origen
 geográfico explícito del producto). No cruza esta base con cantidades.
@@ -7,6 +7,7 @@ geográfico explícito del producto). No cruza esta base con cantidades.
 from __future__ import annotations
 
 import re
+import shutil
 import sys
 import unicodedata
 from pathlib import Path
@@ -15,8 +16,16 @@ import numpy as np
 import pandas as pd
 
 BASE_DIR = Path(__file__).resolve().parent
-INPUT_NAME = "PRECIOS_MAYORISTAS_2026_INTEGRADO.csv"
+INPUT_NAMES = ("PRECIOS_MAYORISTAS_INTEGRADO.csv", "PRECIOS_MAYORISTAS_2026_INTEGRADO.csv")
 OUTPUT_FILES = {
+    "report": "REPORTE_AUDITORIA_PRECIOS.md",
+    "coverage": "RESUMEN_COBERTURA_PRECIOS.csv",
+    "markets": "RESUMEN_MERCADOS_PRECIOS.csv",
+    "provenances": "RESUMEN_PROCEDENCIAS_PRECIOS.csv",
+    "species": "RESUMEN_ESPECIES_PRECIOS.csv",
+    "series": "RESUMEN_SERIES_UTILIZABLES_PRECIOS.csv",
+}
+LEGACY_OUTPUT_FILES = {
     "report": "REPORTE_AUDITORIA_PRECIOS_2026.md",
     "coverage": "RESUMEN_COBERTURA_PRECIOS_2026.csv",
     "markets": "RESUMEN_MERCADOS_PRECIOS_2026.csv",
@@ -80,11 +89,11 @@ def value_stats(frame: pd.DataFrame) -> dict:
 
 
 def add_quality_columns(df: pd.DataFrame) -> pd.DataFrame:
-    expected = ["fecha", "año", "mes", "rubro", "especie", "variedad", "mercado", "procedencia", "unidad", "precio", "precio_min", "precio_max", "precio_promedio", "archivo_origen"]
+    expected = ["fecha", "año", "mes", "rubro", "especie", "variedad", "mercado", "procedencia", "localidad_corrientes", "envase", "kg_bulto", "total_kilos", "unidad", "precio", "precio_min", "precio_max", "precio_promedio", "archivo_origen"]
     for column in expected:
         if column not in df.columns:
             df[column] = ""
-    for column in ["fecha", "rubro", "especie", "variedad", "mercado", "procedencia", "unidad", "archivo_origen"]:
+    for column in ["fecha", "rubro", "especie", "variedad", "mercado", "procedencia", "localidad_corrientes", "envase", "kg_bulto", "total_kilos", "unidad", "archivo_origen"]:
         df[column] = clean_text(df[column])
     df["fecha_parseada"] = pd.to_datetime(df["fecha"], errors="coerce", format="mixed")
     df["fecha_valida"] = df["fecha_parseada"].notna()
@@ -148,20 +157,26 @@ def save_csv(frame: pd.DataFrame, path: Path) -> None:
 
 
 def build_report(df, coverage, markets, provenances, species, series, input_path) -> str:
-    valid_dates = df[df["fecha_valida"]]; high = series[series["indicador_serie_utilizable"] == "Alta"]; medium = series[series["indicador_serie_utilizable"] == "Media"]; market_known = df["mercado"] != ""; provenance_known = df["procedencia"] != ""; market_inferred = df["archivo_origen"].str.contains(r"frut|hortal", case=False, regex=True) & market_known
+    valid_dates = df[df["fecha_valida"]]; high = series[series["indicador_serie_utilizable"] == "Alta"]; medium = series[series["indicador_serie_utilizable"] == "Media"]; market_known = df["mercado"] != ""; provenance_known = df["procedencia"] != ""; market_inferred = df["archivo_origen"].str.contains(r"martin\s+micelli|frut|hortal", case=False, regex=True) & market_known
     market_names = ", ".join(markets.loc[markets["mercado"] != "(sin informar)", "mercado"].astype(str).tolist()) or "(ninguno)"; provenance_names = ", ".join(provenances.loc[provenances["procedencia"] != "(sin informar)", "procedencia"].astype(str).head(30).tolist()) or "(ninguna)"; month_list = ", ".join(f"{int(y)}-{int(m):02d}" for y, m in coverage[["año", "mes"]].drop_duplicates().itertuples(index=False, name=None)) or "n/d"
     return "\n".join([
-        "# Auditoría de precios mayoristas 2026", "", "## 1. Resumen ejecutivo", "", f"Se auditaron **{len(df):,} filas** de `{input_path.name}`. Esta base contiene precios mayoristas diarios y se mantuvo separada de las cantidades 2024/2025.", "", f"La cobertura temporal válida va de **{valid_dates['fecha_parseada'].min().date().isoformat() if not valid_dates.empty else 'n/d'}** a **{valid_dates['fecha_parseada'].max().date().isoformat() if not valid_dates.empty else 'n/d'}**, con **{len(high)} series Alta** y **{len(medium)} series Media**.", "", "## 2. Cobertura general", "", f"- Filas totales: {len(df):,}", f"- Archivos de origen: {df['archivo_origen'].replace('', pd.NA).dropna().nunique():,}", f"- Meses: {month_list}", f"- Rubros: {', '.join(sorted(x for x in df['rubro'].unique() if x)) or 'n/d'}", f"- Especies únicas: {df.loc[df['especie'] != '', 'especie_normalizada'].nunique():,}", f"- Precios válidos (> 0): {pct(100 * df['precio_valido'].mean())}", "", "## Cobertura geográfica", "", f"- Mercado informado: **{int(market_known.sum()):,} de {len(df):,} registros ({pct(100 * market_known.mean())})**.", f"- Procedencia informada: **{int(provenance_known.sum()):,} de {len(df):,} registros ({pct(100 * provenance_known.mean())})**.", f"- Mercados detectados: {market_names}.", f"- Procedencias detectadas: {provenance_names}.", f"- Mercado inferido por fuente: **{int(market_inferred.sum()):,} registros**.", f"- Mercado proveniente de columna explícita: **{int((market_known & ~market_inferred).sum()):,} registros**.", f"- Procedencia proveniente de columnas explícitas: **{int(provenance_known.sum()):,} registros**.", "", "Los registros provenientes de listas mensuales de frutas y hortalizas 2026 se etiquetan como Mercado Central de Buenos Aires porque esa es la fuente de las listas. La procedencia se conserva únicamente cuando aparece explícitamente en la fuente original.", "", "Mercado representa el mercado/lista/fuente comercial de precios; procedencia representa el origen geográfico del producto. No se mezclan automáticamente.", "", "## 3. Cobertura temporal", "", "El detalle se encuentra en `RESUMEN_COBERTURA_PRECIOS_2026.csv`.", "", "## 4. Cobertura por mercado", "", "El detalle se encuentra en `RESUMEN_MERCADOS_PRECIOS_2026.csv`.", "", "## 5. Cobertura por procedencia", "", "El detalle se encuentra en `RESUMEN_PROCEDENCIAS_PRECIOS_2026.csv`.", "", "## 6. Series utilizables", "", "El nivel de análisis es rubro, mercado, procedencia (si existe), especie, variedad y unidad. La procedencia no es requisito de calidad: la clasificación se basa principalmente en observaciones, fechas distintas, meses distintos y precios válidos.", "", f"- Series Alta: {len(high):,}", f"- Series Media: {len(medium):,}", f"- Series Baja: {int((series['indicador_serie_utilizable'] == 'Baja').sum()):,}", "", "## 7. Calidad y limitaciones", "", f"- Fechas inválidas o faltantes: {int((~df['fecha_valida']).sum()):,}.", f"- Precios faltantes/no numéricos: {int(df['precio_efectivo'].isna().sum()):,}.", f"- Precios cero: {int(df['precio_cero'].sum()):,}.", f"- Precios negativos: {int(df['precio_negativo'].sum()):,}.", f"- Outliers por especie (Q1 -/+ 3*IQR), no eliminados: {int(df['outlier_especie'].sum()):,}.", "", "La base sirve para monitoreo operativo de precios mayoristas. No permite inferir escasez, producción, causalidad, elasticidades ni relaciones precio-cantidad.", ""
+        "# Auditoría de precios mayoristas", "", "## 1. Resumen ejecutivo", "", f"Se auditaron **{len(df):,} filas** de `{input_path.name}`. Esta base de precios se mantuvo separada de las cantidades 2024/2025.", "", "Los archivos de salida que conservan el sufijo `2026` son copias legacy de compatibilidad y ya no representan exclusivamente ese año.", "", f"La cobertura temporal válida va de **{valid_dates['fecha_parseada'].min().date().isoformat() if not valid_dates.empty else 'n/d'}** a **{valid_dates['fecha_parseada'].max().date().isoformat() if not valid_dates.empty else 'n/d'}**, con **{len(high)} series Alta** y **{len(medium)} series Media**.", "", "## 2. Cobertura general", "", f"- Filas totales: {len(df):,}", f"- Archivos de origen: {df['archivo_origen'].replace('', pd.NA).dropna().nunique():,}", f"- Meses: {month_list}", f"- Rubros: {', '.join(sorted(x for x in df['rubro'].unique() if x)) or 'n/d'}", f"- Especies únicas: {df.loc[df['especie'] != '', 'especie_normalizada'].nunique():,}", f"- Precios válidos (> 0): {pct(100 * df['precio_valido'].mean())}", "", "## Cobertura geográfica", "", f"- Mercado informado: **{int(market_known.sum()):,} de {len(df):,} registros ({pct(100 * market_known.mean())})**.", f"- Procedencia informada: **{int(provenance_known.sum()):,} de {len(df):,} registros ({pct(100 * provenance_known.mean())})**.", f"- Mercados detectados: {market_names}.", f"- Procedencias detectadas: {provenance_names}.", f"- Mercado inferido por fuente: **{int(market_inferred.sum()):,} registros**.", f"- Mercado proveniente de columna explícita: **{int((market_known & ~market_inferred).sum()):,} registros**.", f"- Procedencia proveniente de columnas explícitas: **{int(provenance_known.sum()):,} registros**.", "", "Los registros de listas mensuales de frutas y hortalizas se etiquetan como Mercado Central de Buenos Aires. Los registros provenientes del archivo MARTIN MICELLI 26-08-2026.xlsx se etiquetan como Mercado de Corrientes. La procedencia se conserva como origen declarado del producto cuando la fuente lo informa.", "", "Mercado representa el mercado/lista/fuente comercial de precios; procedencia representa el origen geográfico del producto. No se mezclan automáticamente.", "", "## 3. Cobertura temporal", "", "El detalle se encuentra en `RESUMEN_COBERTURA_PRECIOS.csv`.", "", "## 4. Cobertura por mercado", "", "El detalle se encuentra en `RESUMEN_MERCADOS_PRECIOS.csv`.", "", "## 5. Cobertura por procedencia", "", "El detalle se encuentra en `RESUMEN_PROCEDENCIAS_PRECIOS.csv`.", "", "## 6. Series utilizables", "", "El nivel de análisis es rubro, mercado, procedencia (si existe), especie, variedad y unidad. La procedencia no es requisito de calidad: la clasificación se basa principalmente en observaciones, fechas distintas, meses distintos y precios válidos.", "", f"- Series Alta: {len(high):,}", f"- Series Media: {len(medium):,}", f"- Series Baja: {int((series['indicador_serie_utilizable'] == 'Baja').sum()):,}", "", "## 7. Calidad y limitaciones", "", f"- Fechas inválidas o faltantes: {int((~df['fecha_valida']).sum()):,}.", f"- Precios faltantes/no numéricos: {int(df['precio_efectivo'].isna().sum()):,}.", f"- Precios cero: {int(df['precio_cero'].sum()):,}.", f"- Precios negativos: {int(df['precio_negativo'].sum()):,}.", f"- Outliers por especie (Q1 -/+ 3*IQR), no eliminados: {int(df['outlier_especie'].sum()):,}.", "", "La base sirve para monitoreo operativo de precios mayoristas. No permite inferir escasez, producción, causalidad, elasticidades ni relaciones precio-cantidad.", ""
     ])
 
 
 def main() -> int:
-    input_path = BASE_DIR / INPUT_NAME
-    if not input_path.exists():
-        print(f"No existe {input_path}. Ejecute primero integrar_precios_2026.py.", file=sys.stderr); return 2
+    input_path = next((BASE_DIR / name for name in INPUT_NAMES if (BASE_DIR / name).exists()), None)
+    if input_path is None:
+        print(f"No existe ninguna base de precios: {', '.join(INPUT_NAMES)}. Ejecute primero integrar_precios_2026.py.", file=sys.stderr); return 2
     df, _ = add_outlier_flags(add_quality_columns(read_input(input_path))); coverage = coverage_summary(df); markets = _dimension_summary(df, "mercado"); provenances = _dimension_summary(df, "procedencia"); species = species_summary(df); series = series_summary(df)
     save_csv(coverage, BASE_DIR / OUTPUT_FILES["coverage"]); save_csv(markets, BASE_DIR / OUTPUT_FILES["markets"]); save_csv(provenances, BASE_DIR / OUTPUT_FILES["provenances"]); save_csv(species, BASE_DIR / OUTPUT_FILES["species"]); save_csv(series, BASE_DIR / OUTPUT_FILES["series"])
-    (BASE_DIR / OUTPUT_FILES["report"]).write_text(build_report(df, coverage, markets, provenances, species, series, input_path), encoding="utf-8")
+    report_text = build_report(df, coverage, markets, provenances, species, series, input_path)
+    (BASE_DIR / OUTPUT_FILES["report"]).write_text(report_text, encoding="utf-8")
+    for key, legacy_name in LEGACY_OUTPUT_FILES.items():
+        if key == "report":
+            (BASE_DIR / legacy_name).write_text(report_text, encoding="utf-8")
+        else:
+            shutil.copyfile(BASE_DIR / OUTPUT_FILES[key], BASE_DIR / legacy_name)
     print(f"Filas auditadas: {len(df):,}"); print(f"Mercados únicos: {df.loc[df['mercado'] != '', 'mercado'].nunique()}"); print(f"Procedencias únicas: {df.loc[df['procedencia'] != '', 'procedencia'].nunique()}"); print("Reportes generados:")
     for filename in OUTPUT_FILES.values(): print(f"- {BASE_DIR / filename}")
     return 0
