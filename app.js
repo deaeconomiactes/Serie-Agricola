@@ -1320,7 +1320,7 @@ function populateSelect(select, values, allLabel, formatValue = value => value) 
 
 function updateHeaderSubtitle() {
     const yearLabel = selectedYear === 'TODOS' ? 'Todos los años' : selectedYear;
-    document.getElementById('headerSubtitle').textContent = `Provincia de Corrientes · ${yearLabel}`;
+    document.getElementById('headerSubtitle').textContent = `Sistema de monitoreo de cantidades transadas y precios mayoristas · Provincia de Corrientes · ${yearLabel}`;
 }
 
 /** Update Serie filter based on selected Origen and Destino */
