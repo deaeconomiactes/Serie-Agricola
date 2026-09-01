@@ -299,6 +299,7 @@ let filteredPriceData = [];
 let priceSeriesData = [];
 let priceQualityMap = new Map();
 let priceFutureDateCount = 0;
+let spreadsheetInvalidCount = 0;
 let heatmapFilter = 'TODOS';
 let selectedYear = '2025';
 const selectedUnit = 'TN';
@@ -485,6 +486,7 @@ async function loadPriceData() {
         priceQualityMap = new Map(priceSeriesData.map(row => [priceSeriesKey(row), row.indicador_serie_utilizable || '']));
     }
     rawPriceData = processPriceData(parsePriceCSV(await response.text()), sourcePath);
+    console.warn('Valores inválidos de planilla excluidos o normalizados:', spreadsheetInvalidCount);
     const dateSplit = filterFutureDates(rawPriceData);
     futurePriceData = dateSplit.futureRows;
     priceData = dateSplit.validRows.filter(row => isValidPrice(row.precioPromedio));
@@ -620,13 +622,15 @@ function processPriceData(rows, sourcePath = PRICE_CSV_PATH) {
         const average = parsePriceNumber(row.precio_promedio) ?? parsePriceNumber(row.precio);
         const minimum = parsePriceNumber(row.precio_min);
         const maximum = parsePriceNumber(row.precio_max);
-        const rubroRaw = normalizeText(row.rubro);
-        const rubro = rubroRaw.includes('HORTAL') ? 'Hortalizas' : rubroRaw.includes('FRUT') ? 'Frutas' : rubroRaw;
+        const rubroRaw = normalizeCategoryValue(row.rubro);
+        const sourceText = normalizeText(sourcePath);
+        const rubroKey = normalizeText(rubroRaw);
+        const rubro = rubroKey.includes('HORTAL') ? 'Hortalizas' : rubroKey.includes('FRUT') ? 'Frutas' : rubroKey.includes('SUBPRODUCT') ? 'Subproductos' : rubroRaw || (sourceText.includes('HORTAL') ? 'Hortalizas' : sourceText.includes('FRUT') ? 'Frutas' : 'Sin clasificar');
         return {
             fecha: date, year: date ? Number(date.slice(0, 4)) : Number(row.año || row.ano) || null, month: monthNumber,
-            mes: monthNumber >= 1 && monthNumber <= 12 ? MONTHS_FULL[monthNumber - 1] : normalizeText(row.mes),
-            rubro, especie: formatLabel(row.especie), variedad: formatLabel(row.variedad),
-            mercado: formatLabel(row.mercado), procedencia: formatLabel(row.procedencia), unidad: formatLabel(row.unidad) || 'Sin especificar', precio: parsePriceNumber(row.precio),
+            mes: monthNumber >= 1 && monthNumber <= 12 ? MONTHS_FULL[monthNumber - 1] : normalizeCategoryValue(row.mes),
+            rubro, especie: normalizeCategoryValue(row.especie) || 'Sin especificar', variedad: normalizeCategoryValue(row.variedad),
+            mercado: normalizeCategoryValue(row.mercado), procedencia: normalizeCategoryValue(row.procedencia), unidad: normalizeCategoryValue(row.unidad) || 'Sin especificar', precio: parsePriceNumber(row.precio),
             precioMin: minimum, precioMax: maximum, precioPromedio: average,
             calidad: priceQualityMap.get(priceSeriesKey({ ...row, rubro, especie: row.especie, variedad: row.variedad })) || '', fuente: sourcePath
         };
@@ -971,31 +975,53 @@ function preparePriceMarketComparisonData(data) {
 }
 
 function getTrafficLightStatus(variation) {
-    if (variation < 0) return { key: 'decrease', label: 'Baja' };
+    if (variation < -50) return { key: 'review', label: 'Revisar' };
+    if (variation < -5) return { key: 'decrease', label: 'Baja' };
     if (variation <= 5) return { key: 'stable', label: 'Estable' };
     if (variation <= 15) return { key: 'moderate', label: 'Suba moderada' };
-    return { key: 'strong', label: 'Suba fuerte' };
+    if (variation <= 50) return { key: 'strong', label: 'Suba fuerte' };
+    return { key: 'review', label: 'Revisar' };
 }
 
-function buildPriceTrafficLightTable(data, frequency) {
+function calculateMonthlyPriceVariation(current, previous) {
+    return isValidPrice(current) && isValidPrice(previous) ? (current / previous - 1) * 100 : null;
+}
+
+function calculateAccumulatedVariation(first, last) {
+    return isValidPrice(first) && isValidPrice(last) ? (last / first - 1) * 100 : null;
+}
+
+function buildMonthlyPriceMatrix(data) {
     const groups = new Map();
     data.filter(row => isValidPrice(row.precioPromedio)).forEach(row => {
         const fields = ['mercado', 'rubro', 'especie', 'variedad', 'procedencia', 'unidad'];
         const key = fields.map(field => row[field] || (field === 'variedad' ? 'Sin especificar' : field === 'procedencia' ? 'Sin procedencia informada' : 'Sin informar')).join('|');
-        const group = groups.get(key) || { row, observations: 0, periods: new Map() };
+        const group = groups.get(key) || { row, observations: 0, monthlyPrices: {}, monthlyVariations: {} };
         group.observations++;
-        const period = createTimeKey(row.fecha || row, frequency);
-        if (period) { const values = group.periods.get(period) || []; values.push(row.precioPromedio); group.periods.set(period, values); }
+        const month = row.fecha ? row.fecha.slice(5, 7) : String(row.month || '').padStart(2, '0');
+        if (/^(0[1-9]|1[0-2])$/.test(month)) {
+            const values = group.monthlyPrices[month] || [];
+            values.push(row.precioPromedio);
+            group.monthlyPrices[month] = values;
+        }
         groups.set(key, group);
     });
     return [...groups.values()].map(group => {
-        const periods = [...group.periods.entries()].sort(([a], [b]) => a.localeCompare(b));
-        if (periods.length < 2) return null;
-        const first = periods[0][1].reduce((sum, value) => sum + value, 0) / periods[0][1].length;
-        const last = periods.at(-1)[1].reduce((sum, value) => sum + value, 0) / periods.at(-1)[1].length;
-        const variation = (last / first - 1) * 100;
-        return isValidPrice(first) && isValidPrice(last) && Number.isFinite(variation) ? { ...group.row, first, last, variation, firstPeriod: periods[0][0], lastPeriod: periods.at(-1)[0], observations: group.observations, status: getTrafficLightStatus(variation) } : null;
-    }).filter(Boolean).sort((a, b) => Math.abs(b.variation) - Math.abs(a.variation)).slice(0, 20);
+        const monthlyPrices = Object.fromEntries(Object.entries(group.monthlyPrices).map(([month, values]) => [month, values.reduce((sum, value) => sum + value, 0) / values.length]));
+        const validMonths = Object.keys(monthlyPrices).sort();
+        const shortPeriodFilter = document.getElementById('priceFilterMes')?.value && document.getElementById('priceFilterMes').value !== 'TODOS';
+        if (validMonths.length < 2 || validMonths.length < 3 && !shortPeriodFilter) return null;
+        const firstMonth = validMonths[0];
+        const lastMonth = validMonths[validMonths.length - 1];
+        const variation = calculateAccumulatedVariation(monthlyPrices[firstMonth], monthlyPrices[lastMonth]);
+        if (!Number.isFinite(variation)) return null;
+        validMonths.slice(1).forEach((month, index) => { group.monthlyVariations[month] = calculateMonthlyPriceVariation(monthlyPrices[month], monthlyPrices[validMonths[index]]); });
+        return { ...group.row, productLabel: getProductLabel(group.row), monthlyPrices, monthlyVariations: group.monthlyVariations, accumulatedVariation: variation, firstPeriod: firstMonth, lastPeriod: lastMonth, observations: group.observations, validMonths: validMonths.length, status: getTrafficLightStatus(variation) };
+    }).filter(Boolean).sort((a, b) => String(a.mercado).localeCompare(String(b.mercado), 'es') || String(a.rubro).localeCompare(String(b.rubro), 'es') || String(a.productLabel).localeCompare(String(b.productLabel), 'es') || b.validMonths - a.validMonths).slice(0, 20);
+}
+
+function buildPriceTrafficLightTable(data, filters, frequency) {
+    return buildMonthlyPriceMatrix(data, frequency);
 }
 
 function escapeHtml(value) {
@@ -1006,9 +1032,12 @@ function renderPriceTrafficLightTable(data, frequency) {
     const body = document.getElementById('priceTrafficLightBody');
     const status = document.getElementById('priceTrafficLightStatus');
     if (!body || !status) return;
-    const rows = buildPriceTrafficLightTable(data, frequency);
-    body.innerHTML = rows.map(row => `<tr><td><span class="traffic-light ${row.status.key}">${row.status.label}</span></td><td>${escapeHtml(row.mercado)}</td><td>${escapeHtml(row.rubro)}</td><td>${escapeHtml(row.especie)}</td><td>${escapeHtml(row.variedad || 'Sin especificar')}</td><td>${escapeHtml(row.procedencia || 'Sin procedencia informada')}</td><td>${formatCurrency(row.first)}</td><td>${formatCurrency(row.last)}</td><td>${formatPercent(row.variation)}</td><td>${escapeHtml(formatPeriodLabel(row.firstPeriod, frequency))}</td><td>${escapeHtml(formatPeriodLabel(row.lastPeriod, frequency))}</td><td>${row.observations}</td></tr>`).join('');
-    status.textContent = rows.length ? '' : 'No hay datos suficientes para calcular esta visualización con los filtros seleccionados.';
+    const rows = buildPriceTrafficLightTable(data, null, frequency);
+    const months = MONTHS.map((month, index) => `<th>${month}</th>`).join('');
+    const header = body.closest('table')?.querySelector('thead tr');
+    if (header) header.innerHTML = `<th>Estado</th><th>Producto</th><th>Mercado / Fuente</th><th>Procedencia / Origen</th>${months}<th>Variación período</th><th>Estado</th>`;
+    body.innerHTML = rows.map(row => `<tr><td><span class="traffic-light ${row.status.key}">${row.status.label}</span></td><td>${escapeHtml(row.productLabel)}</td><td>${escapeHtml(row.mercado)}</td><td>${escapeHtml(row.procedencia || 'Sin procedencia informada')}</td>${MONTHS.map((_, index) => { const month = String(index + 1).padStart(2, '0'); const value = row.monthlyPrices[month]; const variation = row.monthlyVariations[month]; return `<td class="price-month-cell">${value ? `<strong>${formatCurrency(value)}</strong>${Number.isFinite(variation) ? `<small>${variation >= 0 ? '↑' : '↓'}${formatPercent(Math.abs(variation))}</small>` : ''}` : '—'}</td>`; }).join('')}<td>${formatPercent(row.accumulatedVariation)}</td><td><span class="traffic-light ${row.status.key}">${row.status.label}</span></td></tr>`).join('');
+    status.textContent = rows.length ? '' : 'No hay suficientes precios mensuales para construir el semáforo con los filtros seleccionados.';
     status.classList.toggle('is-visible', !rows.length);
 }
 
@@ -1088,7 +1117,7 @@ function renderPriceCharts() {
     console.log('Series comparables para variación:', Math.max(increases.meta.length, decreases.meta.length));
     console.log('Subas mostradas:', increases.labels.length);
     console.log('Bajas mostradas:', decreases.labels.length);
-    renderPriceTrafficLightTable(filteredPriceData, priceFrequency);
+    renderPriceTrafficLightTable(filteredPriceData, 'mensual');
 }
 
 function priceChartOptions(axisLabel, horizontal = false) {
@@ -1878,6 +1907,25 @@ function renderSeasonalityTable() {
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────
+function isInvalidSpreadsheetValue(value) {
+    if (value === null || value === undefined) return true;
+    const text = String(value).trim().toUpperCase();
+    return !text || ['#REF!', '#N/A', '#VALUE!', '#DIV/0!', '#NAME?', '#NULL!', '#NUM!', 'NAN', 'UNDEFINED'].includes(text);
+}
+
+function cleanSpreadsheetErrors(value) {
+    if (isInvalidSpreadsheetValue(value)) {
+        if (value !== null && value !== undefined && String(value).trim()) spreadsheetInvalidCount++;
+        return '';
+    }
+    return String(value).replace(/\s+/g, ' ').trim();
+}
+
+function normalizeCategoryValue(value) {
+    const cleaned = cleanSpreadsheetErrors(value);
+    return cleaned ? formatLabel(cleaned) : '';
+}
+
 function normalizeText(value) {
     return String(value ?? '')
         .normalize('NFD')

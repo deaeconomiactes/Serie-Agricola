@@ -583,6 +583,9 @@ body {
 .price-traffic-table th { color: var(--text-muted); font-size: .66rem; letter-spacing: .45px; padding: 9px 8px; text-align: left; text-transform: uppercase; white-space: nowrap; }
 .price-traffic-table td { border-top: 1px solid var(--border-color); color: var(--text-secondary); padding: 9px 8px; white-space: nowrap; }
 .price-traffic-table tr:hover td { background: rgba(255,255,255,.025); color: var(--text-primary); }
+.price-month-cell { min-width: 84px; text-align: right; }
+.price-month-cell strong, .price-month-cell small { display: block; }
+.price-month-cell small { color: var(--text-muted); font-size: .64rem; margin-top: 3px; }
 .traffic-light { border-radius: 999px; display: inline-block; font-size: .68rem; font-weight: 700; padding: 4px 8px; }
 .traffic-light.stable { background: rgba(52,211,153,.14); color: #34d399; }
 .traffic-light.moderate { background: rgba(251,191,36,.14); color: #fbbf24; }
