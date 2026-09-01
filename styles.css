@@ -523,6 +523,10 @@ body {
 .price-kpi-grid .kpi-icon { color: var(--accent-green); font-size: 1.4rem; font-weight: 800; }
 .price-kpi-grid .kpi-value { font-size: 1.15rem; }
 .price-kpi-grid .kpi-unit { overflow-wrap: anywhere; }
+.price-multi-select { min-height: 40px; }
+.price-multi-select[multiple] { height: 40px; overflow: hidden; }
+.price-multi-select[multiple]:focus { height: 150px; overflow-y: auto; }
+.price-multi-summary { color: var(--text-muted); display: block; font-size: .68rem; margin-top: 4px; }
 .price-kpi-average::before { background: linear-gradient(90deg, #34d399, #22d3ee); }
 .price-kpi-max::before { background: linear-gradient(90deg, #fb923c, #fbbf24); }
 .price-kpi-min::before { background: linear-gradient(90deg, #60a5fa, #a78bfa); }
@@ -571,6 +575,19 @@ body {
 .price-accumulated-summary > div:first-child strong { color: var(--accent-green); font-size: 1.4rem; }
 
 [hidden].price-chart-card { display: none !important; }
+
+.price-traffic-card { margin: 0 0 20px; overflow: hidden; }
+.price-traffic-note { color: var(--text-muted); font-size: .78rem; padding: 0 20px 12px; }
+.price-table-wrap { overflow-x: auto; padding: 0 20px 20px; }
+.price-traffic-table { border-collapse: collapse; font-size: .76rem; min-width: 1180px; width: 100%; }
+.price-traffic-table th { color: var(--text-muted); font-size: .66rem; letter-spacing: .45px; padding: 9px 8px; text-align: left; text-transform: uppercase; white-space: nowrap; }
+.price-traffic-table td { border-top: 1px solid var(--border-color); color: var(--text-secondary); padding: 9px 8px; white-space: nowrap; }
+.price-traffic-table tr:hover td { background: rgba(255,255,255,.025); color: var(--text-primary); }
+.traffic-light { border-radius: 999px; display: inline-block; font-size: .68rem; font-weight: 700; padding: 4px 8px; }
+.traffic-light.stable { background: rgba(52,211,153,.14); color: #34d399; }
+.traffic-light.moderate { background: rgba(251,191,36,.14); color: #fbbf24; }
+.traffic-light.strong { background: rgba(248,113,113,.14); color: #f87171; }
+.traffic-light.decrease { background: rgba(96,165,250,.14); color: #60a5fa; }
 
 .price-inline-status {
     color: var(--text-muted);

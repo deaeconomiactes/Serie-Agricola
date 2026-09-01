@@ -305,19 +305,23 @@
             </div>
             <div class="filter-group">
                 <label class="filter-label" for="priceFilterEspecie">Especie</label>
-                <select id="priceFilterEspecie" class="filter-select"><option value="TODOS">Todas</option></select>
+                <select id="priceFilterEspecie" class="filter-select price-multi-select" multiple size="1"><option value="TODOS">Todas</option></select>
+                <small id="priceFilterEspecieSummary" class="price-multi-summary">Todas</small>
             </div>
             <div class="filter-group">
                 <label class="filter-label" for="priceFilterVariedad">Variedad</label>
-                <select id="priceFilterVariedad" class="filter-select"><option value="TODOS">Todas</option></select>
+                <select id="priceFilterVariedad" class="filter-select price-multi-select" multiple size="1"><option value="TODOS">Todas</option></select>
+                <small id="priceFilterVariedadSummary" class="price-multi-summary">Todas</small>
             </div>
             <div class="filter-group">
                 <label class="filter-label" for="priceFilterMercado">Mercado</label>
-                <select id="priceFilterMercado" class="filter-select"><option value="TODOS">Todos</option></select>
+                <select id="priceFilterMercado" class="filter-select price-multi-select" multiple size="1"><option value="TODOS">Todos</option></select>
+                <small id="priceFilterMercadoSummary" class="price-multi-summary">Todos</small>
             </div>
             <div class="filter-group">
                 <label class="filter-label" for="priceFilterProcedencia">Procedencia</label>
-                <select id="priceFilterProcedencia" class="filter-select"><option value="TODOS">Todas</option></select>
+                <select id="priceFilterProcedencia" class="filter-select price-multi-select" multiple size="1"><option value="TODOS">Todas</option></select>
+                <small id="priceFilterProcedenciaSummary" class="price-multi-summary">Todas</small>
             </div>
             <div class="filter-group">
                 <label class="filter-label" for="priceFilterUnidad">Unidad</label>
@@ -369,8 +373,13 @@
                 <div class="chart-body price-chart-canvas"><canvas id="priceChartMarket"></canvas><div id="priceMarketStatus" class="price-inline-status"></div></div>
             </div>
         </div>
+        <div class="price-traffic-card chart-card">
+            <div class="chart-header"><h2 class="chart-title">Semáforo de precios</h2><p class="chart-desc">Control rápido de variación de precios por producto</p></div>
+            <div class="price-traffic-note">El semáforo clasifica variaciones de precios, no niveles de abastecimiento ni escasez.</div>
+            <div class="price-table-wrap"><table class="price-traffic-table"><thead><tr><th>Estado</th><th>Mercado / Fuente</th><th>Rubro</th><th>Especie</th><th>Variedad</th><th>Procedencia / Origen</th><th>Precio inicial</th><th>Precio final</th><th>Variación</th><th>Período inicial</th><th>Período final</th><th>Observaciones</th></tr></thead><tbody id="priceTrafficLightBody"></tbody></table><div id="priceTrafficLightStatus" class="price-inline-status is-visible">No hay datos suficientes para calcular esta visualización con los filtros seleccionados.</div></div>
+        </div>
         <p class="method-note price-method-note">Los precios se muestran como promedios simples por período. No están ponderados por cantidades salvo que exista un ponderador explícito. Las visualizaciones respetan la frecuencia original y no desagregan datos artificialmente.</p>
-        <p class="method-note price-method-note">Mercado indica la fuente o mercado de referencia del precio. Procedencia indica el origen del producto cuando la fuente lo informa. No se calculan relaciones precio-cantidad ni inferencias de escasez.</p>
+        <p class="method-note price-method-note">Mercado/Fuente indica dónde se releva o publica el precio. Procedencia/Origen indica de dónde proviene el producto cuando la fuente lo informa. No se calculan relaciones precio-cantidad ni inferencias de escasez.</p>
         <p id="priceDailyMethodNote" class="method-note price-method-note" hidden>En vista diaria se muestra la evolución del precio promedio. Las variaciones se resumen entre la primera y última fecha disponible para evitar ruido diario.</p>
         <div id="priceAccumulatedSummary" class="price-accumulated-summary" hidden>
             <div><span class="kpi-label">Variación acumulada</span><strong id="priceAccumulatedValue">–</strong></div>
