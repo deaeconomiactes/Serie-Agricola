@@ -13,7 +13,7 @@ La cobertura temporal válida va de **2024-12-29** a **2026-12-25**, con **581 s
 - Filas totales: 108,331
 - Archivos de origen: 346
 - Meses: 2024-12, 2025-01, 2025-02, 2025-03, 2025-04, 2025-05, 2025-06, 2025-07, 2025-08, 2025-09, 2025-10, 2025-11, 2025-12, 2026-01, 2026-02, 2026-03, 2026-04, 2026-05, 2026-06, 2026-07, 2026-08, 2026-12
-- Rubros: #Ref!, Frutas, Hortalizas, Subproductos
+- Rubros: Frutas, Hortalizas, Subproductos
 - Especies únicas: 251
 - Precios válidos (> 0): 99.9%
 
@@ -54,8 +54,8 @@ El nivel de análisis es rubro, mercado, procedencia (si existe), especie, varie
 ## 7. Calidad y limitaciones
 
 - Fechas inválidas o faltantes: 3.
-- Precios faltantes/no numéricos: 56.
-- Precios cero: 0.
+- Precios faltantes/no numéricos: 2.
+- Precios cero: 54.
 - Precios negativos: 0.
 - Outliers por especie (Q1 -/+ 3*IQR), no eliminados: 2,305.
 

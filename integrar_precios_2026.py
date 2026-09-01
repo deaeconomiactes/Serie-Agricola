@@ -45,7 +45,9 @@ MONTHS = {
 MONTH_NAMES = {number: name.title() for name, number in MONTHS.items() if name != "setiembre"}
 FIELDS = [
     "fecha", "año", "mes", "rubro", "especie", "variedad", "mercado", "procedencia",
-    "localidad_corrientes", "envase", "kg_bulto", "total_kilos", "unidad", "precio", "precio_min", "precio_max", "precio_promedio",
+    "localidad_corrientes", "envase", "kg_bulto", "total_kilos", "unidad", "precio_observado",
+    "unidad_precio_observado", "precio_kg_estimado", "metodo_conversion_precio", "confianza_conversion_precio",
+    "precio", "precio_min", "precio_max", "precio_promedio",
     "archivo_origen",
 ]
 TABULAR_EXTENSIONS = {".csv", ".xlsx", ".xls"}
@@ -99,8 +101,13 @@ def normalize_text(value: Any) -> str:
     return text.title()
 
 
+def is_invalid_spreadsheet_value(value: Any) -> bool:
+    return _key(value) in {"ref", "div0", "value", "name", "na", "null", "none", "nan"}
+
+
 def normalize_species(value: Any) -> str:
-    return normalize_text(value).replace("Prom. Esp.", "Promedio Especie")
+    text = normalize_text(value)
+    return "" if is_invalid_spreadsheet_value(text) else text.replace("Prom. Esp.", "Promedio Especie")
 
 
 def normalize_variety(value: Any) -> str:
@@ -151,6 +158,47 @@ def infer_market_from_source(filename: str, sheet_name: str | None = None) -> st
 
 def normalize_unit(value: Any) -> str:
     return normalize_text(value).replace("Por Kg", "$/Kg")
+
+
+def normalize_price_unit(value: Any, envase: str = "", is_martin: bool = False) -> str:
+    """Normalize the unit of the observed price without assuming $/kg."""
+    text = normalize_text(value)
+    key = _key(text)
+    if key and ("kg" in key or "kilo" in key):
+        return "$/kg"
+    if key and any(token in key for token in ("bulto", "cajon", "caja", "bolsa", "jaula", "envase", "atado", "docena", "unidad", "planta")):
+        return "$/bulto" if any(token in key for token in ("bulto", "cajon", "caja", "bolsa", "jaula", "envase")) else text.lower()
+    if is_martin and envase:
+        return "$/bulto"
+    return text.lower() if text else "sin especificar"
+
+
+def _parse_numeric_price(value: Any) -> float | None:
+    """Parse a source number while retaining zero for audit purposes."""
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value) if value == value else None
+    text = str(value).strip().replace("$", "").replace(" ", "")
+    if not text or text.lower() in {"nan", "nat", "none", "null", "-", "–"}:
+        return None
+    text = re.sub(r"[^0-9,.-]", "", text)
+    if not text:
+        return None
+    if "," in text and "." in text:
+        decimal = "," if text.rfind(",") > text.rfind(".") else "."
+        thousands = "." if decimal == "," else ","
+        text = text.replace(thousands, "").replace(decimal, ".")
+    elif "," in text:
+        parts = text.split(",")
+        text = "".join(parts[:-1]) + "." + parts[-1] if len(parts[-1]) <= 2 else "".join(parts)
+    elif "." in text:
+        left, right = text.rsplit(".", 1)
+        text = left.replace(".", "") + ("." + right if len(right) <= 2 else right)
+    try:
+        return float(text)
+    except ValueError:
+        return None
 
 
 def parse_argentine_price(value: Any) -> float | None:
@@ -327,16 +375,23 @@ def _make_rows(raw_rows: list[dict[str, Any]], source: str, container: str) -> l
             row_year, row_month = year_fallback, month
         row_rubro = rubro
         raw_type = normalize_text(_find(raw, ("rubro", "tipo", "serie")))
+        if is_invalid_spreadsheet_value(raw_type):
+            raw_type = ""
         if not row_rubro and raw_type:
             type_key = _key(raw_type).upper()
             row_rubro = "Hortalizas" if "HORTAL" in type_key else "Frutas" if "FRUT" in type_key else raw_type
         species = normalize_species(_find(raw, ("especie", "esp", "producto", "productos", "articulo")))
         if not species or _key(species) in {"total", "totales"}:
             continue
-        avg = parse_argentine_price(_find(raw, price_candidates))
-        minimum = parse_argentine_price(_find(raw, ("precio_min", "minimo", "mipk", "precio_publico_minimo")))
-        maximum = parse_argentine_price(_find(raw, ("precio_max", "maximo", "mapk", "precio_publico_maximo")))
-        if avg is not None or minimum is not None or maximum is not None:
+        avg_raw = _find(raw, price_candidates)
+        minimum_raw = _find(raw, ("precio_min", "minimo", "mipk", "precio_publico_minimo"))
+        maximum_raw = _find(raw, ("precio_max", "maximo", "mapk", "precio_publico_maximo"))
+        avg = _parse_numeric_price(avg_raw)
+        minimum = _parse_numeric_price(minimum_raw)
+        maximum = _parse_numeric_price(maximum_raw)
+        observed_candidates = [value for value in (avg, minimum, maximum) if value is not None and value > 0]
+        observed = observed_candidates[0] if observed_candidates else next((value for value in (avg, minimum, maximum) if value is not None), None)
+        if observed is not None and observed > 0:
             valid_price_count += 1
         if source_date:
             parsed_dates.append(source_date)
@@ -344,6 +399,39 @@ def _make_rows(raw_rows: list[dict[str, Any]], source: str, container: str) -> l
             # Keep the row and its real date; do not manufacture a price.
             pass
         locality = _find(raw, ("localidad_corrientes", "localidad de corrientes"))
+        envase = normalize_text(_find(raw, ("envase", "presentacion", "presentación", "bulto", "env")))
+        kg_bulto = _parse_numeric_price(_find(raw, ("kg_bulto", "kg/bulto", "kg bulto", "peso bulto", "peso envase", "kg")))
+        total_kilos = _parse_numeric_price(_find(raw, ("total_kilos", "total de kilos", "total kilos")))
+        unit_source = _find(raw, ("unidad_precio_observado", "unidad precio", "unidad", "unit", "precio por", "precio/kg", "mopk", "mipk", "mapk"))
+        observed_unit = normalize_price_unit(unit_source, envase, is_martin)
+        unit_key = _key(observed_unit)
+        source_price_keys = {_key(name) for name in raw if any(token in _key(name) for token in ("mopk", "mipk", "mapk", "precio/kg", "precioporkg"))}
+        if source_price_keys:
+            observed_unit = "$/kg"
+            unit_key = "kg"
+        explicit_per_kg = observed_unit == "$/kg" or "kg" in unit_key or "kilo" in unit_key
+        comparable_unit = observed_unit == "$/kg" or observed_unit == "$/bulto"
+        estimated_kg = None
+        conversion_method = "sin conversión: unidad no comparable"
+        conversion_confidence = "No comparable"
+        if observed is None:
+            conversion_method = "sin conversión: precio observado faltante"
+            conversion_confidence = "Baja"
+        elif observed <= 0:
+            conversion_method = "sin conversión: precio observado cero o inválido"
+            conversion_confidence = "Baja"
+        elif explicit_per_kg:
+            estimated_kg = observed
+            conversion_method = "precio informado por kg"
+            conversion_confidence = "Alta"
+        elif comparable_unit and kg_bulto is not None and kg_bulto > 0:
+            estimated_kg = observed / kg_bulto
+            conversion_method = "precio observado dividido por kg_bulto"
+            conversion_confidence = "Media"
+        elif comparable_unit:
+            conversion_method = "sin conversión: kg_bulto faltante"
+        elif envase:
+            conversion_method = "sin conversión: envase no expresado en kg"
         if is_martin:
             row_rubro_key = _key(raw_type).upper()
             if "HORTAL" in row_rubro_key:
@@ -361,11 +449,16 @@ def _make_rows(raw_rows: list[dict[str, Any]], source: str, container: str) -> l
             "mercado": inferred_market or normalize_market(_find(raw, ("mercado", "market"))),
             "procedencia": normalize_procedencia(_find(raw, ("procedencia", "proc", "origen"))),
             "localidad_corrientes": normalize_location(locality),
-            "envase": normalize_text(_find(raw, ("envase",))),
-            "kg_bulto": _find(raw, ("kg_bulto", "kg/bulto", "kg bulto")),
-            "total_kilos": _find(raw, ("total_kilos", "total de kilos")),
-            "unidad": normalize_unit(_find(raw, ("unidad", "unit"))) or "$/Kg",
-            "precio": avg if avg is not None else (minimum if minimum is not None else maximum),
+            "envase": envase,
+            "kg_bulto": kg_bulto,
+            "total_kilos": total_kilos,
+            "unidad": normalize_unit(_find(raw, ("unidad", "unit"))) or observed_unit,
+            "precio_observado": observed,
+            "unidad_precio_observado": observed_unit,
+            "precio_kg_estimado": estimated_kg,
+            "metodo_conversion_precio": conversion_method,
+            "confianza_conversion_precio": conversion_confidence,
+            "precio": observed,
             "precio_min": minimum,
             "precio_max": maximum,
             "precio_promedio": avg,
@@ -469,9 +562,22 @@ def main() -> int:
     print(f"Fecha mínima Martin Micelli: {martin_dates[0] if martin_dates else 'n/d'}")
     print(f"Fecha máxima Martin Micelli: {martin_dates[-1] if martin_dates else 'n/d'}")
     print(f"Años Martin Micelli: {sorted({row['año'] for row in martin_rows if row['año']})}")
-    valid_prices = [row for row in rows if parse_argentine_price(row["precio_promedio"]) and parse_argentine_price(row["precio_promedio"]) > 0]
+    valid_prices = [row for row in rows if _parse_numeric_price(row["precio_observado"]) is not None and _parse_numeric_price(row["precio_observado"]) > 0]
     print(f"Registros con precio válido: {len(valid_prices)}")
     print(f"Registros sin precio válido: {len(rows) - len(valid_prices)}")
+    estimated_prices = [row for row in rows if _parse_numeric_price(row["precio_kg_estimado"]) is not None and _parse_numeric_price(row["precio_kg_estimado"]) > 0]
+    print(f"Registros con precio por kg estimado: {len(estimated_prices)}")
+    print(f"Registros no comparables: {sum(row['confianza_conversion_precio'] == 'No comparable' for row in rows)}")
+    print(f"Unidades de precio observadas: {sorted({row['unidad_precio_observado'] for row in rows if row['unidad_precio_observado']})}")
+    print(f"Confianza de conversión: { {value: sum(row['confianza_conversion_precio'] == value for row in rows) for value in ('Alta', 'Media', 'Baja', 'No comparable')} }")
+    martin_envases = sorted({row['envase'] for row in martin_rows if row['envase']})
+    martin_kg = sorted({row['kg_bulto'] for row in martin_rows if row['kg_bulto'] is not None})
+    martin_zero_kg = sum(row['kg_bulto'] == 0 for row in martin_rows)
+    martin_extreme = sum(row['precio_kg_estimado'] is not None and (row['precio_kg_estimado'] > 100000 or row['precio_kg_estimado'] < 1) for row in martin_rows)
+    print(f"Martin Micelli - envases únicos: {martin_envases[:30]}{' ...' if len(martin_envases) > 30 else ''}")
+    print(f"Martin Micelli - kg_bulto únicos: {martin_kg[:30]}{' ...' if len(martin_kg) > 30 else ''}")
+    print(f"Martin Micelli - casos kg_bulto igual a cero: {martin_zero_kg}")
+    print(f"Martin Micelli - conversiones con precio por kg extremo: {martin_extreme}")
     markets = sorted({row["mercado"] for row in rows if row["mercado"]})
     procedencias = sorted({row["procedencia"] for row in rows if row["procedencia"]})
     print(f"Mercados detectados: {', '.join(markets) or '(ninguno)'}")
