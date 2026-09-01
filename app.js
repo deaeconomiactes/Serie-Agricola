@@ -299,6 +299,7 @@ let filteredPriceData = [];
 let priceSeriesData = [];
 let priceQualityMap = new Map();
 let priceFutureDateCount = 0;
+let priceUnitMode = 'comparable';
 let spreadsheetInvalidCount = 0;
 let heatmapFilter = 'TODOS';
 let selectedYear = '2025';
@@ -420,7 +421,7 @@ function aggregateQuantityData(data, frequency) {
 
 function aggregatePriceData(data, frequency) {
     const groups = new Map();
-    data.forEach(row => { const key = createTimeKey(row.fecha || row, frequency); if (key && isValidPrice(row.precioPromedio)) { const values = groups.get(key) || []; values.push(row.precioPromedio); groups.set(key, values); } });
+    data.forEach(row => { const key = createTimeKey(row.fecha || row, frequency); const value = getPriceValue(row); if (key && isValidPrice(value)) { const values = groups.get(key) || []; values.push(value); groups.set(key, values); } });
     return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, values]) => ({ key, value: values.reduce((sum, value) => sum + value, 0) / values.length }));
 }
 
@@ -490,7 +491,7 @@ async function loadPriceData() {
     console.warn('Valores inválidos de planilla excluidos o normalizados:', spreadsheetInvalidCount);
     const dateSplit = filterFutureDates(rawPriceData);
     futurePriceData = dateSplit.futureRows;
-    priceData = dateSplit.validRows.filter(row => isValidPrice(row.precioPromedio));
+    priceData = dateSplit.validRows.filter(row => isValidPrice(row.precioObservado));
     validPriceData = priceData;
     const invalidPriceCount = dateSplit.validRows.length - priceData.length;
     const years = getAvailablePriceYears(priceData);
@@ -503,6 +504,11 @@ async function loadPriceData() {
     console.log('Archivo de precios cargado:', sourcePath);
     console.log('Total registros precios crudos:', rawPriceData.length);
     console.log('Total registros precios válidos:', priceData.length);
+    console.log('Registros con precio observado:', priceData.filter(row => isValidPrice(row.precioObservado)).length);
+    console.log('Registros con precio kg estimado:', priceData.filter(row => isValidPrice(row.precioKgEstimado)).length);
+    console.log('Registros no comparables:', priceData.filter(row => !isValidPrice(row.precioKgEstimado)).length);
+    console.log('Unidades observadas:', [...new Set(priceData.map(row => row.unidadPrecioObservado).filter(Boolean))]);
+    console.log('Confianza conversión:', priceData.reduce((counts, row) => { const key = row.confianzaConversion || 'Sin informar'; counts[key] = (counts[key] || 0) + 1; return counts; }, {}));
     console.warn('Registros excluidos por precio inválido o cero:', invalidPriceCount);
     console.warn('Registros de precios con fecha futura excluidos:', futurePriceData.length);
     console.log('Rango de fechas precios:', datedPrices[0] || 'Sin fecha', datedPrices[datedPrices.length - 1] || 'Sin fecha');
@@ -558,6 +564,19 @@ function isValidPrice(value) {
     return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
 
+function isComparablePriceRow(row) {
+    return isValidPrice(row?.precioKgEstimado) && ['Alta', 'Media'].includes(row?.confianzaConversion);
+}
+
+function getPriceValue(row) {
+    if (priceUnitMode === 'comparable') return row?.precioKgEstimado;
+    return row?.precioObservado;
+}
+
+function getPriceMetricLabel() {
+    return priceUnitMode === 'comparable' ? 'Precio estimado por kg' : 'Precio observado';
+}
+
 function getProductLabel(row) {
     const species = String(row?.especie || '').trim();
     const variety = String(row?.variedad || '').trim();
@@ -578,7 +597,7 @@ function buildAccumulatedVariationRanking(data, groupFields, frequency = 'diaria
     let extremeCount = 0;
     const grouped = new Map();
     data.forEach(row => {
-        if (!isValidPrice(row.precioPromedio)) return;
+        if (!isValidPrice(getPriceValue(row))) return;
         const key = groupFields.map(field => String(row[field] || (field === 'variedad' ? 'Sin especificar' : 'Sin procedencia informada'))).join('|');
         const label = groupFields.length === 1 ? (String(row[groupFields[0]] || '').trim() || (groupFields[0] === 'variedad' ? 'Sin especificar' : 'Sin procedencia informada')) : getProductLabel(row);
         const group = grouped.get(key) || { label, rows: [] };
@@ -589,7 +608,7 @@ function buildAccumulatedVariationRanking(data, groupFields, frequency = 'diaria
         const rows = group.rows;
         if (rows.length < 5) return null;
         const byPeriod = new Map();
-        rows.forEach(row => { const period = createTimeKey(row.fecha || row, frequency); if (period) { const values = byPeriod.get(period) || []; values.push(row.precioPromedio); byPeriod.set(period, values); } });
+        rows.forEach(row => { const period = createTimeKey(row.fecha || row, frequency); const value = getPriceValue(row); if (period && isValidPrice(value)) { const values = byPeriod.get(period) || []; values.push(value); byPeriod.set(period, values); } });
         const periods = [...byPeriod.entries()].sort(([a], [b]) => a.localeCompare(b));
         if (periods.length < 2) return null;
         const first = { key: periods[0][0], value: periods[0][1].reduce((sum, value) => sum + value, 0) / periods[0][1].length };
@@ -620,7 +639,9 @@ function processPriceData(rows, sourcePath = PRICE_CSV_PATH) {
         const dateText = String(row.fecha || '').trim();
         const date = /^\d{4}-\d{2}-\d{2}$/.test(dateText) ? dateText : '';
         const monthNumber = date ? Number(date.slice(5, 7)) : MONTHS_FULL.findIndex(month => normalizeText(month) === normalizeText(row.mes)) + 1;
-        const average = parsePriceNumber(row.precio_promedio) ?? parsePriceNumber(row.precio);
+        const observed = parsePriceNumber(row.precio_observado) ?? parsePriceNumber(row.precio_promedio) ?? parsePriceNumber(row.precio);
+        const estimated = parsePriceNumber(row.precio_kg_estimado);
+        const average = estimated ?? observed;
         const minimum = parsePriceNumber(row.precio_min);
         const maximum = parsePriceNumber(row.precio_max);
         const rubroRaw = normalizeCategoryValue(row.rubro);
@@ -631,7 +652,8 @@ function processPriceData(rows, sourcePath = PRICE_CSV_PATH) {
             fecha: date, year: date ? Number(date.slice(0, 4)) : Number(row.año || row.ano) || null, month: monthNumber,
             mes: monthNumber >= 1 && monthNumber <= 12 ? MONTHS_FULL[monthNumber - 1] : normalizeCategoryValue(row.mes),
             rubro, especie: normalizeCategoryValue(row.especie) || 'Sin especificar', variedad: normalizeCategoryValue(row.variedad),
-            mercado: normalizeCategoryValue(row.mercado), procedencia: normalizeCategoryValue(row.procedencia), unidad: normalizeCategoryValue(row.unidad) || 'Sin especificar', precio: parsePriceNumber(row.precio),
+            mercado: normalizeCategoryValue(row.mercado), procedencia: normalizeCategoryValue(row.procedencia), unidad: normalizeCategoryValue(row.unidad) || 'Sin especificar', precio: observed,
+            precioObservado: observed, unidadPrecioObservado: normalizeCategoryValue(row.unidad_precio_observado) || 'sin especificar', envase: normalizeCategoryValue(row.envase), kgBulto: parsePriceNumber(row.kg_bulto), precioKgEstimado: estimated, metodoConversion: normalizeCategoryValue(row.metodo_conversion_precio), confianzaConversion: normalizeCategoryValue(row.confianza_conversion_precio),
             precioMin: minimum, precioMax: maximum, precioPromedio: average,
             calidad: priceQualityMap.get(priceSeriesKey({ ...row, rubro, especie: row.especie, variedad: row.variedad })) || '', fuente: sourcePath
         };
@@ -790,6 +812,11 @@ function populatePriceFilters() {
         };
         if (select.multiple) updateMultiSelectSummary(id);
     });
+    const comparableFilter = document.getElementById('priceFilterComparable');
+    if (comparableFilter) comparableFilter.onchange = () => {
+        priceUnitMode = comparableFilter.value === 'comparables' ? 'comparable' : comparableFilter.value === 'no-comparables' ? 'nonComparable' : 'all';
+        updatePriceDashboard();
+    };
 }
 
 function updatePriceVarietyFilter() { populatePriceFilters(); }
@@ -818,12 +845,16 @@ function getFilteredPriceData() {
         variedad: varieties,
         mercado: markets,
         procedencia: provenances,
-        unidad: document.getElementById('priceFilterUnidad').value
+        unidad: document.getElementById('priceFilterUnidad').value,
+        unidadComparable: document.getElementById('priceFilterComparable').value
     };
+    priceUnitMode = filters.unidadComparable === 'comparables' ? 'comparable' : filters.unidadComparable === 'no-comparables' ? 'nonComparable' : 'all';
     const selectedYear = filters.year === 'TODOS' ? null : Number(filters.year);
     return validPriceData.filter(row =>
+        (filters.unidadComparable === 'comparables' ? isComparablePriceRow(row) : filters.unidadComparable === 'no-comparables' ? !isComparablePriceRow(row) && isValidPrice(row.precioObservado) : isValidPrice(row.precioObservado))
+        &&
         (selectedYear === null || Number(row.year) === selectedYear)
-        && Object.entries(filters).every(([key, value]) => key === 'year' || (Array.isArray(value) ? matchesMultiSelect(row[key], value) : value === 'TODOS' || row[key] === value))
+        && Object.entries(filters).every(([key, value]) => key === 'year' || key === 'unidadComparable' || (Array.isArray(value) ? matchesMultiSelect(row[key], value) : value === 'TODOS' || row[key] === value))
     );
 }
 
@@ -839,7 +870,7 @@ function updatePriceDashboard() {
         ? beforeYearFilterCount
         : validPriceData.filter(row => Number(row.year) === Number(selectedYear)).length;
     applyPriceFilters();
-    const currentPriceFilters = ['priceFilterYear', 'priceFilterRubro', 'priceFilterMes', 'priceFilterEspecie', 'priceFilterVariedad', 'priceFilterMercado', 'priceFilterProcedencia', 'priceFilterUnidad']
+    const currentPriceFilters = ['priceFilterYear', 'priceFilterRubro', 'priceFilterMes', 'priceFilterEspecie', 'priceFilterVariedad', 'priceFilterMercado', 'priceFilterProcedencia', 'priceFilterUnidad', 'priceFilterComparable']
         .reduce((filters, id) => { filters[id] = document.getElementById(id)?.value || 'TODOS'; return filters; }, {});
     console.log('Filtros de precios aplicados:', currentPriceFilters);
     console.log('Año de precios seleccionado:', selectedYear);
@@ -848,6 +879,12 @@ function updatePriceDashboard() {
     console.log('Registros luego del filtro precio:', filteredPriceData.length);
     const hasData = filteredPriceData.length > 0;
     setPriceStatus(hasData ? '' : (priceData.length ? 'No hay precios disponibles para la combinación seleccionada. Revisá año, mercado, especie o mes.' : 'No se pudo cargar la base de precios mayoristas.'), !hasData);
+    const unitStatus = document.getElementById('priceUnitStatus');
+    if (unitStatus) {
+        const nonComparableIncluded = priceUnitMode !== 'comparable' && filteredPriceData.some(row => !isComparablePriceRow(row));
+        unitStatus.textContent = nonComparableIncluded ? 'Algunos precios no tienen unidad comparable en kg y se excluyen de indicadores por kg.' : '';
+        unitStatus.classList.toggle('is-visible', nonComparableIncluded);
+    }
     updatePriceKPIs();
     renderPriceCharts();
 }
@@ -890,10 +927,10 @@ function setPriceStatus(message, visible) {
 }
 
 function updatePriceKPIs() {
-    const values = filteredPriceData.map(row => row.precioPromedio).filter(isValidPrice);
+    const values = filteredPriceData.map(getPriceValue).filter(isValidPrice);
     const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
-    const maximum = filteredPriceData.reduce((best, row) => { const value = isValidPrice(row.precioMax) ? row.precioMax : row.precioPromedio; return isValidPrice(value) && (!best || value > best.value) ? { value, row } : best; }, null);
-    const minimum = filteredPriceData.reduce((best, row) => { const value = isValidPrice(row.precioMin) ? row.precioMin : row.precioPromedio; return isValidPrice(value) && (!best || value < best.value) ? { value, row } : best; }, null);
+    const maximum = filteredPriceData.reduce((best, row) => { const value = getPriceValue(row); return isValidPrice(value) && (!best || value > best.value) ? { value, row } : best; }, null);
+    const minimum = filteredPriceData.reduce((best, row) => { const value = getPriceValue(row); return isValidPrice(value) && (!best || value < best.value) ? { value, row } : best; }, null);
     const species = new Set(filteredPriceData.map(row => row.especie).filter(Boolean));
     const varieties = new Set(filteredPriceData.map(row => row.variedad || 'Sin especificar').filter(Boolean));
     const periodVariation = calculatePeriodVariation(aggregatePriceData(filteredPriceData, priceFrequency), priceFrequency).filter(item => Number.isFinite(item.variation));
@@ -938,6 +975,11 @@ function updatePriceKPIs() {
     document.getElementById('priceKpiIncreaseLabel').textContent = priceFrequency === 'diaria' ? 'Variación acumulada' : 'Mayor suba';
     document.getElementById('priceKpiDecreaseLabel').textContent = priceFrequency === 'diaria' ? 'Variación acumulada' : 'Mayor baja';
     document.getElementById('priceKpiLast').textContent = latest;
+    const comparableView = priceUnitMode === 'comparable';
+    document.getElementById('priceKpiAverageLabel').textContent = comparableView ? 'Precio promedio por kg' : 'Precio observado promedio';
+    document.getElementById('priceKpiAverageUnit').textContent = comparableView ? 'calculado sobre registros con unidad comparable' : 'según presentación original';
+    document.getElementById('priceKpiMaxLabel').textContent = comparableView ? 'Precio máximo por kg' : 'Precio observado máximo';
+    document.getElementById('priceKpiMinLabel').textContent = comparableView ? 'Precio mínimo por kg' : 'Precio observado mínimo';
 }
 
 function formatCurrency(value) {
@@ -1003,14 +1045,14 @@ function preparePriceEvolutionData(data, frequency) {
 function preparePriceRankingData(data, analysisLevel = 'general') {
     const field = analysisLevel === 'species_detail' ? 'variedad' : analysisLevel === 'variety_detail' ? 'procedencia' : 'especie';
     const grouped = new Map();
-    data.filter(row => isValidPrice(row.precioPromedio)).forEach(row => {
+    data.filter(row => isValidPrice(getPriceValue(row))).forEach(row => {
         const label = field === 'variedad'
             ? (row.variedad || 'Sin especificar')
             : field === 'procedencia'
                 ? (row.procedencia || 'Sin procedencia informada')
                 : row.especie || 'Sin especificar';
         const item = grouped.get(label) || { label, values: [], observations: 0, periods: [] };
-        item.values.push(row.precioPromedio);
+        item.values.push(getPriceValue(row));
         item.observations++;
         const period = createTimeKey(row.fecha || row, priceFrequency);
         if (period) item.periods.push(period);
@@ -1043,9 +1085,9 @@ function preparePriceDecreaseRankingData(data, frequency) {
 
 function preparePriceMarketComparisonData(data) {
     const groups = new Map();
-    data.filter(row => isValidPrice(row.precioPromedio) && row.mercado).forEach(row => {
+    data.filter(row => isValidPrice(getPriceValue(row)) && row.mercado).forEach(row => {
         const values = groups.get(row.mercado) || [];
-        values.push(row.precioPromedio);
+        values.push(getPriceValue(row));
         groups.set(row.mercado, values);
     });
     const comparison = [...groups.entries()].map(([market, values]) => ({
@@ -1075,7 +1117,7 @@ function calculateAccumulatedVariation(first, last) {
 
 function buildMonthlyPriceSemaphoreMatrix(data, filters = {}) {
     const groups = new Map();
-    data.filter(row => isValidPrice(row.precioPromedio) && (!row.fecha || isValidOperationalDate(row.fecha))).forEach(row => {
+    data.filter(row => isValidPrice(getPriceValue(row)) && (!row.fecha || isValidOperationalDate(row.fecha))).forEach(row => {
         const fields = ['mercado', 'rubro', 'especie', 'variedad', 'procedencia', 'unidad'];
         const key = fields.map(field => row[field] || (field === 'variedad' ? 'Sin especificar' : field === 'procedencia' ? 'Sin procedencia informada' : 'Sin informar')).join('|');
         const group = groups.get(key) || { row, observations: 0, monthlyValues: {} };
@@ -1083,7 +1125,7 @@ function buildMonthlyPriceSemaphoreMatrix(data, filters = {}) {
         const month = row.fecha ? row.fecha.slice(5, 7) : String(row.month || '').padStart(2, '0');
         if (/^(0[1-9]|1[0-2])$/.test(month)) {
             const values = group.monthlyValues[month] || [];
-            values.push(row.precioPromedio);
+            values.push(getPriceValue(row));
             group.monthlyValues[month] = values;
         }
         groups.set(key, group);
@@ -1141,10 +1183,11 @@ function renderPriceCharts() {
     const comparable = 'No hay suficientes categorías comparables para construir este ranking.';
     const noComparable = 'La selección actual representa una única serie. La variación acumulada se muestra en los KPIs.';
 
-    document.getElementById('priceTimeSeriesTitle').textContent = `Evolución ${priceFrequency} del precio promedio`;
+    const metricLabel = getPriceMetricLabel();
+    document.getElementById('priceTimeSeriesTitle').textContent = `Evolución ${priceFrequency} · ${metricLabel}`;
     document.getElementById('priceDailyMethodNote').hidden = priceFrequency !== 'diaria';
     if (evolution.values.length) {
-        priceCharts.evolution = createPriceChart('evolution', 'priceChartMonthly', { type: 'line', data: { labels: evolution.labels, datasets: [{ label: `Precio promedio ${priceFrequency}`, data: evolution.values, borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,.16)', fill: true, tension: .3, pointRadius: priceFrequency === 'diaria' ? 2 : 4 }] }, options: priceChartOptions('Precio promedio') });
+        priceCharts.evolution = createPriceChart('evolution', 'priceChartMonthly', { type: 'line', data: { labels: evolution.labels, datasets: [{ label: `${metricLabel} ${priceFrequency}`, data: evolution.values, borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,.16)', fill: true, tension: .3, pointRadius: priceFrequency === 'diaria' ? 2 : 4 }] }, options: priceChartOptions(metricLabel) });
     } else showChartMessage('priceChartMonthly', insufficient);
 
     const rankingTitle = visualizations.level === 'species_detail' ? 'Ranking de variedades por precio promedio' : visualizations.level === 'variety_detail' ? 'Ranking por procedencia de precio promedio' : 'Ranking de especies por precio promedio';
@@ -1153,11 +1196,11 @@ function renderPriceCharts() {
     document.getElementById('priceRankingDesc').textContent = rankingDescription;
     document.getElementById('priceRankingCard').hidden = !(visualizations.showSpeciesRanking || visualizations.showVarietyRanking || visualizations.showProcedenciaComparison);
     if (!document.getElementById('priceRankingCard').hidden && ranking.labels.length >= 2) {
-        const base = priceChartOptions('Precio promedio', true);
+        const base = priceChartOptions(metricLabel, true);
         base.scales.x.beginAtZero = true;
         base.scales.x.suggestedMax = Math.max(...ranking.values) * 1.1;
-        base.plugins.tooltip = { ...tooltipConfig(), callbacks: { label: context => { const item = ranking.meta[context.dataIndex]; return [`Precio promedio: ${formatCurrency(item.average)}`, `Observaciones: ${item.observations}`, `Período: ${formatPeriodLabel(item.firstPeriod, priceFrequency)} - ${formatPeriodLabel(item.lastPeriod, priceFrequency)}`]; } } };
-        priceCharts.ranking = createPriceChart('ranking', 'priceChartRanking', { type: 'bar', data: { labels: ranking.labels, datasets: [{ label: 'Precio promedio', data: ranking.values, backgroundColor: PALETTE }] }, options: base });
+        base.plugins.tooltip = { ...tooltipConfig(), callbacks: { label: context => { const item = ranking.meta[context.dataIndex]; return [`${metricLabel}: ${formatCurrency(item.average)}`, `Observaciones: ${item.observations}`, `Período: ${formatPeriodLabel(item.firstPeriod, priceFrequency)} - ${formatPeriodLabel(item.lastPeriod, priceFrequency)}`]; } } };
+        priceCharts.ranking = createPriceChart('ranking', 'priceChartRanking', { type: 'bar', data: { labels: ranking.labels, datasets: [{ label: metricLabel, data: ranking.values, backgroundColor: PALETTE }] }, options: base });
     } else if (!document.getElementById('priceRankingCard').hidden) showChartMessage('priceChartRanking', ranking.labels.length ? comparable : insufficient);
     document.getElementById('priceVariationCard').hidden = !visualizations.showVariationBars;
     if (visualizations.showVariationBars && variation.values.length) {
@@ -1185,10 +1228,10 @@ function renderPriceCharts() {
     const marketCard = document.getElementById('priceMarketCard');
     marketCard.hidden = !visualizations.showMarketComparison;
     if (visualizations.showMarketComparison && marketComparison.labels.length >= 2) {
-        const options = priceChartOptions('Precio promedio', true);
+        const options = priceChartOptions(metricLabel, true);
         options.scales.x.beginAtZero = true;
-        options.plugins.tooltip = { ...tooltipConfig(), callbacks: { label: context => { const item = marketComparison.meta[context.dataIndex]; return [`Precio promedio: ${formatCurrency(item.average)}`, `Observaciones: ${item.observations}`]; } } };
-        priceCharts.marketComparison = createPriceChart('marketComparison', 'priceChartMarket', { type: 'bar', data: { labels: marketComparison.labels, datasets: [{ label: 'Precio promedio', data: marketComparison.values, backgroundColor: ['#34d399', '#60a5fa'] }] }, options });
+        options.plugins.tooltip = { ...tooltipConfig(), callbacks: { label: context => { const item = marketComparison.meta[context.dataIndex]; return [`${metricLabel}: ${formatCurrency(item.average)}`, `Observaciones: ${item.observations}`]; } } };
+        priceCharts.marketComparison = createPriceChart('marketComparison', 'priceChartMarket', { type: 'bar', data: { labels: marketComparison.labels, datasets: [{ label: metricLabel, data: marketComparison.values, backgroundColor: ['#34d399', '#60a5fa'] }] }, options });
     } else if (!marketCard.hidden) showChartMessage('priceChartMarket', 'La selección actual contiene un solo mercado.');
     const dailyDescription = priceFrequency === 'diaria' ? 'Variación acumulada entre primera y última fecha disponible' : 'Productos con mayor cambio entre el primer y último período';
     document.getElementById('priceIncreaseDesc').textContent = dailyDescription;

@@ -131,6 +131,7 @@ button, select { font: inherit; }
 .price-filters { margin-bottom: 16px; padding: 18px 20px; }
 .price-status { display: none; margin-bottom: 16px; padding: 11px 14px; border: 1px solid rgba(216,154,96,.45); border-radius: var(--radius-sm); background: rgba(216,154,96,.1); color: #e5c29e; font-size: .78rem; }
 .price-status.is-visible { display: block; }
+.price-unit-status { margin: -4px 0 14px; padding-left: 12px; border-left: 2px solid rgba(215,179,106,.55); text-align: left; }
 .price-kpi-grid {
     display: grid;
     gap: 16px;
