@@ -294,10 +294,12 @@ let filteredData = [];
 let rawPriceData = [];
 let priceData = [];
 let validPriceData = [];
+let futurePriceData = [];
 let filteredPriceData = [];
 let priceSeriesData = [];
 let priceQualityMap = new Map();
 let priceFutureDateCount = 0;
+let spreadsheetInvalidCount = 0;
 let heatmapFilter = 'TODOS';
 let selectedYear = '2025';
 const selectedUnit = 'TN';
@@ -310,6 +312,7 @@ document.addEventListener('DOMContentLoaded', init);
 async function init() {
     showLoading();
     wireModuleTabs();
+    initMultiSelectControls();
     try {
         await loadQuantityData();
         wireFilters();
@@ -458,6 +461,16 @@ function wireModuleTabs() {
 }
 
 // ─── Independent wholesale prices module ───────────────────────────────
+function isValidOperationalDate(date) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(String(date || '')) && String(date) <= currentDateISO();
+}
+
+function filterFutureDates(data) {
+    const futureRows = data.filter(row => row.fecha && !isValidOperationalDate(row.fecha));
+    const validRows = data.filter(row => !row.fecha || isValidOperationalDate(row.fecha));
+    return { validRows, futureRows };
+}
+
 async function loadPriceData() {
     let response = null;
     let sourcePath = PRICE_CSV_PATH;
@@ -474,12 +487,16 @@ async function loadPriceData() {
         priceQualityMap = new Map(priceSeriesData.map(row => [priceSeriesKey(row), row.indicador_serie_utilizable || '']));
     }
     rawPriceData = processPriceData(parsePriceCSV(await response.text()), sourcePath);
-    priceData = rawPriceData.filter(row => isValidPrice(row.precioPromedio));
+    console.warn('Valores inválidos de planilla excluidos o normalizados:', spreadsheetInvalidCount);
+    const dateSplit = filterFutureDates(rawPriceData);
+    futurePriceData = dateSplit.futureRows;
+    priceData = dateSplit.validRows.filter(row => isValidPrice(row.precioPromedio));
     validPriceData = priceData;
-    const invalidPriceCount = rawPriceData.length - priceData.length;
+    const invalidPriceCount = dateSplit.validRows.length - priceData.length;
     const years = getAvailablePriceYears(priceData);
     const datedPrices = priceData.map(row => row.fecha).filter(Boolean).sort();
     const rowsByYear = priceData.reduce((counts, row) => { if (Number.isFinite(row.year)) counts[row.year] = (counts[row.year] || 0) + 1; return counts; }, {});
+    const rowsByYearMonth = priceData.reduce((counts, row) => { if (row.year && row.mes) { const key = `${row.year}-${String(monthNumber(row.mes)).padStart(2, '0')}`; counts[key] = (counts[key] || 0) + 1; } return counts; }, {});
     const currentYear = new Date().getFullYear();
     const suspiciousRows = priceData.filter(row => Number.isFinite(row.year) && row.year > currentYear + 1);
     priceFutureDateCount = priceData.filter(row => row.fecha && row.fecha > currentDateISO()).length;
@@ -487,9 +504,11 @@ async function loadPriceData() {
     console.log('Total registros precios crudos:', rawPriceData.length);
     console.log('Total registros precios válidos:', priceData.length);
     console.warn('Registros excluidos por precio inválido o cero:', invalidPriceCount);
+    console.warn('Registros de precios con fecha futura excluidos:', futurePriceData.length);
     console.log('Rango de fechas precios:', datedPrices[0] || 'Sin fecha', datedPrices[datedPrices.length - 1] || 'Sin fecha');
     console.log('Años disponibles en precios:', years);
     console.log('Filas por año en precios:', rowsByYear);
+    console.log('Filas de precios válidas por año-mes:', rowsByYearMonth);
     console.warn('Registros con años futuros o sospechosos:', suspiciousRows.length);
     console.log('Frecuencia original detectada en precios:', detectFrequency(priceData));
     if (priceFutureDateCount) console.warn('Fechas futuras excluidas del KPI último registro:', priceFutureDateCount);
@@ -587,12 +606,12 @@ function buildAccumulatedVariationRanking(data, groupFields, frequency = 'diaria
 
 function getPriceVariationGrouping(frequency) {
     if (frequency !== 'diaria') return { groupFields: ['especie', 'variedad'], singleSeries: false };
-    const species = document.getElementById('priceFilterEspecie')?.value || 'TODOS';
-    const variety = document.getElementById('priceFilterVariedad')?.value || 'TODOS';
-    const provenance = document.getElementById('priceFilterProcedencia')?.value || 'TODOS';
-    if (species === 'TODOS') return { groupFields: [], singleSeries: false };
-    if (variety === 'TODOS') return { groupFields: ['variedad'], singleSeries: false };
-    if (provenance === 'TODOS') return { groupFields: ['procedencia'], singleSeries: false };
+    const species = getMultiSelectValues('priceFilterEspecie');
+    const variety = getMultiSelectValues('priceFilterVariedad');
+    const provenance = getMultiSelectValues('priceFilterProcedencia');
+    if (!species.length || species.includes('TODOS') || species.length !== 1) return { groupFields: [], singleSeries: false };
+    if (!variety.length || variety.includes('TODOS') || variety.length !== 1) return { groupFields: ['variedad'], singleSeries: false };
+    if (!provenance.length || provenance.includes('TODOS') || provenance.length !== 1) return { groupFields: ['procedencia'], singleSeries: false };
     return { groupFields: [], singleSeries: true };
 }
 
@@ -604,13 +623,15 @@ function processPriceData(rows, sourcePath = PRICE_CSV_PATH) {
         const average = parsePriceNumber(row.precio_promedio) ?? parsePriceNumber(row.precio);
         const minimum = parsePriceNumber(row.precio_min);
         const maximum = parsePriceNumber(row.precio_max);
-        const rubroRaw = normalizeText(row.rubro);
-        const rubro = rubroRaw.includes('HORTAL') ? 'Hortalizas' : rubroRaw.includes('FRUT') ? 'Frutas' : rubroRaw;
+        const rubroRaw = normalizeCategoryValue(row.rubro);
+        const sourceText = normalizeText(sourcePath);
+        const rubroKey = normalizeText(rubroRaw);
+        const rubro = rubroKey.includes('HORTAL') ? 'Hortalizas' : rubroKey.includes('FRUT') ? 'Frutas' : rubroKey.includes('SUBPRODUCT') ? 'Subproductos' : rubroRaw || (sourceText.includes('HORTAL') ? 'Hortalizas' : sourceText.includes('FRUT') ? 'Frutas' : 'Sin clasificar');
         return {
             fecha: date, year: date ? Number(date.slice(0, 4)) : Number(row.año || row.ano) || null, month: monthNumber,
-            mes: monthNumber >= 1 && monthNumber <= 12 ? MONTHS_FULL[monthNumber - 1] : normalizeText(row.mes),
-            rubro, especie: formatLabel(row.especie), variedad: formatLabel(row.variedad),
-            mercado: formatLabel(row.mercado), procedencia: formatLabel(row.procedencia), unidad: formatLabel(row.unidad) || 'Sin especificar', precio: parsePriceNumber(row.precio),
+            mes: monthNumber >= 1 && monthNumber <= 12 ? MONTHS_FULL[monthNumber - 1] : normalizeCategoryValue(row.mes),
+            rubro, especie: normalizeCategoryValue(row.especie) || 'Sin especificar', variedad: normalizeCategoryValue(row.variedad),
+            mercado: normalizeCategoryValue(row.mercado), procedencia: normalizeCategoryValue(row.procedencia), unidad: normalizeCategoryValue(row.unidad) || 'Sin especificar', precio: parsePriceNumber(row.precio),
             precioMin: minimum, precioMax: maximum, precioPromedio: average,
             calidad: priceQualityMap.get(priceSeriesKey({ ...row, rubro, especie: row.especie, variedad: row.variedad })) || '', fuente: sourcePath
         };
@@ -625,29 +646,149 @@ function initPriceYearFilter() {
     populatePriceFilters();
 }
 
+function getMultiSelectValues(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select?.multiple) return select?.value || 'TODOS';
+    return [...select.selectedOptions].map(option => option.value).filter(Boolean);
+}
+
+function matchesMultiSelect(value, selectedValues) {
+    if (!Array.isArray(selectedValues) || !selectedValues.length || selectedValues.includes('TODOS')) return true;
+    return selectedValues.includes(value || 'Sin especificar');
+}
+
+function updateMultiSelectSummary(selectId) {
+    const summary = document.querySelector(`[data-multi-select="${selectId}"] .multi-select-summary`)
+        || document.getElementById(`${selectId}Summary`);
+    if (!summary) return;
+    const values = getMultiSelectValues(selectId);
+    const allLabel = {
+        priceFilterEspecie: 'Todas las especies',
+        priceFilterVariedad: 'Todas las variedades',
+        priceFilterMercado: 'Todos los mercados',
+        priceFilterProcedencia: 'Todas las procedencias'
+    }[selectId] || (selectId.includes('Mercado') ? 'Todos' : 'Todas');
+    if (!values.length || values.includes('TODOS')) summary.textContent = allLabel;
+    else if (values.length <= 2) summary.textContent = values.join(', ');
+    else summary.textContent = `${values.slice(0, 2).join(', ')} y ${values.length - 2} más`;
+    renderMultiSelectOptions(selectId);
+}
+
+function initMultiSelectControls() {
+    document.querySelectorAll('[data-multi-select]').forEach(wrapper => {
+        const selectId = wrapper.dataset.multiSelect;
+        const trigger = wrapper.querySelector('.multi-select-trigger');
+        const dropdown = wrapper.querySelector('.multi-select-dropdown');
+        if (!trigger || !dropdown) return;
+        trigger.addEventListener('click', event => {
+            event.stopPropagation();
+            const isOpen = wrapper.classList.toggle('is-open');
+            trigger.setAttribute('aria-expanded', String(isOpen));
+            if (isOpen) dropdown.focus();
+        });
+        dropdown.addEventListener('click', event => event.stopPropagation());
+        renderMultiSelectOptions(selectId);
+    });
+    document.addEventListener('click', () => closeMultiSelects());
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeMultiSelects();
+    });
+}
+
+function closeMultiSelects() {
+    document.querySelectorAll('[data-multi-select].is-open').forEach(wrapper => {
+        wrapper.classList.remove('is-open');
+        wrapper.querySelector('.multi-select-trigger')?.setAttribute('aria-expanded', 'false');
+    });
+}
+
+function renderMultiSelectOptions(selectId) {
+    const wrapper = document.querySelector(`[data-multi-select="${selectId}"]`);
+    const select = document.getElementById(selectId);
+    const dropdown = wrapper?.querySelector('.multi-select-dropdown');
+    if (!select || !dropdown) return;
+    dropdown.innerHTML = '';
+    [...select.options].forEach(option => {
+        const item = document.createElement('div');
+        item.className = 'multi-select-option';
+        item.setAttribute('role', 'option');
+        item.tabIndex = 0;
+        item.setAttribute('aria-selected', String(option.selected));
+        item.dataset.value = option.value;
+        if (option.selected) item.classList.add('is-selected');
+        const checkbox = document.createElement('span');
+        checkbox.className = 'multi-select-checkbox';
+        checkbox.setAttribute('aria-hidden', 'true');
+        checkbox.textContent = option.selected ? '✓' : '';
+        const label = document.createElement('span');
+        label.className = 'multi-select-option-label';
+        label.textContent = option.textContent;
+        item.append(checkbox, label);
+        item.addEventListener('click', () => {
+            if (option.value === 'TODOS') {
+                [...select.options].forEach(candidate => { candidate.selected = candidate.value === 'TODOS'; });
+            } else {
+                option.selected = !option.selected;
+                const all = select.options[0];
+                all.selected = false;
+                if (![...select.options].some(candidate => candidate !== all && candidate.selected)) all.selected = true;
+            }
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        item.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                item.click();
+            }
+        });
+        dropdown.appendChild(item);
+    });
+}
+
+function setMultiSelectOptions(selectId, values, allLabel, selectedValues = []) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    const unique = [...new Set(values.filter(value => String(value || '').trim()))];
+    unique.sort((a, b) => String(a).localeCompare(String(b), 'es'));
+    select.innerHTML = '';
+    const all = new Option(allLabel, 'TODOS');
+    select.add(all);
+    unique.forEach(value => select.add(new Option(value, value)));
+    const kept = selectedValues.filter(value => value === 'TODOS' || unique.includes(value));
+    if (kept.length) [...select.options].forEach(option => { option.selected = kept.includes(option.value); });
+    else all.selected = true;
+}
+
 function populatePriceFilters() {
+    const selectedSpecies = getMultiSelectValues('priceFilterEspecie');
     const definitions = [
         ['priceFilterYear', validPriceData.map(row => row.year), 'Todos los años'],
         ['priceFilterRubro', validPriceData.map(row => row.rubro), 'Todos'],
         ['priceFilterMes', validPriceData.map(row => row.mes), 'Todos los meses'],
         ['priceFilterEspecie', validPriceData.map(row => row.especie), 'Todas las especies'],
-        ['priceFilterVariedad', validPriceData.filter(row => row.especie === document.getElementById('priceFilterEspecie').value || document.getElementById('priceFilterEspecie').value === 'TODOS').map(row => row.variedad || 'Sin especificar'), 'Todas las variedades'],
+        ['priceFilterVariedad', validPriceData.filter(row => !Array.isArray(selectedSpecies) || !selectedSpecies.length || selectedSpecies.includes('TODOS') || selectedSpecies.includes(row.especie)).map(row => row.variedad || 'Sin especificar'), 'Todas las variedades'],
         ['priceFilterMercado', validPriceData.map(row => row.mercado), 'Todos los mercados'],
         ['priceFilterProcedencia', validPriceData.map(row => row.procedencia), 'Todas'],
         ['priceFilterUnidad', validPriceData.map(row => row.unidad), 'Todas']
     ];
     definitions.forEach(([id, values, allLabel]) => {
         const select = document.getElementById(id);
-        const current = select.value;
+        const current = select?.multiple ? getMultiSelectValues(id) : select.value;
         const unique = [...new Set(values.filter(value => String(value || '').trim()))];
         if (id === 'priceFilterMes') unique.sort((a, b) => monthNumber(a) - monthNumber(b));
         else unique.sort((a, b) => String(a).localeCompare(String(b), 'es'));
         populateSelect(select, unique, allLabel, value => value);
-        if (unique.includes(current)) select.value = current;
+        if (select.multiple) {
+            const kept = current.filter(value => value === 'TODOS' || unique.includes(value));
+            [...select.options].forEach(option => { option.selected = kept.includes(option.value); });
+            if (!kept.length) select.options[0].selected = true;
+        } else if (unique.includes(current)) select.value = current;
         select.onchange = () => {
             if (id === 'priceFilterEspecie') { updatePriceVarietyFilter(); updatePriceFrequencyOptions(); }
+            if (select.multiple) updateMultiSelectSummary(id);
             updatePriceDashboard();
         };
+        if (select.multiple) updateMultiSelectSummary(id);
     });
 }
 
@@ -665,20 +806,24 @@ function monthNumber(value) {
 }
 
 function getFilteredPriceData() {
+    const species = getMultiSelectValues('priceFilterEspecie');
+    const varieties = getMultiSelectValues('priceFilterVariedad');
+    const markets = getMultiSelectValues('priceFilterMercado');
+    const provenances = getMultiSelectValues('priceFilterProcedencia');
     const filters = {
         rubro: document.getElementById('priceFilterRubro').value,
         year: document.getElementById('priceFilterYear').value,
         mes: document.getElementById('priceFilterMes').value,
-        especie: document.getElementById('priceFilterEspecie').value,
-        variedad: document.getElementById('priceFilterVariedad').value,
-        mercado: document.getElementById('priceFilterMercado').value,
-        procedencia: document.getElementById('priceFilterProcedencia').value,
+        especie: species,
+        variedad: varieties,
+        mercado: markets,
+        procedencia: provenances,
         unidad: document.getElementById('priceFilterUnidad').value
     };
     const selectedYear = filters.year === 'TODOS' ? null : Number(filters.year);
     return validPriceData.filter(row =>
         (selectedYear === null || Number(row.year) === selectedYear)
-        && Object.entries(filters).every(([key, value]) => key === 'year' || value === 'TODOS' || row[key] === value)
+        && Object.entries(filters).every(([key, value]) => key === 'year' || (Array.isArray(value) ? matchesMultiSelect(row[key], value) : value === 'TODOS' || row[key] === value))
     );
 }
 
@@ -708,9 +853,12 @@ function updatePriceDashboard() {
 }
 
 function getPriceAnalysisLevel(filters) {
-    if (!filters || filters.especie === 'TODOS') return 'general';
-    if (filters.variedad === 'TODOS') return 'species_detail';
-    if (filters.procedencia === 'TODOS') return 'variety_detail';
+    const species = Array.isArray(filters?.especie) ? filters.especie : [filters?.especie || 'TODOS'];
+    const varieties = Array.isArray(filters?.variedad) ? filters.variedad : [filters?.variedad || 'TODOS'];
+    const provenances = Array.isArray(filters?.procedencia) ? filters.procedencia : [filters?.procedencia || 'TODOS'];
+    if (!species.length || species.includes('TODOS') || species.length !== 1) return 'general';
+    if (!varieties.length || varieties.includes('TODOS') || varieties.length !== 1) return 'species_detail';
+    if (!provenances.length || provenances.includes('TODOS') || provenances.length !== 1) return 'variety_detail';
     return 'single_series';
 }
 
@@ -908,13 +1056,80 @@ function preparePriceMarketComparisonData(data) {
     return { labels: comparison.map(item => item.market), values: comparison.map(item => item.average), meta: comparison };
 }
 
+function getTrafficLightStatus(variation) {
+    if (variation < -50) return { key: 'review', label: 'Revisar' };
+    if (variation < -5) return { key: 'decrease', label: 'Baja' };
+    if (variation <= 5) return { key: 'stable', label: 'Estable' };
+    if (variation <= 15) return { key: 'moderate', label: 'Suba moderada' };
+    if (variation <= 50) return { key: 'strong', label: 'Suba fuerte' };
+    return { key: 'review', label: 'Revisar' };
+}
+
+function calculateMonthlyPriceVariation(current, previous) {
+    return isValidPrice(current) && isValidPrice(previous) ? (current / previous - 1) * 100 : null;
+}
+
+function calculateAccumulatedVariation(first, last) {
+    return isValidPrice(first) && isValidPrice(last) ? (last / first - 1) * 100 : null;
+}
+
+function buildMonthlyPriceSemaphoreMatrix(data, filters = {}) {
+    const groups = new Map();
+    data.filter(row => isValidPrice(row.precioPromedio) && (!row.fecha || isValidOperationalDate(row.fecha))).forEach(row => {
+        const fields = ['mercado', 'rubro', 'especie', 'variedad', 'procedencia', 'unidad'];
+        const key = fields.map(field => row[field] || (field === 'variedad' ? 'Sin especificar' : field === 'procedencia' ? 'Sin procedencia informada' : 'Sin informar')).join('|');
+        const group = groups.get(key) || { row, observations: 0, monthlyValues: {} };
+        group.observations++;
+        const month = row.fecha ? row.fecha.slice(5, 7) : String(row.month || '').padStart(2, '0');
+        if (/^(0[1-9]|1[0-2])$/.test(month)) {
+            const values = group.monthlyValues[month] || [];
+            values.push(row.precioPromedio);
+            group.monthlyValues[month] = values;
+        }
+        groups.set(key, group);
+    });
+    return [...groups.values()].map(group => {
+        const monthly = Object.fromEntries(Object.entries(group.monthlyValues).map(([month, values]) => [month, { price: values.reduce((sum, value) => sum + value, 0) / values.length, variation: null }]));
+        const validMonths = Object.keys(monthly).sort();
+        const shortPeriodFilter = document.getElementById('priceFilterMes')?.value && document.getElementById('priceFilterMes').value !== 'TODOS';
+        if (validMonths.length < 2 || validMonths.length < 3 && !shortPeriodFilter) return null;
+        const firstMonth = validMonths[0];
+        const lastMonth = validMonths[validMonths.length - 1];
+        const variation = calculateAccumulatedVariation(monthly[firstMonth].price, monthly[lastMonth].price);
+        if (!Number.isFinite(variation)) return null;
+        validMonths.slice(1).forEach((month, index) => { monthly[month].variation = calculateMonthlyPriceVariation(monthly[month].price, monthly[validMonths[index]].price); });
+        const productLabel = getProductLabel(group.row);
+        const market = group.row.mercado || 'Fuente sin informar';
+        return { ...group.row, productLabel, rowLabel: `${productLabel} — ${market}`, rowMeta: [group.row.rubro, group.row.procedencia ? `Origen: ${group.row.procedencia}` : ''].filter(Boolean).join(' · '), market, monthly, accumulatedVariation: variation, firstPeriod: firstMonth, lastPeriod: lastMonth, observations: group.observations, validMonths: validMonths.length, status: getTrafficLightStatus(variation) };
+    }).filter(Boolean).sort((a, b) => String(a.mercado).localeCompare(String(b.mercado), 'es') || String(a.rubro).localeCompare(String(b.rubro), 'es') || String(a.productLabel).localeCompare(String(b.productLabel), 'es') || b.validMonths - a.validMonths).slice(0, 20);
+}
+
+function buildPriceTrafficLightTable(data, filters, frequency) {
+    return buildMonthlyPriceSemaphoreMatrix(data, filters);
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
+}
+
+function renderPriceTrafficLightTable(data, frequency) {
+    const body = document.getElementById('priceTrafficLightBody');
+    const status = document.getElementById('priceTrafficLightStatus');
+    if (!body || !status) return;
+    const rows = buildPriceTrafficLightTable(data, null, frequency);
+    body.innerHTML = rows.map(row => `<tr><td class="price-semaphore-product"><strong>${escapeHtml(row.rowLabel)}</strong><small>${escapeHtml(row.rowMeta)}</small></td>${MONTHS.map((_, index) => { const month = String(index + 1).padStart(2, '0'); const cell = row.monthly[month]; const value = cell?.price; const variation = cell?.variation; const cellClass = !cell ? '' : !Number.isFinite(variation) ? 'stable' : variation < -5 ? 'down-soft' : variation <= 0 ? 'stable' : variation <= 5 ? 'up-soft' : variation <= 15 ? 'up-medium' : 'up-strong'; return `<td class="price-semaphore-cell ${cellClass}">${value ? `<strong>${formatCurrency(value)}</strong>${Number.isFinite(variation) ? `<small>${variation >= 0 ? '↑' : '↓'}${formatPercent(Math.abs(variation))}</small>` : ''}` : '—'}</td>`; }).join('')}<td class="price-semaphore-variation">${formatPercent(row.accumulatedVariation)}</td><td><span class="price-semaphore-badge ${row.status.key}">${row.status.label}</span></td></tr>`).join('');
+    status.textContent = rows.length ? '' : 'No hay suficientes precios mensuales para construir el semáforo con los filtros seleccionados.';
+    status.classList.toggle('is-visible', !rows.length);
+}
+
 function renderPriceCharts() {
     destroyAllPriceCharts();
-    const filters = ['priceFilterYear', 'priceFilterRubro', 'priceFilterMes', 'priceFilterEspecie', 'priceFilterVariedad', 'priceFilterMercado', 'priceFilterProcedencia', 'priceFilterUnidad']
-        .reduce((result, id) => { result[id.replace('priceFilter', '').toLowerCase()] = document.getElementById(id)?.value || 'TODOS'; return result; }, {});
-    filters.especie = document.getElementById('priceFilterEspecie')?.value || 'TODOS';
-    filters.variedad = document.getElementById('priceFilterVariedad')?.value || 'TODOS';
-    filters.procedencia = document.getElementById('priceFilterProcedencia')?.value || 'TODOS';
+    const filters = {
+        especie: getMultiSelectValues('priceFilterEspecie'),
+        variedad: getMultiSelectValues('priceFilterVariedad'),
+        procedencia: getMultiSelectValues('priceFilterProcedencia'),
+        mercado: getMultiSelectValues('priceFilterMercado')
+    };
     const visualizations = getAvailablePriceVisualizations(filteredPriceData, filters, priceFrequency);
     const evolution = preparePriceEvolutionData(filteredPriceData, priceFrequency);
     const ranking = preparePriceRankingData(filteredPriceData, visualizations.level);
@@ -983,6 +1198,7 @@ function renderPriceCharts() {
     console.log('Series comparables para variación:', Math.max(increases.meta.length, decreases.meta.length));
     console.log('Subas mostradas:', increases.labels.length);
     console.log('Bajas mostradas:', decreases.labels.length);
+    renderPriceTrafficLightTable(filteredPriceData, 'mensual');
 }
 
 function priceChartOptions(axisLabel, horizontal = false) {
@@ -1772,6 +1988,25 @@ function renderSeasonalityTable() {
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────
+function isInvalidSpreadsheetValue(value) {
+    if (value === null || value === undefined) return true;
+    const text = String(value).trim().toUpperCase();
+    return !text || ['#REF!', '#N/A', '#VALUE!', '#DIV/0!', '#NAME?', '#NULL!', '#NUM!', 'NAN', 'UNDEFINED'].includes(text);
+}
+
+function cleanSpreadsheetErrors(value) {
+    if (isInvalidSpreadsheetValue(value)) {
+        if (value !== null && value !== undefined && String(value).trim()) spreadsheetInvalidCount++;
+        return '';
+    }
+    return String(value).replace(/\s+/g, ' ').trim();
+}
+
+function normalizeCategoryValue(value) {
+    const cleaned = cleanSpreadsheetErrors(value);
+    return cleaned ? formatLabel(cleaned) : '';
+}
+
 function normalizeText(value) {
     return String(value ?? '')
         .normalize('NFD')
