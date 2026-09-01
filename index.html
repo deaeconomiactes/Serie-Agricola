@@ -305,24 +305,36 @@
                 <select id="priceFilterRubro" class="filter-select"><option value="TODOS">Todos</option></select>
             </div>
             <div class="filter-group">
-                <label class="filter-label" for="priceFilterEspecie">Especie</label>
-                <select id="priceFilterEspecie" class="filter-select price-multi-select" multiple size="1"><option value="TODOS">Todas</option></select>
-                <small id="priceFilterEspecieSummary" class="price-multi-summary">Todas</small>
+                <label class="filter-label" for="priceFilterEspecieTrigger">Especie</label>
+                <div class="multi-select" data-multi-select="priceFilterEspecie">
+                    <select id="priceFilterEspecie" class="filter-select price-multi-select" multiple size="1" aria-hidden="true" tabindex="-1"><option value="TODOS">Todas</option></select>
+                    <button id="priceFilterEspecieTrigger" class="multi-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="multi-select-summary">Todas las especies</span><span class="multi-select-chevron" aria-hidden="true">⌄</span></button>
+                    <div class="multi-select-dropdown" role="listbox" aria-label="Especie" tabindex="-1"></div>
+                </div>
             </div>
             <div class="filter-group">
-                <label class="filter-label" for="priceFilterVariedad">Variedad</label>
-                <select id="priceFilterVariedad" class="filter-select price-multi-select" multiple size="1"><option value="TODOS">Todas</option></select>
-                <small id="priceFilterVariedadSummary" class="price-multi-summary">Todas</small>
+                <label class="filter-label" for="priceFilterVariedadTrigger">Variedad</label>
+                <div class="multi-select" data-multi-select="priceFilterVariedad">
+                    <select id="priceFilterVariedad" class="filter-select price-multi-select" multiple size="1" aria-hidden="true" tabindex="-1"><option value="TODOS">Todas</option></select>
+                    <button id="priceFilterVariedadTrigger" class="multi-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="multi-select-summary">Todas las variedades</span><span class="multi-select-chevron" aria-hidden="true">⌄</span></button>
+                    <div class="multi-select-dropdown" role="listbox" aria-label="Variedad" tabindex="-1"></div>
+                </div>
             </div>
             <div class="filter-group">
-                <label class="filter-label" for="priceFilterMercado">Mercado</label>
-                <select id="priceFilterMercado" class="filter-select price-multi-select" multiple size="1"><option value="TODOS">Todos</option></select>
-                <small id="priceFilterMercadoSummary" class="price-multi-summary">Todos</small>
+                <label class="filter-label" for="priceFilterMercadoTrigger">Mercado</label>
+                <div class="multi-select" data-multi-select="priceFilterMercado">
+                    <select id="priceFilterMercado" class="filter-select price-multi-select" multiple size="1" aria-hidden="true" tabindex="-1"><option value="TODOS">Todos</option></select>
+                    <button id="priceFilterMercadoTrigger" class="multi-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="multi-select-summary">Todos los mercados</span><span class="multi-select-chevron" aria-hidden="true">⌄</span></button>
+                    <div class="multi-select-dropdown" role="listbox" aria-label="Mercado" tabindex="-1"></div>
+                </div>
             </div>
             <div class="filter-group">
-                <label class="filter-label" for="priceFilterProcedencia">Procedencia</label>
-                <select id="priceFilterProcedencia" class="filter-select price-multi-select" multiple size="1"><option value="TODOS">Todas</option></select>
-                <small id="priceFilterProcedenciaSummary" class="price-multi-summary">Todas</small>
+                <label class="filter-label" for="priceFilterProcedenciaTrigger">Procedencia</label>
+                <div class="multi-select" data-multi-select="priceFilterProcedencia">
+                    <select id="priceFilterProcedencia" class="filter-select price-multi-select" multiple size="1" aria-hidden="true" tabindex="-1"><option value="TODOS">Todas</option></select>
+                    <button id="priceFilterProcedenciaTrigger" class="multi-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="multi-select-summary">Todas las procedencias</span><span class="multi-select-chevron" aria-hidden="true">⌄</span></button>
+                    <div class="multi-select-dropdown" role="listbox" aria-label="Procedencia" tabindex="-1"></div>
+                </div>
             </div>
             <div class="filter-group">
                 <label class="filter-label" for="priceFilterUnidad">Unidad</label>
@@ -374,10 +386,10 @@
                 <div class="chart-body price-chart-canvas"><canvas id="priceChartMarket"></canvas><div id="priceMarketStatus" class="price-inline-status"></div></div>
             </div>
         </div>
-        <div class="price-traffic-card chart-card">
+        <div class="price-semaphore-card chart-card">
             <div class="chart-header"><h2 class="chart-title">Semáforo de precios</h2><p class="chart-desc">Control rápido de variación de precios por producto</p></div>
-            <div class="price-traffic-note">El semáforo clasifica variaciones de precios, no niveles de abastecimiento ni escasez.</div>
-            <div class="price-table-wrap"><table class="price-traffic-table"><thead><tr><th>Estado</th><th>Producto</th><th>Mercado / Fuente</th><th>Procedencia / Origen</th><th>Ene</th><th>Feb</th><th>Mar</th><th>Abr</th><th>May</th><th>Jun</th><th>Jul</th><th>Ago</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dic</th><th>Variación período</th><th>Estado</th></tr></thead><tbody id="priceTrafficLightBody"></tbody></table><div id="priceTrafficLightStatus" class="price-inline-status is-visible">No hay suficientes precios mensuales para construir el semáforo con los filtros seleccionados.</div></div>
+            <div class="price-semaphore-note">El sombreado destaca cambios relativos de precios entre meses. No representa escasez ni abastecimiento.</div>
+            <div class="price-semaphore-wrap"><table class="price-semaphore-table"><thead><tr><th>Producto</th><th>Ene</th><th>Feb</th><th>Mar</th><th>Abr</th><th>May</th><th>Jun</th><th>Jul</th><th>Ago</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dic</th><th>Variación período</th><th>Estado</th></tr></thead><tbody id="priceTrafficLightBody"></tbody></table><div id="priceTrafficLightStatus" class="price-inline-status is-visible">No hay suficientes precios mensuales para construir el semáforo con los filtros seleccionados.</div></div>
         </div>
         <p class="method-note price-method-note">Los precios se muestran como promedios simples por período. No están ponderados por cantidades salvo que exista un ponderador explícito. Las visualizaciones respetan la frecuencia original y no desagregan datos artificialmente.</p>
         <p class="method-note price-method-note">Mercado/Fuente indica dónde se releva o publica el precio. Procedencia/Origen indica de dónde proviene el producto cuando la fuente lo informa. No se calculan relaciones precio-cantidad ni inferencias de escasez.</p>

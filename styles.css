@@ -142,10 +142,25 @@ button, select { font: inherit; }
 .price-kpi-grid .kpi-icon { color: var(--accent-green); font-size: 1.4rem; font-weight: 800; }
 .price-kpi-grid .kpi-value { font-size: 1.15rem; }
 .price-kpi-grid .kpi-unit { overflow-wrap: anywhere; }
-.price-multi-select { min-height: 40px; }
-.price-multi-select[multiple] { height: 40px; overflow: hidden; }
-.price-multi-select[multiple]:focus { height: 150px; overflow-y: auto; }
-.price-multi-summary { color: var(--text-muted); display: block; font-size: .68rem; margin-top: 4px; }
+.multi-select { position: relative; z-index: 20; min-width: 0; }
+.multi-select.is-open { z-index: 1100; }
+.price-multi-select { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.multi-select-trigger { display: flex; width: 100%; min-height: 40px; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 11px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-panel); color: var(--text-primary); cursor: pointer; font: inherit; font-size: .78rem; text-align: left; transition: border-color .15s ease, box-shadow .15s ease, background .15s ease; }
+.multi-select-trigger:hover, .multi-select.is-open .multi-select-trigger, .multi-select-trigger:focus-visible { border-color: var(--accent-green); outline: none; box-shadow: 0 0 0 3px var(--accent-green-soft); }
+.multi-select-summary { min-width: 0; overflow: hidden; color: var(--text-primary); text-overflow: ellipsis; white-space: nowrap; }
+.multi-select-chevron { color: var(--text-secondary); font-size: 1rem; line-height: 1; transition: transform .15s ease; }
+.multi-select.is-open .multi-select-chevron { transform: rotate(180deg); color: var(--accent-green); }
+.multi-select-dropdown { position: absolute; top: calc(100% + 7px); right: 0; left: 0; z-index: 1000; display: none; max-height: 245px; overflow-x: hidden; overflow-y: auto; padding: 6px; border: 1px solid #40566d; border-radius: var(--radius-sm); background: #172535; box-shadow: 0 16px 32px rgba(0, 0, 0, .38), 0 3px 8px rgba(0, 0, 0, .22); }
+.multi-select.is-open .multi-select-dropdown { display: block; }
+.multi-select-dropdown:focus-visible { outline: 2px solid var(--accent-green); outline-offset: 2px; }
+.multi-select-option { display: flex; min-height: 34px; align-items: center; gap: 9px; padding: 7px 9px; border-radius: 5px; color: #edf5f8; cursor: pointer; font-size: .76rem; line-height: 1.25; }
+.multi-select-option:hover, .multi-select-option:focus-visible { background: rgba(104, 194, 158, .14); color: #fff; outline: none; }
+.multi-select-option.is-selected { background: rgba(104, 194, 158, .2); color: #fff; }
+.multi-select-checkbox { display: grid; width: 17px; height: 17px; flex: 0 0 17px; place-items: center; border: 1px solid #71869a; border-radius: 4px; background: #101b28; color: #10251d; font-size: .72rem; font-weight: 800; line-height: 1; }
+.multi-select-option.is-selected .multi-select-checkbox { border-color: var(--accent-green); background: var(--accent-green); }
+.multi-select-option-label { min-width: 0; overflow-wrap: anywhere; }
+.multi-select-empty { padding: 10px; color: var(--text-secondary); font-size: .74rem; }
+@media (max-width: 760px) { .multi-select-dropdown { position: fixed; right: 16px; left: 16px; max-height: min(280px, 45vh); } }
 .price-kpi-average::before { background: linear-gradient(90deg, #34d399, #22d3ee); }
 .price-kpi-max::before { background: linear-gradient(90deg, #fb923c, #fbbf24); }
 .price-kpi-min::before { background: linear-gradient(90deg, #60a5fa, #a78bfa); }
@@ -183,21 +198,35 @@ button, select { font: inherit; }
 .quality-badge { padding: 4px 8px; border-radius: 99px; font-size: .65rem; font-weight: 700; } .quality-alta { background: var(--accent-green-soft); color: var(--accent-green); } .quality-media { background: rgba(215,179,106,.14); color: var(--accent-amber); }
 [hidden].price-chart-card { display: none !important; }
 
-.price-traffic-card { margin: 0 0 20px; overflow: hidden; }
-.price-traffic-note { color: var(--text-muted); font-size: .78rem; padding: 0 20px 12px; }
-.price-table-wrap { overflow-x: auto; padding: 0 20px 20px; }
-.price-traffic-table { border-collapse: collapse; font-size: .76rem; min-width: 1180px; width: 100%; }
-.price-traffic-table th { color: var(--text-muted); font-size: .66rem; letter-spacing: .45px; padding: 9px 8px; text-align: left; text-transform: uppercase; white-space: nowrap; }
-.price-traffic-table td { border-top: 1px solid var(--border-color); color: var(--text-secondary); padding: 9px 8px; white-space: nowrap; }
-.price-traffic-table tr:hover td { background: rgba(255,255,255,.025); color: var(--text-primary); }
-.price-month-cell { min-width: 84px; text-align: right; }
-.price-month-cell strong, .price-month-cell small { display: block; }
-.price-month-cell small { color: var(--text-muted); font-size: .64rem; margin-top: 3px; }
-.traffic-light { border-radius: 999px; display: inline-block; font-size: .68rem; font-weight: 700; padding: 4px 8px; }
-.traffic-light.stable { background: rgba(52,211,153,.14); color: #34d399; }
-.traffic-light.moderate { background: rgba(251,191,36,.14); color: #fbbf24; }
-.traffic-light.strong { background: rgba(248,113,113,.14); color: #f87171; }
-.traffic-light.decrease { background: rgba(96,165,250,.14); color: #60a5fa; }
+.price-semaphore-card { margin: 0 0 20px; overflow: hidden; }
+.price-semaphore-note { color: var(--text-muted); font-size: .76rem; padding: 0 20px 12px; }
+.price-semaphore-wrap { padding: 0 20px 20px; }
+.price-semaphore-table { border-collapse: separate; border-spacing: 3px; font-size: .7rem; table-layout: fixed; width: 100%; }
+.price-semaphore-table th { color: var(--text-muted); font-size: .62rem; letter-spacing: .04em; padding: 8px 4px; text-align: center; text-transform: uppercase; white-space: nowrap; }
+.price-semaphore-table th:first-child { text-align: left; width: 22%; }
+.price-semaphore-table th:nth-last-child(2) { width: 9%; }
+.price-semaphore-table th:last-child { width: 10%; }
+.price-semaphore-table td { border: 1px solid rgba(173,198,218,.1); border-radius: 4px; color: var(--text-secondary); padding: 7px 4px; text-align: center; vertical-align: middle; }
+.price-semaphore-table tbody tr:hover td { border-color: rgba(104,194,158,.28); }
+.price-semaphore-product { background: rgba(255,255,255,.02); text-align: left !important; }
+.price-semaphore-product strong, .price-semaphore-product small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.price-semaphore-product strong { color: var(--text-primary); font-size: .72rem; }
+.price-semaphore-product small { color: var(--text-muted); font-size: .62rem; margin-top: 3px; }
+.price-semaphore-cell { background: rgba(255,255,255,.02); }
+.price-semaphore-cell strong, .price-semaphore-cell small { display: block; }
+.price-semaphore-cell small { color: var(--text-muted); font-size: .6rem; margin-top: 3px; }
+.price-semaphore-cell.up-soft { background: rgba(251,191,36,.09); }
+.price-semaphore-cell.up-medium { background: rgba(251,146,60,.13); }
+.price-semaphore-cell.up-strong { background: rgba(248,113,113,.15); }
+.price-semaphore-cell.down-soft { background: rgba(96,165,250,.13); }
+.price-semaphore-cell.stable { background: rgba(255,255,255,.025); }
+.price-semaphore-variation { font-weight: 700; }
+.price-semaphore-badge { border-radius: 999px; display: inline-block; font-size: .62rem; font-weight: 700; padding: 4px 7px; white-space: nowrap; }
+.price-semaphore-badge.stable { background: var(--accent-green-soft); color: var(--accent-green); }
+.price-semaphore-badge.moderate { background: rgba(215,179,106,.14); color: var(--accent-amber); }
+.price-semaphore-badge.strong { background: rgba(216,154,96,.16); color: var(--accent-orange); }
+.price-semaphore-badge.decrease { background: rgba(119,169,215,.14); color: var(--accent-blue); }
+.price-semaphore-badge.review { background: rgba(204,127,134,.16); color: var(--accent-rose); }
 
 /* Footer and loading */
 .footer { padding: 28px 32px; border-top: 1px solid var(--border-color); color: var(--text-muted); font-size: .7rem; text-align: center; }

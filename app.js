@@ -312,6 +312,7 @@ document.addEventListener('DOMContentLoaded', init);
 async function init() {
     showLoading();
     wireModuleTabs();
+    initMultiSelectControls();
     try {
         await loadQuantityData();
         wireFilters();
@@ -657,10 +658,91 @@ function matchesMultiSelect(value, selectedValues) {
 }
 
 function updateMultiSelectSummary(selectId) {
-    const summary = document.getElementById(`${selectId}Summary`);
+    const summary = document.querySelector(`[data-multi-select="${selectId}"] .multi-select-summary`)
+        || document.getElementById(`${selectId}Summary`);
     if (!summary) return;
     const values = getMultiSelectValues(selectId);
-    summary.textContent = !values.length || values.includes('TODOS') ? (selectId.includes('Mercado') ? 'Todos' : 'Todas') : `${values.length} seleccionadas`;
+    const allLabel = {
+        priceFilterEspecie: 'Todas las especies',
+        priceFilterVariedad: 'Todas las variedades',
+        priceFilterMercado: 'Todos los mercados',
+        priceFilterProcedencia: 'Todas las procedencias'
+    }[selectId] || (selectId.includes('Mercado') ? 'Todos' : 'Todas');
+    if (!values.length || values.includes('TODOS')) summary.textContent = allLabel;
+    else if (values.length <= 2) summary.textContent = values.join(', ');
+    else summary.textContent = `${values.slice(0, 2).join(', ')} y ${values.length - 2} más`;
+    renderMultiSelectOptions(selectId);
+}
+
+function initMultiSelectControls() {
+    document.querySelectorAll('[data-multi-select]').forEach(wrapper => {
+        const selectId = wrapper.dataset.multiSelect;
+        const trigger = wrapper.querySelector('.multi-select-trigger');
+        const dropdown = wrapper.querySelector('.multi-select-dropdown');
+        if (!trigger || !dropdown) return;
+        trigger.addEventListener('click', event => {
+            event.stopPropagation();
+            const isOpen = wrapper.classList.toggle('is-open');
+            trigger.setAttribute('aria-expanded', String(isOpen));
+            if (isOpen) dropdown.focus();
+        });
+        dropdown.addEventListener('click', event => event.stopPropagation());
+        renderMultiSelectOptions(selectId);
+    });
+    document.addEventListener('click', () => closeMultiSelects());
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeMultiSelects();
+    });
+}
+
+function closeMultiSelects() {
+    document.querySelectorAll('[data-multi-select].is-open').forEach(wrapper => {
+        wrapper.classList.remove('is-open');
+        wrapper.querySelector('.multi-select-trigger')?.setAttribute('aria-expanded', 'false');
+    });
+}
+
+function renderMultiSelectOptions(selectId) {
+    const wrapper = document.querySelector(`[data-multi-select="${selectId}"]`);
+    const select = document.getElementById(selectId);
+    const dropdown = wrapper?.querySelector('.multi-select-dropdown');
+    if (!select || !dropdown) return;
+    dropdown.innerHTML = '';
+    [...select.options].forEach(option => {
+        const item = document.createElement('div');
+        item.className = 'multi-select-option';
+        item.setAttribute('role', 'option');
+        item.tabIndex = 0;
+        item.setAttribute('aria-selected', String(option.selected));
+        item.dataset.value = option.value;
+        if (option.selected) item.classList.add('is-selected');
+        const checkbox = document.createElement('span');
+        checkbox.className = 'multi-select-checkbox';
+        checkbox.setAttribute('aria-hidden', 'true');
+        checkbox.textContent = option.selected ? '✓' : '';
+        const label = document.createElement('span');
+        label.className = 'multi-select-option-label';
+        label.textContent = option.textContent;
+        item.append(checkbox, label);
+        item.addEventListener('click', () => {
+            if (option.value === 'TODOS') {
+                [...select.options].forEach(candidate => { candidate.selected = candidate.value === 'TODOS'; });
+            } else {
+                option.selected = !option.selected;
+                const all = select.options[0];
+                all.selected = false;
+                if (![...select.options].some(candidate => candidate !== all && candidate.selected)) all.selected = true;
+            }
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        item.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                item.click();
+            }
+        });
+        dropdown.appendChild(item);
+    });
 }
 
 function setMultiSelectOptions(selectId, values, allLabel, selectedValues = []) {
@@ -991,37 +1073,39 @@ function calculateAccumulatedVariation(first, last) {
     return isValidPrice(first) && isValidPrice(last) ? (last / first - 1) * 100 : null;
 }
 
-function buildMonthlyPriceMatrix(data) {
+function buildMonthlyPriceSemaphoreMatrix(data, filters = {}) {
     const groups = new Map();
-    data.filter(row => isValidPrice(row.precioPromedio)).forEach(row => {
+    data.filter(row => isValidPrice(row.precioPromedio) && (!row.fecha || isValidOperationalDate(row.fecha))).forEach(row => {
         const fields = ['mercado', 'rubro', 'especie', 'variedad', 'procedencia', 'unidad'];
         const key = fields.map(field => row[field] || (field === 'variedad' ? 'Sin especificar' : field === 'procedencia' ? 'Sin procedencia informada' : 'Sin informar')).join('|');
-        const group = groups.get(key) || { row, observations: 0, monthlyPrices: {}, monthlyVariations: {} };
+        const group = groups.get(key) || { row, observations: 0, monthlyValues: {} };
         group.observations++;
         const month = row.fecha ? row.fecha.slice(5, 7) : String(row.month || '').padStart(2, '0');
         if (/^(0[1-9]|1[0-2])$/.test(month)) {
-            const values = group.monthlyPrices[month] || [];
+            const values = group.monthlyValues[month] || [];
             values.push(row.precioPromedio);
-            group.monthlyPrices[month] = values;
+            group.monthlyValues[month] = values;
         }
         groups.set(key, group);
     });
     return [...groups.values()].map(group => {
-        const monthlyPrices = Object.fromEntries(Object.entries(group.monthlyPrices).map(([month, values]) => [month, values.reduce((sum, value) => sum + value, 0) / values.length]));
-        const validMonths = Object.keys(monthlyPrices).sort();
+        const monthly = Object.fromEntries(Object.entries(group.monthlyValues).map(([month, values]) => [month, { price: values.reduce((sum, value) => sum + value, 0) / values.length, variation: null }]));
+        const validMonths = Object.keys(monthly).sort();
         const shortPeriodFilter = document.getElementById('priceFilterMes')?.value && document.getElementById('priceFilterMes').value !== 'TODOS';
         if (validMonths.length < 2 || validMonths.length < 3 && !shortPeriodFilter) return null;
         const firstMonth = validMonths[0];
         const lastMonth = validMonths[validMonths.length - 1];
-        const variation = calculateAccumulatedVariation(monthlyPrices[firstMonth], monthlyPrices[lastMonth]);
+        const variation = calculateAccumulatedVariation(monthly[firstMonth].price, monthly[lastMonth].price);
         if (!Number.isFinite(variation)) return null;
-        validMonths.slice(1).forEach((month, index) => { group.monthlyVariations[month] = calculateMonthlyPriceVariation(monthlyPrices[month], monthlyPrices[validMonths[index]]); });
-        return { ...group.row, productLabel: getProductLabel(group.row), monthlyPrices, monthlyVariations: group.monthlyVariations, accumulatedVariation: variation, firstPeriod: firstMonth, lastPeriod: lastMonth, observations: group.observations, validMonths: validMonths.length, status: getTrafficLightStatus(variation) };
+        validMonths.slice(1).forEach((month, index) => { monthly[month].variation = calculateMonthlyPriceVariation(monthly[month].price, monthly[validMonths[index]].price); });
+        const productLabel = getProductLabel(group.row);
+        const market = group.row.mercado || 'Fuente sin informar';
+        return { ...group.row, productLabel, rowLabel: `${productLabel} — ${market}`, rowMeta: [group.row.rubro, group.row.procedencia ? `Origen: ${group.row.procedencia}` : ''].filter(Boolean).join(' · '), market, monthly, accumulatedVariation: variation, firstPeriod: firstMonth, lastPeriod: lastMonth, observations: group.observations, validMonths: validMonths.length, status: getTrafficLightStatus(variation) };
     }).filter(Boolean).sort((a, b) => String(a.mercado).localeCompare(String(b.mercado), 'es') || String(a.rubro).localeCompare(String(b.rubro), 'es') || String(a.productLabel).localeCompare(String(b.productLabel), 'es') || b.validMonths - a.validMonths).slice(0, 20);
 }
 
 function buildPriceTrafficLightTable(data, filters, frequency) {
-    return buildMonthlyPriceMatrix(data, frequency);
+    return buildMonthlyPriceSemaphoreMatrix(data, filters);
 }
 
 function escapeHtml(value) {
@@ -1033,10 +1117,7 @@ function renderPriceTrafficLightTable(data, frequency) {
     const status = document.getElementById('priceTrafficLightStatus');
     if (!body || !status) return;
     const rows = buildPriceTrafficLightTable(data, null, frequency);
-    const months = MONTHS.map((month, index) => `<th>${month}</th>`).join('');
-    const header = body.closest('table')?.querySelector('thead tr');
-    if (header) header.innerHTML = `<th>Estado</th><th>Producto</th><th>Mercado / Fuente</th><th>Procedencia / Origen</th>${months}<th>Variación período</th><th>Estado</th>`;
-    body.innerHTML = rows.map(row => `<tr><td><span class="traffic-light ${row.status.key}">${row.status.label}</span></td><td>${escapeHtml(row.productLabel)}</td><td>${escapeHtml(row.mercado)}</td><td>${escapeHtml(row.procedencia || 'Sin procedencia informada')}</td>${MONTHS.map((_, index) => { const month = String(index + 1).padStart(2, '0'); const value = row.monthlyPrices[month]; const variation = row.monthlyVariations[month]; return `<td class="price-month-cell">${value ? `<strong>${formatCurrency(value)}</strong>${Number.isFinite(variation) ? `<small>${variation >= 0 ? '↑' : '↓'}${formatPercent(Math.abs(variation))}</small>` : ''}` : '—'}</td>`; }).join('')}<td>${formatPercent(row.accumulatedVariation)}</td><td><span class="traffic-light ${row.status.key}">${row.status.label}</span></td></tr>`).join('');
+    body.innerHTML = rows.map(row => `<tr><td class="price-semaphore-product"><strong>${escapeHtml(row.rowLabel)}</strong><small>${escapeHtml(row.rowMeta)}</small></td>${MONTHS.map((_, index) => { const month = String(index + 1).padStart(2, '0'); const cell = row.monthly[month]; const value = cell?.price; const variation = cell?.variation; const cellClass = !cell ? '' : !Number.isFinite(variation) ? 'stable' : variation < -5 ? 'down-soft' : variation <= 0 ? 'stable' : variation <= 5 ? 'up-soft' : variation <= 15 ? 'up-medium' : 'up-strong'; return `<td class="price-semaphore-cell ${cellClass}">${value ? `<strong>${formatCurrency(value)}</strong>${Number.isFinite(variation) ? `<small>${variation >= 0 ? '↑' : '↓'}${formatPercent(Math.abs(variation))}</small>` : ''}` : '—'}</td>`; }).join('')}<td class="price-semaphore-variation">${formatPercent(row.accumulatedVariation)}</td><td><span class="price-semaphore-badge ${row.status.key}">${row.status.label}</span></td></tr>`).join('');
     status.textContent = rows.length ? '' : 'No hay suficientes precios mensuales para construir el semáforo con los filtros seleccionados.';
     status.classList.toggle('is-visible', !rows.length);
 }
