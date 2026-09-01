@@ -13,8 +13,9 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div class="app-shell">
     <!-- Header -->
-    <header class="header">
+    <header class="header dashboard-header">
         <div class="header-inner">
             <div class="header-left">
                 <div class="logo-icon">
@@ -26,10 +27,10 @@
                 </div>
                 <div>
                     <h1 class="header-title">Tránsito y Comercialización Frutihortícola</h1>
-            <p class="header-subtitle" id="headerSubtitle">Provincia de Corrientes · 2025</p>
+                    <p class="header-subtitle" id="headerSubtitle">Sistema de monitoreo de cantidades transadas y precios mayoristas · Provincia de Corrientes · 2025</p>
                 </div>
             </div>
-            <div class="header-right">
+            <div class="header-right header-summary">
                 <div class="header-stat">
                     <span class="header-stat-label">Producción Total</span>
                     <span class="header-stat-value" id="totalProduction">–</span>
@@ -46,15 +47,15 @@
         </div>
     </header>
 
-    <nav class="module-nav" aria-label="Módulos del dashboard">
+    <nav class="module-nav module-tabs" aria-label="Módulos del dashboard">
         <button class="module-tab is-active" type="button" data-module="quantityView" aria-controls="quantityView" aria-selected="true">Cantidades transadas</button>
         <button class="module-tab" type="button" data-module="priceView" aria-controls="priceView" aria-selected="false">Precios mayoristas</button>
     </nav>
 
-    <div id="quantityView" class="module-view is-active">
+    <div id="quantityView" class="module-view module-panel is-active">
     <!-- Filters -->
-    <section class="filters-section">
-        <div class="filters-inner">
+    <section class="filters-section filters-card">
+        <div class="filters-inner filters-grid">
             <div class="filter-group">
                 <label class="filter-label">Año</label>
                 <select id="filterYear" class="filter-select">
@@ -107,7 +108,7 @@
             </div>
         </div>
     </section>
-    <p class="method-note quantity-method-note">Datos de cantidades transadas / tránsito / comercialización. Unidad principal: toneladas. Las agregaciones mensuales y anuales corresponden a sumas.</p>
+    <p class="method-note methodology-note quantity-method-note">Datos de cantidades transadas, tránsito y comercialización. Las agregaciones corresponden a sumas según la frecuencia disponible.</p>
 
     <!-- KPI Cards -->
     <section class="kpi-section">
@@ -164,10 +165,10 @@
     </section>
 
     <!-- Charts Grid -->
-    <main class="charts-section">
+    <main class="charts-section chart-grid">
         <!-- Row 1: Monthly production & Market comparison -->
-        <div class="charts-row">
-            <div class="chart-card chart-card-large">
+        <div class="charts-row charts-row-main">
+            <div class="chart-card chart-card-large chart-card-main">
                 <div class="chart-header">
                     <h2 class="chart-title" id="quantityTimeSeriesTitle">Producción Mensual Total</h2>
                     <p class="chart-desc">Evolución de la producción por mes – componente estacional</p>
@@ -176,6 +177,9 @@
                     <canvas id="chartMonthly"></canvas>
                 </div>
             </div>
+        </div>
+
+        <div class="charts-row">
             <div class="chart-card chart-card-small">
                 <div class="chart-header">
                     <h2 class="chart-title">Distribución por Mercado</h2>
@@ -183,19 +187,6 @@
                 </div>
                 <div class="chart-body chart-body-donut">
                     <canvas id="chartMarket"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- Row 2: Frutas vs Hortalizas & Top 10 -->
-        <div class="charts-row">
-            <div class="chart-card chart-card-medium">
-                <div class="chart-header">
-                    <h2 class="chart-title">Frutas vs Hortalizas por Mes</h2>
-                    <p class="chart-desc">Comparación estacional entre series</p>
-                </div>
-                <div class="chart-body">
-                    <canvas id="chartSeriesMonthly"></canvas>
                 </div>
             </div>
             <div class="chart-card chart-card-medium">
@@ -209,7 +200,7 @@
             </div>
         </div>
 
-        <!-- Row 3: Heatmap & Treemap -->
+        <!-- Row 4: Heatmap & Treemap -->
         <div class="charts-row">
             <div class="chart-card chart-card-full">
                 <div class="chart-header chart-header-flex">
@@ -229,8 +220,17 @@
             </div>
         </div>
 
-        <!-- Row 4: Market comparison monthly & Species composition -->
+        <!-- Row 3: comparación por serie y mercado -->
         <div class="charts-row">
+            <div class="chart-card chart-card-medium">
+                <div class="chart-header">
+                    <h2 class="chart-title">Frutas vs Hortalizas por Mes</h2>
+                    <p class="chart-desc">Comparación estacional entre series</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chartSeriesMonthly"></canvas>
+                </div>
+            </div>
             <div class="chart-card chart-card-medium">
                 <div class="chart-header">
                     <h2 class="chart-title">Producción por Mercado (Mensual)</h2>
@@ -240,6 +240,10 @@
                     <canvas id="chartMarketMonthly"></canvas>
                 </div>
             </div>
+        </div>
+
+        <!-- Row 5: composición y variedades -->
+        <div class="charts-row">
             <div class="chart-card chart-card-medium">
                 <div class="chart-header">
                     <h2 class="chart-title">Composición por Especie</h2>
@@ -249,11 +253,7 @@
                     <canvas id="chartSpeciesDonut"></canvas>
                 </div>
             </div>
-        </div>
-
-        <!-- Row 5: Variety analysis -->
-        <div class="charts-row">
-            <div class="chart-card chart-card-full">
+            <div class="chart-card chart-card-medium chart-card-varieties">
                 <div class="chart-header">
                     <h2 class="chart-title">Top 15 Variedades</h2>
                     <p class="chart-desc">Detalle de las variedades más producidas (Especie – Variedad)</p>
@@ -280,7 +280,7 @@
     </div>
 
     <!-- Independent wholesale prices module: it must not be combined with quantity data. -->
-    <div id="priceView" class="module-view">
+    <div id="priceView" class="module-view module-panel">
     <section class="prices-section" id="pricesSection">
         <div class="prices-heading">
             <div>
@@ -289,19 +289,28 @@
                 <p class="prices-subtitle">Evolución operativa de precios por producto, mercado y procedencia</p>
             </div>
         </div>
+        <p class="method-note methodology-note price-method-note">Los precios mayoristas se muestran como promedios simples por período. Mercado/Fuente indica dónde se releva el precio; Procedencia/Origen indica de dónde proviene el producto cuando la fuente lo informa.</p>
 
-        <div class="price-filters" aria-label="Filtros de precios mayoristas">
+        <div class="price-filters filters-card filters-grid" aria-label="Filtros de precios mayoristas">
             <div class="filter-group">
                 <label class="filter-label" for="priceFilterYear">Año</label>
                 <select id="priceFilterYear" class="filter-select"><option value="TODOS">Todos los años</option></select>
             </div>
             <div class="filter-group">
-                <label class="filter-label" for="priceFilterRubro">Rubro</label>
-                <select id="priceFilterRubro" class="filter-select"><option value="TODOS">Todos</option></select>
-            </div>
-            <div class="filter-group">
                 <label class="filter-label" for="priceFilterMes">Mes</label>
                 <select id="priceFilterMes" class="filter-select"><option value="TODOS">Todos</option></select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="priceFilterMercado">Mercado / Fuente</label>
+                <select id="priceFilterMercado" class="filter-select"><option value="TODOS">Todos</option></select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="priceFilterProcedencia">Procedencia / Origen</label>
+                <select id="priceFilterProcedencia" class="filter-select"><option value="TODOS">Todas</option></select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="priceFilterRubro">Rubro</label>
+                <select id="priceFilterRubro" class="filter-select"><option value="TODOS">Todos</option></select>
             </div>
             <div class="filter-group">
                 <label class="filter-label" for="priceFilterEspecie">Especie</label>
@@ -310,14 +319,6 @@
             <div class="filter-group">
                 <label class="filter-label" for="priceFilterVariedad">Variedad</label>
                 <select id="priceFilterVariedad" class="filter-select"><option value="TODOS">Todas</option></select>
-            </div>
-            <div class="filter-group">
-                <label class="filter-label" for="priceFilterMercado">Mercado</label>
-                <select id="priceFilterMercado" class="filter-select"><option value="TODOS">Todos</option></select>
-            </div>
-            <div class="filter-group">
-                <label class="filter-label" for="priceFilterProcedencia">Procedencia</label>
-                <select id="priceFilterProcedencia" class="filter-select"><option value="TODOS">Todas</option></select>
             </div>
             <div class="filter-group">
                 <label class="filter-label" for="priceFilterUnidad">Unidad</label>
@@ -369,8 +370,6 @@
                 <div class="chart-body price-chart-canvas"><canvas id="priceChartMarket"></canvas><div id="priceMarketStatus" class="price-inline-status"></div></div>
             </div>
         </div>
-        <p class="method-note price-method-note">Los precios se muestran como promedios simples por período. No están ponderados por cantidades salvo que exista un ponderador explícito. Las visualizaciones respetan la frecuencia original y no desagregan datos artificialmente.</p>
-        <p class="method-note price-method-note">Mercado indica la fuente o mercado de referencia del precio. Procedencia indica el origen del producto cuando la fuente lo informa. No se calculan relaciones precio-cantidad ni inferencias de escasez.</p>
         <p id="priceDailyMethodNote" class="method-note price-method-note" hidden>En vista diaria se muestra la evolución del precio promedio. Las variaciones se resumen entre la primera y última fecha disponible para evitar ruido diario.</p>
         <div id="priceAccumulatedSummary" class="price-accumulated-summary" hidden>
             <div><span class="kpi-label">Variación acumulada</span><strong id="priceAccumulatedValue">–</strong></div>
@@ -396,6 +395,7 @@
         <p>Tránsito y Comercialización Frutihortícola · Serie 2024-2025</p>
         <p class="footer-note">Las cantidades se expresan en toneladas (tn). Los precios corresponden a una fuente mayorista independiente.</p>
     </footer>
+    </div>
 
     <script src="app.js"></script>
 </body>
