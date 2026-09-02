@@ -31,3 +31,31 @@ Estos datos corresponden a commodities agrícolas/granos y forman una tercera fa
 - precios mayoristas frutihortícolas.
 
 No deben mezclarse directamente ni cruzarse con esas familias para inferir causalidad o relaciones precio-cantidad. La unidad, moneda, mercado, tipo de precio y condición comercial originales deben conservarse. Precio de pizarra, disponible, FOB/FAS y futuros son referencias distintas y no deben tratarse como una única serie.
+
+## Decisión operativa inicial
+
+- La fuente piloto es BCR / Cámara Arbitral de Cereales.
+- Se priorizan precios de pizarra / precios Cámara por su cercanía con precios locales de mercado.
+- Se incluirán todos los commodities disponibles con cobertura útil, empezando por soja, maíz, trigo, girasol y sorgo; cebada y otros granos se incorporarán si la cobertura es consistente.
+- El foco inicial es lo más actual posible.
+- El módulo futuro tendrá uso analítico, pero todavía no tiene interfaz visual.
+- La actualización ideal será automatizada, siempre respetando acceso, permisos y condiciones de uso.
+- Si la API requiere autenticación, las credenciales se manejarán mediante variables de entorno y nunca en el frontend.
+- Si no hay API estable o credenciales, se mantiene el fallback de descarga manual.
+
+## Flujo recomendado
+
+1. Configurar `.env` si se cuenta con API/credenciales.
+2. Ejecutar una simulación segura:
+
+   ```powershell
+   python .\descargar_commodities_bcr.py --dry-run --days-back 30
+   ```
+
+3. Si no hay API, descargar manualmente y colocar los archivos originales en `raw/`.
+4. Ejecutar `python .\integrar_commodities_bcr.py`.
+5. Ejecutar `python .\auditar_commodities_bcr.py`.
+6. Revisar los reportes de cobertura, actualidad y calidad.
+7. Recién después decidir la implementación visual.
+
+La configuración API y el flujo de seguridad están documentados en `API_BCR_PLAN.md`.

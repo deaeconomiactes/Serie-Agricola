@@ -270,3 +270,18 @@ En esta primera etapa:
 - luego se evaluará la automatización si el formato y los permisos lo permiten.
 
 La capa de trabajo y auditoría de este piloto se encuentra en `data/commodities_bcr/`. Continúa siendo una tercera familia de datos separada de las cantidades y los precios mayoristas frutihortícolas.
+
+## Decisión operativa inicial para BCR
+
+- Se prioriza BCR/Cámara Arbitral como fuente piloto.
+- Se priorizan Precios de Pizarra / Precios Cámara por su cercanía con precios locales de mercado.
+- Se incluirán todos los commodities disponibles con cobertura útil, comenzando por soja, maíz, trigo, girasol y sorgo; cebada y otros granos u oleaginosas se incorporarán si presentan datos consistentes.
+- El foco inicial será lo más actual posible.
+- El módulo futuro tendrá uso analítico, no sólo informativo.
+- La actualización ideal será automatizada.
+- La automatización deberá evitar exponer credenciales y respetar las condiciones de uso de la fuente.
+- Si la API requiere autenticación, las credenciales deberán manejarse con variables de entorno o un gestor de secretos.
+- Nunca se expondrán credenciales en `app.js` ni en recursos entregados al frontend.
+- Si no hay una API estable o autorizada, se mantendrá el fallback de descarga manual.
+
+La automatización se limita por ahora a preparar configuración, validaciones y un modo de simulación. No se incluyen tokens, credenciales reales ni endpoints sensibles no confirmados.

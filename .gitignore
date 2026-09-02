@@ -19,6 +19,7 @@ __pycache__/
 !auditar_precios_2026.py
 !integrar_commodities_bcr.py
 !auditar_commodities_bcr.py
+!descargar_commodities_bcr.py
 
 # Commodity BCR work area: raw files remain local; generated outputs are tracked.
 data/commodities_bcr/raw/*
@@ -29,6 +30,12 @@ data/commodities_bcr/raw/*
 !data/commodities_bcr/reports/RESUMEN_COMMODITIES_BCR.csv
 !data/commodities_bcr/reports/RESUMEN_SERIES_COMMODITIES_BCR.csv
 !data/commodities_bcr/reports/CASOS_PROBLEMATICOS_COMMODITIES_BCR.csv
+!data/commodities_bcr/reports/RESUMEN_ACTUALIDAD_COMMODITIES_BCR.csv
+!data/commodities_bcr/catalogo_commodities_bcr.csv
+
+# Local API credentials; keep the example configuration versioned.
+.env
+!.env.example
 
 # OS
 .DS_Store

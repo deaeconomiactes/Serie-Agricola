@@ -1,0 +1,7 @@
+commodity;aliases;prioridad;activo;observaciones
+Soja;soja|soya;alta;true;Producto prioritario
+Maíz;maiz|maíz|corn;alta;true;Producto prioritario
+Trigo;trigo|wheat;alta;true;Producto prioritario
+Girasol;girasol|sunflower;alta;true;Producto prioritario
+Sorgo;sorgo|sorghum;alta;true;Producto prioritario
+Cebada;cebada|barley;media;true;Incluir si existe cobertura útil

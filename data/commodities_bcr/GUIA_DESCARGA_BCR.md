@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-La carpeta `data/commodities_bcr/raw/` recibe las descargas originales del piloto de commodities agrícolas de la Bolsa de Comercio de Rosario / Cámara Arbitral de Cereales. El objetivo es conservar una copia sin modificar de la fuente antes de integrarla y auditarla.
+La carpeta `data/commodities_bcr/raw/` recibe las descargas originales del piloto de commodities agrícolas de la Bolsa de Comercio de Rosario / Cámara Arbitral de Cereales. El objetivo es conservar una copia sin modificar de la fuente antes de integrarla y auditarla. La fuente prioritaria es BCR/Cámara Arbitral y el tipo de precio preferido es pizarra / precio Cámara.
 
 ## Archivos a colocar en `raw/`
 
@@ -23,7 +23,7 @@ Para la primera prueba, priorizar:
 - girasol;
 - sorgo.
 
-La cebada y otros granos pueden incorporarse después de confirmar que la fuente publica una serie consistente.
+La cebada y otros granos pueden incorporarse después de confirmar que la fuente publica una serie consistente. Se incluirá todo commodity con cobertura útil y el foco inicial será lo más actual posible.
 
 ## Período sugerido
 
@@ -55,3 +55,9 @@ El integrador puede detectar el commodity desde el nombre si el archivo no trae 
 - Ejecutar `python .\auditar_commodities_bcr.py` para producir los reportes en `reports/`.
 
 La unidad, moneda, tipo de precio y condición comercial deben conservarse. Las referencias de pizarra, disponible, FOB/FAS y futuros no deben mezclarse como si fueran la misma serie ni con precios o cantidades frutihortícolas.
+
+## Automatización y fallback
+
+La actualización ideal será automatizada si BCR ofrece una API o descarga estructurada estable y autorizada. Las credenciales deben configurarse mediante variables de entorno; nunca deben guardarse en archivos versionados ni exponerse al navegador. Consultar `API_BCR_PLAN.md` y probar primero `descargar_commodities_bcr.py --dry-run`.
+
+Si no hay credenciales o API estable, mantener esta descarga manual como fallback. El futuro módulo será analítico, pero no se implementa todavía en el dashboard.

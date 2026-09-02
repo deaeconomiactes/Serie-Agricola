@@ -22,6 +22,7 @@ PROJECT_DIR = Path(__file__).resolve().parent
 DEFAULT_INPUT_DIR = PROJECT_DIR / "data" / "commodities_bcr" / "raw"
 OUTPUT_PATH = PROJECT_DIR / "data" / "commodities_bcr" / "processed" / "COMMODITIES_BCR_INTEGRADO.csv"
 TEMPLATE_PATH = DEFAULT_INPUT_DIR / "PLANTILLA_COMMODITIES_BCR.csv"
+CATALOG_PATH = PROJECT_DIR / "data" / "commodities_bcr" / "catalogo_commodities_bcr.csv"
 
 OUTPUT_COLUMNS = [
     "fecha", "año", "mes", "commodity", "fuente", "mercado", "tipo_precio",
@@ -64,11 +65,37 @@ def _key(value: Any) -> str:
     return re.sub(r"[^a-z0-9]+", "", text.lower())
 
 
-def normalize_commodity(value: Any) -> str:
+def load_commodity_catalog(path: Path = CATALOG_PATH) -> tuple[dict[str, str], set[str]]:
+    """Carga aliases del catálogo sin hacer obligatorio su uso."""
+    if not path.exists():
+        return {}, set()
+    try:
+        catalog = pd.read_csv(path, sep=";", dtype=str, encoding="utf-8-sig").fillna("")
+    except (OSError, UnicodeError, pd.errors.ParserError):
+        return {}, set()
+    aliases: dict[str, str] = {}
+    canonical: set[str] = set()
+    for _, row in catalog.iterrows():
+        product = normalize_text(row.get("commodity", ""))
+        if not product:
+            continue
+        canonical.add(_key(product))
+        aliases[_key(product)] = product
+        for alias in re.split(r"[|,;/]", normalize_text(row.get("aliases", ""))):
+            if _key(alias):
+                aliases[_key(alias)] = product
+    return aliases, canonical
+
+
+def normalize_commodity(value: Any, catalog: dict[str, str] | None = None) -> str:
     text = normalize_text(value)
     key = _key(text)
     if not key or key in {"nan", "none", "null", "n/a", "na", "total", "totales"}:
         return ""
+    if catalog is None:
+        catalog, _ = load_commodity_catalog()
+    if key in catalog:
+        return catalog[key]
     if "trigocandeal" in key:
         return "Trigo Candeal"
     if "trigopan" in key or key.startswith("trigo"):
@@ -86,9 +113,14 @@ def normalize_commodity(value: Any) -> str:
     return text
 
 
-def commodity_from_filename(filename: str) -> str:
+def commodity_from_filename(filename: str, catalog: dict[str, str] | None = None) -> str:
     """Detecta el commodity en el nombre cuando falta la columna de producto."""
     key = _key(Path(filename).stem)
+    if catalog is None:
+        catalog, _ = load_commodity_catalog()
+    for alias in sorted(catalog, key=len, reverse=True):
+        if alias and alias in key:
+            return catalog[alias]
     for token, commodity in (("girasol", "Girasol"), ("soja", "Soja"), ("maiz", "Maíz"),
                              ("trigo", "Trigo"), ("sorgo", "Sorgo"), ("cebada", "Cebada")):
         if token in key:
@@ -234,7 +266,7 @@ def _filename_year_month(filename: str) -> tuple[str, str]:
 
 def infer_frequency_from_filename_or_data(df: pd.DataFrame, filename: str) -> str:
     """Determina frecuencia sin convertir una fuente mensual/anual en diaria."""
-    dates = pd.to_datetime(df.get("_fecha", pd.Series(dtype=object)), errors="coerce", format="mixed", dayfirst=True).dropna()
+    dates = pd.to_datetime(df.get("_fecha", pd.Series(dtype=object)), errors="coerce", format="%Y-%m-%d").dropna()
     if dates.empty:
         return "Sin determinar"
     key = _key(Path(filename).stem)
@@ -370,11 +402,12 @@ def create_template(path: Path) -> None:
 
 def integrate_file(path: Path, integration_date: str) -> list[dict[str, Any]]:
     output: list[dict[str, Any]] = []
+    catalog, canonical_commodities = load_commodity_catalog()
     for sheet_name, frame in read_tables(path):
         date_column = _find_column(list(frame.columns), DATE_COLUMNS)
         commodity_column = _find_column(list(frame.columns), COMMODITY_COLUMNS)
         price_column = _find_price_column(list(frame.columns))
-        filename_commodity = commodity_from_filename(path.name)
+        filename_commodity = commodity_from_filename(path.name, catalog)
         if not price_column or (not commodity_column and not filename_commodity):
             continue
         frame = frame.copy()
@@ -388,7 +421,8 @@ def integrate_file(path: Path, integration_date: str) -> list[dict[str, Any]]:
         explicit_market_column = _find_column(list(frame.columns), MARKET_COLUMNS)
         explicit_price_type_column = _find_column(list(frame.columns), PRICE_TYPE_COLUMNS)
         for _, row in frame.iterrows():
-            commodity = normalize_commodity(row.get(commodity_column, "")) if commodity_column else ""
+            raw_commodity = row.get(commodity_column, "") if commodity_column else ""
+            commodity = normalize_commodity(raw_commodity, catalog) if commodity_column else ""
             commodity = commodity or filename_commodity
             if not commodity:
                 continue
@@ -409,6 +443,8 @@ def integrate_file(path: Path, integration_date: str) -> list[dict[str, Any]]:
             unit = explicit_unit or "$/Tn"
             currency = explicit_currency or "ARS"
             notes = []
+            if canonical_commodities and _key(commodity) not in canonical_commodities:
+                notes.append("commodity no catalogado; se conserva para revisión")
             if not explicit_unit:
                 notes.append("unidad por defecto BCR: $/Tn; validar contra la fuente")
             if not explicit_currency:

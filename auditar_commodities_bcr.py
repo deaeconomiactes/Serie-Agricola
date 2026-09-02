@@ -23,6 +23,7 @@ OUTPUTS = {
     "commodities": REPORT_DIR / "RESUMEN_COMMODITIES_BCR.csv",
     "series": REPORT_DIR / "RESUMEN_SERIES_COMMODITIES_BCR.csv",
     "problems": REPORT_DIR / "CASOS_PROBLEMATICOS_COMMODITIES_BCR.csv",
+    "actuality": REPORT_DIR / "RESUMEN_ACTUALIDAD_COMMODITIES_BCR.csv",
 }
 EXPECTED_COLUMNS = [
     "fecha", "año", "mes", "commodity", "fuente", "mercado", "tipo_precio", "moneda", "unidad",
@@ -45,6 +46,19 @@ def read_input(path: Path) -> pd.DataFrame:
         if column not in frame.columns:
             frame[column] = ""
     return frame[EXPECTED_COLUMNS].fillna("")
+
+
+def parse_dates(series: pd.Series) -> pd.Series:
+    """Parsea ISO sin invertirla y usa día primero sólo para formatos locales."""
+    values = series.fillna("").astype(str).str.strip()
+    parsed = pd.Series(pd.NaT, index=series.index, dtype="datetime64[ns]")
+    iso = values.str.fullmatch(r"\d{4}-\d{2}-\d{2}")
+    if iso.any():
+        parsed.loc[iso] = pd.to_datetime(values.loc[iso], format="%Y-%m-%d", errors="coerce")
+    local = ~iso & values.ne("")
+    if local.any():
+        parsed.loc[local] = pd.to_datetime(values.loc[local], errors="coerce", format="mixed", dayfirst=True)
+    return parsed
 
 
 def parse_number(value: Any) -> float:
@@ -78,7 +92,7 @@ def prepare(frame: pd.DataFrame) -> pd.DataFrame:
         if column not in frame.columns:
             frame[column] = ""
         frame[column] = frame[column].fillna("").astype(str).str.replace(r"\s+", " ", regex=True).str.strip()
-    frame["fecha_parseada"] = pd.to_datetime(frame["fecha"], errors="coerce", format="mixed", dayfirst=True)
+    frame["fecha_parseada"] = parse_dates(frame["fecha"])
     frame["fecha_valida"] = frame["fecha_parseada"].notna()
     frame["precio_num"] = frame["precio"].map(parse_number)
     frame["precio_valido"] = frame["precio_num"].notna() & (frame["precio_num"] > 0)
@@ -172,6 +186,26 @@ def series_summary(frame: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=columns)
 
 
+def actuality_summary(frame: pd.DataFrame, as_of: pd.Timestamp | None = None) -> pd.DataFrame:
+    """Resume la actualidad de cada commodity respecto de la fecha de ejecución."""
+    reference = (as_of or pd.Timestamp.today()).normalize()
+    rows = []
+    for commodity, group in frame.groupby("commodity", dropna=False):
+        dated = group.loc[group["fecha_valida"], "fecha_parseada"].dt.normalize()
+        if dated.empty:
+            rows.append({"commodity": commodity or "(sin informar)", "fecha_max": "", "dias_desde_ultimo_dato": "", "registros_ultimos_7_dias": 0, "registros_ultimos_30_dias": 0, "estado_actualidad": "Sin fecha"})
+            continue
+        last = dated.max()
+        days_since = max(0, int((reference - last).days))
+        valid_dates = group.loc[group["fecha_valida"], "fecha_parseada"].dt.normalize()
+        recent_7 = int(((valid_dates >= reference - pd.Timedelta(days=7)) & (valid_dates <= reference)).sum())
+        recent_30 = int(((valid_dates >= reference - pd.Timedelta(days=30)) & (valid_dates <= reference)).sum())
+        status = "Actualizado" if days_since <= 7 else "Reciente" if days_since <= 30 else "Desactualizado"
+        rows.append({"commodity": commodity or "(sin informar)", "fecha_max": last.date().isoformat(), "dias_desde_ultimo_dato": days_since, "registros_ultimos_7_dias": recent_7, "registros_ultimos_30_dias": recent_30, "estado_actualidad": status})
+    columns = ["commodity", "fecha_max", "dias_desde_ultimo_dato", "registros_ultimos_7_dias", "registros_ultimos_30_dias", "estado_actualidad"]
+    return pd.DataFrame(rows, columns=columns)
+
+
 def problem_cases(frame: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for index, row in frame.iterrows():
@@ -213,11 +247,19 @@ def markdown_table(frame: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
-def build_report(frame: pd.DataFrame, coverage: pd.DataFrame, commodities: pd.DataFrame, series: pd.DataFrame, problems: pd.DataFrame, input_path: Path) -> str:
+def build_report(frame: pd.DataFrame, coverage: pd.DataFrame, commodities: pd.DataFrame, series: pd.DataFrame, problems: pd.DataFrame, actuality: pd.DataFrame, input_path: Path) -> str:
     dated = frame.loc[frame["fecha_valida"], "fecha_parseada"]
     years = sorted(dated.dt.year.astype(int).unique()) if not dated.empty else []
     frequencies = sorted(x for x in frame["frecuencia"].unique() if x)
     quality_counts = series["calidad_serie"].value_counts().to_dict() if not series.empty else {}
+    today = pd.Timestamp.today().normalize()
+    current_date = today.date().isoformat()
+    recent_7 = int(((frame["fecha_parseada"] >= today - pd.Timedelta(days=7)) & (frame["fecha_parseada"] <= today)).sum())
+    recent_30 = int(((frame["fecha_parseada"] >= today - pd.Timedelta(days=30)) & (frame["fecha_parseada"] <= today)).sum())
+    updated = ", ".join(actuality.loc[actuality["estado_actualidad"] == "Actualizado", "commodity"].astype(str)) if not actuality.empty else "ninguno"
+    recent = ", ".join(actuality.loc[actuality["estado_actualidad"] == "Reciente", "commodity"].astype(str)) if not actuality.empty else "ninguno"
+    stale = ", ".join(actuality.loc[actuality["estado_actualidad"] == "Desactualizado", "commodity"].astype(str)) if not actuality.empty else "ninguno"
+    no_date = ", ".join(actuality.loc[actuality["estado_actualidad"] == "Sin fecha", "commodity"].astype(str)) if not actuality.empty else "ninguno"
     return "\n".join([
         "# Auditoría de commodities agrícolas BCR", "", "## 1. Resumen ejecutivo", "",
         f"Se auditaron **{len(frame):,} registros** de `{input_path}`. Se detectaron **{frame['commodity'].replace('', pd.NA).dropna().nunique():,} commodities**, **{frame['archivo_origen'].replace('', pd.NA).dropna().nunique():,} archivos de origen** y **{int(frame['precio_valido'].sum()):,} precios válidos**.", "",
@@ -226,10 +268,12 @@ def build_report(frame: pd.DataFrame, coverage: pd.DataFrame, commodities: pd.Da
         "La fuente piloto es BCR / Cámara Arbitral de Cereales, específicamente descargas manuales de precios de pizarra. El alcance esperado son commodities agrícolas/granos, no precios frutihortícolas. El integrador no realiza scraping ni llamadas de red.", "", "## 3. Cobertura temporal", "",
         f"- Filas totales: {len(frame):,}.", f"- Archivos origen: {frame['archivo_origen'].replace('', pd.NA).dropna().nunique():,}.", f"- Registros con fecha válida: {int(frame['fecha_valida'].sum()):,}.", f"- Rango: {dated.min().date().isoformat() if not dated.empty else 'n/d'} a {dated.max().date().isoformat() if not dated.empty else 'n/d'}.", f"- Años: {', '.join(map(str, years)) or 'n/d'}.", f"- Meses distintos: {int(frame.loc[frame['fecha_valida'], ['año_num', 'mes_num']].drop_duplicates().shape[0])}.", "", "El detalle por año y por commodity-año se encuentra en `RESUMEN_COBERTURA_COMMODITIES_BCR.csv`.", "", "## 4. Cobertura por commodity", "",
         markdown_table(commodities), "", "## 5. Calidad de precios", "",
-        f"- Precios válidos (> 0): {int(frame['precio_valido'].sum()):,}.", f"- Precios cero: {int(frame['precio_cero'].sum()):,}.", f"- Precios negativos: {int(frame['precio_negativo'].sum()):,}.", f"- Precios faltantes o no numéricos: {int(frame['precio_num'].isna().sum()):,}.", f"- Registros con moneda válida: {int(frame['moneda_valida'].sum()):,}.", f"- Registros con unidad válida: {int(frame['unidad_valida'].sum()):,}.", f"- Outliers por commodity usando IQR (1,5 × IQR), conservados y no eliminados: {int(frame['outlier_iqr'].sum()):,}.", "", "Los casos individuales se encuentran en `CASOS_PROBLEMATICOS_COMMODITIES_BCR.csv`.", "", "## 6. Series utilizables", "",
+        f"- Precios válidos (> 0): {int(frame['precio_valido'].sum()):,}.", f"- Precios cero: {int(frame['precio_cero'].sum()):,}.", f"- Precios negativos: {int(frame['precio_negativo'].sum()):,}.", f"- Precios faltantes o no numéricos: {int(frame['precio_num'].isna().sum()):,}.", f"- Registros con moneda válida: {int(frame['moneda_valida'].sum()):,}.", f"- Registros con unidad válida: {int(frame['unidad_valida'].sum()):,}.", f"- Monedas detectadas: {', '.join(sorted(x for x in frame['moneda'].unique() if x)) or 'n/d'}.", f"- Unidades detectadas: {', '.join(sorted(x for x in frame['unidad'].unique() if x)) or 'n/d'}.", f"- Frecuencias detectadas: {', '.join(frequencies) or 'Sin determinar'}.", f"- Outliers por commodity usando IQR (1,5 × IQR), conservados y no eliminados: {int(frame['outlier_iqr'].sum()):,}.", "", "Los casos individuales se encuentran en `CASOS_PROBLEMATICOS_COMMODITIES_BCR.csv`.", "", "## Actualidad de la información", "",
+        f"La fecha de referencia de esta auditoría es **{current_date}**. Fecha máxima disponible: **{dated.max().date().isoformat() if not dated.empty else 'n/d'}**; días desde el último dato: **{max(0, int((today - dated.max().normalize()).days)) if not dated.empty else 'n/d'}**.", f"- Registros de los últimos 7 días: {recent_7:,}.", f"- Registros de los últimos 30 días: {recent_30:,}.", f"- Commodities actualizados (hasta 7 días): {updated or 'ninguno'}.", f"- Commodities recientes (8 a 30 días): {recent or 'ninguno'}.", f"- Commodities desactualizados (> 30 días): {stale or 'ninguno'}.", f"- Commodities sin fecha: {no_date or 'ninguno'}.", "", "El detalle por commodity se encuentra en `RESUMEN_ACTUALIDAD_COMMODITIES_BCR.csv`.", "", "## 6. Series utilizables", "",
         f"- Series Alta: {quality_counts.get('Alta', 0)}.", f"- Series Media: {quality_counts.get('Media', 0)}.", f"- Series Baja: {quality_counts.get('Baja', 0)}.", "", "La clasificación usa las claves commodity, mercado, tipo de precio, moneda, unidad y frecuencia. Alta requiere al menos 30 observaciones, 20 fechas distintas y más de 90% de precios válidos; Media requiere al menos 10 observaciones, 5 fechas distintas y más de 70%; el resto es Baja.", "", "## 7. Problemas detectados", "",
         f"Se detectaron **{len(problems):,} registros problemáticos**. Las categorías pueden superponerse: fecha faltante/inválida, precio faltante/no numérico, cero, negativo, moneda o unidad faltante y outlier IQR. Los outliers no se eliminan automáticamente porque requieren revisión metodológica.", "", "## 8. Recomendación para futura incorporación al dashboard", "",
-        "Mantener commodities como tercer módulo independiente y comenzar, si se aprueba el piloto, con una única serie homogénea de precios de pizarra BCR. Mostrar fuente, mercado Rosario, moneda, unidad, condición comercial y fecha de actualización. No publicar una serie hasta validar una muestra histórica, cobertura, permisos de uso y estabilidad del formato descargado.", "", "## 9. Limitaciones metodológicas", "",
+        "Mantener commodities como tercer módulo independiente y comenzar, si se aprueba el piloto, con una única serie homogénea de precios de pizarra BCR. Mostrar fuente, mercado Rosario, moneda, unidad, condición comercial y fecha de actualización. No publicar una serie hasta validar una muestra histórica, cobertura, permisos de uso y estabilidad del formato descargado.", "", "## Recomendación de automatización", "",
+        "La automatización por API conviene sólo si BCR/GIX confirma un endpoint estable, autenticación, límites y permisos de uso. Las credenciales deben permanecer en variables de entorno y el proceso debe ejecutarse fuera del frontend. Mientras no exista esa confirmación, conviene mantener la descarga manual como fallback, ejecutar integración y auditoría y revisar la actualidad antes de publicar. El flujo actual no realiza llamadas de red.", "", "## 9. Limitaciones metodológicas", "",
         "- Estos datos corresponden a commodities agrícolas/granos.", "- No deben mezclarse directamente con frutas y hortalizas.", "- No representan cantidades transadas.", "- No deben cruzarse con precios frutihortícolas para inferir causalidad.", "- La unidad, moneda y condición comercial deben conservarse.", "- Precio de pizarra, FOB/FAS, disponible y futuros no deben mezclarse como si fueran el mismo tipo de precio.", "", "El valor por defecto del integrador para descargas BCR sin columnas explícitas es ARS y $/Tn, y queda anotado como supuesto pendiente de validación. Las fechas mensuales o anuales no se convierten artificialmente en fechas diarias.", "",
     ])
 
@@ -256,14 +300,16 @@ def main() -> int:
     commodities = commodity_summary(frame)
     series = series_summary(frame)
     problems = problem_cases(frame)
-    save_csv(coverage, OUTPUTS["coverage"]); save_csv(commodities, OUTPUTS["commodities"]); save_csv(series, OUTPUTS["series"]); save_csv(problems, OUTPUTS["problems"])
-    REPORT_PATH.write_text(build_report(frame, coverage, commodities, series, problems, input_path), encoding="utf-8")
+    actuality = actuality_summary(frame)
+    save_csv(coverage, OUTPUTS["coverage"]); save_csv(commodities, OUTPUTS["commodities"]); save_csv(series, OUTPUTS["series"]); save_csv(problems, OUTPUTS["problems"]); save_csv(actuality, OUTPUTS["actuality"])
+    REPORT_PATH.write_text(build_report(frame, coverage, commodities, series, problems, actuality, input_path), encoding="utf-8")
     dated = frame.loc[frame["fecha_valida"], "fecha_parseada"]
     years = sorted(dated.dt.year.astype(int).unique()) if not dated.empty else []
     print(f"Filas auditadas: {len(frame)}")
     print(f"Commodities detectados: {', '.join(sorted(x for x in frame['commodity'].unique() if x)) or 'ninguno'}")
     print(f"Años disponibles: {', '.join(map(str, years)) or 'n/d'}")
     print(f"Precios válidos: {int(frame['precio_valido'].sum())}")
+    print(f"Fecha máxima disponible: {frame.loc[frame['fecha_valida'], 'fecha_parseada'].max().date().isoformat() if frame['fecha_valida'].any() else 'n/d'}")
     print("Reportes generados:")
     print(f"- {REPORT_PATH}")
     for path in OUTPUTS.values(): print(f"- {path}")
