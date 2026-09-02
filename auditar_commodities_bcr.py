@@ -243,8 +243,15 @@ def main() -> int:
     parser.add_argument("input_path", nargs="?", type=Path, default=DEFAULT_INPUT, help="CSV integrado a auditar")
     args = parser.parse_args()
     input_path = args.input_path.expanduser().resolve()
+    if not input_path.exists():
+        print("Primero ejecute integrar_commodities_bcr.py con archivos descargados desde BCR.")
+        return 2
+    source = read_input(input_path)
+    if source.empty:
+        print("No hay datos integrados para auditar. Primero coloque descargas BCR en raw/ y ejecute integrar_commodities_bcr.py.")
+        return 0
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
-    frame, outlier_stats = add_outliers(prepare(read_input(input_path)))
+    frame, outlier_stats = add_outliers(prepare(source))
     coverage = coverage_summary(frame)
     commodities = commodity_summary(frame)
     series = series_summary(frame)
