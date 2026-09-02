@@ -334,6 +334,7 @@ const priceCharts = {
 let rawData = [];
 let quantityData = [];
 let filteredData = [];
+let filteredQuantityData = [];
 // Price data is intentionally independent from quantity data.
 let rawPriceData = [];
 let priceData = [];
@@ -347,7 +348,7 @@ let priceUnitMode = 'comparable';
 let spreadsheetInvalidCount = 0;
 let heatmapFilter = 'TODOS';
 let selectedYear = '2025';
-const selectedUnit = 'TN';
+let selectedUnit = 'TN';
 let quantityFrequency = 'mensual';
 let priceFrequency = 'mensual';
 
@@ -360,6 +361,8 @@ async function init() {
     initMultiSelectControls();
     try {
         await loadQuantityData();
+        initQuantityFilters();
+        applyQuantityFilters();
         wireFilters();
     } catch (e) {
         console.error('Error loading CSV:', e);
@@ -382,14 +385,116 @@ async function loadQuantityData() {
     const tomatoProducts = [...new Set(quantityData.filter(isTomatoRow).map(getQuantityProduct))].sort();
     console.log('Registros con tomate genérico:', tomatoGenericCount);
     console.log('Productos de tomate detectados:', tomatoProducts.map(formatLabel));
-    initQuantityFilters();
-    applyQuantityFilters();
 }
 
-function initQuantityFilters() { populateFilters(); updateQuantityFrequencyOptions(); }
-function applyQuantityFilters() { applyFilters(); }
-function renderQuantityDashboard() { updateDashboard(); }
-function updateQuantityDashboard() { updateDashboard(); }
+const QUANTITY_FILTER_IDS = [
+    'filterYear', 'filterUnidad', 'filterOrigen', 'filterDestino', 'filterSerie',
+    'filterEspecie', 'filterFrequency'
+];
+
+function getQuantityFilter(id) {
+    const element = document.getElementById(id);
+    if (!element) console.warn('Filtro de cantidades no encontrado:', id);
+    return element;
+}
+
+function readQuantityFilters() {
+    return {
+        year: getQuantityFilter('filterYear')?.value || 'TODOS',
+        unidad: getQuantityFilter('filterUnidad')?.value || selectedUnit,
+        origen: getQuantityFilter('filterOrigen')?.value || 'TODOS',
+        destino: getQuantityFilter('filterDestino')?.value || 'TODOS',
+        serie: getQuantityFilter('filterSerie')?.value || 'TODOS',
+        especie: getQuantityFilter('filterEspecie')?.value || 'TODOS',
+        municipio: getQuantityFilter('filterMunicipio')?.value || 'TODOS',
+        frecuencia: getQuantityFilter('filterFrequency')?.value || quantityFrequency
+    };
+}
+
+function initQuantityFilters() {
+    populateFilters();
+    updateQuantityFrequencyOptions();
+    QUANTITY_FILTER_IDS.forEach(id => {
+        const filter = getQuantityFilter(id);
+        if (!filter || filter.dataset.quantityListenerBound === 'true') return;
+        filter.addEventListener('change', () => {
+            if (id === 'filterYear') {
+                selectedYear = filter.value;
+                updateHeaderSubtitle();
+                updateSerieFilter();
+                updateEspecieFilter();
+                updateMunicipioFilter();
+            } else if (id === 'filterUnidad') {
+                selectedUnit = filter.value;
+            } else if (id === 'filterOrigen') {
+                const municipio = getQuantityFilter('filterMunicipio');
+                const municipioGroup = document.getElementById('filterGroupMunicipio');
+                const showMunicipio = normalizeText(filter.value) === 'CORRIENTES';
+                if (municipioGroup) municipioGroup.style.display = showMunicipio ? 'flex' : 'none';
+                if (municipio) {
+                    municipio.disabled = !showMunicipio;
+                    if (!showMunicipio) municipio.value = 'TODOS';
+                }
+                updateSerieFilter();
+                updateEspecieFilter();
+                updateMunicipioFilter();
+            } else if (id === 'filterDestino') {
+                updateSerieFilter();
+                updateEspecieFilter();
+                updateMunicipioFilter();
+            } else if (id === 'filterSerie') {
+                updateEspecieFilter();
+                updateMunicipioFilter();
+            } else if (id === 'filterEspecie') {
+                updateMunicipioFilter();
+            } else if (id === 'filterFrequency') {
+                quantityFrequency = filter.value;
+            }
+            console.log('Filtro cambiado:', id, filter.value);
+            applyQuantityFilters();
+        });
+        filter.dataset.quantityListenerBound = 'true';
+    });
+    const municipio = getQuantityFilter('filterMunicipio');
+    if (municipio && municipio.dataset.quantityListenerBound !== 'true') {
+        municipio.addEventListener('change', () => {
+            if (municipio.value !== 'TODOS') {
+                const origin = getQuantityFilter('filterOrigen');
+                if (origin) origin.value = 'Corrientes';
+                updateSerieFilter();
+            }
+            updateEspecieFilter();
+            console.log('Filtro cambiado:', 'filterMunicipio', municipio.value);
+            applyQuantityFilters();
+        });
+        municipio.dataset.quantityListenerBound = 'true';
+    }
+    console.log('Módulo cantidades inicializado');
+}
+
+function applyQuantityFilters() {
+    const filters = readQuantityFilters();
+    const filtered = unitData().filter(row => {
+        if (filters.year !== 'TODOS' && String(row.year) !== String(filters.year)) return false;
+        if (filters.unidad !== 'TODOS' && normalizeText(row.unidad) !== normalizeText(filters.unidad)) return false;
+        if (filters.origen !== 'TODOS' && row.origen !== filters.origen) return false;
+        if (filters.destino !== 'TODOS' && row.destino !== filters.destino) return false;
+        if (filters.serie !== 'TODOS' && row.serie !== filters.serie) return false;
+        if (filters.especie !== 'TODOS' && getQuantityProduct(row) !== filters.especie) return false;
+        if (filters.municipio !== 'TODOS' && row.municipio !== filters.municipio) return false;
+        return true;
+    });
+    filteredQuantityData = filtered;
+    filteredData = filteredQuantityData;
+    console.log('Filtros cantidades aplicados:', filters);
+    console.log('Registros cantidad antes de filtrar:', quantityData.length);
+    console.log('Registros cantidad después de filtrar:', filteredQuantityData.length);
+    updateQuantityDashboard(filteredQuantityData);
+    return filteredQuantityData;
+}
+
+function renderQuantityDashboard(data = filteredQuantityData) { updateQuantityDashboard(data); }
+function updateQuantityDashboard(data = filteredQuantityData) { updateDashboard(data); }
 
 function dateFromRecord(record, dateColumn = 'fecha') {
     if (typeof record === 'string') return record;
@@ -440,7 +545,12 @@ function updateFrequencySelect(id, originalFrequency, selected, onChange) {
 }
 
 function updateQuantityFrequencyOptions() {
-    quantityFrequency = updateFrequencySelect('filterFrequency', detectFrequency(quantityData), quantityFrequency, value => { quantityFrequency = value; updateQuantityDashboard(); });
+    const select = getQuantityFilter('filterFrequency');
+    if (!select) return;
+    const allowed = new Set(availableFrequencies(detectFrequency(quantityData)));
+    [...select.options].forEach(option => { option.disabled = !allowed.has(option.value); });
+    quantityFrequency = allowed.has(quantityFrequency) ? quantityFrequency : (allowed.has('mensual') ? 'mensual' : [...allowed][0]);
+    select.value = quantityFrequency;
 }
 
 function updatePriceFrequencyOptions() {
@@ -711,7 +821,7 @@ function processPriceData(rows, sourcePath = PRICE_CSV_PATH) {
         return {
             fecha: date, year: date ? Number(date.slice(0, 4)) : Number(row.año || row.ano) || null, month: monthNumber,
             mes: monthNumber >= 1 && monthNumber <= 12 ? MONTHS_FULL[monthNumber - 1] : normalizeCategoryValue(row.mes),
-            rubro, especie: species, variedad, productoNormalizado: normalizedProduct,
+            rubro, especie: species, variedad: variety, productoNormalizado: normalizedProduct,
             mercado: normalizeCategoryValue(row.mercado), procedencia: normalizeCategoryValue(row.procedencia), unidad: normalizeCategoryValue(row.unidad) || 'Sin especificar', precio: observed,
             precioObservado: observed, unidadPrecioObservado: normalizeCategoryValue(row.unidad_precio_observado) || 'sin especificar', envase: normalizeCategoryValue(row.envase), kgBulto: parsePriceNumber(row.kg_bulto), precioKgEstimado: estimated, metodoConversion: normalizeCategoryValue(row.metodo_conversion_precio), confianzaConversion: normalizeCategoryValue(row.confianza_conversion_precio),
             precioMin: minimum, precioMax: maximum, precioPromedio: average,
@@ -1396,58 +1506,6 @@ function parseCSV(text) {
 
 // ─── Cascading Dynamic Filters ──────────────────────────────────────────
 function wireFilters() {
-    document.getElementById('filterYear').addEventListener('change', () => {
-        selectedYear = document.getElementById('filterYear').value;
-        updateHeaderSubtitle();
-        updateSerieFilter();
-        updateEspecieFilter();
-        updateMunicipioFilter();
-        applyFilters();
-    });
-    document.getElementById('filterOrigen').addEventListener('change', () => {
-        const origen = document.getElementById('filterOrigen').value;
-        const btnMunicipio = document.getElementById('filterMunicipio');
-        const grpMunicipio = document.getElementById('filterGroupMunicipio');
-        
-        if (normalizeText(origen) === 'CORRIENTES') {
-            grpMunicipio.style.display = 'flex';
-            btnMunicipio.disabled = false;
-        } else {
-            grpMunicipio.style.display = 'none';
-            btnMunicipio.value = 'TODOS';
-            btnMunicipio.disabled = true;
-        }
-
-        updateSerieFilter();
-        updateEspecieFilter();
-        updateMunicipioFilter();
-        applyFilters();
-    });
-    document.getElementById('filterDestino').addEventListener('change', () => {
-        updateSerieFilter();
-        updateEspecieFilter();
-        updateMunicipioFilter();
-        applyFilters();
-    });
-    document.getElementById('filterSerie').addEventListener('change', () => {
-        updateEspecieFilter();
-        updateMunicipioFilter();
-        applyFilters();
-    });
-    document.getElementById('filterEspecie').addEventListener('change', () => {
-        updateMunicipioFilter();
-        applyFilters();
-    });
-    document.getElementById('filterMunicipio').addEventListener('change', () => {
-        const selMunicipio = document.getElementById('filterMunicipio').value;
-        if (selMunicipio !== 'TODOS') {
-            document.getElementById('filterOrigen').value = 'Corrientes';
-            updateSerieFilter();
-        }
-        updateEspecieFilter();
-        applyFilters();
-    });
-
     // Heatmap filter tabs
     const heatmapTabs = document.getElementById('heatmapTabs');
     if (heatmapTabs) {
@@ -1465,6 +1523,7 @@ function wireFilters() {
 /** Populate all filters initially based on rawData */
 function populateFilters() {
     populateYearFilter();
+    populateUnitFilter();
     updateOrigenFilter();
     updateDestinoFilter();
     updateSerieFilter();
@@ -1500,6 +1559,21 @@ function updateOrigenFilter() {
     const origenes = getUniqueSortedValues(unitData(), r => r.origen);
     populateSelect(sel, origenes, 'Todos', formatLabel);
     sel.value = origenes.includes(currentOrigen) ? currentOrigen : 'TODOS';
+}
+
+function populateUnitFilter() {
+    const select = getQuantityFilter('filterUnidad');
+    if (!select) return;
+    const current = select.value || selectedUnit;
+    const units = getUniqueSortedValues(unitData(), row => row.unidad).map(unit => String(unit).toUpperCase());
+    populateSelect(select, units, 'Todas', value => String(value).toLowerCase());
+    if (units.includes(current)) {
+        select.value = current;
+        selectedUnit = current;
+    } else if (units.length) {
+        select.value = units.length === 1 ? units[0] : 'TODOS';
+        selectedUnit = select.value;
+    }
 }
 
 function updateDestinoFilter() {
@@ -1636,62 +1710,51 @@ function updateMunicipioFilter() {
     }
 }
 
-function applyFilters() {
-    const origen = document.getElementById('filterOrigen').value;
-    const destino = document.getElementById('filterDestino').value;
-    const serie = document.getElementById('filterSerie').value;
-    const especie = document.getElementById('filterEspecie').value;
-    const municipio = document.getElementById('filterMunicipio').value;
-
-    filteredData = unitData().filter(r => {
-        if (selectedYear !== 'TODOS' && String(r.year) !== selectedYear) return false;
-        if (origen !== 'TODOS' && r.origen !== origen) return false;
-        if (destino !== 'TODOS' && r.mercado !== destino) return false;
-        if (serie !== 'TODOS' && r.serie !== serie) return false;
-        if (especie !== 'TODOS' && getQuantityProduct(r) !== especie) return false;
-        if (municipio !== 'TODOS' && r.municipio !== municipio) return false;
-        return true;
-    });
-
-    updateDashboard();
-}
+function applyFilters() { return applyQuantityFilters(); }
 
 // ─── Dashboard update orchestrator ──────────────────────────────────────
-function updateDashboard() {
-    updateKPIs();
-    renderMonthlyChart();
-    renderMarketDonut();
-    renderSeriesMonthly();
-    renderTop10();
-    renderHeatmap();
-    renderMarketMonthly();
-    renderSpeciesDonut();
-    renderVarieties();
-    renderSeasonalityTable();
+function updateDashboard(data = filteredQuantityData) {
+    updateKPIs(data);
+    if (!data.length) {
+        destroyAllQuantityCharts();
+        renderQuantityEmptyState();
+        renderSeasonalityTable(data);
+        return;
+    }
+    clearQuantityEmptyState();
+    renderMonthlyChart(data);
+    renderMarketDonut(data);
+    renderSeriesMonthly(data);
+    renderTop10(data);
+    renderHeatmap(data);
+    renderMarketMonthly(data);
+    renderSpeciesDonut(data);
+    renderVarieties(data);
+    renderSeasonalityTable(data);
 }
 
 // ─── KPI Calculations ──────────────────────────────────────────────────
-function updateKPIs() {
-    const total = sumPeso(filteredData);
-    const frutas = sumPeso(filteredData.filter(r => r.serie === 'FRUTAS'));
-    const hortalizas = sumPeso(filteredData.filter(r => r.serie === 'HORTALIZAS'));
-    const bsas = sumPeso(filteredData.filter(r => r.mercado === 'Buenos Aires'));
-    const ctes = sumPeso(filteredData.filter(r => r.mercado === 'Corrientes'));
+function updateKPIs(data = filteredQuantityData) {
+    const total = sumPeso(data);
+    const frutas = sumPeso(data.filter(r => r.serie === 'FRUTAS'));
+    const hortalizas = sumPeso(data.filter(r => r.serie === 'HORTALIZAS'));
+    const bsas = sumPeso(data.filter(r => r.mercado === 'Buenos Aires'));
+    const ctes = sumPeso(data.filter(r => r.mercado === 'Corrientes'));
 
     // Top especie
-    const byEspecie = groupSum(filteredData, getQuantityProduct);
+    const byEspecie = groupSum(data, getQuantityProduct);
     const topEspecie = Object.entries(byEspecie).sort((a, b) => b[1] - a[1])[0];
 
     // Peak month
-    const byMonth = monthlyTotals(filteredData);
+    const byMonth = monthlyTotals(data);
     let peakIdx = 0, peakVal = 0;
     byMonth.forEach((v, i) => { if (v > peakVal) { peakVal = v; peakIdx = i; } });
 
     // Unique species
-    const speciesSet = new Set(filteredData.map(getQuantityProduct).filter(Boolean));
+    const speciesSet = new Set(data.map(getQuantityProduct).filter(Boolean));
 
     // Last date
-    const latest = filteredData.reduce((best, r) => {
+    const latest = data.reduce((best, r) => {
         if (!best || r.month > best.month || (r.month === best.month && r.day > best.day)) return r;
         return best;
     }, null);
@@ -1716,14 +1779,14 @@ function updateKPIs() {
         document.getElementById('kpiTopEspecieTon').textContent = 'Sin datos';
     }
 
-    document.getElementById('kpiPeakMonth').textContent = filteredData.length ? MONTHS_FULL[peakIdx] : '–';
-    document.getElementById('kpiPeakMonthTon').textContent = filteredData.length ? formatWeight(peakVal) : 'Sin datos';
+    document.getElementById('kpiPeakMonth').textContent = data.length ? MONTHS_FULL[peakIdx] : '–';
+    document.getElementById('kpiPeakMonthTon').textContent = data.length ? formatWeight(peakVal) : 'Sin datos';
 }
 
 // ─── Chart 1: Monthly Production (Stacked Area) ────────────────────────
-function renderMonthlyChart() {
-    const frutasSeries = aggregateQuantityData(filteredData.filter(r => r.serie === 'FRUTAS'), quantityFrequency);
-    const hortSeries = aggregateQuantityData(filteredData.filter(r => r.serie === 'HORTALIZAS'), quantityFrequency);
+function renderMonthlyChart(data = filteredQuantityData) {
+    const frutasSeries = aggregateQuantityData(data.filter(r => r.serie === 'FRUTAS'), quantityFrequency);
+    const hortSeries = aggregateQuantityData(data.filter(r => r.serie === 'HORTALIZAS'), quantityFrequency);
     const labels = [...new Set([...frutasSeries, ...hortSeries].map(item => item.key))].sort();
     const frutaValues = new Map(frutasSeries.map(item => [item.key, item.value]));
     const hortValues = new Map(hortSeries.map(item => [item.key, item.value]));
@@ -1774,9 +1837,9 @@ function renderMonthlyChart() {
 }
 
 // ─── Chart 2: Market Donut ──────────────────────────────────────────────
-function renderMarketDonut() {
-    const bsas = sumPeso(filteredData.filter(r => r.mercado === 'Buenos Aires'));
-    const ctes = sumPeso(filteredData.filter(r => r.mercado === 'Corrientes'));
+function renderMarketDonut(data = filteredQuantityData) {
+    const bsas = sumPeso(data.filter(r => r.mercado === 'Buenos Aires'));
+    const ctes = sumPeso(data.filter(r => r.mercado === 'Corrientes'));
 
     const cfg = {
         type: 'doughnut',
@@ -1809,9 +1872,9 @@ function renderMarketDonut() {
 }
 
 // ─── Chart 3: Series Monthly ────────────────────────────────────────────
-function renderSeriesMonthly() {
-    const frutasMonthly = monthlyTotals(filteredData.filter(r => r.serie === 'FRUTAS'));
-    const hortMonthly = monthlyTotals(filteredData.filter(r => r.serie === 'HORTALIZAS'));
+function renderSeriesMonthly(data = filteredQuantityData) {
+    const frutasMonthly = monthlyTotals(data.filter(r => r.serie === 'FRUTAS'));
+    const hortMonthly = monthlyTotals(data.filter(r => r.serie === 'HORTALIZAS'));
 
     const cfg = {
         type: 'bar',
@@ -1849,8 +1912,8 @@ function renderSeriesMonthly() {
 }
 
 // ─── Chart 4: Top 10 Species ────────────────────────────────────────────
-function renderTop10() {
-    const byEspecie = groupSum(filteredData, getQuantityProduct);
+function renderTop10(data = filteredQuantityData) {
+    const byEspecie = groupSum(data, getQuantityProduct);
     const sorted = Object.entries(byEspecie).sort((a, b) => b[1] - a[1]).slice(0, 10);
 
     const cfg = {
@@ -1892,13 +1955,13 @@ function renderTop10() {
 }
 
 // ─── Chart 5: Heatmap ───────────────────────────────────────────────────
-function renderHeatmap() {
+function renderHeatmap(data = filteredQuantityData) {
     const container = document.getElementById('heatmapContainer');
     
     // Filtrar los datos localmente según la solapa seleccionada (Frutas, Hortalizas o Todas)
-    let dataForHeatmap = filteredData;
+    let dataForHeatmap = data;
     if (heatmapFilter !== 'TODOS') {
-        dataForHeatmap = filteredData.filter(r => r.serie === heatmapFilter);
+        dataForHeatmap = data.filter(r => r.serie === heatmapFilter);
     }
     
     const byEspecie = groupSum(dataForHeatmap, getQuantityProduct);
@@ -1945,9 +2008,9 @@ function renderHeatmap() {
 }
 
 // ─── Chart 6: Market Monthly (Stacked) ──────────────────────────────────
-function renderMarketMonthly() {
-    const bsasMonthly = monthlyTotals(filteredData.filter(r => r.mercado === 'Buenos Aires'));
-    const ctesMonthly = monthlyTotals(filteredData.filter(r => r.mercado === 'Corrientes'));
+function renderMarketMonthly(data = filteredQuantityData) {
+    const bsasMonthly = monthlyTotals(data.filter(r => r.mercado === 'Buenos Aires'));
+    const ctesMonthly = monthlyTotals(data.filter(r => r.mercado === 'Corrientes'));
 
     const cfg = {
         type: 'bar',
@@ -1985,8 +2048,8 @@ function renderMarketMonthly() {
 }
 
 // ─── Chart 7: Species Donut ─────────────────────────────────────────────
-function renderSpeciesDonut() {
-    const byEspecie = groupSum(filteredData, getQuantityProduct);
+function renderSpeciesDonut(data = filteredQuantityData) {
+    const byEspecie = groupSum(data, getQuantityProduct);
     const sorted = Object.entries(byEspecie).sort((a, b) => b[1] - a[1]);
     const top8 = sorted.slice(0, 8);
     const restVal = sorted.slice(8).reduce((s, e) => s + e[1], 0);
@@ -2023,9 +2086,9 @@ function renderSpeciesDonut() {
 }
 
 // ─── Chart 8: Top 15 Varieties ──────────────────────────────────────────
-function renderVarieties() {
+function renderVarieties(data = filteredQuantityData) {
     const byVar = {};
-    filteredData.forEach(r => {
+    data.forEach(r => {
         if (r.variedad === 'SIN VARIED') return;
         const key = isTomatoRow(r) ? getQuantityProduct(r) : r.especie + ' – ' + r.variedad;
         byVar[key] = (byVar[key] || 0) + r.peso;
@@ -2071,15 +2134,20 @@ function renderVarieties() {
 }
 
 // ─── Chart 9: Seasonality Table ─────────────────────────────────────────
-function renderSeasonalityTable() {
+function renderSeasonalityTable(data = filteredQuantityData) {
     const container = document.getElementById('seasonalityTable');
+    if (!container) return;
+    if (!data.length) {
+        container.innerHTML = '<div class="quantity-empty-state">No hay datos disponibles para los filtros seleccionados.</div>';
+        return;
+    }
     const filters = {
         especie: document.getElementById('filterEspecie')?.value || 'TODOS',
         origen: document.getElementById('filterOrigen')?.value || 'TODOS',
         destino: document.getElementById('filterDestino')?.value || 'TODOS'
     };
     const groupFields = getQuantitySemaphoreGroupFields(filters);
-    const groupedRows = buildQuantitySemaphoreRows(filteredData, groupFields);
+    const groupedRows = buildQuantitySemaphoreRows(data, groupFields);
     console.log('Agrupación semáforo cantidades:', groupFields);
     console.log('Filas semáforo cantidades:', groupedRows.length);
 
@@ -2138,13 +2206,57 @@ function buildQuantitySemaphoreRows(data, groupFields) {
         const origin = row.origen || '';
         const destination = row.destino || '';
         const key = [product, groupFields.includes('origen') ? origin || 'SIN INFORMAR' : '', groupFields.includes('destino') ? destination || 'SIN INFORMAR' : ''].join('|');
-        const group = groups.get(key) || { product, origen, destino, monthly: new Array(12).fill(0) };
+        const group = groups.get(key) || { product, origen: origin, destino: destination, monthly: new Array(12).fill(0) };
         if (Number.isInteger(row.month) && row.month >= 1 && row.month <= 12) group.monthly[row.month - 1] += row.peso;
         groups.set(key, group);
     });
     return [...groups.values()].sort((a, b) => {
         const volume = b.monthly.reduce((sum, value) => sum + value, 0) - a.monthly.reduce((sum, value) => sum + value, 0);
         return volume || String(a.product).localeCompare(String(b.product), 'es') || String(a.origen).localeCompare(String(b.origen), 'es');
+    });
+}
+
+const QUANTITY_CHART_CANVAS_IDS = [
+    'chartMonthly', 'chartMarket', 'chartSeriesMonthly', 'chartTop10',
+    'chartMarketMonthly', 'chartSpeciesDonut', 'chartVarieties'
+];
+
+function destroyQuantityChart(chartKey) {
+    const chart = charts[chartKey];
+    if (chart) chart.destroy();
+    charts[chartKey] = null;
+}
+
+function destroyAllQuantityCharts() {
+    Object.keys(charts).forEach(destroyQuantityChart);
+}
+
+function renderQuantityEmptyState() {
+    const message = 'No hay datos disponibles para los filtros seleccionados.';
+    QUANTITY_CHART_CANVAS_IDS.forEach(canvasId => {
+        const canvas = document.getElementById(canvasId);
+        const body = canvas?.parentElement;
+        if (!body) return;
+        canvas.style.display = 'none';
+        let state = body.querySelector('.quantity-empty-state');
+        if (!state) {
+            state = document.createElement('div');
+            state.className = 'quantity-empty-state';
+            body.appendChild(state);
+        }
+        state.textContent = message;
+    });
+    const heatmap = document.getElementById('heatmapContainer');
+    if (heatmap) heatmap.innerHTML = `<div class="quantity-empty-state">${message}</div>`;
+}
+
+function clearQuantityEmptyState() {
+    QUANTITY_CHART_CANVAS_IDS.forEach(canvasId => {
+        const canvas = document.getElementById(canvasId);
+        const body = canvas?.parentElement;
+        if (!body) return;
+        canvas.style.display = '';
+        body.querySelector('.quantity-empty-state')?.remove();
     });
 }
 

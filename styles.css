@@ -112,6 +112,7 @@ button, select { font: inherit; }
 .heatmap-cell { padding: 7px 4px; border-radius: 4px; color: rgba(255,255,255,.9); font-size: .63rem; font-variant-numeric: tabular-nums; text-align: center; }
 .heatmap-cell-empty { background: rgba(255,255,255,.035); color: var(--text-muted); }
 .seasonality-table { width: 100%; min-width: 800px; border-collapse: collapse; font-size: .72rem; }
+.quantity-empty-state { align-items: center; color: var(--text-muted); display: flex; justify-content: center; min-height: 120px; padding: 24px; text-align: center; }
 .seasonality-table th { position: sticky; top: 0; padding: 10px 8px; border-bottom: 1px solid var(--border-color); background: var(--bg-panel); color: var(--text-secondary); font-size: .62rem; letter-spacing: .04em; text-align: center; text-transform: uppercase; }
 .seasonality-table th:first-child, .seasonality-table td:first-child { text-align: left; }
 .seasonality-table td { padding: 8px; border-bottom: 1px solid rgba(173,198,218,.1); color: var(--text-secondary); font-variant-numeric: tabular-nums; text-align: center; }
