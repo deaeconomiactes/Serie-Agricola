@@ -52,10 +52,26 @@ No deben mezclarse directamente ni cruzarse con esas familias para inferir causa
    python .\descargar_commodities_bcr.py --dry-run --days-back 30
    ```
 
+   Para productos específicos:
+
+   ```powershell
+   python .\descargar_commodities_bcr.py --dry-run --date-start 2026-08-01 --date-end 2026-09-01 --products soja,maiz,trigo,girasol,sorgo
+   ```
+
 3. Si no hay API, descargar manualmente y colocar los archivos originales en `raw/`.
 4. Ejecutar `python .\integrar_commodities_bcr.py`.
 5. Ejecutar `python .\auditar_commodities_bcr.py`.
 6. Revisar los reportes de cobertura, actualidad y calidad.
 7. Recién después decidir la implementación visual.
+
+Si se dispone de API configurada y autorizada, el flujo previsto es:
+
+```powershell
+python .\descargar_commodities_bcr.py --days-back 7 --products soja,maiz,trigo
+python .\integrar_commodities_bcr.py
+python .\auditar_commodities_bcr.py
+```
+
+El archivo `.env` no debe commitearse. Si faltan endpoint o IDs BCR confirmados, el descargador no realiza llamadas y se debe usar el fallback manual.
 
 La configuración API y el flujo de seguridad están documentados en `API_BCR_PLAN.md`.

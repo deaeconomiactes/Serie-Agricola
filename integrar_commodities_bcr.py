@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import re
 import unicodedata
 from datetime import date, datetime, timedelta
@@ -29,7 +30,7 @@ OUTPUT_COLUMNS = [
     "moneda", "unidad", "precio", "frecuencia", "condicion_comercial",
     "archivo_origen", "fecha_integracion", "observaciones",
 ]
-TABULAR_EXTENSIONS = {".csv", ".xlsx", ".xls"}
+TABULAR_EXTENSIONS = {".csv", ".xlsx", ".xls", ".json"}
 DATE_COLUMNS = ("fecha", "date", "fecha mercado", "fecha de mercado", "fecha pizarra", "día", "dia")
 COMMODITY_COLUMNS = ("producto", "grano", "especie", "commodity", "producto/grano")
 PRICE_COLUMNS = ("precio", "precio pizarra", "pizarra", "valor", "cotizacion", "cotización", "precio camara", "precio cámara", "cámara", "camara")
@@ -39,6 +40,7 @@ NOTE_COLUMNS = ("observacion", "observaciones", "observación", "observaciones",
 CONDITION_COLUMNS = ("condicion comercial", "condición comercial", "condicion", "condición", "entrega", "pago")
 MARKET_COLUMNS = ("mercado", "plaza", "puerto")
 PRICE_TYPE_COLUMNS = ("tipo precio", "tipo de precio", "tipo")
+ID_COLUMNS = ("id grano", "idgrano", "bcr id grano", "bcr_id_grano")
 IGNORED_FILENAMES = {"desktop.ini", "plantilla_commodities_bcr.csv"}
 PRICE_EXCLUDED_KEYS = ("ano", "anio", "mes", "cantidad", "volumen", "observacion", "nota")
 MONTHS = {
@@ -65,26 +67,30 @@ def _key(value: Any) -> str:
     return re.sub(r"[^a-z0-9]+", "", text.lower())
 
 
-def load_commodity_catalog(path: Path = CATALOG_PATH) -> tuple[dict[str, str], set[str]]:
+def load_commodity_catalog(path: Path = CATALOG_PATH) -> tuple[dict[str, str], set[str], dict[str, str]]:
     """Carga aliases del catálogo sin hacer obligatorio su uso."""
     if not path.exists():
-        return {}, set()
+        return {}, set(), {}
     try:
         catalog = pd.read_csv(path, sep=";", dtype=str, encoding="utf-8-sig").fillna("")
     except (OSError, UnicodeError, pd.errors.ParserError):
-        return {}, set()
+        return {}, set(), {}
     aliases: dict[str, str] = {}
     canonical: set[str] = set()
+    ids: dict[str, str] = {}
     for _, row in catalog.iterrows():
         product = normalize_text(row.get("commodity", ""))
         if not product:
             continue
         canonical.add(_key(product))
         aliases[_key(product)] = product
+        bcr_id = normalize_text(row.get("bcr_id_grano", ""))
+        if bcr_id:
+            ids[_key(bcr_id)] = product
         for alias in re.split(r"[|,;/]", normalize_text(row.get("aliases", ""))):
             if _key(alias):
                 aliases[_key(alias)] = product
-    return aliases, canonical
+    return aliases, canonical, ids
 
 
 def normalize_commodity(value: Any, catalog: dict[str, str] | None = None) -> str:
@@ -93,7 +99,7 @@ def normalize_commodity(value: Any, catalog: dict[str, str] | None = None) -> st
     if not key or key in {"nan", "none", "null", "n/a", "na", "total", "totales"}:
         return ""
     if catalog is None:
-        catalog, _ = load_commodity_catalog()
+        catalog, _, _ = load_commodity_catalog()
     if key in catalog:
         return catalog[key]
     if "trigocandeal" in key:
@@ -117,7 +123,7 @@ def commodity_from_filename(filename: str, catalog: dict[str, str] | None = None
     """Detecta el commodity en el nombre cuando falta la columna de producto."""
     key = _key(Path(filename).stem)
     if catalog is None:
-        catalog, _ = load_commodity_catalog()
+        catalog, _, _ = load_commodity_catalog()
     for alias in sorted(catalog, key=len, reverse=True):
         if alias and alias in key:
             return catalog[alias]
@@ -274,6 +280,8 @@ def infer_frequency_from_filename_or_data(df: pd.DataFrame, filename: str) -> st
         return "Anual"
     if "mensual" in key or "monthly" in key or "mes" in key:
         return "Mensual"
+    if "diaria" in key or "daily" in key:
+        return "Diaria"
     unique = dates.dt.normalize().drop_duplicates().sort_values()
     if len(unique) >= 2:
         gaps = unique.diff().dropna().dt.days
@@ -282,9 +290,7 @@ def infer_frequency_from_filename_or_data(df: pd.DataFrame, filename: str) -> st
         if (gaps >= 25).all() and (gaps <= 45).all():
             return "Mensual"
         return "Diaria"
-    if unique.iloc[0].day == 1:
-        return "Mensual"
-    return "Diaria"
+    return "Sin determinar"
 
 
 def _find_column(columns: list[Any], candidates: tuple[str, ...]) -> str | None:
@@ -337,6 +343,29 @@ def _read_csv(path: Path) -> list[tuple[str, pd.DataFrame]]:
     return [("", pd.read_csv(path, sep=delimiter, header=None, dtype=object, encoding=detected_encoding))]
 
 
+def _json_records(payload: Any) -> list[dict[str, Any]]:
+    """Extrae registros de listas, data/results y envoltorios con metadata."""
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    if not isinstance(payload, dict):
+        return []
+    for key in ("data", "results", "records", "items"):
+        if key in payload:
+            records = _json_records(payload[key])
+            if records:
+                return records
+    if any(isinstance(value, (str, int, float, bool)) or value is None for value in payload.values()):
+        return [payload]
+    return []
+
+
+def _read_json(path: Path) -> list[tuple[str, pd.DataFrame]]:
+    with path.open("r", encoding="utf-8-sig") as handle:
+        payload = json.load(handle)
+    records = _json_records(payload)
+    return [("", pd.DataFrame(records, dtype=object))] if records else []
+
+
 def _headered(frame: pd.DataFrame) -> pd.DataFrame:
     frame = frame.dropna(axis=0, how="all").dropna(axis=1, how="all").reset_index(drop=True)
     if frame.empty:
@@ -361,6 +390,8 @@ def _headered(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def read_tables(path: Path) -> list[tuple[str, pd.DataFrame]]:
+    if path.suffix.lower() == ".json":
+        return _read_json(path)
     if path.suffix.lower() == ".csv":
         frames = _read_csv(path)
     else:
@@ -402,13 +433,20 @@ def create_template(path: Path) -> None:
 
 def integrate_file(path: Path, integration_date: str) -> list[dict[str, Any]]:
     output: list[dict[str, Any]] = []
-    catalog, canonical_commodities = load_commodity_catalog()
+    catalog, canonical_commodities, catalog_ids = load_commodity_catalog()
     for sheet_name, frame in read_tables(path):
         date_column = _find_column(list(frame.columns), DATE_COLUMNS)
         commodity_column = _find_column(list(frame.columns), COMMODITY_COLUMNS)
+        id_column = _find_column(list(frame.columns), ID_COLUMNS)
         price_column = _find_price_column(list(frame.columns))
         filename_commodity = commodity_from_filename(path.name, catalog)
-        if not price_column or (not commodity_column and not filename_commodity):
+        id_commodity = ""
+        if id_column:
+            for raw_id in frame[id_column].tolist():
+                id_commodity = catalog_ids.get(_key(raw_id), "")
+                if id_commodity:
+                    break
+        if not price_column or (not commodity_column and not filename_commodity and not id_commodity):
             continue
         frame = frame.copy()
         frame["_fecha"] = frame[date_column].map(parse_date) if date_column else ""
@@ -423,7 +461,7 @@ def integrate_file(path: Path, integration_date: str) -> list[dict[str, Any]]:
         for _, row in frame.iterrows():
             raw_commodity = row.get(commodity_column, "") if commodity_column else ""
             commodity = normalize_commodity(raw_commodity, catalog) if commodity_column else ""
-            commodity = commodity or filename_commodity
+            commodity = commodity or (catalog_ids.get(_key(row.get(id_column, "")), "") if id_column else "") or filename_commodity
             if not commodity:
                 continue
             date_value = row.get("_fecha", "")

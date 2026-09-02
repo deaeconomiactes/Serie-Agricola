@@ -1,7 +1,7 @@
-commodity;aliases;prioridad;activo;observaciones
-Soja;soja|soya;alta;true;Producto prioritario
-Maíz;maiz|maíz|corn;alta;true;Producto prioritario
-Trigo;trigo|wheat;alta;true;Producto prioritario
-Girasol;girasol|sunflower;alta;true;Producto prioritario
-Sorgo;sorgo|sorghum;alta;true;Producto prioritario
-Cebada;cebada|barley;media;true;Incluir si existe cobertura útil
+commodity;aliases;prioridad;activo;bcr_id_grano;observaciones
+Soja;soja|soya;alta;true;;Pendiente validar id BCR
+Maíz;maiz|maíz|corn;alta;true;;Pendiente validar id BCR
+Trigo;trigo|wheat;alta;true;;Pendiente validar id BCR
+Girasol;girasol|sunflower;alta;true;;Pendiente validar id BCR
+Sorgo;sorgo|sorghum;alta;true;;Pendiente validar id BCR
+Cebada;cebada|barley;media;true;;Pendiente validar id BCR
