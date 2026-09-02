@@ -9,6 +9,11 @@
 !RESUMEN_PROCEDENCIAS_PRECIOS_2026.csv
 !RESUMEN_ESPECIES_PRECIOS_2026.csv
 !RESUMEN_SERIES_UTILIZABLES_PRECIOS_2026.csv
+!RESUMEN_ORIGENES_CANTIDADES.csv
+!RESUMEN_DESTINOS_CANTIDADES.csv
+!RESUMEN_ORIGEN_DESTINO_CANTIDADES.csv
+!CASOS_DESTINO_SOSPECHOSO_CANTIDADES.csv
+!CASOS_PRODUCTO_AGREGADO_CANTIDADES.csv
 
 # Python
 *.py
@@ -20,6 +25,7 @@ __pycache__/
 !integrar_commodities_bcr.py
 !auditar_commodities_bcr.py
 !descargar_commodities_bcr.py
+!auditar_flujos_cantidades.py
 
 # Commodity BCR work area: raw files remain local; generated outputs are tracked.
 data/commodities_bcr/raw/*

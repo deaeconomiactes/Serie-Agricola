@@ -1,0 +1,63 @@
+﻿destino_normalizado;destino_original;clasificacion;registros;peso_tn
+Corrientes;CORRIENTES;válido;30436;151088.672
+Buenos Aires;BSAS;válido;3821;513886.72
+;MENDOZA;sospechoso;2462;245691.966
+;SALTA;sospechoso;1220;146531.914
+;BRASIL;sospechoso;1082;70392.19
+;R. NEGRO;sospechoso;1017;134210.6
+;JUJUY;sospechoso;905;54475.895
+;SAN JUAN;sospechoso;773;40330.476
+;E. RIOS;sospechoso;709;200848.7
+;SANTA FE;sospechoso;707;34781.2
+;M.D.PLAT;sospechoso;693;15647.2
+;RÍO NEGRO;sospechoso;607;106183.57
+;CHILE;sospechoso;512;25266.459
+;ENTRE RÍOS;sospechoso;487;128060.278
+;MAR DEL PLATA;sospechoso;433;9552.483
+;SANTA FÉ;sospechoso;367;18004.156
+;TUCUMAN;sospechoso;358;69432.3
+;MISIONES;sospechoso;317;25869.61
+;NEUQUEN;sospechoso;253;7211.4
+;TUCUMÁN;sospechoso;249;33039.995
+;FORMOSA;sospechoso;213;9082.067
+;SGO.EST.;sospechoso;213;24544.0
+;ECUADOR;sospechoso;212;90325.457
+;CORDOBA;sospechoso;179;47552.9
+;NEUQUÉN;sospechoso;141;5448.424
+;SGO DEL ESTERO;sospechoso;131;12120.262
+;S. PEDRO;sospechoso;116;2150.6
+;BOLIVIA;sospechoso;98;36055.349
+;PARAGUAY;sospechoso;97;21290.47
+;ESPAÑA;sospechoso;92;732.609
+;CÓRDOBA;sospechoso;81;28318.883
+;SAN LUIS;sospechoso;73;25417.834
+;SE BS.AS;sospechoso;73;222497.6
+;SUD. BS AS;sospechoso;62;172024.636
+;CHUBUT;sospechoso;53;1453.566
+;CHACO;sospechoso;51;1422.25
+;LA RIOJA;sospechoso;40;1117.69
+;EGIPTO;sospechoso;39;600.633
+;COLOMBIA;sospechoso;38;2930.463
+;PERU;sospechoso;37;431.8
+;LA PAMPA;sospechoso;22;84.7
+;PERÚ;sospechoso;22;494.794
+;CATAMARC;sospechoso;21;2317.7
+;ITALIA;sospechoso;17;199.775
+;STA.CRUZ;sospechoso;15;208.0
+;PTO.RICO;sospechoso;13;3.9
+;GRECIA;sospechoso;12;163.491
+;GRL.BELG;sospechoso;12;9419.8
+;SUR. BS AS;sospechoso;11;269.764
+;(vacío / inválido);sospechoso;10;2.134
+;SAN PEDRO;sospechoso;10;40.412
+;SANTA CRUZ;sospechoso;6;80.49
+;CATAMARCA;sospechoso;5;1091.066
+;GRAL BELGRANO;sospechoso;5;3158.948
+;MEXICO;sospechoso;5;221.3
+;MÉXICO;sospechoso;5;128.766
+;V.DOLOR.;sospechoso;3;107.6
+;S.BS.AS.;sospechoso;2;30.8
+;#N/A;sospechoso;1;26.905
+;CHINA;sospechoso;1;21.0
+;PORTUGAL;sospechoso;1;20.2
+;ROSARIO;sospechoso;1;48.0

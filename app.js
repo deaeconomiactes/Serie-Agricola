@@ -20,7 +20,7 @@ const LOCATION_EQUIVALENCES = {
     MDPLAT: 'Mar del Plata', MDP: 'Mar del Plata', MARDELPLATA: 'Mar del Plata',
     PTORICO: 'Puerto Rico', PUERTORICO: 'Puerto Rico',
     SBSAS: 'Buenos Aires',
-    CORDOBA: 'Córdoba', CBA: 'Córdoba',
+    CORDOBA: 'Córdoba', CBA: 'Córdoba', CRDOBA: 'Córdoba',
     ERIOS: 'Entre Ríos', ENTRERIOS: 'Entre Ríos',
     GRLBELG: 'General Belgrano', GRALBELGRANO: 'General Belgrano', GENERALBELGRANO: 'General Belgrano',
     SPEDRO: 'San Pedro', SANPEDRO: 'San Pedro',
@@ -30,10 +30,25 @@ const LOCATION_EQUIVALENCES = {
     STACRUZ: 'Santa Cruz',
     LARIOJA: 'La Rioja', LAPAMPA: 'La Pampa', JUJUY: 'Jujuy', SALTA: 'Salta', MENDOZA: 'Mendoza',
     MISIONES: 'Misiones', FORMOSA: 'Formosa', CHUBUT: 'Chubut', CHACO: 'Chaco', CORRIENTES: 'Corrientes',
-    SANJUAN: 'San Juan', SANLUIS: 'San Luis', SANTAFE: 'Santa Fe', TIERRADELFUEGO: 'Tierra del Fuego',
+    SANJUAN: 'San Juan', SANLUIS: 'San Luis', SANTAFE: 'Santa Fe', RNEGRO: 'Río Negro', RONEGRO: 'Río Negro', RIONEGRO: 'Río Negro',
+    TIERRADELFUEGO: 'Tierra del Fuego',
     CHILE: 'Chile', CHINA: 'China', COLOMBIA: 'Colombia', ECUADOR: 'Ecuador', ESPANA: 'España',
     GRECIA: 'Grecia', ITALIA: 'Italia', PARAGUAY: 'Paraguay', PORTUGAL: 'Portugal', URUGUAY: 'Uruguay',
     BRASIL: 'Brasil'
+};
+
+const VALID_QUANTITY_DESTINATIONS = ['Buenos Aires', 'Corrientes'];
+const DESTINATION_EQUIVALENCES = {
+    BUENOSAIRES: 'Buenos Aires',
+    BSAS: 'Buenos Aires',
+    CABA: 'Buenos Aires',
+    CAPITALFEDERAL: 'Buenos Aires',
+    CIUDADAUTONOMADEBUENOSAIRES: 'Buenos Aires',
+    MERCADOCENTRAL: 'Buenos Aires',
+    MERCADOCENTRALDEBUENOSAIRES: 'Buenos Aires',
+    CORRIENTES: 'Corrientes',
+    CTES: 'Corrientes',
+    MERCADODECORRIENTES: 'Corrientes'
 };
 
 // Chart.js color palette
@@ -273,6 +288,35 @@ function normalizeVariedad(especie, variedad) {
     return variedad;
 }
 
+function normalizeTomatoProduct(row) {
+    const species = normalizeText(row?.especie);
+    const variety = normalizeText(row?.variedad);
+    const speciesSpecific = species.startsWith('TOMATE ') ? species.slice('TOMATE '.length).trim() : '';
+    const varietySpecific = variety.startsWith('TOMATE ') ? variety.slice('TOMATE '.length).trim() : variety;
+    const genericValues = new Set(['', 'TOMATE', 'SIN VARIEDAD', 'SIN VARIED']);
+    const specific = speciesSpecific || (species === 'TOMATE' && !genericValues.has(varietySpecific) ? varietySpecific : '');
+    return specific ? `TOMATE ${specific}` : 'TOMATE SIN VARIEDAD ESPECIFICADA';
+}
+
+function isTomatoRow(row) {
+    return normalizeText(row?.especie).startsWith('TOMATE') || normalizeText(row?.variedad).startsWith('TOMATE');
+}
+
+function getQuantityProduct(row) {
+    return row?.productoNormalizado || row?.especie || 'SIN ESPECIFICAR';
+}
+
+function normalizeDestination(value) {
+    const cleaned = cleanSpreadsheetErrors(value);
+    if (!cleaned) return '';
+    return DESTINATION_EQUIVALENCES[makeLocationKey(cleaned)] || '';
+}
+
+function normalizeOrigin(value) {
+    const cleaned = cleanSpreadsheetErrors(value);
+    return cleaned ? normalizeLocation(cleaned) : '';
+}
+
 // ─── Chart instances ────────────────────────────────────────────────────
 let charts = {};
 // Las instancias de precios se administran por separado para no afectar los gráficos de cantidades.
@@ -334,6 +378,10 @@ async function loadQuantityData() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     quantityData = parseCSV(await response.text());
     rawData = quantityData;
+    const tomatoGenericCount = quantityData.filter(row => normalizeText(row.especie) === 'TOMATE').length;
+    const tomatoProducts = [...new Set(quantityData.filter(isTomatoRow).map(getQuantityProduct))].sort();
+    console.log('Registros con tomate genérico:', tomatoGenericCount);
+    console.log('Productos de tomate detectados:', tomatoProducts.map(formatLabel));
     initQuantityFilters();
     applyQuantityFilters();
 }
@@ -517,6 +565,10 @@ async function loadPriceData() {
     console.log('Filas de precios válidas por año-mes:', rowsByYearMonth);
     console.warn('Registros con años futuros o sospechosos:', suspiciousRows.length);
     console.log('Frecuencia original detectada en precios:', detectFrequency(priceData));
+    const tomatoGenericCount = priceData.filter(row => normalizeText(row.especie) === 'TOMATE').length;
+    const tomatoProducts = [...new Set(priceData.filter(isTomatoRow).map(row => row.productoNormalizado))].sort();
+    console.log('Registros con tomate genérico:', tomatoGenericCount);
+    console.log('Productos de tomate detectados:', tomatoProducts.map(formatLabel));
     if (priceFutureDateCount) console.warn('Fechas futuras excluidas del KPI último registro:', priceFutureDateCount);
     initPriceYearFilter();
     updatePriceFrequencyOptions();
@@ -578,6 +630,7 @@ function getPriceMetricLabel() {
 }
 
 function getProductLabel(row) {
+    if (row?.productoNormalizado && isTomatoRow(row)) return formatLabel(row.productoNormalizado);
     const species = String(row?.especie || '').trim();
     const variety = String(row?.variedad || '').trim();
     return [species, variety && variety.toUpperCase() !== 'SIN VARIEDAD' ? variety : '']
@@ -598,7 +651,9 @@ function buildAccumulatedVariationRanking(data, groupFields, frequency = 'diaria
     const grouped = new Map();
     data.forEach(row => {
         if (!isValidPrice(getPriceValue(row))) return;
-        const key = groupFields.map(field => String(row[field] || (field === 'variedad' ? 'Sin especificar' : 'Sin procedencia informada'))).join('|');
+        const key = groupFields.map(field => String(field === 'especie'
+            ? (row.productoNormalizado || row.especie)
+            : row[field] || (field === 'variedad' ? 'Sin especificar' : 'Sin procedencia informada'))).join('|');
         const label = groupFields.length === 1 ? (String(row[groupFields[0]] || '').trim() || (groupFields[0] === 'variedad' ? 'Sin especificar' : 'Sin procedencia informada')) : getProductLabel(row);
         const group = grouped.get(key) || { label, rows: [] };
         group.rows.push(row);
@@ -648,10 +703,15 @@ function processPriceData(rows, sourcePath = PRICE_CSV_PATH) {
         const sourceText = normalizeText(sourcePath);
         const rubroKey = normalizeText(rubroRaw);
         const rubro = rubroKey.includes('HORTAL') ? 'Hortalizas' : rubroKey.includes('FRUT') ? 'Frutas' : rubroKey.includes('SUBPRODUCT') ? 'Subproductos' : rubroRaw || (sourceText.includes('HORTAL') ? 'Hortalizas' : sourceText.includes('FRUT') ? 'Frutas' : 'Sin clasificar');
+        const species = normalizeCategoryValue(row.especie) || 'Sin especificar';
+        const variety = normalizeCategoryValue(row.variedad);
+        const normalizedProduct = isTomatoRow({ especie: species, variedad: variety })
+            ? normalizeTomatoProduct({ especie: species, variedad: variety })
+            : species;
         return {
             fecha: date, year: date ? Number(date.slice(0, 4)) : Number(row.año || row.ano) || null, month: monthNumber,
             mes: monthNumber >= 1 && monthNumber <= 12 ? MONTHS_FULL[monthNumber - 1] : normalizeCategoryValue(row.mes),
-            rubro, especie: normalizeCategoryValue(row.especie) || 'Sin especificar', variedad: normalizeCategoryValue(row.variedad),
+            rubro, especie: species, variedad, productoNormalizado: normalizedProduct,
             mercado: normalizeCategoryValue(row.mercado), procedencia: normalizeCategoryValue(row.procedencia), unidad: normalizeCategoryValue(row.unidad) || 'Sin especificar', precio: observed,
             precioObservado: observed, unidadPrecioObservado: normalizeCategoryValue(row.unidad_precio_observado) || 'sin especificar', envase: normalizeCategoryValue(row.envase), kgBulto: parsePriceNumber(row.kg_bulto), precioKgEstimado: estimated, metodoConversion: normalizeCategoryValue(row.metodo_conversion_precio), confianzaConversion: normalizeCategoryValue(row.confianza_conversion_precio),
             precioMin: minimum, precioMax: maximum, precioPromedio: average,
@@ -694,6 +754,11 @@ function updateMultiSelectSummary(selectId) {
     else if (values.length <= 2) summary.textContent = values.join(', ');
     else summary.textContent = `${values.slice(0, 2).join(', ')} y ${values.length - 2} más`;
     renderMultiSelectOptions(selectId);
+}
+
+function matchesPriceFilter(row, key, selectedValues) {
+    const value = key === 'especie' ? row.productoNormalizado : row[key];
+    return matchesMultiSelect(value, selectedValues);
 }
 
 function initMultiSelectControls() {
@@ -787,8 +852,8 @@ function populatePriceFilters() {
         ['priceFilterYear', validPriceData.map(row => row.year), 'Todos los años'],
         ['priceFilterRubro', validPriceData.map(row => row.rubro), 'Todos'],
         ['priceFilterMes', validPriceData.map(row => row.mes), 'Todos los meses'],
-        ['priceFilterEspecie', validPriceData.map(row => row.especie), 'Todas las especies'],
-        ['priceFilterVariedad', validPriceData.filter(row => !Array.isArray(selectedSpecies) || !selectedSpecies.length || selectedSpecies.includes('TODOS') || selectedSpecies.includes(row.especie)).map(row => row.variedad || 'Sin especificar'), 'Todas las variedades'],
+        ['priceFilterEspecie', validPriceData.map(row => row.productoNormalizado), 'Todas las especies'],
+        ['priceFilterVariedad', validPriceData.filter(row => !Array.isArray(selectedSpecies) || !selectedSpecies.length || selectedSpecies.includes('TODOS') || selectedSpecies.includes(row.productoNormalizado)).map(row => row.variedad || 'Sin especificar'), 'Todas las variedades'],
         ['priceFilterMercado', validPriceData.map(row => row.mercado), 'Todos los mercados'],
         ['priceFilterProcedencia', validPriceData.map(row => row.procedencia), 'Todas'],
         ['priceFilterUnidad', validPriceData.map(row => row.unidad), 'Todas']
@@ -799,7 +864,7 @@ function populatePriceFilters() {
         const unique = [...new Set(values.filter(value => String(value || '').trim()))];
         if (id === 'priceFilterMes') unique.sort((a, b) => monthNumber(a) - monthNumber(b));
         else unique.sort((a, b) => String(a).localeCompare(String(b), 'es'));
-        populateSelect(select, unique, allLabel, value => value);
+        populateSelect(select, unique, allLabel, value => ['priceFilterEspecie', 'priceFilterVariedad'].includes(id) ? formatLabel(value) : value);
         if (select.multiple) {
             const kept = current.filter(value => value === 'TODOS' || unique.includes(value));
             [...select.options].forEach(option => { option.selected = kept.includes(option.value); });
@@ -854,7 +919,7 @@ function getFilteredPriceData() {
         (filters.unidadComparable === 'comparables' ? isComparablePriceRow(row) : filters.unidadComparable === 'no-comparables' ? !isComparablePriceRow(row) && isValidPrice(row.precioObservado) : isValidPrice(row.precioObservado))
         &&
         (selectedYear === null || Number(row.year) === selectedYear)
-        && Object.entries(filters).every(([key, value]) => key === 'year' || key === 'unidadComparable' || (Array.isArray(value) ? matchesMultiSelect(row[key], value) : value === 'TODOS' || row[key] === value))
+        && Object.entries(filters).every(([key, value]) => key === 'year' || key === 'unidadComparable' || (Array.isArray(value) ? matchesPriceFilter(row, key, value) : value === 'TODOS' || row[key] === value))
     );
 }
 
@@ -901,7 +966,7 @@ function getPriceAnalysisLevel(filters) {
 
 function getAvailablePriceVisualizations(filteredData, filters, frequency) {
     const level = getPriceAnalysisLevel(filters);
-    const speciesCount = new Set(filteredData.map(row => row.especie).filter(Boolean)).size;
+    const speciesCount = new Set(filteredData.map(row => row.productoNormalizado || row.especie).filter(Boolean)).size;
     const varietyCount = new Set(filteredData.map(row => row.variedad || 'Sin especificar')).size;
     const provenanceCount = new Set(filteredData.map(row => row.procedencia || 'Sin procedencia informada')).size;
     const marketCount = new Set(filteredData.map(row => row.mercado).filter(Boolean)).size;
@@ -931,7 +996,7 @@ function updatePriceKPIs() {
     const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
     const maximum = filteredPriceData.reduce((best, row) => { const value = getPriceValue(row); return isValidPrice(value) && (!best || value > best.value) ? { value, row } : best; }, null);
     const minimum = filteredPriceData.reduce((best, row) => { const value = getPriceValue(row); return isValidPrice(value) && (!best || value < best.value) ? { value, row } : best; }, null);
-    const species = new Set(filteredPriceData.map(row => row.especie).filter(Boolean));
+    const species = new Set(filteredPriceData.map(row => row.productoNormalizado || row.especie).filter(Boolean));
     const varieties = new Set(filteredPriceData.map(row => row.variedad || 'Sin especificar').filter(Boolean));
     const periodVariation = calculatePeriodVariation(aggregatePriceData(filteredPriceData, priceFrequency), priceFrequency).filter(item => Number.isFinite(item.variation));
     let largestIncrease = periodVariation.filter(item => item.variation > 0).sort((a, b) => b.variation - a.variation)[0];
@@ -964,8 +1029,8 @@ function updatePriceKPIs() {
     document.getElementById('priceKpiAverage').textContent = formatCurrency(average);
     document.getElementById('priceKpiMax').textContent = formatCurrency(maximum?.value);
     document.getElementById('priceKpiMin').textContent = formatCurrency(minimum?.value);
-    document.getElementById('priceKpiMaxDetail').textContent = maximum ? `${maximum.row.especie}${maximum.row.variedad ? ` · ${maximum.row.variedad}` : ''}` : 'Sin datos';
-    document.getElementById('priceKpiMinDetail').textContent = minimum ? `${minimum.row.especie}${minimum.row.variedad ? ` · ${minimum.row.variedad}` : ''}` : 'Sin datos';
+    document.getElementById('priceKpiMaxDetail').textContent = maximum ? getProductLabel(maximum.row) : 'Sin datos';
+    document.getElementById('priceKpiMinDetail').textContent = minimum ? getProductLabel(minimum.row) : 'Sin datos';
     document.getElementById('priceKpiSpecies').textContent = species.size || '–';
     document.getElementById('priceKpiVarieties').textContent = varieties.size || '–';
     document.getElementById('priceKpiIncrease').textContent = largestIncrease ? formatPercent(largestIncrease.variation) : '–';
@@ -1050,7 +1115,7 @@ function preparePriceRankingData(data, analysisLevel = 'general') {
             ? (row.variedad || 'Sin especificar')
             : field === 'procedencia'
                 ? (row.procedencia || 'Sin procedencia informada')
-                : row.especie || 'Sin especificar';
+                : row.productoNormalizado || row.especie || 'Sin especificar';
         const item = grouped.get(label) || { label, values: [], observations: 0, periods: [] };
         item.values.push(getPriceValue(row));
         item.observations++;
@@ -1118,8 +1183,12 @@ function calculateAccumulatedVariation(first, last) {
 function buildMonthlyPriceSemaphoreMatrix(data, filters = {}) {
     const groups = new Map();
     data.filter(row => isValidPrice(getPriceValue(row)) && (!row.fecha || isValidOperationalDate(row.fecha))).forEach(row => {
-        const fields = ['mercado', 'rubro', 'especie', 'variedad', 'procedencia', 'unidad'];
-        const key = fields.map(field => row[field] || (field === 'variedad' ? 'Sin especificar' : field === 'procedencia' ? 'Sin procedencia informada' : 'Sin informar')).join('|');
+        const fields = ['mercado', 'rubro', 'procedencia', 'unidad'];
+        const productKey = isTomatoRow(row)
+            ? row.productoNormalizado
+            : `${row.especie || 'Sin especificar'}|${row.variedad || 'Sin especificar'}`;
+        const key = [row.mercado, row.rubro, productKey, row.procedencia, row.unidad]
+            .map((value, index) => value || (index === 3 ? 'Sin procedencia informada' : 'Sin informar')).join('|');
         const group = groups.get(key) || { row, observations: 0, monthlyValues: {} };
         group.observations++;
         const month = row.fecha ? row.fecha.slice(5, 7) : String(row.month || '').padStart(2, '0');
@@ -1264,7 +1333,7 @@ function parseCSV(text) {
         const cols = lines[i].split(';');
         if (cols.length < 7) continue;
 
-        const rawSerie = normalizeText(cols[2]);
+        const rawSerie = normalizeText(cleanSpreadsheetErrors(cols[2]));
         // Skip duplicate TOMATE / PIMIENTO series
         if (rawSerie === 'TOMATE' || rawSerie === 'PIMIENTO') continue;
 
@@ -1292,20 +1361,34 @@ function parseCSV(text) {
         const peso = parseFloat(pesoStr);
         if (isNaN(peso) || peso <= 0) continue;
 
-        const mercado = normalizeLocation(cols[1]);
-        const rawEspecie = normalizeText(cols[3]);
-        const especie = normalizeEspecie(rawEspecie);
-        const rawVariedad = normalizeText(cols[4]);
-        const procedencia = normalizeLocation(cols[5]);
+        const destinoOriginal = String(cols[1] ?? '').trim();
+        const destino = normalizeDestination(destinoOriginal);
+        const rawEspecieOriginal = String(cols[3] ?? '').trim();
+        const rawEspecie = normalizeText(cleanSpreadsheetErrors(rawEspecieOriginal));
+        const especie = normalizeEspecie(rawEspecie) || 'SIN ESPECIFICAR';
+        const variedadOriginal = String(cols[4] ?? '').trim();
+        const rawVariedad = normalizeText(cleanSpreadsheetErrors(variedadOriginal));
+        const procedenciaOriginal = String(cols[5] ?? '').trim();
+        const procedencia = normalizeOrigin(procedenciaOriginal);
 
         let municipio = normalizeLocation(cols[6]);
         if (!municipio) municipio = procedencia;
 
         // Normalize variedad
-        const variedad = normalizeVariedad(especie, rawVariedad);
+        const variedad = normalizeVariedad(especie, rawVariedad) || (isTomatoRow({ especie, variedad: rawVariedad }) ? 'SIN VARIEDAD ESPECIFICADA' : 'SIN VARIEDAD');
+        const productoNormalizado = isTomatoRow({ especie, variedad: rawVariedad })
+            ? normalizeTomatoProduct({ especie, variedad })
+            : especie;
 
         const origen = procedencia;
-        rows.push({ day, month, year, mercado, serie, especie, variedad, municipio, peso, origen, unidad });
+        rows.push({
+            day, month, year, mercado: destino, destino, destinoOriginal,
+            destinoEstado: destino ? 'válido' : (destinoOriginal ? 'sospechoso' : 'vacío'),
+            mercadoOriginal: destinoOriginal,
+            serie, especie, especieOriginal: rawEspecieOriginal, variedad,
+            variedadOriginal, productoNormalizado, municipio, peso, origen,
+            origenOriginal: procedenciaOriginal, unidad
+        });
     }
 
     return rows;
@@ -1422,7 +1505,13 @@ function updateOrigenFilter() {
 function updateDestinoFilter() {
     const sel = document.getElementById('filterDestino');
     const currentDestino = sel.value;
-    const mercados = getUniqueSortedValues(unitData(), r => r.mercado);
+    const destinosDetectados = getUniqueSortedValues(unitData(), r => r.destinoOriginal);
+    const destinosValidos = VALID_QUANTITY_DESTINATIONS.filter(destination => unitData().some(row => row.destino === destination));
+    const destinosSospechosos = destinosDetectados.filter(destination => !normalizeDestination(destination));
+    console.log('Destinos detectados en cantidades:', destinosDetectados);
+    console.log('Destinos válidos en cantidades:', destinosValidos);
+    if (destinosSospechosos.length) console.warn('Destinos sospechosos excluidos del filtro:', destinosSospechosos);
+    const mercados = destinosValidos;
     populateSelect(sel, mercados, 'Todos', formatLabel);
     sel.value = mercados.includes(currentDestino) ? currentDestino : 'TODOS';
 }
@@ -1493,7 +1582,7 @@ function updateEspecieFilter() {
     if (serie !== 'TODOS') subset = subset.filter(r => r.serie === serie);
     if (municipio !== 'TODOS') subset = subset.filter(r => r.municipio === municipio);
 
-    const especies = [...new Set(subset.map(r => r.especie))].sort();
+    const especies = [...new Set(subset.map(getQuantityProduct).filter(Boolean))].sort();
 
     const sel = document.getElementById('filterEspecie');
     sel.innerHTML = '<option value="TODOS">Todas (' + especies.length + ')</option>';
@@ -1526,7 +1615,7 @@ function updateMunicipioFilter() {
     if (origen !== 'TODOS') subset = subset.filter(r => r.origen === origen);
     if (destino !== 'TODOS') subset = subset.filter(r => r.mercado === destino);
     if (serie !== 'TODOS') subset = subset.filter(r => r.serie === serie);
-    if (especie !== 'TODOS') subset = subset.filter(r => r.especie === especie);
+    if (especie !== 'TODOS') subset = subset.filter(r => getQuantityProduct(r) === especie);
 
     const municipios = [...new Set(subset.map(r => r.municipio))].sort();
 
@@ -1559,7 +1648,7 @@ function applyFilters() {
         if (origen !== 'TODOS' && r.origen !== origen) return false;
         if (destino !== 'TODOS' && r.mercado !== destino) return false;
         if (serie !== 'TODOS' && r.serie !== serie) return false;
-        if (especie !== 'TODOS' && r.especie !== especie) return false;
+        if (especie !== 'TODOS' && getQuantityProduct(r) !== especie) return false;
         if (municipio !== 'TODOS' && r.municipio !== municipio) return false;
         return true;
     });
@@ -1590,7 +1679,7 @@ function updateKPIs() {
     const ctes = sumPeso(filteredData.filter(r => r.mercado === 'Corrientes'));
 
     // Top especie
-    const byEspecie = groupSum(filteredData, 'especie');
+    const byEspecie = groupSum(filteredData, getQuantityProduct);
     const topEspecie = Object.entries(byEspecie).sort((a, b) => b[1] - a[1])[0];
 
     // Peak month
@@ -1599,7 +1688,7 @@ function updateKPIs() {
     byMonth.forEach((v, i) => { if (v > peakVal) { peakVal = v; peakIdx = i; } });
 
     // Unique species
-    const speciesSet = new Set(filteredData.map(r => r.especie));
+    const speciesSet = new Set(filteredData.map(getQuantityProduct).filter(Boolean));
 
     // Last date
     const latest = filteredData.reduce((best, r) => {
@@ -1761,7 +1850,7 @@ function renderSeriesMonthly() {
 
 // ─── Chart 4: Top 10 Species ────────────────────────────────────────────
 function renderTop10() {
-    const byEspecie = groupSum(filteredData, 'especie');
+    const byEspecie = groupSum(filteredData, getQuantityProduct);
     const sorted = Object.entries(byEspecie).sort((a, b) => b[1] - a[1]).slice(0, 10);
 
     const cfg = {
@@ -1812,7 +1901,7 @@ function renderHeatmap() {
         dataForHeatmap = filteredData.filter(r => r.serie === heatmapFilter);
     }
     
-    const byEspecie = groupSum(dataForHeatmap, 'especie');
+    const byEspecie = groupSum(dataForHeatmap, getQuantityProduct);
     const sorted = Object.entries(byEspecie).sort((a, b) => b[1] - a[1]).slice(0, 20);
     const especies = sorted.map(s => s[0]);
 
@@ -1821,7 +1910,7 @@ function renderHeatmap() {
     let globalMax = 0;
     especies.forEach(esp => {
         matrix[esp] = new Array(12).fill(0);
-        dataForHeatmap.filter(r => r.especie === esp).forEach(r => {
+        dataForHeatmap.filter(r => getQuantityProduct(r) === esp).forEach(r => {
             matrix[esp][r.month - 1] += r.peso;
         });
         matrix[esp].forEach(v => { if (v > globalMax) globalMax = v; });
@@ -1897,7 +1986,7 @@ function renderMarketMonthly() {
 
 // ─── Chart 7: Species Donut ─────────────────────────────────────────────
 function renderSpeciesDonut() {
-    const byEspecie = groupSum(filteredData, 'especie');
+    const byEspecie = groupSum(filteredData, getQuantityProduct);
     const sorted = Object.entries(byEspecie).sort((a, b) => b[1] - a[1]);
     const top8 = sorted.slice(0, 8);
     const restVal = sorted.slice(8).reduce((s, e) => s + e[1], 0);
@@ -1938,7 +2027,7 @@ function renderVarieties() {
     const byVar = {};
     filteredData.forEach(r => {
         if (r.variedad === 'SIN VARIED') return;
-        const key = r.especie + ' – ' + r.variedad;
+        const key = isTomatoRow(r) ? getQuantityProduct(r) : r.especie + ' – ' + r.variedad;
         byVar[key] = (byVar[key] || 0) + r.peso;
     });
     const sorted = Object.entries(byVar).sort((a, b) => b[1] - a[1]).slice(0, 15);
@@ -1984,28 +2073,29 @@ function renderVarieties() {
 // ─── Chart 9: Seasonality Table ─────────────────────────────────────────
 function renderSeasonalityTable() {
     const container = document.getElementById('seasonalityTable');
-    const byEspecie = groupSum(filteredData, 'especie');
-    const sorted = Object.entries(byEspecie).sort((a, b) => b[1] - a[1]).slice(0, 25);
-    const especies = sorted.map(s => s[0]);
+    const filters = {
+        especie: document.getElementById('filterEspecie')?.value || 'TODOS',
+        origen: document.getElementById('filterOrigen')?.value || 'TODOS',
+        destino: document.getElementById('filterDestino')?.value || 'TODOS'
+    };
+    const groupFields = getQuantitySemaphoreGroupFields(filters);
+    const groupedRows = buildQuantitySemaphoreRows(filteredData, groupFields);
+    console.log('Agrupación semáforo cantidades:', groupFields);
+    console.log('Filas semáforo cantidades:', groupedRows.length);
 
-    // Build matrix
-    const matrix = {};
-    especies.forEach(esp => {
-        matrix[esp] = new Array(12).fill(0);
-        filteredData.filter(r => r.especie === esp).forEach(r => {
-            matrix[esp][r.month - 1] += r.peso;
-        });
-    });
-
-    let html = `<table class="seasonality-table"><thead><tr><th>Especie</th>`;
+    let html = `<table class="seasonality-table"><thead><tr><th>Producto</th>`;
+    if (groupFields.includes('origen')) html += '<th>Origen</th>';
+    if (groupFields.includes('destino')) html += '<th>Destino</th>';
     MONTHS.forEach(m => html += `<th>${m}</th>`);
     html += `<th class="total-col">Total</th></tr></thead><tbody>`;
 
-    especies.forEach(esp => {
-        const vals = matrix[esp];
+    groupedRows.slice(0, 50).forEach(group => {
+        const vals = group.monthly;
         const total = vals.reduce((s, v) => s + v, 0);
         const maxVal = Math.max(...vals);
-        html += `<tr><td>${formatLabel(esp)}</td>`;
+        html += `<tr><td>${formatLabel(group.product)}</td>`;
+        if (groupFields.includes('origen')) html += `<td>${formatLabel(group.origen || 'Sin informar')}</td>`;
+        if (groupFields.includes('destino')) html += `<td>${formatLabel(group.destino || 'Sin informar')}</td>`;
         for (let m = 0; m < 12; m++) {
             const v = vals[m];
             const pct = maxVal > 0 ? (v / maxVal) * 100 : 0;
@@ -2028,6 +2118,34 @@ function renderSeasonalityTable() {
 
     html += '</tbody></table>';
     container.innerHTML = html;
+}
+
+function getQuantitySemaphoreGroupFields(filters = {}) {
+    const species = filters.especie || 'TODOS';
+    const origin = filters.origen || 'TODOS';
+    const destination = filters.destino || 'TODOS';
+    const fields = ['productoNormalizado'];
+    if (species !== 'TODOS') fields.push('origen');
+    const multipleDestinations = VALID_QUANTITY_DESTINATIONS.filter(value => rawData.some(row => row.destino === value)).length > 1;
+    if (destination === 'TODOS' && multipleDestinations) fields.push('destino');
+    return fields;
+}
+
+function buildQuantitySemaphoreRows(data, groupFields) {
+    const groups = new Map();
+    data.forEach(row => {
+        const product = getQuantityProduct(row);
+        const origin = row.origen || '';
+        const destination = row.destino || '';
+        const key = [product, groupFields.includes('origen') ? origin || 'SIN INFORMAR' : '', groupFields.includes('destino') ? destination || 'SIN INFORMAR' : ''].join('|');
+        const group = groups.get(key) || { product, origen, destino, monthly: new Array(12).fill(0) };
+        if (Number.isInteger(row.month) && row.month >= 1 && row.month <= 12) group.monthly[row.month - 1] += row.peso;
+        groups.set(key, group);
+    });
+    return [...groups.values()].sort((a, b) => {
+        const volume = b.monthly.reduce((sum, value) => sum + value, 0) - a.monthly.reduce((sum, value) => sum + value, 0);
+        return volume || String(a.product).localeCompare(String(b.product), 'es') || String(a.origen).localeCompare(String(b.origen), 'es');
+    });
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────
@@ -2070,8 +2188,10 @@ function makeLocationKey(value) {
 }
 
 function normalizeLocation(value) {
-    const key = makeLocationKey(value);
-    return LOCATION_EQUIVALENCES[key] || formatLabel(value);
+    const cleaned = cleanSpreadsheetErrors(value);
+    if (!cleaned) return '';
+    const key = makeLocationKey(cleaned);
+    return LOCATION_EQUIVALENCES[key] || formatLabel(cleaned);
 }
 
 function formatLabel(value) {
@@ -2108,7 +2228,11 @@ function sumPeso(arr) { return arr.reduce((s, r) => s + r.peso, 0); }
 
 function groupSum(arr, key) {
     const map = {};
-    arr.forEach(r => { map[r[key]] = (map[r[key]] || 0) + r.peso; });
+    arr.forEach(r => {
+        const groupKey = typeof key === 'function' ? key(r) : r[key];
+        if (!groupKey) return;
+        map[groupKey] = (map[groupKey] || 0) + r.peso;
+    });
     return map;
 }
 

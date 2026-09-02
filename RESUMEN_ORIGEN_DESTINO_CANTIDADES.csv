@@ -1,0 +1,81 @@
+﻿origen_normalizado;destino_normalizado;destino_original;clasificacion_destino;registros;peso_tn
+Corrientes;Corrientes;CORRIENTES;válido;24131;129336.549
+Buenos Aires;Buenos Aires;BSAS;válido;3821;513886.72
+Mendoza;Corrientes;CORRIENTES;válido;3021;6912.485
+Mendoza;;MENDOZA;sospechoso;2462;245691.966
+Salta;;SALTA;sospechoso;1220;146531.914
+Brasil;;BRASIL;sospechoso;1082;70392.19
+Jujuy;Corrientes;CORRIENTES;válido;1082;2863.179
+Río Negro;;R. NEGRO;sospechoso;1017;134210.6
+Jujuy;;JUJUY;sospechoso;905;54475.895
+Buenos Aires;Corrientes;CORRIENTES;válido;815;4897.989
+San Juan;;SAN JUAN;sospechoso;773;40330.476
+Entre Ríos;;E. RIOS;sospechoso;709;200848.7
+Santa Fe;;SANTA FE;sospechoso;707;34781.2
+Mar del Plata;;M.D.PLAT;sospechoso;693;15647.2
+Río Negro;;RÍO NEGRO;sospechoso;607;106183.57
+Chile;;CHILE;sospechoso;512;25266.459
+Entre Ríos;;ENTRE RÍOS;sospechoso;487;128060.278
+Mar del Plata;;MAR DEL PLATA;sospechoso;433;9552.483
+Río Negro;Corrientes;CORRIENTES;válido;423;1532.146
+Santa Fe;;SANTA FÉ;sospechoso;367;18004.156
+Tucumán;;TUCUMAN;sospechoso;358;69432.3
+Misiones;;MISIONES;sospechoso;317;25869.61
+Neuquén;;NEUQUEN;sospechoso;253;7211.4
+Tucumán;;TUCUMÁN;sospechoso;249;33039.995
+Chaco;Corrientes;CORRIENTES;válido;215;479.173
+Formosa;;FORMOSA;sospechoso;213;9082.067
+Santiago del Estero;;SGO.EST.;sospechoso;213;24544.0
+Ecuador;;ECUADOR;sospechoso;212;90325.457
+Córdoba;;CORDOBA;sospechoso;179;47552.9
+Misiones;Corrientes;CORRIENTES;válido;150;775.256
+Neuquén;;NEUQUÉN;sospechoso;141;5448.424
+Santa Fe;Corrientes;CORRIENTES;válido;132;598.738
+Santiago del Estero;;SGO DEL ESTERO;sospechoso;131;12120.262
+San Pedro;;S. PEDRO;sospechoso;116;2150.6
+Entre Ríos;Corrientes;CORRIENTES;válido;114;333.57
+Bolivia;;BOLIVIA;sospechoso;98;36055.349
+Paraguay;;PARAGUAY;sospechoso;97;21290.47
+España;;ESPAÑA;sospechoso;92;732.609
+Córdoba;;CÓRDOBA;sospechoso;81;28318.883
+Formosa;Corrientes;CORRIENTES;válido;81;486.76
+Salta;Corrientes;CORRIENTES;válido;81;170.952
+San Luis;;SAN LUIS;sospechoso;73;25417.834
+Se Bs.As;;SE BS.AS;sospechoso;73;222497.6
+Sud. Bs As;;SUD. BS AS;sospechoso;62;172024.636
+Santiago del Estero;Corrientes;CORRIENTES;válido;59;462.352
+Tucumán;Corrientes;CORRIENTES;válido;57;1223.764
+Chubut;;CHUBUT;sospechoso;53;1453.566
+Chaco;;CHACO;sospechoso;51;1422.25
+La Rioja;;LA RIOJA;sospechoso;40;1117.69
+Egipto;;EGIPTO;sospechoso;39;600.633
+Colombia;;COLOMBIA;sospechoso;38;2930.463
+Perú;;PERU;sospechoso;37;431.8
+Ciudad Autónoma de Buenos Aires;Corrientes;CORRIENTES;válido;28;139.85
+Córdoba;Corrientes;CORRIENTES;válido;27;454.085
+La Pampa;;LA PAMPA;sospechoso;22;84.7
+Perú;;PERÚ;sospechoso;22;494.794
+Catamarca;;CATAMARC;sospechoso;21;2317.7
+Italia;;ITALIA;sospechoso;17;199.775
+Santa Cruz;;STA.CRUZ;sospechoso;15;208.0
+Catamarca;Corrientes;CORRIENTES;válido;13;321.394
+Puerto Rico;;PTO.RICO;sospechoso;13;3.9
+Grecia;;GRECIA;sospechoso;12;163.491
+Grl.Belg;;GRL.BELG;sospechoso;12;9419.8
+Sur. Bs As;;SUR. BS AS;sospechoso;11;269.764
+(vacío / inválido);;(vacío / inválido);sospechoso;10;2.134
+San Pedro;;SAN PEDRO;sospechoso;10;40.412
+Santa Cruz;;SANTA CRUZ;sospechoso;6;80.49
+Catamarca;;CATAMARCA;sospechoso;5;1091.066
+Gral Belgrano;;GRAL BELGRANO;sospechoso;5;3158.948
+México;;MEXICO;sospechoso;5;221.3
+México;;MÉXICO;sospechoso;5;128.766
+San Juan;Corrientes;CORRIENTES;válido;3;4.56
+San Luis;Corrientes;CORRIENTES;válido;3;95.8
+V.Dolor.;;V.DOLOR.;sospechoso;3;107.6
+S.Bs.As.;;S.BS.AS.;sospechoso;2;30.8
+(vacío / inválido);;#N/A;sospechoso;1;26.905
+China;;CHINA;sospechoso;1;21.0
+Chubut;Corrientes;CORRIENTES;válido;1;0.07
+Portugal;;PORTUGAL;sospechoso;1;20.2
+Rosario;;ROSARIO;sospechoso;1;48.0
