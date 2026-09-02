@@ -1,0 +1,7 @@
+commodity;aliases;prioridad;activo;bcr_id_grano;observaciones
+Soja;soja|soya;alta;true;;Pendiente validar id BCR
+Maíz;maiz|maíz|corn;alta;true;;Pendiente validar id BCR
+Trigo;trigo|wheat;alta;true;;Pendiente validar id BCR
+Girasol;girasol|sunflower;alta;true;;Pendiente validar id BCR
+Sorgo;sorgo|sorghum;alta;true;;Pendiente validar id BCR
+Cebada;cebada|barley;media;true;;Pendiente validar id BCR

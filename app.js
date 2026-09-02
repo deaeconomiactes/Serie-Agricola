@@ -598,8 +598,10 @@ function buildAccumulatedVariationRanking(data, groupFields, frequency = 'diaria
     const grouped = new Map();
     data.forEach(row => {
         if (!isValidPrice(getPriceValue(row))) return;
-        const key = groupFields.map(field => String(row[field] || (field === 'variedad' ? 'Sin especificar' : 'Sin procedencia informada'))).join('|');
-        const label = groupFields.length === 1 ? (String(row[groupFields[0]] || '').trim() || (groupFields[0] === 'variedad' ? 'Sin especificar' : 'Sin procedencia informada')) : getProductLabel(row);
+        const key = groupFields.map(field => String(getPriceDimensionValue(row, field))).join('|');
+        const label = groupFields.length === 2 && groupFields.includes('especie') && groupFields.includes('variedad')
+            ? getProductLabel(row)
+            : groupFields.map(field => formatPriceDimensionValue(row, field)).join(' · ');
         const group = grouped.get(key) || { label, rows: [] };
         group.rows.push(row);
         grouped.set(key, group);
@@ -624,13 +626,16 @@ function buildAccumulatedVariationRanking(data, groupFields, frequency = 'diaria
 }
 
 function getPriceVariationGrouping(frequency) {
-    if (frequency !== 'diaria') return { groupFields: ['especie', 'variedad'], singleSeries: false };
-    const species = getMultiSelectValues('priceFilterEspecie');
-    const variety = getMultiSelectValues('priceFilterVariedad');
-    const provenance = getMultiSelectValues('priceFilterProcedencia');
-    if (!species.length || species.includes('TODOS') || species.length !== 1) return { groupFields: [], singleSeries: false };
-    if (!variety.length || variety.includes('TODOS') || variety.length !== 1) return { groupFields: ['variedad'], singleSeries: false };
-    if (!provenance.length || provenance.includes('TODOS') || provenance.length !== 1) return { groupFields: ['procedencia'], singleSeries: false };
+    const filters = getPriceFilters();
+    const splitDimensions = getPriceSplitDimensions(filters);
+    const species = getFilterValues(filters.especie);
+    const variety = getFilterValues(filters.variedad);
+    const provenance = getFilterValues(filters.procedencia);
+    if (frequency !== 'diaria') return { groupFields: [...new Set(['especie', 'variedad', ...splitDimensions])], singleSeries: false };
+    if (splitDimensions.length) return { groupFields: [...new Set(['especie', 'variedad', ...splitDimensions])], singleSeries: false };
+    if (isAllSelected(species) || species.length !== 1) return { groupFields: [], singleSeries: false };
+    if (isAllSelected(variety) || variety.length !== 1) return { groupFields: ['variedad'], singleSeries: false };
+    if (isAllSelected(provenance) || provenance.length !== 1) return { groupFields: ['procedencia'], singleSeries: false };
     return { groupFields: [], singleSeries: true };
 }
 
@@ -674,9 +679,39 @@ function getMultiSelectValues(selectId) {
     return [...select.selectedOptions].map(option => option.value).filter(Boolean);
 }
 
+function isAllSelected(values) {
+    const normalized = Array.isArray(values) ? values : [values];
+    return !normalized.length || normalized.some(value => ['TODOS', 'TODAS', 'ALL', '**ALL**'].includes(String(value ?? '').trim().toUpperCase()));
+}
+
+function getSelectedValues(filterId) {
+    const select = document.getElementById(filterId);
+    if (!select) return ['TODOS'];
+    const values = select.multiple
+        ? [...select.selectedOptions].map(option => option.value).filter(Boolean)
+        : [select.value || 'TODOS'];
+    return isAllSelected(values) ? ['TODOS'] : values;
+}
+
+function isMultiSpecificSelection(values) {
+    return !isAllSelected(values) && (Array.isArray(values) ? values : [values]).length > 1;
+}
+
 function matchesMultiSelect(value, selectedValues) {
-    if (!Array.isArray(selectedValues) || !selectedValues.length || selectedValues.includes('TODOS')) return true;
-    return selectedValues.includes(value || 'Sin especificar');
+    if (isAllSelected(selectedValues)) return true;
+    const values = Array.isArray(selectedValues) ? selectedValues : [selectedValues];
+    return values.includes(value || 'Sin especificar');
+}
+
+function matchesPriceFilter(row, key, selectedValues) {
+    const value = key === 'especie'
+        ? row.productoNormalizado || row.especie
+        : key === 'variedad'
+            ? row.variedad || 'Sin especificar'
+            : key === 'procedencia'
+                ? row.procedencia || 'Sin procedencia informada'
+                : row[key];
+    return matchesMultiSelect(value, selectedValues);
 }
 
 function updateMultiSelectSummary(selectId) {
@@ -685,6 +720,7 @@ function updateMultiSelectSummary(selectId) {
     if (!summary) return;
     const values = getMultiSelectValues(selectId);
     const allLabel = {
+        priceFilterRubro: 'Todos los rubros',
         priceFilterEspecie: 'Todas las especies',
         priceFilterVariedad: 'Todas las variedades',
         priceFilterMercado: 'Todos los mercados',
@@ -782,7 +818,7 @@ function setMultiSelectOptions(selectId, values, allLabel, selectedValues = []) 
 }
 
 function populatePriceFilters() {
-    const selectedSpecies = getMultiSelectValues('priceFilterEspecie');
+    const selectedSpecies = getSelectedValues('priceFilterEspecie');
     const definitions = [
         ['priceFilterYear', validPriceData.map(row => row.year), 'Todos los años'],
         ['priceFilterRubro', validPriceData.map(row => row.rubro), 'Todos'],
@@ -795,13 +831,14 @@ function populatePriceFilters() {
     ];
     definitions.forEach(([id, values, allLabel]) => {
         const select = document.getElementById(id);
-        const current = select?.multiple ? getMultiSelectValues(id) : select.value;
+        const current = select?.multiple ? getSelectedValues(id) : select.value;
         const unique = [...new Set(values.filter(value => String(value || '').trim()))];
         if (id === 'priceFilterMes') unique.sort((a, b) => monthNumber(a) - monthNumber(b));
         else unique.sort((a, b) => String(a).localeCompare(String(b), 'es'));
         populateSelect(select, unique, allLabel, value => value);
         if (select.multiple) {
-            const kept = current.filter(value => value === 'TODOS' || unique.includes(value));
+            const currentValues = Array.isArray(current) ? current : [current];
+            const kept = currentValues.filter(value => value === 'TODOS' || unique.includes(value));
             [...select.options].forEach(option => { option.selected = kept.includes(option.value); });
             if (!kept.length) select.options[0].selected = true;
         } else if (unique.includes(current)) select.value = current;
@@ -832,29 +869,29 @@ function monthNumber(value) {
     return index >= 0 ? index + 1 : 99;
 }
 
-function getFilteredPriceData() {
-    const species = getMultiSelectValues('priceFilterEspecie');
-    const varieties = getMultiSelectValues('priceFilterVariedad');
-    const markets = getMultiSelectValues('priceFilterMercado');
-    const provenances = getMultiSelectValues('priceFilterProcedencia');
-    const filters = {
-        rubro: document.getElementById('priceFilterRubro').value,
-        year: document.getElementById('priceFilterYear').value,
-        mes: document.getElementById('priceFilterMes').value,
-        especie: species,
-        variedad: varieties,
-        mercado: markets,
-        procedencia: provenances,
-        unidad: document.getElementById('priceFilterUnidad').value,
-        unidadComparable: document.getElementById('priceFilterComparable').value
+function getPriceFilters() {
+    return {
+        year: getSelectedValues('priceFilterYear'),
+        mes: getSelectedValues('priceFilterMes'),
+        rubro: getSelectedValues('priceFilterRubro'),
+        especie: getSelectedValues('priceFilterEspecie'),
+        variedad: getSelectedValues('priceFilterVariedad'),
+        mercado: getSelectedValues('priceFilterMercado'),
+        procedencia: getSelectedValues('priceFilterProcedencia'),
+        unidad: getSelectedValues('priceFilterUnidad'),
+        unidadComparable: document.getElementById('priceFilterComparable')?.value || 'comparables'
     };
+}
+
+function getFilteredPriceData() {
+    const filters = getPriceFilters();
     priceUnitMode = filters.unidadComparable === 'comparables' ? 'comparable' : filters.unidadComparable === 'no-comparables' ? 'nonComparable' : 'all';
-    const selectedYear = filters.year === 'TODOS' ? null : Number(filters.year);
+    const selectedYear = isAllSelected(filters.year) ? null : Number(filters.year[0]);
     return validPriceData.filter(row =>
         (filters.unidadComparable === 'comparables' ? isComparablePriceRow(row) : filters.unidadComparable === 'no-comparables' ? !isComparablePriceRow(row) && isValidPrice(row.precioObservado) : isValidPrice(row.precioObservado))
         &&
         (selectedYear === null || Number(row.year) === selectedYear)
-        && Object.entries(filters).every(([key, value]) => key === 'year' || key === 'unidadComparable' || (Array.isArray(value) ? matchesMultiSelect(row[key], value) : value === 'TODOS' || row[key] === value))
+        && Object.entries(filters).every(([key, value]) => key === 'year' || key === 'unidadComparable' || matchesPriceFilter(row, key, value))
     );
 }
 
@@ -864,15 +901,15 @@ function applyPriceFilters() {
 }
 
 function updatePriceDashboard() {
-    const selectedYear = document.getElementById('priceFilterYear')?.value || 'TODOS';
+    const filters = getPriceFilters();
+    const selectedYear = isAllSelected(filters.year) ? 'TODOS' : filters.year[0];
     const beforeYearFilterCount = validPriceData.length;
     const afterYearFilterCount = selectedYear === 'TODOS'
         ? beforeYearFilterCount
         : validPriceData.filter(row => Number(row.year) === Number(selectedYear)).length;
     applyPriceFilters();
-    const currentPriceFilters = ['priceFilterYear', 'priceFilterRubro', 'priceFilterMes', 'priceFilterEspecie', 'priceFilterVariedad', 'priceFilterMercado', 'priceFilterProcedencia', 'priceFilterUnidad', 'priceFilterComparable']
-        .reduce((filters, id) => { filters[id] = document.getElementById(id)?.value || 'TODOS'; return filters; }, {});
-    console.log('Filtros de precios aplicados:', currentPriceFilters);
+    console.log('Filtros precios:', filters);
+    console.log('Filtros de precios aplicados:', filters);
     console.log('Año de precios seleccionado:', selectedYear);
     console.log('Registros antes de filtrar por año:', beforeYearFilterCount);
     console.log('Registros después de filtrar por año:', afterYearFilterCount);
@@ -885,22 +922,61 @@ function updatePriceDashboard() {
         unitStatus.textContent = nonComparableIncluded ? 'Algunos precios no tienen unidad comparable en kg y se excluyen de indicadores por kg.' : '';
         unitStatus.classList.toggle('is-visible', nonComparableIncluded);
     }
+    const splitDimensions = getPriceSplitDimensions(filters);
+    const selectionSummary = document.getElementById('priceSelectionSummary');
+    if (selectionSummary) {
+        selectionSummary.textContent = splitDimensions.length
+            ? `Resumen de selección filtrada · comparación separada por ${splitDimensions.map(formatPriceDimensionName).join(', ')}`
+            : '';
+        selectionSummary.classList.toggle('is-visible', splitDimensions.length > 0);
+    }
     updatePriceKPIs();
     renderPriceCharts();
 }
 
 function getPriceAnalysisLevel(filters) {
-    const species = Array.isArray(filters?.especie) ? filters.especie : [filters?.especie || 'TODOS'];
-    const varieties = Array.isArray(filters?.variedad) ? filters.variedad : [filters?.variedad || 'TODOS'];
-    const provenances = Array.isArray(filters?.procedencia) ? filters.procedencia : [filters?.procedencia || 'TODOS'];
-    if (!species.length || species.includes('TODOS') || species.length !== 1) return 'general';
-    if (!varieties.length || varieties.includes('TODOS') || varieties.length !== 1) return 'species_detail';
-    if (!provenances.length || provenances.includes('TODOS') || provenances.length !== 1) return 'variety_detail';
+    const species = getFilterValues(filters?.especie);
+    const varieties = getFilterValues(filters?.variedad);
+    const provenances = getFilterValues(filters?.procedencia);
+    if (isAllSelected(species) || species.length !== 1) return 'general';
+    if (isAllSelected(varieties) || varieties.length !== 1) return 'species_detail';
+    if (isAllSelected(provenances) || provenances.length !== 1) return 'variety_detail';
     return 'single_series';
+}
+
+function getFilterValues(values) {
+    if (Array.isArray(values)) return values.length ? values : ['TODOS'];
+    return [values || 'TODOS'];
+}
+
+function getPriceSplitDimensions(filters = {}) {
+    return ['mercado', 'rubro', 'especie', 'variedad', 'procedencia']
+        .filter(dimension => isMultiSpecificSelection(getFilterValues(filters[dimension])));
+}
+
+function formatPriceDimensionName(dimension) {
+    return { mercado: 'mercado', rubro: 'rubro', especie: 'especie', variedad: 'variedad', procedencia: 'procedencia' }[dimension] || dimension;
+}
+
+function getPriceDimensionValue(row, dimension) {
+    if (dimension === 'especie') return row.productoNormalizado || row.especie || 'Sin especificar';
+    if (dimension === 'variedad') return row.variedad || 'Sin especificar';
+    if (dimension === 'procedencia') return row.procedencia || 'Sin procedencia informada';
+    if (dimension === 'mercado') return row.mercado || 'Fuente sin informar';
+    return row[dimension] || 'Sin informar';
+}
+
+function formatPriceDimensionValue(row, dimension) {
+    return formatLabel(getPriceDimensionValue(row, dimension));
+}
+
+function getPriceSplitLabel(row, splitDimensions) {
+    return splitDimensions.map(dimension => formatPriceDimensionValue(row, dimension)).join(' · ');
 }
 
 function getAvailablePriceVisualizations(filteredData, filters, frequency) {
     const level = getPriceAnalysisLevel(filters);
+    const hasSplitSelection = getPriceSplitDimensions(filters).length > 0;
     const speciesCount = new Set(filteredData.map(row => row.especie).filter(Boolean)).size;
     const varietyCount = new Set(filteredData.map(row => row.variedad || 'Sin especificar')).size;
     const provenanceCount = new Set(filteredData.map(row => row.procedencia || 'Sin procedencia informada')).size;
@@ -909,10 +985,10 @@ function getAvailablePriceVisualizations(filteredData, filters, frequency) {
     const isDaily = frequency === 'diaria';
     return {
         level,
-        showSpeciesRanking: level === 'general' && speciesCount >= 2,
-        showVarietyRanking: level === 'species_detail' && varietyCount >= 2,
-        showProcedenciaComparison: level === 'variety_detail' && provenanceCount >= 2,
-        showMarketComparison: marketCount >= 2,
+        showSpeciesRanking: level === 'general' && (speciesCount >= 2 || hasSplitSelection),
+        showVarietyRanking: level === 'species_detail' && (varietyCount >= 2 || hasSplitSelection),
+        showProcedenciaComparison: level === 'variety_detail' && (provenanceCount >= 2 || hasSplitSelection),
+        showMarketComparison: marketCount >= 1,
         showVariationBars: !isDaily && periods >= 2,
         showAccumulatedVariationCard: isDaily && periods >= 2,
         showIncreasesRanking: !isDaily && level !== 'single_series',
@@ -977,7 +1053,10 @@ function updatePriceKPIs() {
     document.getElementById('priceKpiLast').textContent = latest;
     const comparableView = priceUnitMode === 'comparable';
     document.getElementById('priceKpiAverageLabel').textContent = comparableView ? 'Precio promedio por kg' : 'Precio observado promedio';
-    document.getElementById('priceKpiAverageUnit').textContent = comparableView ? 'calculado sobre registros con unidad comparable' : 'según presentación original';
+    const splitDimensions = getPriceSplitDimensions(getPriceFilters());
+    document.getElementById('priceKpiAverageUnit').textContent = splitDimensions.length
+        ? 'resumen de selección filtrada'
+        : comparableView ? 'calculado sobre registros con unidad comparable' : 'según presentación original';
     document.getElementById('priceKpiMaxLabel').textContent = comparableView ? 'Precio máximo por kg' : 'Precio observado máximo';
     document.getElementById('priceKpiMinLabel').textContent = comparableView ? 'Precio mínimo por kg' : 'Precio observado mínimo';
 }
@@ -1037,21 +1116,62 @@ function createPriceChart(chartKey, canvasId, config) {
     return canvas ? new Chart(canvas.getContext('2d'), config) : null;
 }
 
-function preparePriceEvolutionData(data, frequency) {
-    const series = aggregatePriceData(data, frequency).filter(item => isValidPrice(item.value));
-    return { labels: series.map(item => formatPeriodLabel(item.key, frequency)), values: series.map(item => item.value), meta: series };
-}
-
-function preparePriceRankingData(data, analysisLevel = 'general') {
-    const field = analysisLevel === 'species_detail' ? 'variedad' : analysisLevel === 'variety_detail' ? 'procedencia' : 'especie';
+function preparePriceEvolutionData(data, frequency, filters = getPriceFilters()) {
+    const splitDimensions = getPriceSplitDimensions(filters);
+    if (!splitDimensions.length) {
+        const aggregate = aggregatePriceData(data, frequency).filter(item => isValidPrice(item.value));
+        const values = aggregate.map(item => item.value);
+        return {
+            labels: aggregate.map(item => formatPeriodLabel(item.key, frequency)),
+            values,
+            meta: aggregate,
+            splitDimensions,
+            tooManySeries: false,
+            series: [{ label: `Precio promedio ${frequency}`, data: values, meta: aggregate }]
+        };
+    }
+    const periods = new Set();
     const grouped = new Map();
     data.filter(row => isValidPrice(getPriceValue(row))).forEach(row => {
-        const label = field === 'variedad'
-            ? (row.variedad || 'Sin especificar')
-            : field === 'procedencia'
-                ? (row.procedencia || 'Sin procedencia informada')
-                : row.especie || 'Sin especificar';
-        const item = grouped.get(label) || { label, values: [], observations: 0, periods: [] };
+        const period = createTimeKey(row.fecha || row, frequency);
+        if (!period) return;
+        const dimensionValues = splitDimensions.map(dimension => getPriceDimensionValue(row, dimension));
+        const key = JSON.stringify(dimensionValues);
+        const group = grouped.get(key) || { label: getPriceSplitLabel(row, splitDimensions), periods: new Map() };
+        const values = group.periods.get(period) || [];
+        values.push(getPriceValue(row));
+        group.periods.set(period, values);
+        periods.add(period);
+        grouped.set(key, group);
+    });
+    const orderedPeriods = [...periods].sort((a, b) => a.localeCompare(b));
+    const series = [...grouped.values()].sort((a, b) => a.label.localeCompare(b.label, 'es')).map(group => {
+        const meta = orderedPeriods.map(period => {
+            const values = group.periods.get(period) || [];
+            return { key: period, value: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null, observations: values.length, dimensions: splitDimensions };
+        });
+        return { label: group.label, data: meta.map(item => item.value), meta };
+    });
+    return {
+        labels: orderedPeriods.map(period => formatPeriodLabel(period, frequency)),
+        values: series[0]?.data || [],
+        meta: series[0]?.meta || [],
+        splitDimensions,
+        tooManySeries: series.length > 8,
+        series
+    };
+}
+
+function preparePriceRankingData(data, analysisLevel = 'general', filters = getPriceFilters()) {
+    const field = analysisLevel === 'species_detail' ? 'variedad' : analysisLevel === 'variety_detail' ? 'procedencia' : 'especie';
+    const dimensions = [...new Set([...getPriceSplitDimensions(filters), field])];
+    const grouped = new Map();
+    data.filter(row => isValidPrice(getPriceValue(row))).forEach(row => {
+        const key = dimensions.map(dimension => String(getPriceDimensionValue(row, dimension))).join('|');
+        const label = dimensions.length === 2 && dimensions.includes('especie') && dimensions.includes('variedad')
+            ? getProductLabel(row)
+            : dimensions.map(dimension => formatPriceDimensionValue(row, dimension)).join(' · ');
+        const item = grouped.get(key) || { label, values: [], observations: 0, periods: [] };
         item.values.push(getPriceValue(row));
         item.observations++;
         const period = createTimeKey(row.fecha || row, priceFrequency);
@@ -1065,10 +1185,31 @@ function preparePriceRankingData(data, analysisLevel = 'general') {
     return { labels: ranking.map(item => item.label), values: ranking.map(item => item.average), meta: ranking };
 }
 
-function preparePriceVariationData(data, frequency) {
+function preparePriceVariationData(data, frequency, filters = getPriceFilters()) {
     if (frequency === 'diaria') return { labels: [], values: [], meta: [] };
+    const splitDimensions = getPriceSplitDimensions(filters);
+    if (splitDimensions.length) {
+        const evolution = preparePriceEvolutionData(data, frequency, filters);
+        const series = evolution.series.map(item => {
+            let previous = null;
+            const meta = item.meta.map((period, index) => {
+                const variation = isValidPrice(previous) && isValidPrice(period.value) ? (period.value / previous - 1) * 100 : null;
+                if (isValidPrice(period.value)) previous = period.value;
+                return { ...period, variation, key: period.key || index };
+            });
+            return { label: item.label, data: meta.map(period => period.variation), meta };
+        });
+        return {
+            labels: evolution.labels,
+            values: series[0]?.data || [],
+            meta: series[0]?.meta || [],
+            splitDimensions,
+            tooManySeries: series.length > 8,
+            series
+        };
+    }
     const series = calculatePeriodVariation(aggregatePriceData(data, frequency), frequency).filter(item => Number.isFinite(item.variation));
-    return { labels: series.map(item => formatPeriodLabel(item.key, frequency)), values: series.map(item => item.variation), meta: series };
+    return { labels: series.map(item => formatPeriodLabel(item.key, frequency)), values: series.map(item => item.variation), meta: series, splitDimensions, tooManySeries: false, series: [{ label: `Variación ${frequency}`, data: series.map(item => item.variation), meta: series }] };
 }
 
 function preparePriceIncreaseRankingData(data, frequency) {
@@ -1142,7 +1283,12 @@ function buildMonthlyPriceSemaphoreMatrix(data, filters = {}) {
         validMonths.slice(1).forEach((month, index) => { monthly[month].variation = calculateMonthlyPriceVariation(monthly[month].price, monthly[validMonths[index]].price); });
         const productLabel = getProductLabel(group.row);
         const market = group.row.mercado || 'Fuente sin informar';
-        return { ...group.row, productLabel, rowLabel: `${productLabel} — ${market}`, rowMeta: [group.row.rubro, group.row.procedencia ? `Origen: ${group.row.procedencia}` : ''].filter(Boolean).join(' · '), market, monthly, accumulatedVariation: variation, firstPeriod: firstMonth, lastPeriod: lastMonth, observations: group.observations, validMonths: validMonths.length, status: getTrafficLightStatus(variation) };
+        const splitDimensions = getPriceSplitDimensions(filters);
+        const splitLabels = splitDimensions
+            .filter(dimension => !['especie', 'variedad'].includes(dimension))
+            .map(dimension => formatPriceDimensionValue(group.row, dimension));
+        const rowLabel = [...new Set([productLabel, ...splitLabels])].join(' — ');
+        return { ...group.row, productLabel, rowLabel, rowMeta: [group.row.rubro, group.row.procedencia ? `Origen: ${group.row.procedencia}` : ''].filter(Boolean).join(' · '), market, monthly, accumulatedVariation: variation, firstPeriod: firstMonth, lastPeriod: lastMonth, observations: group.observations, validMonths: validMonths.length, status: getTrafficLightStatus(variation) };
     }).filter(Boolean).sort((a, b) => String(a.mercado).localeCompare(String(b.mercado), 'es') || String(a.rubro).localeCompare(String(b.rubro), 'es') || String(a.productLabel).localeCompare(String(b.productLabel), 'es') || b.validMonths - a.validMonths).slice(0, 20);
 }
 
@@ -1158,7 +1304,7 @@ function renderPriceTrafficLightTable(data, frequency) {
     const body = document.getElementById('priceTrafficLightBody');
     const status = document.getElementById('priceTrafficLightStatus');
     if (!body || !status) return;
-    const rows = buildPriceTrafficLightTable(data, null, frequency);
+    const rows = buildPriceTrafficLightTable(data, getPriceFilters(), frequency);
     body.innerHTML = rows.map(row => `<tr><td class="price-semaphore-product"><strong>${escapeHtml(row.rowLabel)}</strong><small>${escapeHtml(row.rowMeta)}</small></td>${MONTHS.map((_, index) => { const month = String(index + 1).padStart(2, '0'); const cell = row.monthly[month]; const value = cell?.price; const variation = cell?.variation; const cellClass = !cell ? '' : !Number.isFinite(variation) ? 'stable' : variation < -5 ? 'down-soft' : variation <= 0 ? 'stable' : variation <= 5 ? 'up-soft' : variation <= 15 ? 'up-medium' : 'up-strong'; return `<td class="price-semaphore-cell ${cellClass}">${value ? `<strong>${formatCurrency(value)}</strong>${Number.isFinite(variation) ? `<small>${variation >= 0 ? '↑' : '↓'}${formatPercent(Math.abs(variation))}</small>` : ''}` : '—'}</td>`; }).join('')}<td class="price-semaphore-variation">${formatPercent(row.accumulatedVariation)}</td><td><span class="price-semaphore-badge ${row.status.key}">${row.status.label}</span></td></tr>`).join('');
     status.textContent = rows.length ? '' : 'No hay suficientes precios mensuales para construir el semáforo con los filtros seleccionados.';
     status.classList.toggle('is-visible', !rows.length);
@@ -1166,16 +1312,12 @@ function renderPriceTrafficLightTable(data, frequency) {
 
 function renderPriceCharts() {
     destroyAllPriceCharts();
-    const filters = {
-        especie: getMultiSelectValues('priceFilterEspecie'),
-        variedad: getMultiSelectValues('priceFilterVariedad'),
-        procedencia: getMultiSelectValues('priceFilterProcedencia'),
-        mercado: getMultiSelectValues('priceFilterMercado')
-    };
+    const filters = getPriceFilters();
+    const splitDimensions = getPriceSplitDimensions(filters);
     const visualizations = getAvailablePriceVisualizations(filteredPriceData, filters, priceFrequency);
-    const evolution = preparePriceEvolutionData(filteredPriceData, priceFrequency);
-    const ranking = preparePriceRankingData(filteredPriceData, visualizations.level);
-    const variation = preparePriceVariationData(filteredPriceData, priceFrequency);
+    const evolution = preparePriceEvolutionData(filteredPriceData, priceFrequency, filters);
+    const ranking = preparePriceRankingData(filteredPriceData, visualizations.level, filters);
+    const variation = preparePriceVariationData(filteredPriceData, priceFrequency, filters);
     const increases = preparePriceIncreaseRankingData(filteredPriceData, priceFrequency);
     const decreases = preparePriceDecreaseRankingData(filteredPriceData, priceFrequency);
     const marketComparison = preparePriceMarketComparisonData(filteredPriceData);
@@ -1186,8 +1328,38 @@ function renderPriceCharts() {
     const metricLabel = getPriceMetricLabel();
     document.getElementById('priceTimeSeriesTitle').textContent = `Evolución ${priceFrequency} · ${metricLabel}`;
     document.getElementById('priceDailyMethodNote').hidden = priceFrequency !== 'diaria';
-    if (evolution.values.length) {
-        priceCharts.evolution = createPriceChart('evolution', 'priceChartMonthly', { type: 'line', data: { labels: evolution.labels, datasets: [{ label: `${metricLabel} ${priceFrequency}`, data: evolution.values, borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,.16)', fill: true, tension: .3, pointRadius: priceFrequency === 'diaria' ? 2 : 4 }] }, options: priceChartOptions(metricLabel) });
+    const tooManySeries = 'La selección actual genera demasiadas series para una lectura clara. Reducí la cantidad de categorías seleccionadas.';
+    if (evolution.tooManySeries) {
+        showChartMessage('priceChartMonthly', tooManySeries);
+    } else if (evolution.labels.length && evolution.series?.length) {
+        const evolutionOptions = priceChartOptions(metricLabel);
+        evolutionOptions.plugins.tooltip = {
+            ...tooltipConfig(),
+            callbacks: {
+                label: context => {
+                    const series = evolution.series[context.datasetIndex];
+                    const item = series?.meta?.[context.dataIndex];
+                    return [`Período: ${evolution.labels[context.dataIndex] || 'Sin período'}`, `${series?.label || metricLabel}: ${formatCurrency(item?.value)}`, `Observaciones: ${item?.observations || 0}`];
+                }
+            }
+        };
+        const colors = ['#34d399', '#60a5fa', '#fb923c', '#a78bfa', '#f472b6', '#facc15', '#22d3ee', '#fb7185'];
+        priceCharts.evolution = createPriceChart('evolution', 'priceChartMonthly', {
+            type: 'line',
+            data: {
+                labels: evolution.labels,
+                datasets: evolution.series.map((series, index) => ({
+                    label: splitDimensions.length ? series.label : `${metricLabel} ${priceFrequency}`,
+                    data: series.data,
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: `${colors[index % colors.length]}2a`,
+                    fill: !splitDimensions.length,
+                    tension: .3,
+                    pointRadius: priceFrequency === 'diaria' ? 2 : 4
+                }))
+            },
+            options: evolutionOptions
+        });
     } else showChartMessage('priceChartMonthly', insufficient);
 
     const rankingTitle = visualizations.level === 'species_detail' ? 'Ranking de variedades por precio promedio' : visualizations.level === 'variety_detail' ? 'Ranking por procedencia de precio promedio' : 'Ranking de especies por precio promedio';
@@ -1203,10 +1375,14 @@ function renderPriceCharts() {
         priceCharts.ranking = createPriceChart('ranking', 'priceChartRanking', { type: 'bar', data: { labels: ranking.labels, datasets: [{ label: metricLabel, data: ranking.values, backgroundColor: PALETTE }] }, options: base });
     } else if (!document.getElementById('priceRankingCard').hidden) showChartMessage('priceChartRanking', ranking.labels.length ? comparable : insufficient);
     document.getElementById('priceVariationCard').hidden = !visualizations.showVariationBars;
-    if (visualizations.showVariationBars && variation.values.length) {
+    if (variation.tooManySeries) {
+        showChartMessage('priceChartVariation', tooManySeries);
+    } else if (visualizations.showVariationBars && variation.values.length) {
         const variationOptions = priceChartOptions('Variación %');
         variationOptions.scales.y.ticks.callback = value => formatPercent(value);
-        priceCharts.variation = createPriceChart('variation', 'priceChartVariation', { type: 'bar', data: { labels: variation.labels, datasets: [{ label: `Variación ${priceFrequency}`, data: variation.values, backgroundColor: variation.values.map(value => value >= 0 ? '#fb923c' : '#60a5fa') }] }, options: variationOptions });
+        variationOptions.plugins.tooltip = { ...tooltipConfig(), callbacks: { label: context => { const series = variation.series[context.datasetIndex]; const item = series?.meta?.[context.dataIndex]; return [`${series?.label || 'Variación'}: ${formatPercent(item?.variation)}`, `Observaciones: ${item?.observations || 0}`]; } } };
+        const variationColors = ['#fb923c', '#60a5fa', '#a78bfa', '#34d399', '#f472b6', '#facc15', '#22d3ee', '#fb7185'];
+        priceCharts.variation = createPriceChart('variation', 'priceChartVariation', { type: 'bar', data: { labels: variation.labels, datasets: variation.series.map((series, index) => ({ label: variation.splitDimensions?.length ? series.label : `Variación ${priceFrequency}`, data: series.data, backgroundColor: variation.splitDimensions?.length ? variationColors[index % variationColors.length] : series.data.map(value => value >= 0 ? '#fb923c' : '#60a5fa') })) }, options: variationOptions });
     } else if (visualizations.showVariationBars) showChartMessage('priceChartVariation', insufficient);
 
     const variationMeta = { diaria: ['Variación acumulada del período', 'Cambio entre el primer y último precio promedio disponible'], mensual: ['Variación mensual de precios', 'Cambio porcentual respecto al mes anterior'], anual: ['Variación anual de precios', 'Cambio porcentual respecto al año anterior'] }[priceFrequency];
@@ -1237,6 +1413,10 @@ function renderPriceCharts() {
     document.getElementById('priceIncreaseDesc').textContent = dailyDescription;
     document.getElementById('priceDecreaseDesc').textContent = dailyDescription;
     console.log('Frecuencia precios aplicada:', priceFrequency);
+    console.log('Filtros precios:', filters);
+    console.log('Dimensiones de separación:', splitDimensions);
+    console.log('Cantidad de series generadas:', evolution.series?.length || 0);
+    console.log('Series:', (evolution.series || []).map(series => series.label));
     console.log('Agrupación variación diaria:', increases.groupFields || decreases.groupFields || []);
     console.log('Series comparables para variación:', Math.max(increases.meta.length, decreases.meta.length));
     console.log('Subas mostradas:', increases.labels.length);
