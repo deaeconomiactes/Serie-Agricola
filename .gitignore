@@ -17,6 +17,18 @@ __pycache__/
 !integrar_bases_2025.py
 !integrar_precios_2026.py
 !auditar_precios_2026.py
+!integrar_commodities_bcr.py
+!auditar_commodities_bcr.py
+
+# Commodity BCR work area: raw files remain local; generated outputs are tracked.
+data/commodities_bcr/raw/*
+!data/commodities_bcr/raw/.gitkeep
+!data/commodities_bcr/processed/COMMODITIES_BCR_INTEGRADO.csv
+!data/commodities_bcr/reports/REPORTE_AUDITORIA_COMMODITIES_BCR.md
+!data/commodities_bcr/reports/RESUMEN_COBERTURA_COMMODITIES_BCR.csv
+!data/commodities_bcr/reports/RESUMEN_COMMODITIES_BCR.csv
+!data/commodities_bcr/reports/RESUMEN_SERIES_COMMODITIES_BCR.csv
+!data/commodities_bcr/reports/CASOS_PROBLEMATICOS_COMMODITIES_BCR.csv
 
 # OS
 .DS_Store
