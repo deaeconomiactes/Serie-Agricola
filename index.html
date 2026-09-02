@@ -301,8 +301,12 @@
                 <select id="priceFilterMes" class="filter-select"><option value="TODOS">Todos</option></select>
             </div>
             <div class="filter-group">
-                <label class="filter-label" for="priceFilterRubro">Rubro</label>
-                <select id="priceFilterRubro" class="filter-select"><option value="TODOS">Todos</option></select>
+                <label class="filter-label" for="priceFilterRubroTrigger">Rubro</label>
+                <div class="multi-select" data-multi-select="priceFilterRubro">
+                    <select id="priceFilterRubro" class="filter-select price-multi-select" multiple size="1" aria-hidden="true" tabindex="-1"><option value="TODOS">Todos</option></select>
+                    <button id="priceFilterRubroTrigger" class="multi-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="multi-select-summary">Todos los rubros</span><span class="multi-select-chevron" aria-hidden="true">⌄</span></button>
+                    <div class="multi-select-dropdown" role="listbox" aria-label="Rubro" tabindex="-1"></div>
+                </div>
             </div>
             <div class="filter-group">
                 <label class="filter-label" for="priceFilterEspecieTrigger">Especie</label>
@@ -361,6 +365,7 @@
 
         <div id="priceStatus" class="price-status" role="status" aria-live="polite"></div>
         <div id="priceUnitStatus" class="price-inline-status price-unit-status" role="status" aria-live="polite"></div>
+        <div id="priceSelectionSummary" class="price-inline-status" role="status" aria-live="polite"></div>
 
         <div class="price-kpi-grid">
             <div class="kpi-card price-kpi-average"><div class="kpi-icon">$</div><div class="kpi-content"><span class="kpi-label" id="priceKpiAverageLabel">Precio promedio por kg</span><span class="kpi-value" id="priceKpiAverage">–</span><span class="kpi-unit" id="priceKpiAverageUnit">calculado sobre registros con unidad comparable</span></div></div>
