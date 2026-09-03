@@ -250,6 +250,32 @@ Como controles mínimos, cada registro debería conservar la procedencia, la uni
 - Si una API requiere autenticación, las credenciales se manejarán con variables de entorno y nunca desde el frontend.
 - Si no hay API disponible, se mantendrá el fallback de descarga manual.
 
+## Evaluación de fuentes alternativas con API
+
+BCR/Cámara Arbitral sigue siendo la fuente local preferida para precios de pizarra. Como actualmente no se cuenta con credenciales BCR/GIX, se evaluarán alternativas automatizables sin presentarlas como equivalentes metodológicos ni como reemplazos automáticos de la pizarra local.
+
+### SIO Granos / Secretaría de Agricultura
+
+SIO-Granos es una plataforma argentina para informar operaciones de compraventa y publicar precios de referencia. La plataforma publica documentación de acceso y una documentación de API pública; debe verificarse qué datos están disponibles sin autenticación, qué límites aplican y si la licencia permite el uso previsto. Es la alternativa local prioritaria por su posible relación con operaciones, precios de referencia y un dashboard analítico argentino. Antes de incorporarla se deben validar producto, frecuencia, condición comercial, unidad, moneda, cobertura histórica y permisos.
+
+### World Bank Pink Sheet
+
+El Banco Mundial ofrece archivos públicos mensuales y anuales de precios de commodities. Es una alternativa internacional estable para contexto y comparación de tendencias, pero no reemplaza una cotización local argentina ni sirve para seguimiento operativo diario. Deben conservarse serie original, unidad, moneda, versión del archivo y fecha de descarga.
+
+### BCRA IPMP
+
+El Índice de Precios de las Materias Primas del BCRA se publica diariamente y combina precios internacionales de materias primas relevantes para las exportaciones argentinas. Incluye, entre otros, maíz, trigo, soja y cebada, además de derivados y otras materias primas. Es útil como indicador agregado/contextual, no como precio local individual por commodity; debe mantenerse separado de precios de mercado físico.
+
+### FAOSTAT / FAO
+
+FAOSTAT ofrece acceso público a datos estadísticos agrícolas mediante API y descargas masivas. Puede aportar precios de productores, índices o datos agrícolas según el dominio y la cobertura, pero probablemente sea más estructural que operativo diario. Se debe validar periodicidad, país, producto, unidad, moneda y definición antes de usarlo para commodities.
+
+### granos.ar
+
+granos.ar expone un monitor técnico con información JSON aparentemente accesible sin una API key obligatoria y declara utilizar fuentes externas, entre ellas SIO-Granos, BCR/CAC, MATBA-ROFEX y organismos públicos. Es técnicamente cómodo para un piloto, pero no es la fuente primaria oficial y sus propios términos advierten sobre limitaciones de exactitud, actualidad e idoneidad. Sólo debe usarse como complemento no oficial después de validar estabilidad, procedencia, licencia y metodología.
+
+La comparación detallada y el catálogo de evaluación se encuentran en [data/commodities_bcr/FUENTES_API_COMMODITIES_COMPARATIVO.md](data/commodities_bcr/FUENTES_API_COMMODITIES_COMPARATIVO.md) y [data/commodities/catalogo_fuentes_commodities.csv](data/commodities/catalogo_fuentes_commodities.csv). En esta etapa no se implementan descargas nuevas para estas fuentes.
+
 ## Estado de integración
 
 En esta etapa no se modifican `app.js`, `index.html` ni `styles.css`, no se crea una pestaña de commodities y no se cargan datos externos en el navegador. El pipeline exploratorio permanece separado de frutas y hortalizas; esta documentación y los scripts sólo preparan la validación para una decisión posterior.

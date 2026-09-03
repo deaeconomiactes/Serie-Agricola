@@ -33,6 +33,15 @@ __pycache__/
 !data/commodities_bcr/processed/.gitkeep
 !data/commodities_bcr/reports/.gitkeep
 
+# Arquitectura futura multi-fuente de commodities
+!data/commodities/
+!data/commodities/**/
+!data/commodities/*.md
+!data/commodities/*.csv
+!data/commodities/raw/.gitkeep
+!data/commodities/processed/.gitkeep
+!data/commodities/reports/.gitkeep
+
 # OS
 .DS_Store
 Thumbs.db
