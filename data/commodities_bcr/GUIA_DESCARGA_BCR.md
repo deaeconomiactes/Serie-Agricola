@@ -2,13 +2,7 @@
 
 ## Próximo paso operativo
 
-Realizar una prueba manual desde la consulta oficial de Precios de Pizarra / Precios Cámara para:
-
-- soja;
-- maíz;
-- trigo;
-- girasol;
-- sorgo.
+Realizar primero una descarga real desde la consulta oficial de Precios de Pizarra / Precios Cámara para maíz. Luego ampliar, si hay cobertura, a soja, trigo, girasol y sorgo.
 
 Usar inicialmente los últimos 30 días o, si la cobertura diaria es escasa, los últimos 3 meses. Guardar los archivos en `data/commodities_bcr/raw/`.
 
@@ -41,6 +35,18 @@ python .\auditar_commodities_bcr.py
 ```
 
 La automatización sólo se habilita con un endpoint y configuración autorizados en `.env`. Nunca colocar credenciales en `app.js`, HTML, CSS, el catálogo ni archivos versionados.
+
+El downloader no hace llamadas de red por defecto. El uso de API requiere además el argumento explícito `--allow-api`; para esta prueba se recomienda mantener la descarga manual.
+
+## Verificación rápida de un archivo real
+
+Después de colocar `BCR_pizarra_maiz_ultimos_30_dias.xlsx` o equivalente en `raw/`, ejecutar:
+
+```powershell
+python .\integrar_commodities_bcr.py
+python .\auditar_commodities_bcr.py
+python -c "import pandas as pd; df=pd.read_csv('data/commodities_bcr/processed/COMMODITIES_BCR_INTEGRADO.csv', sep=';'); print(df.head()); print(df['commodity'].value_counts(dropna=False)); print(df[['fecha','commodity','precio','moneda','unidad','tipo_precio','archivo_origen']].head(20).to_string())"
+```
 
 ## Fuente y permisos
 

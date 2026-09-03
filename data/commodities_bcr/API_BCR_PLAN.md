@@ -18,6 +18,8 @@ Ver [.env.example](../../.env.example): `BCR_API_BASE_URL`, `BCR_API_PRICES_ENDP
 
 El endpoint se deja vacío hasta confirmarlo. La ausencia de endpoint o de credenciales no es un error: el script informa que debe usarse la descarga manual.
 
+El downloader opera en modo manual por defecto y no hace llamadas de red. Una consulta API requeriría `--allow-api` explícito, además de endpoint, token Bearer y autorización confirmados.
+
 ## Seguridad y trazabilidad
 
 - Nunca guardar usuario, contraseña, token o archivos `.env` en Git.

@@ -218,6 +218,7 @@ def main() -> int:
     parser.add_argument("--products", help="Lista separada por comas; por defecto usa el catálogo activo")
     parser.add_argument("--output-dir", default="data/commodities_bcr/raw/")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--allow-api", action="store_true", help="Habilita explícitamente la consulta al endpoint configurado")
     args = parser.parse_args()
 
     load_dotenv()
@@ -229,6 +230,8 @@ def main() -> int:
     missing_ids = [product for product in products if not catalog_id(catalog, product)]
 
     print("Modo dry-run activo: no se descargará nada." if args.dry_run else "Modo descarga controlada activo.")
+    if not args.dry_run and not args.allow_api:
+        print("Modo manual por defecto: no se harán llamadas de red. Use --allow-api sólo después de confirmar endpoint, credenciales y autorización.")
     print(f"Productos considerados: {', '.join(products)}")
     print(f"Rango de fechas: {start.isoformat()} a {end.isoformat()} ({(end - start).days + 1} días)")
     print(f"Ventanas de consulta: {len(query_windows)} de hasta 7 días")
@@ -255,6 +258,9 @@ def main() -> int:
 
     if not config["api_ready"]:
         print("No hay credenciales/API BCR configurada. Para avanzar, descargue archivos manuales en data/commodities_bcr/raw/ o complete .env con acceso autorizado.")
+        return 0
+    if not args.allow_api:
+        print("La configuración API está completa, pero la consulta queda desactivada por seguridad. Si corresponde, revise la autorización y use --allow-api explícitamente.")
         return 0
 
     errors = 0

@@ -45,9 +45,21 @@ Pipeline exploratorio separado de cantidades y precios mayoristas frutihortícol
 
 Con `raw/` vacío, integración y auditoría terminan correctamente y explican el próximo paso; no se generan reportes vacíos que parezcan datos válidos.
 
+El downloader no hace llamadas de red por defecto. Aunque exista configuración API, sólo podría consultar con `--allow-api`, después de confirmar endpoint, autorización y credenciales.
+
+## Verificación rápida después de una descarga real
+
+Después de colocar `BCR_pizarra_maiz_ultimos_30_dias.xlsx` o equivalente en `raw/`:
+
+```powershell
+python .\integrar_commodities_bcr.py
+python .\auditar_commodities_bcr.py
+python -c "import pandas as pd; df=pd.read_csv('data/commodities_bcr/processed/COMMODITIES_BCR_INTEGRADO.csv', sep=';'); print(df.head()); print(df['commodity'].value_counts(dropna=False)); print(df[['fecha','commodity','precio','moneda','unidad','tipo_precio','archivo_origen']].head(20).to_string())"
+```
+
 ## Primer ensayo manual recomendado
 
-Descargar desde BCR/Cámara Arbitral archivos de prueba para soja, maíz, trigo, girasol y sorgo, preferentemente de los últimos 30 días o los últimos 3 meses. Guardarlos en `raw/` con nombres como:
+La primera prueba operativa debe ser un archivo real de BCR/Cámara Arbitral para maíz, preferentemente de los últimos 30 días o los últimos 3 meses. Luego se puede ampliar a soja, trigo, girasol y sorgo. Guardarlo en `raw/` con nombres como:
 
 ```text
 BCR_pizarra_soja_ultimos_3_meses.xlsx
