@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Integra respuestas SIO Granos manteniendo una capa separada de BCR."""
+"""Integra respuestas reales de SIO Granos, separadas del pipeline BCR."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import re
 import unicodedata
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 
 ROOT = Path(__file__).resolve().parent
@@ -18,12 +18,21 @@ PROCESSED_DIR = ROOT / "data" / "commodities_sio" / "processed"
 CATALOG_PATH = ROOT / "data" / "commodities_sio" / "catalogo_productos_sio.csv"
 OUTPUT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_INTEGRADO.csv"
 OUTPUT_COLUMNS = [
-    "fecha", "año", "mes", "commodity", "fuente", "mercado", "tipo_precio", "moneda", "unidad", "precio", "volumen", "zona", "provincia", "condicion_comercial", "archivo_origen", "fecha_integracion", "observaciones",
+    "fecha", "año", "mes", "commodity", "fuente", "mercado", "tipo_precio",
+    "moneda", "unidad", "precio", "volumen", "volumen_unidad", "procedencia",
+    "provincia", "localidad", "zona", "precio_puesto_en", "operacion",
+    "condicion_pago", "condicion_comercial", "frecuencia", "archivo_origen",
+    "fecha_integracion", "observaciones",
 ]
-EXTENSIONS = {".json", ".csv", ".xlsx", ".xls"}
-NON_REAL_MARKERS = ("plantilla", "simul", "prueba", "test")
+EXTENSIONS = {".json", ".csv", ".xlsx", ".xls", ".html", ".htm"}
+NON_REAL_MARKERS = ("plantilla", "simul", "prueba", "test", "ejemplo", "sample")
 DEFAULT_SOURCE = "SIO Granos / Secretaría de Agricultura"
-HEADER_KEYS = {"fecha", "fechaconcertacion", "fechaentrega", "producto", "grano", "commodity", "especie", "precio", "preciotn", "cotizacion", "valor", "moneda", "unidad", "volumen", "cantidad", "zona", "provincia"}
+HEADER_KEYS = {
+    "fecha", "fechadeclaracion", "fechaconcertacion", "fechadeentrega", "producto",
+    "grano", "commodity", "especie", "precio", "preciomonto", "preciotn", "monto",
+    "cotizacion", "valor", "moneda", "unidad", "volumen", "cantidad", "cantidadtn",
+    "tn", "procedencia", "provincia", "localidad", "zona", "operacion",
+}
 
 
 def key(value: Any) -> str:
@@ -130,7 +139,7 @@ def read_matrix(values: list[tuple[Any, ...]]) -> tuple[list[dict[str, Any]], li
         return [], []
     header_index = max(nonempty, key=lambda index: sum(key(cell) in HEADER_KEYS for cell in values[index]))
     headers = [text(cell) or f"columna_{index + 1}" for index, cell in enumerate(values[header_index])]
-    rows = []
+    rows: list[dict[str, Any]] = []
     for values_row in values[header_index + 1:]:
         if values_row and any(text(cell) for cell in values_row):
             rows.append({headers[index]: values_row[index] if index < len(values_row) else "" for index in range(len(headers))})
@@ -138,7 +147,8 @@ def read_matrix(values: list[tuple[Any, ...]]) -> tuple[list[dict[str, Any]], li
 
 
 def read_file(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
-    if path.suffix.lower() == ".csv":
+    suffix = path.suffix.lower()
+    if suffix == ".csv":
         content = path.read_text(encoding="utf-8-sig", errors="replace")
         try:
             dialect = csv.Sniffer().sniff(content[:4096], delimiters=";,\t|")
@@ -147,21 +157,37 @@ def read_file(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
             dialect.delimiter = ";"
         reader = csv.DictReader(content.splitlines(), dialect=dialect)
         return [dict(row) for row in reader], [text(column) for column in (reader.fieldnames or [])]
-    if path.suffix.lower() == ".json":
-        return (extract_records(json.loads(path.read_text(encoding="utf-8-sig"))), [])
-    if path.suffix.lower() == ".xls":
+    if suffix == ".json":
+        return extract_records(json.loads(path.read_text(encoding="utf-8-sig"))), []
+    if suffix in {".html", ".htm"}:
         try:
             import pandas as pd
-            frames = pd.read_excel(path, sheet_name=None, header=None)
-            rows: list[dict[str, Any]] = []
-            columns: list[str] = []
-            for frame in frames.values():
-                sheet_rows, sheet_columns = read_matrix([tuple(row) for row in frame.where(frame.notna(), "").itertuples(index=False, name=None)])
-                rows.extend(sheet_rows)
-                columns.extend(column for column in sheet_columns if column not in columns)
-            return rows, columns
+            frames = pd.read_html(path)
         except ImportError as exc:
-            raise RuntimeError("para leer XLS instale pandas y xlrd, o convierta a XLSX/CSV") from exc
+            raise RuntimeError("para leer HTML instale pandas o convierta la respuesta a CSV/XLSX") from exc
+        rows: list[dict[str, Any]] = []
+        columns: list[str] = []
+        for frame in frames:
+            frame = frame.fillna("")
+            table_rows, table_columns = read_matrix([tuple(frame.columns)] + [tuple(row) for row in frame.itertuples(index=False, name=None)])
+            rows.extend(table_rows)
+            columns.extend(column for column in table_columns if column not in columns)
+        return rows, columns
+    try:
+        import pandas as pd
+    except ImportError:
+        pd = None
+    if suffix == ".xls":
+        if pd is None:
+            raise RuntimeError("para leer XLS instale pandas y xlrd, o convierta a XLSX/CSV")
+        frames = pd.read_excel(path, sheet_name=None, header=None)
+        rows: list[dict[str, Any]] = []
+        columns: list[str] = []
+        for frame in frames.values():
+            table_rows, table_columns = read_matrix([tuple(row) for row in frame.fillna("").itertuples(index=False, name=None)])
+            rows.extend(table_rows)
+            columns.extend(column for column in table_columns if column not in columns)
+        return rows, columns
     try:
         from openpyxl import load_workbook
     except ImportError as exc:
@@ -170,23 +196,27 @@ def read_file(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
     rows: list[dict[str, Any]] = []
     columns: list[str] = []
     for sheet in workbook.worksheets:
-        sheet_rows, sheet_columns = read_matrix([tuple(row) for row in sheet.values])
-        rows.extend(sheet_rows)
-        columns.extend(column for column in sheet_columns if column not in columns)
+        table_rows, table_columns = read_matrix([tuple(row) for row in sheet.values])
+        rows.extend(table_rows)
+        columns.extend(column for column in table_columns if column not in columns)
     return rows, columns
+
+
+def first_text(source: dict[str, Any], *names: str) -> str:
+    return text(value_for(source, *names))
 
 
 def process_file(path: Path, aliases: dict[str, str]) -> tuple[list[dict[str, str]], dict[str, Any]]:
     source_rows, columns = read_file(path)
     rows: list[dict[str, str]] = []
-    missing_fields: set[str] = set()
     dates: list[date] = []
     prices: list[float] = []
+    commodities: set[str] = set()
     for source in source_rows:
-        market_date = parse_date(value_for(source, "Fecha", "Fecha Concertación", "Fecha Concertacion", "Fecha de mercado", "Fecha Entrega"))
-        raw_commodity = value_for(source, "Producto", "Grano", "Commodity", "Especie")
+        market_date = parse_date(value_for(source, "Fecha Declaración", "Fecha Declaracion", "Fecha de Concertación", "Fecha de Concertacion", "Fecha de Entrega", "Fecha Concertación", "Fecha Concertacion", "Fecha"))
+        raw_commodity = value_for(source, "Producto", "Grano", "Especie", "Commodity")
         commodity, commodity_note = normalize_commodity(raw_commodity, path.name, aliases)
-        raw_price = value_for(source, "Precio", "Precio/TN", "Precio TN", "Precio Hecho", "Cotización", "Cotizacion", "Valor")
+        raw_price = value_for(source, "Precio", "Precio/Monto", "Monto", "Precio/TN", "Precio TN", "Precio hecho", "Precio Hecho", "Cotización", "Cotizacion", "Valor")
         price = parse_number(raw_price)
         if not market_date and price is None and not raw_commodity:
             continue
@@ -194,54 +224,66 @@ def process_file(path: Path, aliases: dict[str, str]) -> tuple[list[dict[str, st
             dates.append(market_date)
         if price is not None:
             prices.append(price)
-        moneda = text(value_for(source, "Moneda", "Currency"))
-        unidad = text(value_for(source, "Unidad", "Unit"))
-        tipo = text(value_for(source, "Operación", "Operacion", "Tipo de precio", "Tipo Precio", "Tipo", "Price Type"))
+        moneda = first_text(source, "Moneda", "Currency")
+        unidad = first_text(source, "Unidad", "Unit")
+        tipo = first_text(source, "Tipo de precio", "Tipo Precio", "Price Type", "Tipo")
+        volumen = first_text(source, "Cantidad (TN)", "Cantidad TN", "Volumen TN", "Toneladas", "Volumen", "Cantidad", "TN")
+        volumen_unidad = first_text(source, "Unidad de volumen", "Unidad volumen", "Volume Unit")
+        if not volumen_unidad and any(key(name) in {key(column) for column in source} for name in ("Cantidad (TN)", "Cantidad TN", "Volumen TN", "Toneladas", "TN")):
+            volumen_unidad = "TN"
         row_missing: list[str] = []
         if not moneda:
             moneda = "Sin especificar"
-            missing_fields.add("moneda")
             row_missing.append("falta moneda")
         if not unidad:
             unidad = "Sin especificar"
-            missing_fields.add("unidad")
             row_missing.append("falta unidad")
         if not tipo:
             tipo = "Sin especificar"
-            missing_fields.add("tipo_precio")
             row_missing.append("falta tipo_precio")
-        observation = text(value_for(source, "Observación", "Observaciones", "Nota", "Notas"))
-        observation = "; ".join(dict.fromkeys([part for part in [observation, commodity_note] + row_missing if part]))
+        if not market_date:
+            row_missing.append("falta fecha válida")
+        if price is None:
+            row_missing.append("falta precio válido")
+        operation = first_text(source, "Operación", "Operacion")
+        payment = first_text(source, "Condición de Pago", "Condicion de Pago", "Pago")
+        commercial = first_text(source, "Condición comercial", "Condicion comercial", "Condición", "Condicion", "Entrega")
+        observation = first_text(source, "Observación", "Observaciones", "Nota", "Notas")
+        notes = "; ".join(dict.fromkeys([part for part in [observation, commodity_note] + row_missing if part]))
+        commodities.add(commodity)
         rows.append({
             "fecha": market_date.isoformat() if market_date else "",
             "año": str(market_date.year) if market_date else "",
             "mes": str(market_date.month) if market_date else "",
             "commodity": commodity,
-            "fuente": text(value_for(source, "Fuente", "Source")) or DEFAULT_SOURCE,
-            "mercado": text(value_for(source, "Mercado", "Market")),
+            "fuente": first_text(source, "Fuente", "Source") or DEFAULT_SOURCE,
+            "mercado": first_text(source, "Mercado", "Market"),
             "tipo_precio": tipo,
             "moneda": moneda,
             "unidad": unidad,
             "precio": "" if price is None else f"{price:g}",
-            "volumen": text(value_for(source, "Volumen", "Cantidad", "Toneladas", "Cantidad TN", "Volumen TN")),
-            "zona": text(value_for(source, "Zona", "Localidad", "Lugar de entrega")),
-            "provincia": text(value_for(source, "Provincia", "Pcia")),
-            "condicion_comercial": text(value_for(source, "Condición comercial", "Condicion comercial", "Condición", "Condicion", "Pago", "Entrega")),
+            "volumen": volumen,
+            "volumen_unidad": volumen_unidad,
+            "procedencia": first_text(source, "Procedencia"),
+            "provincia": first_text(source, "Provincia", "Pcia"),
+            "localidad": first_text(source, "Localidad"),
+            "zona": first_text(source, "Zona", "Lugar de entrega"),
+            "precio_puesto_en": first_text(source, "Precio puesto en", "Destino", "Puerto"),
+            "operacion": operation,
+            "condicion_pago": payment,
+            "condicion_comercial": commercial,
+            "frecuencia": first_text(source, "Frecuencia", "Frequency"),
             "archivo_origen": path.name,
             "fecha_integracion": date.today().isoformat(),
-            "observaciones": observation,
+            "observaciones": notes,
         })
-    return rows, {"columns": columns, "read": len(source_rows), "integrated": len(rows), "dates": dates, "prices": prices, "commodities": sorted({row["commodity"] for row in rows})}
+    return rows, {"read": len(source_rows), "integrated": len(rows), "columns": columns, "commodities": sorted(commodities), "dates": dates, "prices": prices}
 
 
-def is_non_real(path: Path) -> bool:
-    return any(marker in key(path.name) for marker in NON_REAL_MARKERS)
-
-
-def candidate_files() -> list[Path]:
+def real_files() -> list[Path]:
     if not RAW_DIR.exists():
         return []
-    return sorted(path for path in RAW_DIR.iterdir() if path.is_file() and path.suffix.lower() in EXTENSIONS and not path.name.startswith("~$"))
+    return sorted(path for path in RAW_DIR.iterdir() if path.is_file() and path.suffix.lower() in EXTENSIONS and not any(marker in path.stem.lower() for marker in NON_REAL_MARKERS))
 
 
 def remove_output() -> None:
@@ -249,20 +291,16 @@ def remove_output() -> None:
         OUTPUT_PATH.unlink()
 
 
-def write_output(rows: Iterable[dict[str, str]]) -> None:
+def write_output(rows: list[dict[str, str]]) -> None:
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     with OUTPUT_PATH.open("w", encoding="utf-8-sig", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=OUTPUT_COLUMNS, delimiter=";")
+        writer = csv.DictWriter(handle, fieldnames=OUTPUT_COLUMNS, delimiter=";", extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
 
 
 def main() -> int:
-    candidates = candidate_files()
-    files = [path for path in candidates if not is_non_real(path)]
-    non_real = [path for path in candidates if is_non_real(path)]
-    if non_real:
-        print("Se omiten archivos de prueba/plantilla: " + ", ".join(path.name for path in non_real))
+    files = real_files()
     if not files:
         remove_output()
         print("No hay archivos reales de SIO Granos en data/commodities_sio/raw/.")
@@ -277,7 +315,7 @@ def main() -> int:
             all_rows.extend(rows)
             print(f"Archivo procesado: {path.name}")
             print(f"  Columnas detectadas: {', '.join(diagnostics['columns']) or '(JSON/estructura anidada)'}")
-            print(f"  Commodity detectado: {', '.join(diagnostics['commodities']) or 'sin identificar'}")
+            print(f"  Commodities detectados: {', '.join(diagnostics['commodities']) or 'sin identificar'}")
             print(f"  Filas leídas: {diagnostics['read']}; filas integradas: {diagnostics['integrated']}")
             print(f"  Precio mínimo: {min(diagnostics['prices']):g}" if diagnostics["prices"] else "  Precio mínimo: sin precio válido")
             print(f"  Precio máximo: {max(diagnostics['prices']):g}" if diagnostics["prices"] else "  Precio máximo: sin precio válido")
@@ -286,7 +324,7 @@ def main() -> int:
         except Exception as exc:
             errors += 1
             print(f"ERROR en {path.name}: {exc}")
-            print("  Sugerencia: revisar encabezados o conservar la respuesta JSON original para ajustar el mapeo.")
+            print("  Sugerencia: revisar encabezados o conservar la respuesta original para ajustar el mapeo.")
     if not all_rows:
         remove_output()
         print("No se integraron filas válidas de SIO Granos. No se generan reportes vacíos.")

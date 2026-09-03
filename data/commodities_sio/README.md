@@ -1,34 +1,48 @@
 # Exploración SIO Granos
 
-Esta carpeta corresponde a la exploración técnica de SIO Granos / Secretaría de Agricultura como posible fuente local automatizable de commodities agrícolas. Se evalúa como alternativa ante la falta de credenciales BCR/API GIX, pero todavía no está integrada al dashboard ni se presume que sus datos sean equivalentes a los precios de pizarra BCR.
+Esta carpeta contiene una exploración local y separada de SIO Granos / Secretaría de Agricultura. El foco inicial es la consulta pública de operaciones informadas y sus posibles exportaciones, para evaluar si SIO puede aportar una alternativa automatizable de precios y operaciones de soja, maíz, trigo, girasol, sorgo y cebada.
+
+SIO no se presume equivalente a los precios de pizarra BCR. La información debe conservar su fuente, mercado, tipo de precio, moneda, unidad, frecuencia, volumen, procedencia, precio puesto en y condiciones comerciales. No se mezcla con BCR, futuros, FOB/FAS ni precios mayoristas frutihortícolas.
 
 ## Estructura
 
-- `raw/`: respuestas originales obtenidas mediante exploración pública autorizada o descargas manuales.
+- `raw/`: respuestas originales de exploración pública controlada o descargas manuales.
 - `processed/`: CSV integrado de SIO, separado de BCR y de las fuentes frutihortícolas.
 - `reports/`: auditorías de cobertura, calidad, actualidad y aptitud analítica.
-- `sio_config.example.json`: esquema sin credenciales ni endpoints inventados.
+- `sio_config.example.json`: configuración de referencia con URLs públicas candidatas, sin credenciales.
 - `sio_config.json`: configuración local real, ignorada por Git.
-- `catalogo_productos_sio.csv`: catálogo inicial sin IDs inventados.
+- `catalogo_productos_sio.csv`: catálogo inicial; los IDs SIO quedan pendientes de validación y no se inventan.
 
-Debe conservarse en cada registro `fuente`, `mercado`, `tipo_precio`, `moneda`, `unidad`, `frecuencia`, `condicion_comercial` y procedencia. SIO puede representar operaciones declaradas, precios de referencia o datos agregados según el recurso consultado; no debe mezclarse con BCR, futuros, FOB/FAS ni precios mayoristas frutihortícolas en un mismo CSV final.
+La exploración inicial usa los últimos 30 días. Las consultas se dividen en ventanas de hasta 180 días. No se realizan llamadas externas por defecto: sólo `--allow-web` habilita una exploración pública controlada con timeout, User-Agent explícito y límite de requests.
 
-## Flujo seguro
+## Flujo recomendado
 
-Por defecto el explorador no hace llamadas web:
+1. Copiar `sio_config.example.json` como `sio_config.json` sólo si se validaron las URLs públicas que se usarán.
+2. Revisar la consulta sin red:
 
 ```powershell
-python .\explorar_sio_granos.py
-python .\explorar_sio_granos.py --dry-run --date-start 2026-08-01 --date-end 2026-09-01 --products soja,maiz,trigo
+python .\explorar_sio_granos.py --dry-run --days-back 30 --products soja,maiz,trigo,girasol,sorgo
 ```
 
-Para una exploración pública controlada, completar localmente `sio_config.json` con endpoints públicos documentados y ejecutar con `--allow-web`, limitando `--max-requests`. `--save-response` conserva las respuestas en `raw/`.
+3. Si la automatización aún no está validada, generar URLs para consulta/descarga manual:
 
-Luego:
+```powershell
+python .\explorar_sio_granos.py --manual-urls --days-back 30 --products soja,maiz,trigo
+```
+
+4. Para una exploración pública puntual, habilitarla explícitamente y guardar sólo el diagnóstico:
+
+```powershell
+python .\explorar_sio_granos.py --allow-web --save-response --max-requests 3 --days-back 30 --products maiz
+```
+
+5. Colocar respuestas reales en `raw/`, ejecutar integración y auditoría:
 
 ```powershell
 python .\integrar_commodities_sio.py
 python .\auditar_commodities_sio.py
 ```
 
-No generar datos ficticios ni cargar datos SIO en el navegador. La eventual visualización será un módulo analítico de commodities separado de cantidades y precios frutihortícolas.
+6. Revisar `reports/` antes de considerar cualquier uso analítico.
+
+El explorador no asume el payload de SIO: inspecciona formularios, campos y enlaces de exportación HTML. Si no detecta una exportación estable, debe mantenerse el fallback manual. No generar datos ficticios, no exponer credenciales y no cargar SIO en el navegador ni en el dashboard visual.
