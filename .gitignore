@@ -18,6 +18,21 @@ __pycache__/
 !integrar_precios_2026.py
 !auditar_precios_2026.py
 
+# Pipeline exploratorio de commodities BCR
+.env
+!.env.example
+!descargar_commodities_bcr.py
+!integrar_commodities_bcr.py
+!auditar_commodities_bcr.py
+!FUENTES_COMMODITIES_AGRICOLAS.md
+!data/commodities_bcr/
+!data/commodities_bcr/**/
+!data/commodities_bcr/*.md
+!data/commodities_bcr/*.csv
+!data/commodities_bcr/raw/.gitkeep
+!data/commodities_bcr/processed/.gitkeep
+!data/commodities_bcr/reports/.gitkeep
+
 # OS
 .DS_Store
 Thumbs.db

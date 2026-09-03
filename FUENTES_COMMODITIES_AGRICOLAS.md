@@ -238,6 +238,18 @@ Como controles mínimos, cada registro debería conservar la procedencia, la uni
 7. Diseñar el módulo visual separado, con filtros, series, tabla reciente y ficha metodológica.
 8. Documentar fecha de actualización, versión de fuente y procedimiento de reproducción antes de publicar cualquier dato.
 
+## Decisión operativa inicial para BCR
+
+- Se prioriza BCR/Cámara Arbitral como fuente piloto.
+- Se priorizan Precios de Pizarra / Precios Cámara por su cercanía con precios locales de mercado.
+- Se incluirán todos los commodities disponibles con cobertura útil, empezando por soja, maíz, trigo, girasol, sorgo y cebada si resulta consistente.
+- El foco inicial será lo más actual posible.
+- El módulo futuro tendrá uso analítico, no sólo informativo.
+- La actualización ideal será automatizada desde el inicio cuando exista un canal autorizado y técnicamente estable.
+- La automatización evitará exponer credenciales y respetará las condiciones de uso de la fuente.
+- Si una API requiere autenticación, las credenciales se manejarán con variables de entorno y nunca desde el frontend.
+- Si no hay API disponible, se mantendrá el fallback de descarga manual.
+
 ## Estado de integración
 
-En esta etapa no se modifican `app.js`, `index.html`, `styles.css`, scripts de integración ni las bases CSV actuales. Tampoco se incorporan datos externos al dashboard. Este archivo es únicamente una evaluación técnica para orientar una decisión posterior.
+En esta etapa no se modifican `app.js`, `index.html` ni `styles.css`, no se crea una pestaña de commodities y no se cargan datos externos en el navegador. El pipeline exploratorio permanece separado de frutas y hortalizas; esta documentación y los scripts sólo preparan la validación para una decisión posterior.
