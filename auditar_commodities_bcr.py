@@ -64,7 +64,19 @@ def read_rows() -> list[dict[str, str]]:
 def raw_candidates() -> list[Path]:
     if not RAW_DIR.exists():
         return []
-    return sorted(path for path in RAW_DIR.iterdir() if path.is_file() and path.suffix.lower() in {".csv", ".xlsx", ".xls"} and not path.name.startswith("~$"))
+    return sorted(path for path in RAW_DIR.iterdir() if path.is_file() and path.suffix.lower() in {".csv", ".xlsx", ".xls", ".json", ".html"} and not path.name.startswith("~$"))
+
+
+def infer_source_download(row: dict[str, str]) -> str:
+    explicit = (row.get("fuente_descarga") or "").strip()
+    if explicit:
+        return explicit
+    origin = (row.get("archivo_origen") or "").lower()
+    if origin.startswith("bcr_api_") or "_api_" in origin:
+        return "API"
+    if "public" in origin or origin.endswith(".html"):
+        return "public-web"
+    return "manual"
 
 
 def remove_reports() -> None:
@@ -111,6 +123,7 @@ def main() -> int:
     all_prices: list[float] = []
     problems: list[dict[str, str]] = []
     key_counts: Counter[tuple[str, ...]] = Counter()
+    download_sources: Counter[str] = Counter()
     simulated = False
     missing_price = zero_price = negative_price = invalid_date = 0
 
@@ -138,6 +151,7 @@ def main() -> int:
                 problems.append({"fila": str(row_number), "tipo": "precio negativo", "commodity": commodity, "fecha": row.get("fecha", ""), "precio": row.get("precio", ""), "detalle": "Revisar signo y formato de la descarga."})
         if NON_REAL_MARKERS.search(row.get("archivo_origen", "") + " " + row.get("observaciones", "")):
             simulated = True
+        download_sources[infer_source_download(row)] += 1
         key_counts[(row.get("fecha", ""), commodity, row.get("tipo_precio", ""), row.get("moneda", ""), row.get("unidad", ""), row.get("mercado", ""))] += 1
 
     for duplicate_key, count in key_counts.items():
@@ -170,11 +184,12 @@ def main() -> int:
         units = sorted({(row.get("unidad") or "").strip() for row in subset if (row.get("unidad") or "").strip()})
         currencies = sorted({(row.get("moneda") or "").strip() for row in subset if (row.get("moneda") or "").strip()})
         frequencies = sorted({(row.get("frecuencia") or "Sin determinar").strip() or "Sin determinar" for row in subset})
+        sources = sorted({infer_source_download(row) for row in subset})
         quality = "Alta" if len(prices) >= 5 and len(dates) >= 5 and len(units) <= 1 and len(currencies) <= 1 else "Media" if len(prices) >= 2 and len(dates) >= 2 else "Baja"
         usable = "Sí" if len(prices) >= 2 and len(dates) >= 2 and len(units) == 1 and len(currencies) == 1 and status != "Fecha futura" else "No"
         actuality_rows.append({"commodity": commodity, "fecha_max": max_date.isoformat() if max_date else "", "dias_desde_ultimo_dato": str(age) if max_date else "", "registros_ultimos_7_dias": str(count_7), "registros_ultimos_30_dias": str(count_30), "estado_actualidad": status})
-        commodity_rows.append({"commodity": commodity, "filas_totales": str(len(subset)), "fecha_min": min_date.isoformat() if min_date else "", "fecha_max": max_date.isoformat() if max_date else "", "precios_validos": str(len(prices)), "precios_faltantes": str(sum(1 for row in subset if parse_price(row.get("precio", "")) is None)), "precios_cero": str(sum(1 for price in prices if price == 0)), "precios_negativos": str(sum(1 for price in prices if price < 0)), "precio_min": f"{min(prices):g}" if prices else "", "precio_max": f"{max(prices):g}" if prices else "", "unidad": "|".join(units), "moneda": "|".join(currencies), "frecuencia": "|".join(frequencies)})
-        series_rows.append({"commodity": commodity, "unidad": "|".join(units), "moneda": "|".join(currencies), "frecuencia_detectada": "|".join(frequencies), "calidad_serie": quality, "sirve_visualizacion_analitica": usable, "motivo": "" if usable == "Sí" else "Se requieren al menos dos precios y fechas válidas, con unidad y moneda homogéneas."})
+        commodity_rows.append({"commodity": commodity, "fuente_descarga": "|".join(sources), "filas_totales": str(len(subset)), "fecha_min": min_date.isoformat() if min_date else "", "fecha_max": max_date.isoformat() if max_date else "", "precios_validos": str(len(prices)), "precios_faltantes": str(sum(1 for row in subset if parse_price(row.get("precio", "")) is None)), "precios_cero": str(sum(1 for price in prices if price == 0)), "precios_negativos": str(sum(1 for price in prices if price < 0)), "precio_min": f"{min(prices):g}" if prices else "", "precio_max": f"{max(prices):g}" if prices else "", "unidad": "|".join(units), "moneda": "|".join(currencies), "frecuencia": "|".join(frequencies)})
+        series_rows.append({"commodity": commodity, "fuente_descarga": "|".join(sources), "unidad": "|".join(units), "moneda": "|".join(currencies), "frecuencia_detectada": "|".join(frequencies), "calidad_serie": quality, "sirve_visualizacion_analitica": usable, "motivo": "" if usable == "Sí" else "Se requieren al menos dos precios y fechas válidas, con unidad y moneda homogéneas."})
 
     max_date = max(all_dates) if all_dates else None
     min_date = min(all_dates) if all_dates else None
@@ -184,6 +199,7 @@ def main() -> int:
     write_csv(REPORT_FILES["coverage"], ["metrica", "valor", "observacion"], [
         {"metrica": "filas_totales", "valor": str(len(rows)), "observacion": "Filas provenientes de archivos reales no marcados como plantilla/prueba."},
         {"metrica": "commodity_detectado", "valor": "|".join(commodities), "observacion": "Normalizado por catálogo o conservado para revisión."},
+        {"metrica": "fuente_descarga", "valor": "|".join(f"{name}:{count}" for name, count in sorted(download_sources.items())), "observacion": "manual, public-web o API según el origen del archivo."},
         {"metrica": "fecha_minima", "valor": min_date.isoformat() if min_date else "", "observacion": "Fecha de mercado válida."},
         {"metrica": "fecha_maxima", "valor": max_date.isoformat() if max_date else "", "observacion": "Fecha de mercado válida."},
         {"metrica": "dias_desde_ultimo_dato", "valor": str(age) if max_date else "", "observacion": "Calculado respecto de la fecha de auditoría."},
@@ -214,13 +230,13 @@ def main() -> int:
     usable_count = sum(1 for row in series_rows if row["sirve_visualizacion_analitica"] == "Sí")
     report_lines = [
         "# Reporte de auditoría de commodities BCR", "", f"Fecha de auditoría: {today.isoformat()}", "",
-        "## Resumen", "", f"- Filas totales: {len(rows)}.", f"- Commodities detectados: {', '.join(commodities)}.", f"- Fecha mínima: {min_date.isoformat() if min_date else 'sin fecha válida'}.", f"- Fecha máxima: {max_date.isoformat() if max_date else 'sin fecha válida'}.", f"- Días desde último dato: {age if max_date else 'sin fecha válida'}.", f"- Precios válidos: {len(all_prices)}; faltantes: {missing_price}; cero: {zero_price}; negativos: {negative_price}.", f"- Series aptas para futura visualización analítica: {usable_count} de {len(series_rows)}.", "",
+        "## Resumen", "", f"- Filas totales: {len(rows)}.", f"- Commodities detectados: {', '.join(commodities)}.", f"- Fuente de descarga: {', '.join(f'{name} ({count})' for name, count in sorted(download_sources.items()))}.", f"- Fecha mínima: {min_date.isoformat() if min_date else 'sin fecha válida'}.", f"- Fecha máxima: {max_date.isoformat() if max_date else 'sin fecha válida'}.", f"- Días desde último dato: {age if max_date else 'sin fecha válida'}.", f"- Precios válidos: {len(all_prices)}; faltantes: {missing_price}; cero: {zero_price}; negativos: {negative_price}.", f"- Series aptas para futura visualización analítica: {usable_count} de {len(series_rows)}.", "",
     ]
     if warnings:
         report_lines.extend(["## Advertencias", "", *[f"- {warning}" for warning in warnings], ""])
     report_lines.extend([
         "## Actualidad de la información", "", f"Commodities actualizados: {', '.join(updated) if updated else 'ninguno'}.", f"Commodities recientes o actualizados: {', '.join(recent) if recent else 'ninguno'}.", f"Commodities sin dato reciente, desactualizados o con fecha futura: {', '.join(stale) if stale else 'ninguno'}.", f"Cobertura de últimos 7 días: {coverage_7} registro(s). Cobertura de últimos 30 días: {coverage_30} registro(s).", "", markdown_table(["Commodity", "Fecha máxima", "Días", "Últimos 7 días", "Últimos 30 días", "Estado"], [[row["commodity"], row["fecha_max"] or "—", row["dias_desde_ultimo_dato"] or "—", row["registros_ultimos_7_dias"], row["registros_ultimos_30_dias"], row["estado_actualidad"]] for row in actuality_rows]), "",
-        "## Calidad y utilidad analítica", "", "La aptitud visual se determina por cantidad de precios/fechas válidas y homogeneidad de moneda y unidad; no reemplaza la validación metodológica de BCR.", "", markdown_table(["Commodity", "Calidad", "Visualización analítica", "Motivo"], [[row["commodity"], row["calidad_serie"], row["sirve_visualizacion_analitica"], row["motivo"]] for row in series_rows]), "", f"Casos problemáticos detectados: {len(problems)}. Ver `CASOS_PROBLEMATICOS_COMMODITIES_BCR.csv`.", "",
+        "## Calidad y utilidad analítica", "", "La aptitud visual se determina por cantidad de precios/fechas válidas y homogeneidad de moneda y unidad; no reemplaza la validación metodológica de BCR.", "", markdown_table(["Commodity", "Origen", "Calidad", "Visualización analítica", "Motivo"], [[row["commodity"], row["fuente_descarga"], row["calidad_serie"], row["sirve_visualizacion_analitica"], row["motivo"]] for row in series_rows]), "", f"Casos problemáticos detectados: {len(problems)}. Ver `CASOS_PROBLEMATICOS_COMMODITIES_BCR.csv`.", "",
         "## Recomendación de automatización", "", "Mantener descarga manual mientras no exista una API BCR/GIX confirmada, autorizada y estable. No hacer scraping ni llamadas automáticas; si se habilita una API en el futuro, mantener credenciales fuera del repositorio y ejecutar la descarga desde un proceso local/backend.", "", "## Próximos pasos", "", "1. Revisar el archivo real, su fuente, tipo de precio, unidad, moneda y condiciones de uso.", "2. Confirmar que la serie sea Precio de Pizarra / Precio Cámara y que la fecha máxima sea suficientemente actual.", "3. Corregir casos problemáticos y repetir integración/auditoría antes de decidir cualquier módulo visual.",
     ])
     REPORT_FILES["report"].write_text("\n".join(report_lines) + "\n", encoding="utf-8")

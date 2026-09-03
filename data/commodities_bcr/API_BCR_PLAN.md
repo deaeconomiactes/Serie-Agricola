@@ -14,15 +14,15 @@ Preparar una futura descarga automatizada de Precios de Pizarra / Precios Cámar
 
 ## Variables esperadas
 
-Ver [.env.example](../../.env.example): `BCR_API_BASE_URL`, `BCR_API_PRICES_ENDPOINT`, `BCR_API_USER`, `BCR_API_PASSWORD`, `BCR_API_TOKEN`, `BCR_API_USE_AUTH` y `BCR_COMMODITIES_DEFAULT_DAYS_BACK`.
+Ver [.env.example](../../.env.example): `BCR_API_BASE_URL`, `BCR_API_LOGIN_ENDPOINT`, `BCR_API_PRECIOS_CAMARA_ENDPOINT`, `BCR_API_KEY`, `BCR_API_SECRET`, `BCR_API_TOKEN`, `BCR_API_USE_AUTH` y `BCR_COMMODITIES_DEFAULT_DAYS_BACK`. Se conservan `BCR_API_PRICES_ENDPOINT`, `BCR_API_USER` y `BCR_API_PASSWORD` por compatibilidad, pero se prefieren `api_key`/`secret` o token si la documentación de BCR/GIX los utiliza.
 
 El endpoint se deja vacío hasta confirmarlo. La ausencia de endpoint o de credenciales no es un error: el script informa que debe usarse la descarga manual.
 
-El downloader opera en modo manual por defecto y no hace llamadas de red. Una consulta API requeriría `--allow-api` explícito, además de endpoint, token Bearer y autorización confirmados.
+El downloader opera en modo manual por defecto y no hace llamadas de red. Una consulta API requeriría `--source api --allow-api`, endpoint, token Bearer o credenciales API confirmadas, identificadores `bcr_id_grano` confirmados y autorización. Si el token dura 24 horas, debe renovarse fuera del repositorio y nunca guardarse en raw/ ni en Git.
 
 ## Seguridad y trazabilidad
 
-- Nunca guardar usuario, contraseña, token o archivos `.env` en Git.
+- Nunca guardar usuario, contraseña, api_key, secret, token o archivos `.env` en Git.
 - Nunca imprimir secretos; el modo `dry-run` sólo muestra presencia y valores enmascarados.
 - No inventar `bcr_id_grano`; los identificadores pendientes quedan vacíos en el catálogo.
 - No llamar a la API sin configuración explícita y suficiente.

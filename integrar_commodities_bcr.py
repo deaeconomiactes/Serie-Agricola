@@ -21,9 +21,9 @@ OUTPUT_COLUMNS = [
     "fecha", "año", "mes", "commodity", "commodity_original", "fuente", "mercado",
     "tipo_precio", "moneda", "unidad", "precio", "frecuencia", "condicion_comercial",
     "contrato", "vencimiento", "fuente_url", "fecha_actualizacion", "fecha_descarga",
-    "archivo_origen", "fecha_integracion", "observaciones",
+    "archivo_origen", "fuente_descarga", "fecha_integracion", "observaciones",
 ]
-EXTENSIONS = {".csv", ".xlsx", ".xls"}
+EXTENSIONS = {".csv", ".xlsx", ".xls", ".json", ".html"}
 NON_REAL_MARKERS = ("plantilla", "simul", "prueba", "test")
 DEFAULT_SOURCE = "Bolsa de Comercio de Rosario / Cámara Arbitral de Cereales"
 DEFAULT_MARKET = "Rosario"
@@ -32,7 +32,7 @@ DEFAULT_CURRENCY = "ARS"
 DEFAULT_UNIT = "$/Tn"
 DEFAULT_CONDITION = "Mercadería disponible / referencia de pizarra BCR"
 HEADER_KEYS = {
-    "fecha", "fechamercado", "fechapizarra", "dia", "producto", "grano", "commodity", "especie",
+    "fecha", "fechamercado", "fechapizarra", "fechacotizacion", "dia", "producto", "grano", "commodity", "especie",
     "precio", "preciopizarra", "pizarra", "preciocamara", "cotizacion", "valor", "moneda", "unidad",
 }
 
@@ -197,21 +197,46 @@ def read_excel(path: Path) -> tuple[list[dict[str, Any]], list[str], list[str]]:
     return result, sheets or [sheet.title for sheet in workbook.worksheets], columns
 
 
+def extract_json_records(payload: Any) -> list[dict[str, Any]]:
+    if isinstance(payload, list):
+        records: list[dict[str, Any]] = []
+        for item in payload:
+            records.extend(extract_json_records(item))
+        return records
+    if isinstance(payload, dict):
+        for name in ("data", "results", "records", "items", "rows"):
+            if name in payload:
+                nested = extract_json_records(payload[name])
+                if nested:
+                    return nested
+        return [payload]
+    return []
+
+
 def read_json(path: Path) -> tuple[list[dict[str, Any]], list[str], list[str]]:
     payload = json.loads(path.read_text(encoding="utf-8-sig"))
-    if isinstance(payload, list):
-        rows = [row for row in payload if isinstance(row, dict)]
-    elif isinstance(payload, dict):
-        rows = []
-        for name in ("data", "results", "records", "items", "rows"):
-            if isinstance(payload.get(name), list):
-                rows = [row for row in payload[name] if isinstance(row, dict)]
-                break
-        if not rows:
-            rows = [payload]
-    else:
-        rows = []
+    rows = extract_json_records(payload)
     return rows, ["JSON"], [text(column) for column in (list(rows[0].keys()) if rows else [])]
+
+
+def read_html(path: Path) -> tuple[list[dict[str, Any]], list[str], list[str]]:
+    """Lee sólo tablas HTML claras; una página sin tablas queda como diagnóstico."""
+    try:
+        import pandas as pd
+        tables = pd.read_html(path)
+    except ImportError as exc:
+        raise RuntimeError("para leer tablas HTML instale pandas o convierta el archivo a XLSX/CSV") from exc
+    except ValueError:
+        return [], ["HTML"], []
+    rows: list[dict[str, Any]] = []
+    columns: list[str] = []
+    for frame in tables:
+        frame = frame.where(frame.notna(), "")
+        table_columns = [text(column) for column in frame.columns]
+        table_rows = [{table_columns[index]: row[index] for index in range(len(table_columns))} for row in frame.itertuples(index=False, name=None)]
+        rows.extend(table_rows)
+        columns.extend(column for column in table_columns if column not in columns)
+    return rows, [f"tabla_{index + 1}" for index in range(len(tables))] or ["HTML"], columns
 
 
 def read_source(path: Path) -> tuple[list[dict[str, Any]], list[str], list[str]]:
@@ -219,6 +244,8 @@ def read_source(path: Path) -> tuple[list[dict[str, Any]], list[str], list[str]]
         return read_csv(path)
     if path.suffix.lower() == ".json":
         return read_json(path)
+    if path.suffix.lower() == ".html":
+        return read_html(path)
     return read_excel(path)
 
 
@@ -236,9 +263,18 @@ def detect_frequency(filename: str, dates: list[date]) -> str:
     return "Sin determinar"
 
 
+def source_download(path: Path) -> str:
+    name = path.name.lower()
+    if path.name.upper().startswith("BCR_API_") or "_api_" in name:
+        return "API"
+    if "public" in name or path.suffix.lower() == ".html":
+        return "public-web"
+    return "manual"
+
+
 def process_file(path: Path, aliases: dict[str, str]) -> tuple[list[dict[str, str]], dict[str, Any]]:
     source_rows, sheets, columns = read_source(path)
-    parsed_dates = [parse_date(value_for(row, "Fecha", "Fecha Mercado", "Fecha de mercado", "Fecha Pizarra", "Día", "Dia")) for row in source_rows]
+    parsed_dates = [parse_date(value_for(row, "Fecha", "Fecha Mercado", "Fecha de mercado", "Fecha Pizarra", "Fecha Cotización", "Fecha Cotizacion", "Día", "Dia")) for row in source_rows]
     valid_dates = [item for item in parsed_dates if item]
     detected_frequency = detect_frequency(path.name, valid_dates)
     rows: list[dict[str, str]] = []
@@ -273,6 +309,7 @@ def process_file(path: Path, aliases: dict[str, str]) -> tuple[list[dict[str, st
             "fecha_actualizacion": text(value_for(source, "Fecha actualización", "Fecha actualizacion", "Updated At")),
             "fecha_descarga": text(value_for(source, "Fecha descarga", "Download Date")) or date.today().isoformat(),
             "archivo_origen": path.name,
+            "fuente_descarga": source_download(path),
             "fecha_integracion": date.today().isoformat(),
             "observaciones": observation,
         })
@@ -285,6 +322,8 @@ def process_file(path: Path, aliases: dict[str, str]) -> tuple[list[dict[str, st
         "prices": [parse_argentine_number(row["precio"]) for row in rows if row["precio"]],
         "currencies": sorted({row["moneda"] for row in rows if row["moneda"]}),
         "units": sorted({row["unidad"] for row in rows if row["unidad"]}),
+        "commodities": sorted({row["commodity"] for row in rows}),
+        "download_source": source_download(path),
     }
     return rows, diagnostics
 
@@ -318,7 +357,8 @@ def print_diagnostics(path: Path, diagnostics: dict[str, Any]) -> None:
     print(f"Archivo procesado: {path.name}")
     print(f"  Hojas detectadas: {', '.join(diagnostics['sheets'])}")
     print(f"  Columnas detectadas: {', '.join(diagnostics['columns']) or '(ninguna)'}")
-    print("  Commodity detectado: se toma de la columna o del nombre del archivo")
+    print(f"  Commodity detectado: {', '.join(diagnostics['commodities']) or 'no identificado'}")
+    print(f"  Fuente de descarga: {diagnostics['download_source']}")
     print(f"  Filas leídas: {diagnostics['read']}; filas integradas: {diagnostics['integrated']}")
     print(f"  Precio mínimo: {min(prices):g}" if prices else "  Precio mínimo: sin precio válido")
     print(f"  Precio máximo: {max(prices):g}" if prices else "  Precio máximo: sin precio válido")

@@ -28,24 +28,44 @@ Pipeline exploratorio separado de cantidades y precios mayoristas frutihortícol
    python .\descargar_commodities_bcr.py --dry-run --days-back 30
    ```
 
-3. Si no hay API, descargar manualmente desde BCR/Cámara Arbitral y colocar los archivos en `raw/`.
-4. Integrar:
+   También puede limitar productos: `python .\descargar_commodities_bcr.py --dry-run --days-back 30 --products soja,maiz,trigo`.
+
+3. Generar URLs manuales, sin red:
+
+   ```powershell
+   python .\descargar_commodities_bcr.py --manual-urls --date-start 2026-08-01 --date-end 2026-09-01 --products soja,maiz,trigo,girasol,sorgo
+   ```
+
+4. Si no hay API, abrir las URLs, descargar manualmente desde BCR/Cámara Arbitral y colocar los archivos en `raw/`.
+5. Intentar descarga pública sólo de forma explícita y controlada:
+
+   ```powershell
+   python .\descargar_commodities_bcr.py --source public-web --allow-web --date-start 2026-08-01 --date-end 2026-09-01 --products maiz
+   ```
+
+6. Integrar:
 
    ```powershell
    python .\integrar_commodities_bcr.py
    ```
 
-5. Auditar:
+7. Auditar:
 
    ```powershell
    python .\auditar_commodities_bcr.py
    ```
 
-6. Revisar los reportes y sólo después decidir si corresponde diseñar el módulo visual.
+8. Revisar los reportes y sólo después decidir si corresponde diseñar el módulo visual.
 
 Con `raw/` vacío, integración y auditoría terminan correctamente y explican el próximo paso; no se generan reportes vacíos que parezcan datos válidos.
 
 El downloader no hace llamadas de red por defecto. Aunque exista configuración API, sólo podría consultar con `--allow-api`, después de confirmar endpoint, autorización y credenciales.
+
+API, sólo con credenciales, endpoint e identificadores BCR confirmados:
+
+```powershell
+python .\descargar_commodities_bcr.py --source api --allow-api --days-back 7 --products maiz
+```
 
 ## Verificación rápida después de una descarga real
 
