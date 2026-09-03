@@ -1,0 +1,9 @@
+{
+  "base_url": "",
+  "endpoints": {
+    "consulta_publica": "",
+    "precios_referencia": "",
+    "operaciones": ""
+  },
+  "notes": "Completar sólo con endpoints públicos documentados o autorizados."
+}

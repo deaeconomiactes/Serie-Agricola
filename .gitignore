@@ -42,6 +42,20 @@ __pycache__/
 !data/commodities/processed/.gitkeep
 !data/commodities/reports/.gitkeep
 
+# Exploración SIO Granos
+!explorar_sio_granos.py
+!integrar_commodities_sio.py
+!auditar_commodities_sio.py
+!data/commodities_sio/
+!data/commodities_sio/**/
+!data/commodities_sio/*.md
+!data/commodities_sio/*.json
+!data/commodities_sio/*.csv
+!data/commodities_sio/raw/.gitkeep
+!data/commodities_sio/processed/.gitkeep
+!data/commodities_sio/reports/.gitkeep
+data/commodities_sio/sio_config.json
+
 # OS
 .DS_Store
 Thumbs.db

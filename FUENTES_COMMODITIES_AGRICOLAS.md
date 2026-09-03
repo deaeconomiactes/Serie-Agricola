@@ -2,7 +2,9 @@
 
 **Estado:** evaluación exploratoria. **No hay integración de commodities en el dashboard.**
 
-Este documento evalúa fuentes potenciales para una incorporación futura. Las fuentes descritas como externas aún no forman parte del proyecto y no se agregan llamadas de red, scripts ni archivos de datos en esta etapa.
+Este documento evalúa fuentes potenciales para una incorporación futura. En esta etapa no se integran commodities al dashboard ni se realizan llamadas automáticas de red. Sí se deja preparada documentación, estructura técnica exploratoria y scripts de apoyo para futuras pruebas controladas.
+
+Los scripts disponibles preparan integración, auditoría y descarga controlada, pero no publican información en el dashboard.
 
 ## 1. Objetivo
 
@@ -256,7 +258,7 @@ BCR/Cámara Arbitral sigue siendo la fuente local preferida para precios de piza
 
 ### SIO Granos / Secretaría de Agricultura
 
-SIO-Granos es una plataforma argentina para informar operaciones de compraventa y publicar precios de referencia. La plataforma publica documentación de acceso y una documentación de API pública; debe verificarse qué datos están disponibles sin autenticación, qué límites aplican y si la licencia permite el uso previsto. Es la alternativa local prioritaria por su posible relación con operaciones, precios de referencia y un dashboard analítico argentino. Antes de incorporarla se deben validar producto, frecuencia, condición comercial, unidad, moneda, cobertura histórica y permisos.
+SIO-Granos es una plataforma argentina para informar operaciones de compraventa y publicar precios de referencia. La plataforma publica documentación de acceso y una documentación de API pública; debe verificarse qué datos están disponibles sin autenticación, qué límites aplican y si la licencia permite el uso previsto. Pasa a ser la primera alternativa local automatizable a explorar por su posible relación con operaciones, precios de referencia y un dashboard analítico argentino. Todavía no está integrada al dashboard ni se validó una respuesta real. Antes de incorporarla se deben confirmar endpoints, producto, frecuencia, condición comercial, unidad, moneda, cobertura histórica y permisos.
 
 ### World Bank Pink Sheet
 
@@ -274,7 +276,9 @@ FAOSTAT ofrece acceso público a datos estadísticos agrícolas mediante API y d
 
 granos.ar expone un monitor técnico con información JSON aparentemente accesible sin una API key obligatoria y declara utilizar fuentes externas, entre ellas SIO-Granos, BCR/CAC, MATBA-ROFEX y organismos públicos. Es técnicamente cómodo para un piloto, pero no es la fuente primaria oficial y sus propios términos advierten sobre limitaciones de exactitud, actualidad e idoneidad. Sólo debe usarse como complemento no oficial después de validar estabilidad, procedencia, licencia y metodología.
 
-La comparación detallada y el catálogo de evaluación se encuentran en [data/commodities_bcr/FUENTES_API_COMMODITIES_COMPARATIVO.md](data/commodities_bcr/FUENTES_API_COMMODITIES_COMPARATIVO.md) y [data/commodities/catalogo_fuentes_commodities.csv](data/commodities/catalogo_fuentes_commodities.csv). En esta etapa no se implementan descargas nuevas para estas fuentes.
+No debe usarse como fuente principal para reportes institucionales sin validación previa de procedencia, licencia y estabilidad.
+
+La comparación detallada y el catálogo de evaluación se encuentran en [data/commodities_bcr/FUENTES_API_COMMODITIES_COMPARATIVO.md](data/commodities_bcr/FUENTES_API_COMMODITIES_COMPARATIVO.md) y [data/commodities/catalogo_fuentes_commodities.csv](data/commodities/catalogo_fuentes_commodities.csv). Para SIO Granos existe únicamente un explorador técnico separado y no productivo. No se crean todavía descargadores específicos para World Bank, BCRA, FAO o granos.ar. El pipeline BCR existente se mantiene como prueba controlada separada.
 
 ## Estado de integración
 
