@@ -8,6 +8,7 @@ import json
 import re
 import unicodedata
 from datetime import date, datetime
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
@@ -146,6 +147,43 @@ def read_matrix(values: list[tuple[Any, ...]]) -> tuple[list[dict[str, Any]], li
     return rows, headers
 
 
+class HTMLTableParser(HTMLParser):
+    """Extrae tablas HTML simples sin interpretar formularios ni JavaScript."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.tables: list[list[tuple[Any, ...]]] = []
+        self._table: list[list[str]] | None = None
+        self._row: list[str] | None = None
+        self._cell: list[str] | None = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        tag = tag.lower()
+        if tag == "table" and self._table is None:
+            self._table = []
+        elif tag == "tr" and self._table is not None:
+            self._row = []
+        elif tag in {"th", "td"} and self._row is not None:
+            self._cell = []
+
+    def handle_data(self, data: str) -> None:
+        if self._cell is not None:
+            self._cell.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        tag = tag.lower()
+        if tag in {"th", "td"} and self._cell is not None and self._row is not None:
+            self._row.append("".join(self._cell).strip())
+            self._cell = None
+        elif tag == "tr" and self._row is not None and self._table is not None:
+            if self._row:
+                self._table.append(self._row)
+            self._row = None
+        elif tag == "table" and self._table is not None:
+            self.tables.append([tuple(row) for row in self._table])
+            self._table = None
+
+
 def read_file(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
     suffix = path.suffix.lower()
     if suffix == ".csv":
@@ -164,7 +202,17 @@ def read_file(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
             import pandas as pd
             frames = pd.read_html(path)
         except ImportError as exc:
-            raise RuntimeError("para leer HTML instale pandas o convierta la respuesta a CSV/XLSX") from exc
+            parser = HTMLTableParser()
+            parser.feed(path.read_text(encoding="utf-8", errors="replace"))
+            rows: list[dict[str, Any]] = []
+            columns: list[str] = []
+            for table in parser.tables:
+                if not any(key(cell) in HEADER_KEYS for row in table[:5] for cell in row):
+                    continue
+                table_rows, table_columns = read_matrix(table)
+                rows.extend(table_rows)
+                columns.extend(column for column in table_columns if column not in columns)
+            return rows, columns
         rows: list[dict[str, Any]] = []
         columns: list[str] = []
         for frame in frames:
