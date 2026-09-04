@@ -1,0 +1,26 @@
+{
+  "source": "SIO Granos",
+  "endpoint": "operaciones_informadas_ultimas.aspx/GetOperaciones",
+  "mapping_status": "pendiente_validacion",
+  "evidence": [
+    "data/commodities_sio/reports/REPORTE_MAPEO_GETOPERACIONES_SIO.md"
+  ],
+  "row_mapping": {
+    "0": "id",
+    "1": "fecha",
+    "2": "numero_operacion",
+    "3": "operacion",
+    "4": "tipo_operacion",
+    "5": "tipo_precio",
+    "6": "commodity",
+    "7": "volumen",
+    "8": "calidad",
+    "9": "procedencia",
+    "10": "precio",
+    "11": "lugar_entrega",
+    "12": "fecha_entrega",
+    "13": "condicion_pago",
+    "14": "fuera_de_termino"
+  },
+  "notes": "Las posiciones reflejan la configuración local de la grilla observada, pero deben validarse antes de cambiar mapping_status a validado. No completar posiciones por suposición."
+}

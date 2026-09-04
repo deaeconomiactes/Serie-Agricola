@@ -58,6 +58,7 @@ data/commodities_sio/sio_config.json
 data/commodities_sio/raw/*.html
 data/commodities_sio/raw/*.js
 data/commodities_sio/raw/*.json
+data/commodities_sio/mapeo_getoperaciones_sio.local.json
 !data/commodities_sio/reports/*.md
 
 # OS

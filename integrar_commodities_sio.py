@@ -17,6 +17,8 @@ ROOT = Path(__file__).resolve().parent
 RAW_DIR = ROOT / "data" / "commodities_sio" / "raw"
 PROCESSED_DIR = ROOT / "data" / "commodities_sio" / "processed"
 CATALOG_PATH = ROOT / "data" / "commodities_sio" / "catalogo_productos_sio.csv"
+MAPPING_LOCAL_PATH = ROOT / "data" / "commodities_sio" / "mapeo_getoperaciones_sio.local.json"
+MAPPING_EXAMPLE_PATH = ROOT / "data" / "commodities_sio" / "mapeo_getoperaciones_sio.example.json"
 OUTPUT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_INTEGRADO.csv"
 OUTPUT_COLUMNS = [
     "fecha", "año", "mes", "commodity", "fuente", "mercado", "tipo_precio",
@@ -95,6 +97,48 @@ def read_aliases() -> dict[str, str]:
                 if alias:
                     aliases[key(alias)] = canonical
     return aliases
+
+
+def load_positional_mapping() -> tuple[dict[int, str] | None, str]:
+    """Carga sólo un mapeo explícitamente validado y respaldado por evidencia."""
+
+    selected = next((path for path in (MAPPING_LOCAL_PATH, MAPPING_EXAMPLE_PATH) if path.exists()), None)
+    if selected is None:
+        return None, "mapeo posicional SIO pendiente de validación; no existe archivo de mapeo"
+    try:
+        document = json.loads(selected.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, f"mapeo posicional SIO pendiente de validación; archivo inválido ({exc.__class__.__name__})"
+    if not isinstance(document, dict) or document.get("mapping_status") != "validado":
+        return None, "mapeo posicional SIO pendiente de validación"
+    evidence = document.get("evidence", [])
+    evidence_items = [evidence] if isinstance(evidence, str) else evidence if isinstance(evidence, list) else []
+    documented_evidence = any((ROOT / item).exists() if not Path(item).is_absolute() else Path(item).exists() for item in evidence_items if isinstance(item, str) and item.strip())
+    raw_mapping = document.get("row_mapping")
+    if not documented_evidence or not isinstance(raw_mapping, dict):
+        return None, "mapeo posicional SIO pendiente de validación; falta evidencia documentada"
+    mapping: dict[int, str] = {}
+    for position, field in raw_mapping.items():
+        try:
+            position_number = int(position)
+        except (TypeError, ValueError):
+            continue
+        if position_number >= 0 and isinstance(field, str) and field.strip():
+            mapping[position_number] = field.strip()
+    if not mapping or not any(key(field) in {"fecha", "producto", "commodity", "precio"} for field in mapping.values()):
+        return None, "mapeo posicional SIO pendiente de validación; faltan campos mínimos"
+    return mapping, f"mapeo posicional validado desde {selected.name}"
+
+
+def map_positional_row(source: dict[str, Any], mapping: dict[int, str]) -> dict[str, Any] | None:
+    raw_row = next((value for name, value in source.items() if key(name) == "row"), None)
+    if not isinstance(raw_row, (list, tuple)):
+        return None
+    mapped: dict[str, Any] = {}
+    for position, field in mapping.items():
+        if position < len(raw_row):
+            mapped[field] = raw_row[position]
+    return mapped or None
 
 
 def normalize_commodity(value: Any, filename: str, aliases: dict[str, str]) -> tuple[str, str]:
@@ -255,13 +299,24 @@ def first_text(source: dict[str, Any], *names: str) -> str:
     return text(value_for(source, *names))
 
 
-def process_file(path: Path, aliases: dict[str, str]) -> tuple[list[dict[str, str]], dict[str, Any]]:
+def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[int, str] | None) -> tuple[list[dict[str, str]], dict[str, Any]]:
     source_rows, columns = read_file(path)
     rows: list[dict[str, str]] = []
     dates: list[date] = []
     prices: list[float] = []
     commodities: set[str] = set()
+    positional_skipped = 0
     for source in source_rows:
+        has_positional_row = any(key(name) == "row" for name in source)
+        if has_positional_row:
+            if positional_mapping is None:
+                positional_skipped += 1
+                continue
+            mapped_source = map_positional_row(source, positional_mapping)
+            if mapped_source is None:
+                positional_skipped += 1
+                continue
+            source = mapped_source
         market_date = parse_date(value_for(source, "Fecha Declaración", "Fecha Declaracion", "Fecha de Concertación", "Fecha de Concertacion", "Fecha de Entrega", "Fecha Concertación", "Fecha Concertacion", "Fecha"))
         raw_commodity = value_for(source, "Producto", "Grano", "Especie", "Commodity")
         commodity, commodity_note = normalize_commodity(raw_commodity, path.name, aliases)
@@ -295,7 +350,7 @@ def process_file(path: Path, aliases: dict[str, str]) -> tuple[list[dict[str, st
         if price is None:
             row_missing.append("falta precio válido")
         operation = first_text(source, "Operación", "Operacion")
-        payment = first_text(source, "Condición de Pago", "Condicion de Pago", "Pago")
+        payment = first_text(source, "condicion_pago", "Condición de Pago", "Condicion de Pago", "Pago")
         commercial = first_text(source, "Condición comercial", "Condicion comercial", "Condición", "Condicion", "Entrega")
         observation = first_text(source, "Observación", "Observaciones", "Nota", "Notas")
         notes = "; ".join(dict.fromkeys([part for part in [observation, commodity_note] + row_missing if part]))
@@ -316,7 +371,7 @@ def process_file(path: Path, aliases: dict[str, str]) -> tuple[list[dict[str, st
             "procedencia": first_text(source, "Procedencia"),
             "provincia": first_text(source, "Provincia", "Pcia"),
             "localidad": first_text(source, "Localidad"),
-            "zona": first_text(source, "Zona", "Lugar de entrega"),
+            "zona": first_text(source, "Zona", "Lugar de entrega", "lugar_entrega"),
             "precio_puesto_en": first_text(source, "Precio puesto en", "Destino", "Puerto"),
             "operacion": operation,
             "condicion_pago": payment,
@@ -326,7 +381,7 @@ def process_file(path: Path, aliases: dict[str, str]) -> tuple[list[dict[str, st
             "fecha_integracion": date.today().isoformat(),
             "observaciones": notes,
         })
-    return rows, {"read": len(source_rows), "integrated": len(rows), "columns": columns, "commodities": sorted(commodities), "dates": dates, "prices": prices}
+    return rows, {"read": len(source_rows), "integrated": len(rows), "positional_skipped": positional_skipped, "columns": columns, "commodities": sorted(commodities), "dates": dates, "prices": prices}
 
 
 def real_files() -> list[Path]:
@@ -356,16 +411,20 @@ def main() -> int:
         print("No hay datos integrados ni se generan reportes vacíos.")
         return 0
     aliases = read_aliases()
+    positional_mapping, mapping_status = load_positional_mapping()
+    print(f"Mapeo posicional: {mapping_status}")
     all_rows: list[dict[str, str]] = []
     errors = 0
     for path in files:
         try:
-            rows, diagnostics = process_file(path, aliases)
+            rows, diagnostics = process_file(path, aliases, positional_mapping)
             all_rows.extend(rows)
             print(f"Archivo procesado: {path.name}")
             print(f"  Columnas detectadas: {', '.join(diagnostics['columns']) or '(JSON/estructura anidada)'}")
             print(f"  Commodities detectados: {', '.join(diagnostics['commodities']) or 'sin identificar'}")
             print(f"  Filas leídas: {diagnostics['read']}; filas integradas: {diagnostics['integrated']}")
+            if diagnostics["positional_skipped"]:
+                print(f"  Filas Row posicionales omitidas: {diagnostics['positional_skipped']}")
             print(f"  Precio mínimo: {min(diagnostics['prices']):g}" if diagnostics["prices"] else "  Precio mínimo: sin precio válido")
             print(f"  Precio máximo: {max(diagnostics['prices']):g}" if diagnostics["prices"] else "  Precio máximo: sin precio válido")
             print(f"  Fecha mínima: {min(diagnostics['dates']).isoformat()}" if diagnostics["dates"] else "  Fecha mínima: sin fecha válida")
