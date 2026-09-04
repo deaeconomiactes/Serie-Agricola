@@ -16,6 +16,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections import Counter
 from datetime import date, datetime, timedelta
 from html.parser import HTMLParser
 from pathlib import Path
@@ -430,6 +431,181 @@ def compact(value: Any) -> str:
     return re.sub(r"[^a-z0-9]", "", normalize(value))
 
 
+def currency_marker_hits(source: str) -> list[dict[str, str]]:
+    patterns = (
+        ("U$S", r"U\s*\$\s*S"),
+        ("USD", r"\bUSD\b"),
+        ("ARS", r"\bARS\b"),
+        ("pesos", r"\bpesos?\b"),
+        ("dólares", r"\bd[oó]lares?\b"),
+        ("moneda", r"\bmoneda\b"),
+        ("símbolo $", r"(?<![A-Za-z0-9_])\$(?![A-Za-z])"),
+    )
+    hits: list[dict[str, str]] = []
+    for label, pattern in patterns:
+        for match in re.finditer(pattern, source, flags=re.I):
+            context = re.sub(r"\s+", " ", source[max(0, match.start() - 70):match.end() + 100]).strip()
+            hits.append({"marker": label, "context": context})
+            if len(hits) >= 60:
+                return hits
+    return hits
+
+
+def load_local_json(path: Path) -> Any:
+    try:
+        payload: Any = json.loads(path.read_text(encoding="utf-8-sig", errors="replace"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if isinstance(payload, dict) and isinstance(payload.get("d"), str):
+        try:
+            payload["d"] = json.loads(payload["d"])
+        except json.JSONDecodeError:
+            pass
+    return payload
+
+
+def inspect_json_currency(payload: Any) -> dict[str, Any]:
+    named_fields: list[str] = []
+    row_evidence: list[dict[str, str]] = []
+    row_lengths: list[int] = []
+    currency_names = {"moneda", "currency", "codigomoneda", "monedaprecio"}
+
+    def visit(value: Any, path: str = "") -> None:
+        if isinstance(value, dict):
+            for name, child in value.items():
+                child_path = f"{path}.{name}" if path else str(name)
+                if compact(name) in currency_names:
+                    named_fields.append(child_path)
+                if compact(name) == "row" and isinstance(child, list):
+                    row_lengths.append(len(child))
+                    for position, item in enumerate(child):
+                        item_text = str(item or "")
+                        if currency_marker_hits(item_text):
+                            row_evidence.append({"position": str(position), "value": re.sub(r"\s+", " ", item_text).strip()})
+                visit(child, child_path)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                visit(child, f"{path}[{index}]")
+
+    visit(payload)
+    return {"named_fields": unique(named_fields), "row_evidence": row_evidence, "row_lengths": sorted(set(row_lengths))}
+
+
+def load_local_mapping_positions() -> tuple[dict[int, dict[str, str]], str]:
+    paths = (DATA_DIR / "mapeo_getoperaciones_sio.local.json", DATA_DIR / "mapeo_getoperaciones_sio.example.json")
+    for path in paths:
+        if not path.exists():
+            continue
+        try:
+            document = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        raw_mapping = document.get("row_mapping") if isinstance(document, dict) else None
+        if not isinstance(raw_mapping, dict):
+            continue
+        mapping: dict[int, dict[str, str]] = {}
+        for position, specification in raw_mapping.items():
+            try:
+                position_number = int(position)
+            except (TypeError, ValueError):
+                continue
+            if isinstance(specification, str):
+                mapping[position_number] = {"target_field": specification}
+            elif isinstance(specification, dict) and specification.get("target_field"):
+                mapping[position_number] = {key: str(value) for key, value in specification.items() if value is not None}
+        if mapping:
+            return mapping, path.name
+    return {}, "ningún archivo de mapeo"
+
+
+def write_currency_report(reviewed_files: list[str], raw_files: list[Path], scan_results: list[dict[str, Any]], positional: dict[str, Any], mapping_name: str) -> Path:
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    named_fields = sorted({field for result in scan_results for field in result["json"]["named_fields"]})
+    column_names = sorted({column for result in scan_results for column in result["columns"]})
+    all_hits = [hit for result in scan_results for hit in result["hits"]]
+    direct: list[str] = []
+    indirect: list[str] = []
+    absent: list[str] = []
+    if named_fields:
+        direct.append("Campos JSON con nombre de moneda: " + ", ".join(f"`{field}`" for field in named_fields) + ".")
+    else:
+        absent.append("No se encontró un campo JSON con nombre `moneda`, `currency` o equivalente.")
+    if all_hits:
+        markers = Counter(hit["marker"] for hit in all_hits)
+        direct.append("Marcadores textuales encontrados en archivos locales: " + ", ".join(f"{name} ({count})" for name, count in sorted(markers.items())) + ".")
+        direct.append("Los símbolos `$` hallados en HTML/JavaScript también corresponden a selectores jQuery; no se consideran por sí solos evidencia de moneda.")
+        for result in scan_results:
+            for hit in result["hits"][:8]:
+                direct.append(f"`{result['file']}`: `{hit['marker']}` en contexto `{hit['context']}`.")
+    else:
+        absent.append("No se encontraron símbolos ni textos monetarios en los archivos raw/ y el CSV local revisados.")
+    currency_columns = [column for column in column_names if compact(column) in {"moneda", "currency", "codigomoneda", "monedaprecio"}]
+    if currency_columns:
+        direct.append("Columnas HTML/JavaScript relacionadas con moneda: " + ", ".join(f"`{column}`" for column in currency_columns) + ".")
+    else:
+        absent.append("Las columnas `colNames`/`colModel` observadas no contienen una columna separada de moneda.")
+    for result in scan_results:
+        if result["html"] and not result["html_currency"]:
+            absent.append(f"`{result['file']}` no presenta una etiqueta HTML visible de moneda.")
+    if any("moneda" in line.lower() or "embeb" in line.lower() for result in scan_results for line in result["documentation"]):
+        indirect.append("Los reportes locales previos documentan la presencia de texto monetario embebido en el valor original, pero no validan una columna separada.")
+    if positional["currency_rows"]:
+        indirect.append("Los valores de `Row` contienen marcadores monetarios en las posiciones " + ", ".join(positional["currency_positions"]) + "; el mapeo estructural las asocia al precio, no a una columna `moneda`.")
+    if not indirect:
+        indirect.append("No se encontró evidencia indirecta adicional que permita validar la moneda.")
+    unused = ", ".join(str(position) for position in positional["unused_positions"]) or "ninguna"
+    conclusion = "C. Moneda no determinable con los archivos actuales."
+    direct_lines = [f"- {item}" for item in direct] or ["- No se encontró evidencia directa."]
+    absent_lines = [f"- {item}" for item in absent] or ["- No se registraron ausencias específicas."]
+    lines = [
+        "# Reporte de moneda SIO", "", f"Fecha de análisis: {date.today().isoformat()}", "", "## Objetivo", "", "Determinar si la moneda del precio puede recuperarse de forma explícita o validable en la respuesta SIO.", "", "## Fuentes revisadas", "", *[f"- `{path}`" for path in reviewed_files], "", "## Evidencia encontrada", "", "### Evidencia directa", "", *direct_lines, "", "### Evidencia indirecta", "", *[f"- {item}" for item in indirect], "", "### Sin evidencia", "", *absent_lines, "", "## Revisión de posiciones Row", "", f"- Archivo de mapeo revisado: `{mapping_name}`.", f"- Longitudes de Row observadas: {', '.join(str(item) for item in positional['row_lengths']) or 'ninguna'}.", f"- Posiciones con marcadores monetarios: {', '.join(positional['currency_positions']) or 'ninguna'}.", f"- Posiciones Row no utilizadas por el mapeo: {unused}.", "- Se revisaron los valores no utilizados y no apareció una posición adicional identificable como moneda; la posición de precio conserva el texto original.", "", "## Resultado", "", conclusion, "", "La presencia de `U$S` o `$` dentro del valor original del precio no se trata como una moneda separada y validada. No permite por sí sola completar `moneda` ni habilitar comparaciones monetarias.", "", "## Decisión metodológica", "", "- Si la moneda es explícita en un campo respaldado por la respuesta, permitir completar `moneda`.", "- Si la moneda no es explícita, mantener `moneda=Sin especificar`.", "- Si sólo hay evidencia débil o embebida en un valor, no completar moneda automáticamente; marcar observación.", "- No asumir ARS ni USD por tratarse de SIO.", "", "## Impacto en aptitud dashboard", "", "`apto_piloto` puede permanecer en sí porque la muestra tiene fecha, commodity, precio válido, fuente y unidades respaldadas. `apto_dashboard` debe permanecer en no mientras la moneda no quede validada y no exista homogeneidad monetaria. Sin moneda no se deben comparar precios ni variaciones monetarias en el dashboard.", "", "## Próximo paso recomendado", "", "Buscar una exportación manual o respuesta de navegador/DevTools que exponga una columna o metadato de moneda. Si `GetOperaciones` no la devuelve, evaluar otro endpoint o parámetro sólo mediante una prueba controlada y documentada; no hacer paginación masiva ni llamadas desde el dashboard.", "",
+    ]
+    path = DATA_DIR / "reports" / "REPORTE_MONEDA_SIO.md"
+    path.write_text("\n".join(lines), encoding="utf-8")
+    return path
+
+
+def run_currency_analysis() -> int:
+    raw_files = sorted(path for path in DEFAULT_OUTPUT.iterdir() if path.is_file() and path.suffix.lower() in {".html", ".htm", ".json", ".js"}) if DEFAULT_OUTPUT.exists() else []
+    documentation_paths = [
+        DATA_DIR / "reports" / name
+        for name in ("REPORTE_DESCUBRIMIENTO_SIO.md", "REPORTE_ENDPOINT_SIO.md", "REPORTE_MAPEO_GETOPERACIONES_SIO.md", "REPORTE_VALIDACION_MAPEO_SIO.md", "REPORTE_UNIDADES_MONEDA_SIO.md")
+        if (DATA_DIR / "reports" / name).exists()
+    ]
+    processed_path = DATA_DIR / "processed" / "COMMODITIES_SIO_INTEGRADO.csv"
+    reviewed = [str(path.relative_to(ROOT)).replace("\\", "/") for path in raw_files + documentation_paths + ([processed_path] if processed_path.exists() else [])]
+    scan_paths = raw_files + ([processed_path] if processed_path.exists() else [])
+    results: list[dict[str, Any]] = []
+    for path in scan_paths:
+        try:
+            source = path.read_text(encoding="utf-8-sig", errors="replace")
+        except OSError:
+            continue
+        html_evidence = extract_discovery_evidence(source.encode("utf-8"), "local://" + path.name) if path.suffix.lower() in {".html", ".htm"} else None
+        payload = load_local_json(path) if path.suffix.lower() == ".json" else None
+        json_evidence = inspect_json_currency(payload)
+        documentation = []
+        for doc_path in documentation_paths:
+            try:
+                documentation.append(doc_path.read_text(encoding="utf-8-sig", errors="replace"))
+            except OSError:
+                pass
+        results.append({"file": str(path.relative_to(ROOT)).replace("\\", "/"), "hits": currency_marker_hits(source) if path in raw_files else [], "columns": html_evidence["columns"] if html_evidence else [], "html": bool(html_evidence), "html_currency": bool(html_evidence and any(compact(column) in {"moneda", "currency", "codigomoneda", "monedaprecio"} for column in html_evidence["columns"])), "json": json_evidence, "documentation": documentation})
+    mapping, mapping_name = load_local_mapping_positions()
+    currency_rows = [item for result in results for item in result["json"]["row_evidence"]]
+    row_lengths = sorted({length for result in results for length in result["json"]["row_lengths"]})
+    mapped_positions = set(mapping)
+    currency_positions = sorted({item["position"] for item in currency_rows}, key=int)
+    positional = {"currency_rows": currency_rows, "currency_positions": currency_positions, "row_lengths": row_lengths, "unused_positions": sorted(set(range(max(row_lengths or [0]))) - mapped_positions)}
+    report = write_currency_report(reviewed, raw_files, results, positional, mapping_name)
+    print("Análisis de moneda SIO finalizado en modo local; no se realizaron requests web.")
+    print(f"Archivos raw revisados: {len(raw_files)}; marcadores monetarios: {len(currency_rows)} valores Row con evidencia.")
+    print(f"Posiciones Row con marcadores: {', '.join(currency_positions) or 'ninguna'}; posiciones no utilizadas: {', '.join(str(item) for item in positional['unused_positions']) or 'ninguna'}.")
+    print("Resultado: C. Moneda no determinable con los archivos actuales.")
+    print(f"Reporte generado: {report}")
+    return 0
+
+
 def response_record_count(payload: Any) -> tuple[int, bool]:
     if isinstance(payload, list):
         return len(payload), True
@@ -566,6 +742,7 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--allow-web", action="store_true")
     parser.add_argument("--discover-web", action="store_true", help="analizar HTML y scripts públicos de forma controlada")
+    parser.add_argument("--analyze-currency", action="store_true", help="analizar evidencia local de moneda sin usar la red")
     parser.add_argument("--test-endpoint", choices=["get-operaciones"], help="probar un único endpoint candidato documentado")
     parser.add_argument("--manual-urls", action="store_true", help="mostrar URLs para consulta manual sin llamar a la red")
     parser.add_argument("--days-back", default="30")
@@ -578,6 +755,8 @@ def main() -> int:
     args = parser.parse_args()
     if args.max_requests < 1:
         raise SystemExit("--max-requests debe ser mayor que cero")
+    if args.analyze_currency and any((args.allow_web, args.dry_run, args.discover_web, args.test_endpoint, args.manual_urls)):
+        raise SystemExit("Use --analyze-currency como modo independiente; sólo analiza archivos locales")
     if args.allow_web and args.manual_urls:
         raise SystemExit("Use --allow-web o --manual-urls, no ambos")
     if args.discover_web and (args.dry_run or args.allow_web or args.manual_urls):
@@ -586,6 +765,8 @@ def main() -> int:
         raise SystemExit("--test-endpoint requiere --allow-web")
     if args.test_endpoint and (args.dry_run or args.discover_web or args.manual_urls):
         raise SystemExit("Use --test-endpoint como modo independiente con --allow-web")
+    if args.analyze_currency:
+        return run_currency_analysis()
     catalog = read_catalog()
     products = parse_products(args.products, catalog)
     start, end = date_range(args)

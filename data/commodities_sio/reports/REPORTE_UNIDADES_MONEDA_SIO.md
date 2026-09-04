@@ -19,6 +19,7 @@ El CSV conserva los campos normalizados y los metadatos de procedencia relevante
 - `precio_total`: reservado para un monto total explícito; no se completa por cálculo.
 - `precio_tipo_original`: tipo o texto original asociado al precio.
 - `campo_precio_original` y `valor_precio_original`: etiqueta y valor originales.
+- `campo_moneda_original` y `valor_moneda_original`: etiqueta y valor originales si la fuente expone un campo de moneda.
 - `unidad`: unidad del precio cuando surge de la etiqueta fuente.
 - `volumen` y `volumen_unidad`: cantidad y unidad de volumen.
 - `campo_volumen_original`: etiqueta original del volumen.

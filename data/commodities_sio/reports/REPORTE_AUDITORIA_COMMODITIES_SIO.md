@@ -4,6 +4,11 @@ Fecha de auditoría: 2026-09-04
 
 ## Resumen
 
+- Moneda explícitamente informada: no (0/15).
+- Moneda inferida: no (0/15).
+- Moneda sin especificar: sí (15/15).
+- Porcentaje de filas con moneda válida/explícita: 0.0%.
+- Conteo por moneda explícita: ninguna.
 - Muestra piloto de una sola página GetOperaciones: sí; filas piloto: 15.
 - Filas totales: 15.
 - Columnas mapeadas con dato: fecha, operacion, tipo_precio, commodity, volumen, procedencia, precio, zona, condicion_pago.
@@ -23,6 +28,12 @@ Fecha de auditoría: 2026-09-04
 - apto_piloto: sí (15/15 filas).
 - apto_dashboard: no (0/15 filas).
 - Series utilizables para dashboard analítico futuro: 0 de 5.
+
+## Moneda y comparabilidad
+
+Moneda explícitamente informada: no (0/15 filas). Moneda inferida: no (0/15 filas). Moneda sin especificar: sí (15/15 filas).
+Comparabilidad monetaria: no.
+Los valores no deben compararse ni usarse para variaciones monetarias mientras la moneda permanezca embebida o no informada explícitamente. La auditoría conserva `moneda=Sin especificar` y no habilita `apto_dashboard`.
 
 ## Actualidad de la información
 

@@ -24,6 +24,14 @@ La exploración inicial usa los últimos 30 días. Las consultas se dividen en v
 python .\explorar_sio_granos.py --dry-run --days-back 30 --products soja,maiz,trigo,girasol,sorgo
 ```
 
+Para analizar la evidencia local de moneda sin hacer requests web:
+
+```powershell
+python .\explorar_sio_granos.py --analyze-currency
+```
+
+Este modo revisa HTML, JSON, JavaScript y CSV ya existentes, incluyendo columnas y posiciones `Row`; no hace requests web, no integra el dashboard y sirve para decidir si la muestra piloto puede avanzar a análisis.
+
 3. Si la automatización aún no está validada, generar URLs para consulta/descarga manual:
 
 ```powershell

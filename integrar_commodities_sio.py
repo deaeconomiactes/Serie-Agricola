@@ -22,7 +22,7 @@ MAPPING_EXAMPLE_PATH = ROOT / "data" / "commodities_sio" / "mapeo_getoperaciones
 OUTPUT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_INTEGRADO.csv"
 OUTPUT_COLUMNS = [
     "fecha", "año", "mes", "commodity", "fuente", "mercado", "tipo_precio",
-    "precio_tipo_original", "precio_unidad", "precio_total", "campo_precio_original", "valor_precio_original", "moneda", "unidad", "precio", "volumen", "volumen_unidad", "campo_volumen_original", "procedencia",
+    "precio_tipo_original", "precio_unidad", "precio_total", "campo_precio_original", "valor_precio_original", "moneda", "campo_moneda_original", "valor_moneda_original", "unidad", "precio", "volumen", "volumen_unidad", "campo_volumen_original", "procedencia",
     "provincia", "localidad", "zona", "precio_puesto_en", "operacion",
     "condicion_pago", "condicion_comercial", "frecuencia", "archivo_origen",
     "fecha_integracion", "observaciones",
@@ -364,7 +364,10 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
         price_original = text(raw_price)
         price_label = text(source.get("__source_label_precio")) or detected_price_field
         price_type_original = first_text(source, "precio_tipo_original", "Precio tipo original", "Precio")
-        moneda = first_text(source, "Moneda", "Currency")
+        raw_currency, detected_currency_field = value_with_field(source, "Moneda", "Currency", "Código moneda", "Codigo moneda")
+        moneda = text(raw_currency)
+        currency_original = text(raw_currency)
+        currency_label = detected_currency_field
         source_unit = first_text(source, "Unidad", "Unit")
         explicit_price_unit = explicit_unit_from_label(price_label, text(source.get("__unit_value_unidad")))
         unidad = source_unit or explicit_price_unit
@@ -380,7 +383,7 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
         row_missing: list[str] = []
         if not moneda:
             moneda = "Sin especificar"
-            row_missing.append("moneda sin especificar; no se infiere del valor original")
+            row_missing.append("moneda no informada explícitamente en endpoint GetOperaciones; no se infiere del valor original")
         if not unidad:
             unidad = "Sin especificar"
             row_missing.append("falta unidad")
@@ -412,6 +415,8 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
             "campo_precio_original": price_label or "Sin especificar",
             "valor_precio_original": price_original,
             "moneda": moneda,
+            "campo_moneda_original": currency_label or "Sin especificar",
+            "valor_moneda_original": currency_original,
             "unidad": unidad,
             "precio": "" if price is None else f"{price:g}",
             "volumen": volumen,
