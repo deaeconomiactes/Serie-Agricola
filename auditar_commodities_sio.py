@@ -13,6 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 PROCESSED_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_INTEGRADO.csv"
 REPORT_DIR = ROOT / "data" / "commodities_sio" / "reports"
+PAGINATED_REPORT_PATH = REPORT_DIR / "REPORTE_MUESTRA_PAGINADA_SIO.md"
 REPORTS = {
     "report": REPORT_DIR / "REPORTE_AUDITORIA_COMMODITIES_SIO.md",
     "coverage": REPORT_DIR / "RESUMEN_COBERTURA_COMMODITIES_SIO.csv",
@@ -120,6 +121,35 @@ def markdown_table(headers: list[str], rows: list[list[str]]) -> str:
     return "\n".join(lines)
 
 
+def format_counts(counts: Counter[str]) -> str:
+    return ", ".join(f"{name or 'sin dato'}={count}" for name, count in sorted(counts.items())) or "sin dato"
+
+
+def update_paginated_audit_report(rows: list[dict[str, str]]) -> None:
+    if not PAGINATED_REPORT_PATH.exists():
+        return
+    pages = sorted({value(row, "pagina_origen") for row in rows if value(row, "pagina_origen")}, key=lambda item: int(item))
+    sample_page_count = max((int(value(row, "muestra_paginas")) for row in rows if value(row, "muestra_paginas").isdigit()), default=len(pages))
+    records_by_page = Counter(value(row, "pagina_origen") for row in rows if value(row, "pagina_origen"))
+    ids = [value(row, "id_operacion_sio") for row in rows if value(row, "id_operacion_sio")]
+    duplicate_ids = sum(count - 1 for count in Counter(ids).values() if count > 1)
+    composite_keys = [(value(row, "fecha"), value(row, "commodity"), value(row, "precio"), value(row, "moneda"), value(row, "unidad"), value(row, "volumen"), value(row, "lugar_entrega"), value(row, "tipo_precio")) for row in rows if not value(row, "id_operacion_sio")]
+    duplicate_composites = sum(count - 1 for count in Counter(composite_keys).values() if count > 1)
+    currencies = display_values(rows, "moneda")
+    units = display_values(rows, "unidad")
+    prices_by_currency = Counter(value(row, "moneda") for row in rows if parse_price(value(row, "precio")) is not None and value(row, "moneda") != "Sin especificar")
+    pilot_statuses = Counter(value(row, "apto_piloto") for row in rows)
+    dashboard_statuses = Counter(value(row, "apto_dashboard") for row in rows)
+    dates = [parse_date(value(row, "fecha")) for row in rows]
+    dates = [item for item in dates if item]
+    result_section = "\n".join([
+        "## Resultado de auditoría", "", f"- Commodities: {', '.join(sorted({value(row, 'commodity') for row in rows if value(row, 'commodity')})) or 'ninguno'}.", f"- Rango de fechas: {min(dates).isoformat() if dates else 'sin fecha válida'} a {max(dates).isoformat() if dates else 'sin fecha válida'}.", f"- Monedas: {', '.join(currencies) or 'ninguna'}; mezcla ARS/USD: {'sí' if {'ARS', 'USD'}.issubset(set(currencies)) else 'no'}.", f"- Unidades: {', '.join(units) or 'ninguna'}.", f"- Precios válidos por moneda: {', '.join(f'{name}={count}' for name, count in sorted(prices_by_currency.items())) or 'ninguno'}.", f"- Volumen válido: {sum(1 for row in rows if parse_price(value(row, 'volumen')) is not None)}/{len(rows)}.", f"- Procedencias con dato: {coverage_count(rows, 'procedencia')}; lugares de entrega con dato: {coverage_count(rows, 'lugar_entrega')}; condiciones de pago con dato: {coverage_count(rows, 'condicion_pago')}.", f"- Páginas solicitadas/procesadas: {sample_page_count}; páginas con filas finales: {', '.join(pages) or 'no identificadas'}; registros finales por página: {', '.join(f'{page}={records_by_page[page]}' for page in pages) or 'no identificados'}.", f"- Duplicados por id_operacion_sio en CSV final: {duplicate_ids}; duplicados compuestos sin ID: {duplicate_composites}.", f"- apto_piloto: {format_counts(pilot_statuses)}.", f"- apto_dashboard: {format_counts(dashboard_statuses)}.", "- Comparabilidad conjunta ARS/USD: no; deben mantenerse series separadas por moneda.", "",
+    ])
+    report = PAGINATED_REPORT_PATH.read_text(encoding="utf-8")
+    report = re.sub(r"## Resultado de auditoría\n.*?(?=\n## Riesgos)", result_section.rstrip(), report, flags=re.S)
+    PAGINATED_REPORT_PATH.write_text(report, encoding="utf-8")
+
+
 def main() -> int:
     rows = read_rows()
     if not rows:
@@ -220,6 +250,24 @@ def main() -> int:
         coverage.append({"nivel": "commodity", "commodity": commodity, "año": "", "mes": "", "registros": str(len(dates))})
         coverage.append({"nivel": "commodity_ultimos_30_dias", "commodity": commodity, "año": "", "mes": "", "registros": str(count_30)})
 
+    split_series: list[dict[str, str]] = []
+    for commodity in commodities:
+        commodity_rows = [row for row in rows if (value(row, "commodity") or "Sin especificar") == commodity]
+        currency_groups = sorted({value(row, "moneda") or "Sin especificar" for row in commodity_rows})
+        for currency in currency_groups:
+            subset = [row for row in commodity_rows if (value(row, "moneda") or "Sin especificar") == currency]
+            dates = [parsed for parsed in (parse_date(value(row, "fecha")) for row in subset) if parsed]
+            prices = [parsed for parsed in (parse_price(value(row, "precio")) for row in subset) if parsed is not None]
+            units = display_values(subset, "unidad")
+            types = display_values(subset, "tipo_precio")
+            frequencies = display_values(subset, "frecuencia")
+            statuses = [dashboard_status(row, all_currency_values, all_unit_values) for row in subset]
+            status_value = "si" if statuses and all(item == "si" for item in statuses) else "parcial_piloto" if statuses and all(item == "parcial_piloto" for item in statuses) else "no"
+            quality = "Alta" if len(prices) >= 5 and len(dates) >= 5 and len(units) == 1 else "Media" if len(prices) >= 2 and len(dates) >= 2 else "Baja"
+            usable = "Sí" if len(prices) >= 2 and len(dates) >= 2 and len(units) == 1 and len(types) == 1 and status_value == "si" else "No"
+            split_series.append({"commodity": commodity, "moneda": currency if currency != "Sin especificar" else "", "unidad": "|".join(units), "tipo_precio": "|".join(types), "frecuencia": "|".join(frequencies) or "Sin especificar", "registros": str(len(subset)), "fechas_validas": str(len(dates)), "precios_validos": str(len(prices)), "precio_unidad_con_dato": str(coverage_count(subset, "precio_unidad")), "precio_total_con_dato": str(coverage_count(subset, "precio_total")), "campo_precio_original": "|".join(display_values(subset, "campo_precio_original")), "campo_volumen_original": "|".join(display_values(subset, "campo_volumen_original")), "apto_piloto": "Sí" if all(value(row, "apto_piloto").lower() in {"sí", "si"} for row in subset) else "No", "apto_dashboard": status_value, "calidad_serie": quality, "aptitud_dashboard_analitico": usable, "motivo": "" if usable == "Sí" else "Serie separada por moneda; requiere mayor cobertura y validación antes de publicar."})
+    series = split_series
+
     coverage_fields = ["nivel", "commodity", "año", "mes", "registros"]
     write_csv(REPORTS["coverage"], coverage_fields, coverage)
     write_csv(REPORTS["commodities"], list(summary[0].keys()), summary)
@@ -296,6 +344,7 @@ def main() -> int:
     embedded_section = "## Moneda embebida en campo de precio\n\n`Row[10]` contiene el campo original de precio. El símbolo monetario se extrae sólo si aparece explícitamente: `U$S`/`US$`/`USD` se normaliza a `USD`, y `$` sin esos marcadores se normaliza a `ARS`. No se infiere moneda por contexto y se conserva `precio_original_texto`."
     report_text = report_text.replace("## Moneda y comparabilidad", embedded_section + "\n\n## Moneda y comparabilidad", 1)
     REPORTS["report"].write_text(report_text, encoding="utf-8")
+    update_paginated_audit_report(rows)
     print(f"Auditoría SIO finalizada: {len(rows)} filas, {len(commodities)} commodity(s).")
     print(f"Fecha máxima: {max_date.isoformat() if max_date else 'sin fecha válida'}; precios válidos: {len(all_prices)}; faltantes: {missing_price}.")
     for path in REPORTS.values():

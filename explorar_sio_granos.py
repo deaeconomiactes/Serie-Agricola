@@ -30,6 +30,7 @@ CATALOG_PATH = DATA_DIR / "catalogo_productos_sio.csv"
 DEFAULT_OUTPUT = DATA_DIR / "raw"
 REPORT_DIR = DATA_DIR / "reports"
 ENDPOINT_REPORT_PATH = REPORT_DIR / "REPORTE_ENDPOINT_SIO.md"
+PAGINATED_REPORT_PATH = REPORT_DIR / "REPORTE_MUESTRA_PAGINADA_SIO.md"
 USER_AGENT = "Serie-Agricola/commodities-sio-explorer (+consulta-publica)"
 SAFE_MESSAGE = (
     "Modo seguro: no se realizan llamadas externas. Use --dry-run para ver la "
@@ -688,6 +689,101 @@ def save_endpoint_response(output_dir: Path, content: bytes, content_type: str) 
     return path
 
 
+def save_sample_page_response(output_dir: Path, page: int, content: bytes) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    path = output_dir / f"SIO_GetOperaciones_page_{page}_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.json"
+    path.write_bytes(content)
+    return path
+
+
+def response_item_ids(content: bytes) -> list[str]:
+    payload, error = decode_json_response(content)
+    if error:
+        return []
+    if isinstance(payload, dict) and isinstance(payload.get("d"), dict):
+        payload = payload["d"]
+    if isinstance(payload, dict) and isinstance(payload.get("Items"), list):
+        return [str(item.get("ID")) for item in payload["Items"] if isinstance(item, dict) and item.get("ID") is not None]
+    return []
+
+
+def write_sample_pages_report(command: str, endpoint: str, pages: int, page_size: int, max_requests: int, requests: list[dict[str, Any]]) -> Path:
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "# Reporte de muestra paginada SIO", "", "## Objetivo", "", "Validar una extracción limitada de varias páginas del endpoint GetOperaciones.", "", "## Comando ejecutado", "", f"`{command}`", "", "## Parámetros", "", f"- pages: {pages}", f"- page_size: {page_size}", f"- max_requests: {max_requests}", f"- endpoint: `{endpoint}`", "- payload base: `{\"pPageSize\": page_size, \"pCurrentPage\": pagina}`", "", "## Requests realizados", "", "| Página | Status code | Content-Type | Tamaño respuesta | Registros detectados | Archivo raw | Observaciones |", "| --- | --- | --- | ---: | ---: | --- | --- |",
+    ]
+    if requests:
+        for item in requests:
+            lines.append(f"| {item['page']} | {item['status'] or 'sin respuesta'} | {item['content_type']} | {item['size']} bytes | {item['records']} | {item['saved'] or 'no guardado'} | {item['observations']} |")
+    else:
+        lines.append("| — | — | — | 0 bytes | 0 | no | No se realizaron requests. |")
+    lines.extend([
+        "", "## Resultado de integración", "", "Pendiente de ejecutar `integrar_commodities_sio.py`.", "", "## Resultado de auditoría", "", "Pendiente de ejecutar `auditar_commodities_sio.py`.", "", "## Riesgos", "", "- La extracción sigue siendo una muestra limitada y no representa toda la serie histórica.", "- No publicar todavía en el dashboard ni mezclar monedas.", "- El endpoint puede no cubrir todos los productos ni todo el mercado.", "", "## Recomendación próxima", "", "Si la muestra es consistente, preparar extracción controlada de N páginas con límite configurable y auditoría previa. Si hay duplicados o inconsistencias, ajustar deduplicación y mapeo antes de ampliar.", "",
+    ])
+    report_text = "\n".join(lines)
+    if any("contenido idéntico" in str(item.get("observations", "")) for item in requests):
+        report_text = report_text.replace("Si la muestra es consistente, preparar extracción controlada de N páginas con límite configurable y auditoría previa. Si hay duplicados o inconsistencias, ajustar deduplicación y mapeo antes de ampliar.", "Las páginas 2/3 devolvieron contenido idéntico a la página anterior y no evidenciaron el efecto de `pCurrentPage`; no ampliar la extracción hasta validar la paginación real. Mantener la deduplicación exacta y repetir la prueba sólo con un request validado en DevTools.")
+    PAGINATED_REPORT_PATH.write_text(report_text, encoding="utf-8")
+    return PAGINATED_REPORT_PATH
+
+
+def run_sample_pages(args: argparse.Namespace, config: dict[str, Any]) -> int:
+    if args.pages < 1:
+        raise SystemExit("--pages debe ser mayor que cero")
+    if args.pages > 5:
+        raise SystemExit("--pages no puede superar 5 en la muestra controlada")
+    base_url = str(config.get("base_url", "")).strip()
+    endpoint = endpoint_url(base_url, TEST_ENDPOINT_PATH) if base_url else TEST_ENDPOINT_PATH
+    requests: list[dict[str, Any]] = []
+    output_dir = Path(args.output_dir)
+    request_limit = min(args.pages, args.max_requests)
+    for page in range(1, request_limit + 1):
+        payload = {"pPageSize": args.page_size, "pCurrentPage": page}
+        item: dict[str, Any] = {"page": page, "status": "", "content_type": "no informado", "size": 0, "records": 0, "saved": "", "observations": ""}
+        content = b""
+        if not base_url:
+            item["observations"] = "configuración local SIO sin base_url"
+            requests.append(item)
+            break
+        request = urllib.request.Request(endpoint, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json; charset=utf-8", "Accept": "application/json, text/javascript, */*; q=0.01", "X-Requested-With": "XMLHttpRequest", "User-Agent": USER_AGENT}, method="POST")
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:  # nosec B310: explicit configured endpoint plus --sample-pages and --allow-web
+                content = response.read()
+                item["status"] = response.status
+                item["content_type"] = response.headers.get_content_type()
+                item["size"] = len(content)
+            result = analyze_endpoint_response(content, item["status"], item["content_type"], "")
+            item["records"] = result["record_count"]
+            item["observations"] = "respuesta recibida sin retry"
+            item["ids"] = response_item_ids(content)
+            if args.save_response:
+                item["saved"] = str(save_sample_page_response(output_dir, page, content).relative_to(ROOT)).replace("\\", "/")
+        except urllib.error.HTTPError as exc:
+            content = exc.read()
+            item["status"] = exc.code
+            item["content_type"] = exc.headers.get_content_type() if exc.headers else "no informado"
+            item["size"] = len(content)
+            result = analyze_endpoint_response(content, item["status"], item["content_type"], f"HTTPError: {exc.code}")
+            item["records"] = result["record_count"]
+            item["observations"] = "error HTTP; sin retry"
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            item["observations"] = f"{exc.__class__.__name__}; sin retry"
+        requests.append(item)
+    previous_ids: list[str] = []
+    for item in requests:
+        current_ids = item.get("ids", [])
+        if current_ids and previous_ids and current_ids == previous_ids:
+            item["observations"] += "; contenido idéntico a la página anterior; pCurrentPage no evidenciado por la respuesta"
+        if current_ids:
+            previous_ids = current_ids
+    report = write_sample_pages_report(" ".join(sys.argv), endpoint, args.pages, args.page_size, args.max_requests, requests)
+    print(f"Muestra paginada finalizada: {len(requests)} request(s); máximo solicitado: {args.max_requests}; máximo de páginas permitido: 5.")
+    for item in requests:
+        print(f"Página {item['page']}: status={item['status'] or 'sin respuesta'}; registros={item['records']}; raw={item['saved'] or 'no guardado'}.")
+    print(f"Reporte generado: {report}")
+    return 0
+
+
 def write_endpoint_report(command: str, url: str, payload: dict[str, int], result: dict[str, Any], saved: str) -> Path:
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     report = [
@@ -764,6 +860,7 @@ def main() -> int:
     parser.add_argument("--allow-web", action="store_true")
     parser.add_argument("--discover-web", action="store_true", help="analizar HTML y scripts públicos de forma controlada")
     parser.add_argument("--analyze-currency", action="store_true", help="analizar evidencia local de moneda sin usar la red")
+    parser.add_argument("--sample-pages", action="store_true", help="extraer una muestra limitada de páginas GetOperaciones")
     parser.add_argument("--test-endpoint", choices=["get-operaciones"], help="probar un único endpoint candidato documentado")
     parser.add_argument("--manual-urls", action="store_true", help="mostrar URLs para consulta manual sin llamar a la red")
     parser.add_argument("--days-back", default="30")
@@ -773,11 +870,19 @@ def main() -> int:
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT))
     parser.add_argument("--save-response", action="store_true")
     parser.add_argument("--max-requests", type=int, default=5)
+    parser.add_argument("--pages", type=int, default=3)
+    parser.add_argument("--page-size", type=int, default=15)
     args = parser.parse_args()
     if args.max_requests < 1:
         raise SystemExit("--max-requests debe ser mayor que cero")
     if args.analyze_currency and any((args.allow_web, args.dry_run, args.discover_web, args.test_endpoint, args.manual_urls)):
         raise SystemExit("Use --analyze-currency como modo independiente; sólo analiza archivos locales")
+    if args.sample_pages and not args.allow_web:
+        raise SystemExit("--sample-pages requiere --allow-web")
+    if args.sample_pages and any((args.dry_run, args.discover_web, args.test_endpoint, args.manual_urls, args.analyze_currency)):
+        raise SystemExit("Use --sample-pages como modo independiente con --allow-web")
+    if args.sample_pages and args.page_size < 1:
+        raise SystemExit("--page-size debe ser mayor que cero")
     if args.allow_web and args.manual_urls:
         raise SystemExit("Use --allow-web o --manual-urls, no ambos")
     if args.discover_web and (args.dry_run or args.allow_web or args.manual_urls):
@@ -796,6 +901,8 @@ def main() -> int:
     windows = split_date_range(start, end, max_days)
     endpoints = candidate_endpoints(config)
 
+    if args.sample_pages:
+        return run_sample_pages(args, config)
     if args.discover_web:
         return run_discovery(args, config, endpoints, products, windows)
     if args.test_endpoint:

@@ -1,6 +1,8 @@
 ﻿commodity;moneda;unidad;tipo_precio;frecuencia;registros;fechas_validas;precios_validos;precio_unidad_con_dato;precio_total_con_dato;campo_precio_original;campo_volumen_original;apto_piloto;apto_dashboard;calidad_serie;aptitud_dashboard_analitico;motivo
-CEBADA FORR.;USD;TN;Precio Hecho;Sin especificar;1;1;1;1;0;Precio/TN Monto;Cant. (TN);Sí;parcial_piloto;Baja;No;Se requieren validación de cobertura histórica/paginación y moneda/unidad homogéneas antes de publicar.
-Girasol;USD;TN;Precio Hecho;Sin especificar;1;1;1;1;0;Precio/TN Monto;Cant. (TN);Sí;parcial_piloto;Baja;No;Se requieren validación de cobertura histórica/paginación y moneda/unidad homogéneas antes de publicar.
-Maíz;ARS|USD;TN;Precio Hecho;Sin especificar;4;4;4;4;0;Precio/TN Monto;Cant. (TN);Sí;parcial_piloto;Media;No;Se requieren validación de cobertura histórica/paginación y moneda/unidad homogéneas antes de publicar.
-Soja;ARS|USD;TN;Precio Hecho;Sin especificar;7;7;7;7;0;Precio/TN Monto;Cant. (TN);Sí;parcial_piloto;Media;No;Se requieren validación de cobertura histórica/paginación y moneda/unidad homogéneas antes de publicar.
-TRIGO PAN;ARS;TN;Precio Hecho;Sin especificar;2;2;2;2;0;Precio/TN Monto;Cant. (TN);Sí;parcial_piloto;Media;No;Se requieren validación de cobertura histórica/paginación y moneda/unidad homogéneas antes de publicar.
+CEBADA FORR.;USD;TN;Precio Hecho;Sin especificar;1;1;1;1;0;Precio/TN Monto;Cant. (TN);Sí;parcial_piloto;Baja;No;"Serie separada por moneda; requiere mayor cobertura y validación antes de publicar."
+Girasol;USD;TN;Precio Hecho;Sin especificar;2;2;2;2;0;Precio/TN Monto;Cant. (TN);Sí;parcial_piloto;Media;No;"Serie separada por moneda; requiere mayor cobertura y validación antes de publicar."
+Maíz;ARS;TN;Precio Hecho;Sin especificar;5;5;5;5;0;Precio/TN Monto;Cant. (TN);Sí;parcial_piloto;Alta;No;"Serie separada por moneda; requiere mayor cobertura y validación antes de publicar."
+Maíz;USD;TN;Precio Hecho;Sin especificar;4;4;4;4;0;Precio/TN Monto;Cant. (TN);Sí;parcial_piloto;Media;No;"Serie separada por moneda; requiere mayor cobertura y validación antes de publicar."
+Soja;ARS;TN;Precio Hecho;Sin especificar;8;8;8;8;0;Precio/TN Monto;Cant. (TN);Sí;parcial_piloto;Alta;No;"Serie separada por moneda; requiere mayor cobertura y validación antes de publicar."
+Soja;USD;TN;Precio Hecho;Sin especificar;7;7;7;7;0;Precio/TN Monto;Cant. (TN);Sí;parcial_piloto;Alta;No;"Serie separada por moneda; requiere mayor cobertura y validación antes de publicar."
+TRIGO PAN;ARS;TN;Precio Hecho;Sin especificar;3;3;3;3;0;Precio/TN Monto;Cant. (TN);Sí;parcial_piloto;Media;No;"Serie separada por moneda; requiere mayor cobertura y validación antes de publicar."

@@ -32,6 +32,14 @@ python .\explorar_sio_granos.py --analyze-currency
 
 Este modo revisa HTML, JSON, JavaScript y CSV ya existentes, incluyendo columnas y posiciones `Row`; no hace requests web, no integra el dashboard y sirve para decidir si la muestra piloto puede avanzar a análisis.
 
+Para extraer una muestra paginada limitada del endpoint validado:
+
+```powershell
+python .\explorar_sio_granos.py --sample-pages --allow-web --save-response --pages 3 --page-size 15 --max-requests 3
+```
+
+Este modo no es scraping masivo: limita páginas y requests, conserva el `raw` fuera del repo, no integra al dashboard y requiere auditoría antes de ampliar la extracción.
+
 3. Si la automatización aún no está validada, generar URLs para consulta/descarga manual:
 
 ```powershell
