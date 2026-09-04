@@ -6,21 +6,100 @@
     "data/commodities_sio/reports/REPORTE_MAPEO_GETOPERACIONES_SIO.md"
   ],
   "row_mapping": {
-    "0": "id",
-    "1": "fecha",
-    "2": "numero_operacion",
-    "3": "operacion",
-    "4": "tipo_operacion",
-    "5": "tipo_precio",
-    "6": "commodity",
-    "7": "volumen",
-    "8": "calidad",
-    "9": "procedencia",
-    "10": "precio",
-    "11": "lugar_entrega",
-    "12": "fecha_entrega",
-    "13": "condicion_pago",
-    "14": "fuera_de_termino"
+    "0": {
+      "source_label": "ID",
+      "target_field": "id",
+      "confidence": "alta",
+      "notes": "Identificador visible de operación; no es una medida de precio."
+    },
+    "1": {
+      "source_label": "Fecha Concertación",
+      "target_field": "fecha",
+      "confidence": "alta",
+      "notes": "Fecha de concertación observada en colNames."
+    },
+    "2": {
+      "source_label": "Nro. Operación",
+      "target_field": "numero_operacion",
+      "confidence": "alta",
+      "notes": "Identificador operativo visible."
+    },
+    "3": {
+      "source_label": "Operación",
+      "target_field": "operacion",
+      "confidence": "alta",
+      "notes": "Campo operativo de la grilla."
+    },
+    "4": {
+      "source_label": "Tipo",
+      "target_field": "tipo_operacion",
+      "confidence": "alta",
+      "notes": "Tipo de operación observado en la grilla."
+    },
+    "5": {
+      "source_label": "Precio",
+      "target_field": "precio_tipo_original",
+      "confidence": "media",
+      "notes": "Los valores observados son Precio Hecho; no se trata como monto numérico."
+    },
+    "6": {
+      "source_label": "Producto",
+      "target_field": "commodity",
+      "confidence": "alta",
+      "notes": "Producto de la operación."
+    },
+    "7": {
+      "source_label": "Cant. (TN)",
+      "target_field": "volumen",
+      "unit_field": "volumen_unidad",
+      "unit_value_if_label_matches": "TN",
+      "confidence": "alta",
+      "notes": "Unidad respaldada por etiqueta de columna."
+    },
+    "8": {
+      "source_label": "Calidad",
+      "target_field": "calidad",
+      "confidence": "alta",
+      "notes": "Campo de calidad visible."
+    },
+    "9": {
+      "source_label": "Procedencia Pcia./LOCALID.",
+      "target_field": "procedencia",
+      "confidence": "alta",
+      "notes": "Provincia/localidad combinadas en la respuesta."
+    },
+    "10": {
+      "source_label": "Precio/TN Monto",
+      "target_field": "precio",
+      "unit_field": "unidad",
+      "unit_value_if_label_matches": "TN",
+      "confidence": "alta",
+      "notes": "El rótulo explicita Precio/TN; conservar también el valor original y no inferir moneda."
+    },
+    "11": {
+      "source_label": "Lugar Entrega",
+      "target_field": "lugar_entrega",
+      "confidence": "alta",
+      "notes": "Destino/lugar de entrega; no equivale automáticamente a precio puesto en."
+    },
+    "12": {
+      "source_label": "Fecha Entr. DESDE/HASTA",
+      "target_field": "fecha_entrega",
+      "confidence": "alta",
+      "notes": "Rango de entrega, distinto de fecha de concertación."
+    },
+    "13": {
+      "source_label": "Condición Pago",
+      "target_field": "condicion_pago",
+      "confidence": "alta",
+      "notes": "Condición de pago visible."
+    },
+    "14": {
+      "source_label": "Fuera de Termino",
+      "target_field": "fuera_de_termino",
+      "confidence": "alta",
+      "notes": "Indicador booleano textual."
+    }
   },
-  "notes": "Las posiciones reflejan la configuración local de la grilla observada, pero deben validarse antes de cambiar mapping_status a validado. No completar posiciones por suposición."
+  "notes": "Completar sólo con posiciones validadas contra grilla/JSON real. Este ejemplo permanece pendiente_validacion y no habilita integración posicional."
 }

@@ -1,34 +1,19 @@
 ﻿fila;tipo;commodity;fecha;precio;detalle
 2;moneda faltante;Soja;2026-09-04;377;Completar moneda antes de usar la serie analíticamente.
-2;unidad faltante;Soja;2026-09-04;377;Completar unidad antes de usar la serie analíticamente.
 3;moneda faltante;Maíz;2026-09-04;286000;Completar moneda antes de usar la serie analíticamente.
-3;unidad faltante;Maíz;2026-09-04;286000;Completar unidad antes de usar la serie analíticamente.
 4;moneda faltante;Soja;2026-09-04;552720;Completar moneda antes de usar la serie analíticamente.
-4;unidad faltante;Soja;2026-09-04;552720;Completar unidad antes de usar la serie analíticamente.
 5;moneda faltante;Maíz;2026-09-04;180;Completar moneda antes de usar la serie analíticamente.
-5;unidad faltante;Maíz;2026-09-04;180;Completar unidad antes de usar la serie analíticamente.
 6;moneda faltante;Maíz;2026-09-04;190;Completar moneda antes de usar la serie analíticamente.
-6;unidad faltante;Maíz;2026-09-04;190;Completar unidad antes de usar la serie analíticamente.
 7;moneda faltante;Girasol;2026-09-04;400;Completar moneda antes de usar la serie analíticamente.
-7;unidad faltante;Girasol;2026-09-04;400;Completar unidad antes de usar la serie analíticamente.
 8;moneda faltante;TRIGO PAN;2026-09-04;340000;Completar moneda antes de usar la serie analíticamente.
-8;unidad faltante;TRIGO PAN;2026-09-04;340000;Completar unidad antes de usar la serie analíticamente.
 9;moneda faltante;Soja;2026-09-04;560000;Completar moneda antes de usar la serie analíticamente.
-9;unidad faltante;Soja;2026-09-04;560000;Completar unidad antes de usar la serie analíticamente.
 10;moneda faltante;Soja;2026-09-04;360;Completar moneda antes de usar la serie analíticamente.
-10;unidad faltante;Soja;2026-09-04;360;Completar unidad antes de usar la serie analíticamente.
 11;moneda faltante;Soja;2026-09-04;565000;Completar moneda antes de usar la serie analíticamente.
-11;unidad faltante;Soja;2026-09-04;565000;Completar unidad antes de usar la serie analíticamente.
 12;moneda faltante;CEBADA FORR.;2026-09-04;215.6;Completar moneda antes de usar la serie analíticamente.
-12;unidad faltante;CEBADA FORR.;2026-09-04;215.6;Completar unidad antes de usar la serie analíticamente.
 13;moneda faltante;Soja;2026-09-04;546056;Completar moneda antes de usar la serie analíticamente.
-13;unidad faltante;Soja;2026-09-04;546056;Completar unidad antes de usar la serie analíticamente.
 14;moneda faltante;TRIGO PAN;2026-09-04;335854;Completar moneda antes de usar la serie analíticamente.
-14;unidad faltante;TRIGO PAN;2026-09-04;335854;Completar unidad antes de usar la serie analíticamente.
 15;moneda faltante;Soja;2026-09-04;560000;Completar moneda antes de usar la serie analíticamente.
-15;unidad faltante;Soja;2026-09-04;560000;Completar unidad antes de usar la serie analíticamente.
 16;moneda faltante;Maíz;2026-09-04;202;Completar moneda antes de usar la serie analíticamente.
-16;unidad faltante;Maíz;2026-09-04;202;Completar unidad antes de usar la serie analíticamente.
 ;posible duplicado;Soja;2026-09-04;;La clave fecha/commodity/tipo/moneda/unidad/mercado aparece 7 veces.
 ;posible duplicado;Maíz;2026-09-04;;La clave fecha/commodity/tipo/moneda/unidad/mercado aparece 4 veces.
 ;posible duplicado;TRIGO PAN;2026-09-04;;La clave fecha/commodity/tipo/moneda/unidad/mercado aparece 2 veces.

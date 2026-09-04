@@ -22,7 +22,7 @@ MAPPING_EXAMPLE_PATH = ROOT / "data" / "commodities_sio" / "mapeo_getoperaciones
 OUTPUT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_INTEGRADO.csv"
 OUTPUT_COLUMNS = [
     "fecha", "año", "mes", "commodity", "fuente", "mercado", "tipo_precio",
-    "moneda", "unidad", "precio", "volumen", "volumen_unidad", "procedencia",
+    "precio_tipo_original", "precio_unidad", "precio_total", "campo_precio_original", "valor_precio_original", "moneda", "unidad", "precio", "volumen", "volumen_unidad", "campo_volumen_original", "procedencia",
     "provincia", "localidad", "zona", "precio_puesto_en", "operacion",
     "condicion_pago", "condicion_comercial", "frecuencia", "archivo_origen",
     "fecha_integracion", "observaciones",
@@ -47,7 +47,7 @@ def key(value: Any) -> str:
 def text(value: Any) -> str:
     if value is None:
         return ""
-    result = str(value).strip()
+    result = str(value).replace("\r", "").strip()
     return "" if result.lower() in {"nan", "nat", "none"} else result
 
 
@@ -99,7 +99,7 @@ def read_aliases() -> dict[str, str]:
     return aliases
 
 
-def load_positional_mapping() -> tuple[dict[int, str] | None, str]:
+def load_positional_mapping() -> tuple[dict[int, dict[str, Any]] | None, str]:
     """Carga sólo un mapeo explícitamente validado y respaldado por evidencia."""
 
     selected = next((path for path in (MAPPING_LOCAL_PATH, MAPPING_EXAMPLE_PATH) if path.exists()), None)
@@ -117,27 +117,39 @@ def load_positional_mapping() -> tuple[dict[int, str] | None, str]:
     raw_mapping = document.get("row_mapping")
     if not documented_evidence or not isinstance(raw_mapping, dict):
         return None, "mapeo posicional SIO pendiente de validación; falta evidencia documentada"
-    mapping: dict[int, str] = {}
+    mapping: dict[int, dict[str, Any]] = {}
     for position, field in raw_mapping.items():
         try:
             position_number = int(position)
         except (TypeError, ValueError):
             continue
-        if position_number >= 0 and isinstance(field, str) and field.strip():
-            mapping[position_number] = field.strip()
-    if not mapping or not any(key(field) in {"fecha", "producto", "commodity", "precio"} for field in mapping.values()):
+        if position_number < 0:
+            continue
+        if isinstance(field, str) and field.strip():
+            mapping[position_number] = {"target_field": field.strip()}
+        elif isinstance(field, dict) and isinstance(field.get("target_field"), str) and field["target_field"].strip():
+            mapping[position_number] = dict(field)
+    if not mapping or not any(key(spec.get("target_field")) in {"fecha", "producto", "commodity", "precio"} for spec in mapping.values()):
         return None, "mapeo posicional SIO pendiente de validación; faltan campos mínimos"
     return mapping, f"mapeo posicional validado desde {selected.name}"
 
 
-def map_positional_row(source: dict[str, Any], mapping: dict[int, str]) -> dict[str, Any] | None:
+def map_positional_row(source: dict[str, Any], mapping: dict[int, dict[str, Any]]) -> dict[str, Any] | None:
     raw_row = next((value for name, value in source.items() if key(name) == "row"), None)
     if not isinstance(raw_row, (list, tuple)):
         return None
     mapped: dict[str, Any] = {}
-    for position, field in mapping.items():
+    for position, specification in mapping.items():
         if position < len(raw_row):
+            field = specification["target_field"].strip()
             mapped[field] = raw_row[position]
+            source_label = text(specification.get("source_label"))
+            if source_label:
+                mapped[f"__source_label_{field}"] = source_label
+            unit_field = text(specification.get("unit_field"))
+            unit_value = text(specification.get("unit_value_if_label_matches"))
+            if unit_field and unit_value and source_label:
+                mapped[f"__unit_value_{unit_field}"] = unit_value
     return mapped or None
 
 
@@ -159,6 +171,23 @@ def value_for(row: dict[str, Any], *names: str) -> Any:
     for name in names:
         if key(name) in normalized:
             return normalized[key(name)]
+    return ""
+
+
+def value_with_field(row: dict[str, Any], *names: str) -> tuple[Any, str]:
+    normalized = {key(name): (value, str(name)) for name, value in row.items()}
+    for name in names:
+        if key(name) in normalized:
+            return normalized[key(name)]
+    return "", ""
+
+
+def explicit_unit_from_label(label: str, unit_value: str = "") -> str:
+    if unit_value:
+        return unit_value
+    normalized = key(label)
+    if "preciotn" in normalized or ("preciopor" in normalized and "tn" in normalized) or ("preciopor" in normalized and "tonelada" in normalized) or "$/tn" in label.lower():
+        return "TN"
     return ""
 
 
@@ -324,7 +353,7 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
         market_date = parse_date(value_for(source, "Fecha Declaración", "Fecha Declaracion", "Fecha de Concertación", "Fecha de Concertacion", "Fecha de Entrega", "Fecha Concertación", "Fecha Concertacion", "Fecha"))
         raw_commodity = value_for(source, "Producto", "Grano", "Especie", "Commodity")
         commodity, commodity_note = normalize_commodity(raw_commodity, path.name, aliases)
-        raw_price = value_for(source, "Precio", "Precio/Monto", "Monto", "Precio/TN", "Precio TN", "Precio hecho", "Precio Hecho", "Cotización", "Cotizacion", "Valor")
+        raw_price, detected_price_field = value_with_field(source, "Precio/TN Monto", "Precio/Monto", "Precio/TN", "Precio TN", "Precio unitario", "Precio", "Monto", "Precio hecho", "Precio Hecho", "Cotización", "Cotizacion", "Valor")
         price = parse_number(raw_price)
         if not market_date and price is None and not raw_commodity:
             continue
@@ -332,17 +361,26 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
             dates.append(market_date)
         if price is not None:
             prices.append(price)
+        price_original = text(raw_price)
+        price_label = text(source.get("__source_label_precio")) or detected_price_field
+        price_type_original = first_text(source, "precio_tipo_original", "Precio tipo original", "Precio")
         moneda = first_text(source, "Moneda", "Currency")
-        unidad = first_text(source, "Unidad", "Unit")
-        tipo = first_text(source, "Tipo de precio", "Tipo Precio", "Price Type", "Tipo")
-        volumen = first_text(source, "Cantidad (TN)", "Cantidad TN", "Volumen TN", "Toneladas", "Volumen", "Cantidad", "TN")
-        volumen_unidad = first_text(source, "Unidad de volumen", "Unidad volumen", "Volume Unit")
-        if not volumen_unidad and any(key(name) in {key(column) for column in source} for name in ("Cantidad (TN)", "Cantidad TN", "Volumen TN", "Toneladas", "TN")):
+        source_unit = first_text(source, "Unidad", "Unit")
+        explicit_price_unit = explicit_unit_from_label(price_label, text(source.get("__unit_value_unidad")))
+        unidad = source_unit or explicit_price_unit
+        precio_unidad = price if explicit_price_unit and price is not None else None
+        raw_total, detected_total_field = value_with_field(source, "Precio total", "Monto total", "Total")
+        precio_total = parse_number(raw_total)
+        tipo = first_text(source, "tipo_precio", "Tipo de precio", "Tipo Precio", "Price Type", "Tipo") or price_type_original
+        volumen, detected_volume_field = value_with_field(source, "Cantidad (TN)", "Cantidad TN", "Volumen TN", "Toneladas", "Volumen", "Cantidad", "TN")
+        volume_label = text(source.get("__source_label_volumen")) or detected_volume_field
+        volumen_unidad = first_text(source, "volumen_unidad", "Unidad de volumen", "Unidad volumen", "Volume Unit") or text(source.get("__unit_value_volumen_unidad"))
+        if not volumen_unidad and key(volume_label) in {"cantidadtn", "cantidadtns", "volumentn", "toneladas", "tn"}:
             volumen_unidad = "TN"
         row_missing: list[str] = []
         if not moneda:
             moneda = "Sin especificar"
-            row_missing.append("falta moneda")
+            row_missing.append("moneda sin especificar; no se infiere del valor original")
         if not unidad:
             unidad = "Sin especificar"
             row_missing.append("falta unidad")
@@ -353,7 +391,7 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
             row_missing.append("falta fecha válida")
         if price is None:
             row_missing.append("falta precio válido")
-        operation = first_text(source, "Operación", "Operacion")
+        operation = first_text(source, "Operación", "Operacion", "operacion")
         payment = first_text(source, "condicion_pago", "Condición de Pago", "Condicion de Pago", "Pago")
         commercial = first_text(source, "Condición comercial", "Condicion comercial", "Condición", "Condicion", "Entrega")
         observation = first_text(source, "Observación", "Observaciones", "Nota", "Notas")
@@ -368,11 +406,17 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
             "fuente": first_text(source, "Fuente", "Source") or DEFAULT_SOURCE,
             "mercado": first_text(source, "Mercado", "Market"),
             "tipo_precio": tipo,
+            "precio_tipo_original": price_type_original,
+            "precio_unidad": "" if precio_unidad is None else f"{precio_unidad:g}",
+            "precio_total": "" if precio_total is None else f"{precio_total:g}",
+            "campo_precio_original": price_label or "Sin especificar",
+            "valor_precio_original": price_original,
             "moneda": moneda,
             "unidad": unidad,
             "precio": "" if price is None else f"{price:g}",
             "volumen": volumen,
             "volumen_unidad": volumen_unidad,
+            "campo_volumen_original": volume_label or "Sin especificar",
             "procedencia": first_text(source, "Procedencia"),
             "provincia": first_text(source, "Provincia", "Pcia"),
             "localidad": first_text(source, "Localidad"),

@@ -7,15 +7,21 @@ Fecha de auditoría: 2026-09-04
 - Muestra piloto de una sola página GetOperaciones: sí; filas piloto: 15.
 - Filas totales: 15.
 - Columnas mapeadas con dato: fecha, operacion, tipo_precio, commodity, volumen, procedencia, precio, zona, condicion_pago.
-- Columnas faltantes/no separadas: moneda, unidad, volumen_unidad, precio_puesto_en, frecuencia.
+- Columnas faltantes/no separadas: moneda, precio_total, precio_puesto_en, frecuencia.
 - Commodities detectados: CEBADA FORR., Girasol, Maíz, Soja, TRIGO PAN.
 - Años disponibles: 2026.
 - Meses disponibles: 2026-09.
 - Rango de fechas: 2026-09-04 a 2026-09-04.
 - Fecha máxima: 2026-09-04; días desde último dato: 0.
 - Precios válidos: 15; faltantes: 0; cero: 0; negativos: 0.
-- Monedas: ninguna; unidades: ninguna; tipos de precio: Precio Hecho.
+- Monedas especificadas: 0/15; sin especificar: 15.
+- Unidades de precio especificadas: 15/15; sin especificar: 0.
+- Unidades de volumen especificadas: 15/15; sin especificar: 0.
+- Campos originales de precio: Precio/TN Monto; campos originales de volumen: Cant. (TN).
+- Precio unitario con dato: 15; precio total con dato: 0; inconsistencias detectadas: 0.
 - Volumen con dato numérico: 15; procedencia con dato: 15; lugar de entrega (zona) con dato: 15; condición de pago con dato: 15.
+- apto_piloto: sí (15/15 filas).
+- apto_dashboard: no (0/15 filas).
 - Series utilizables para dashboard analítico futuro: 0 de 5.
 
 ## Actualidad de la información
@@ -43,15 +49,15 @@ No publicar en el dashboard ni mezclar con BCR o frutas/hortalizas antes de esa 
 
 ## Series y aptitud analítica
 
-| Commodity | Moneda | Unidad | Tipo | Frecuencia | Calidad | Aptitud |
-| --- | --- | --- | --- | --- | --- | --- |
-| CEBADA FORR. |  |  | Precio Hecho | Sin especificar | Baja | No |
-| Girasol |  |  | Precio Hecho | Sin especificar | Baja | No |
-| Maíz |  |  | Precio Hecho | Sin especificar | Media | No |
-| Soja |  |  | Precio Hecho | Sin especificar | Media | No |
-| TRIGO PAN |  |  | Precio Hecho | Sin especificar | Media | No |
+| Commodity | Moneda | Unidad | Tipo | Frecuencia | Apto piloto | Apto dashboard | Calidad | Aptitud analítica |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| CEBADA FORR. |  | TN | Precio Hecho | Sin especificar | Sí | No | Baja | No |
+| Girasol |  | TN | Precio Hecho | Sin especificar | Sí | No | Baja | No |
+| Maíz |  | TN | Precio Hecho | Sin especificar | Sí | No | Media | No |
+| Soja |  | TN | Precio Hecho | Sin especificar | Sí | No | Media | No |
+| TRIGO PAN |  | TN | Precio Hecho | Sin especificar | Sí | No | Media | No |
 
-Casos problemáticos: 33. Ver CASOS_PROBLEMATICOS_COMMODITIES_SIO.csv.
+Casos problemáticos: 18. Ver CASOS_PROBLEMATICOS_COMMODITIES_SIO.csv.
 
 ## Próximos pasos
 
