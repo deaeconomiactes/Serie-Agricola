@@ -451,6 +451,15 @@ def currency_marker_hits(source: str) -> list[dict[str, str]]:
     return hits
 
 
+def normalize_currency_from_text(value: Any) -> str:
+    raw = str(value or "")
+    if re.search(r"U\s*\$\s*S|US\s*\$|\bUSD\b", raw, flags=re.I):
+        return "USD"
+    if "$" in raw:
+        return "ARS"
+    return ""
+
+
 def load_local_json(path: Path) -> Any:
     try:
         payload: Any = json.loads(path.read_text(encoding="utf-8-sig", errors="replace"))
@@ -481,7 +490,7 @@ def inspect_json_currency(payload: Any) -> dict[str, Any]:
                     for position, item in enumerate(child):
                         item_text = str(item or "")
                         if currency_marker_hits(item_text):
-                            row_evidence.append({"position": str(position), "value": re.sub(r"\s+", " ", item_text).strip()})
+                            row_evidence.append({"position": str(position), "value": re.sub(r"\s+", " ", item_text).strip(), "currency": normalize_currency_from_text(item_text)})
                 visit(child, child_path)
         elif isinstance(value, list):
             for index, child in enumerate(value):
@@ -554,14 +563,25 @@ def write_currency_report(reviewed_files: list[str], raw_files: list[Path], scan
     if not indirect:
         indirect.append("No se encontró evidencia indirecta adicional que permita validar la moneda.")
     unused = ", ".join(str(position) for position in positional["unused_positions"]) or "ninguna"
-    conclusion = "C. Moneda no determinable con los archivos actuales."
+    currency_row_values = Counter(item.get("currency", "") for item in positional["currency_rows"] if item.get("currency"))
+    if positional["currency_rows"] and all(item.get("currency") for item in positional["currency_rows"]):
+        conclusion = "A. Moneda explícita detectada en el campo original de precio."
+    elif positional["currency_rows"]:
+        conclusion = "B. Moneda parcialmente identificable; quedan valores sin marcador explícito."
+    else:
+        conclusion = "C. Moneda no determinable con los archivos actuales."
+    if currency_row_values:
+        direct.append("Normalización explícita de valores Row: " + ", ".join(f"{name} ({count})" for name, count in sorted(currency_row_values.items())) + ".")
     direct_lines = [f"- {item}" for item in direct] or ["- No se encontró evidencia directa."]
     absent_lines = [f"- {item}" for item in absent] or ["- No se registraron ausencias específicas."]
     lines = [
-        "# Reporte de moneda SIO", "", f"Fecha de análisis: {date.today().isoformat()}", "", "## Objetivo", "", "Determinar si la moneda del precio puede recuperarse de forma explícita o validable en la respuesta SIO.", "", "## Fuentes revisadas", "", *[f"- `{path}`" for path in reviewed_files], "", "## Evidencia encontrada", "", "### Evidencia directa", "", *direct_lines, "", "### Evidencia indirecta", "", *[f"- {item}" for item in indirect], "", "### Sin evidencia", "", *absent_lines, "", "## Revisión de posiciones Row", "", f"- Archivo de mapeo revisado: `{mapping_name}`.", f"- Longitudes de Row observadas: {', '.join(str(item) for item in positional['row_lengths']) or 'ninguna'}.", f"- Posiciones con marcadores monetarios: {', '.join(positional['currency_positions']) or 'ninguna'}.", f"- Posiciones Row no utilizadas por el mapeo: {unused}.", "- Se revisaron los valores no utilizados y no apareció una posición adicional identificable como moneda; la posición de precio conserva el texto original.", "", "## Resultado", "", conclusion, "", "La presencia de `U$S` o `$` dentro del valor original del precio no se trata como una moneda separada y validada. No permite por sí sola completar `moneda` ni habilitar comparaciones monetarias.", "", "## Decisión metodológica", "", "- Si la moneda es explícita en un campo respaldado por la respuesta, permitir completar `moneda`.", "- Si la moneda no es explícita, mantener `moneda=Sin especificar`.", "- Si sólo hay evidencia débil o embebida en un valor, no completar moneda automáticamente; marcar observación.", "- No asumir ARS ni USD por tratarse de SIO.", "", "## Impacto en aptitud dashboard", "", "`apto_piloto` puede permanecer en sí porque la muestra tiene fecha, commodity, precio válido, fuente y unidades respaldadas. `apto_dashboard` debe permanecer en no mientras la moneda no quede validada y no exista homogeneidad monetaria. Sin moneda no se deben comparar precios ni variaciones monetarias en el dashboard.", "", "## Próximo paso recomendado", "", "Buscar una exportación manual o respuesta de navegador/DevTools que exponga una columna o metadato de moneda. Si `GetOperaciones` no la devuelve, evaluar otro endpoint o parámetro sólo mediante una prueba controlada y documentada; no hacer paginación masiva ni llamadas desde el dashboard.", "",
+        "# Reporte de moneda SIO", "", f"Fecha de análisis: {date.today().isoformat()}", "", "## Objetivo", "", "Determinar si la moneda del precio puede recuperarse de forma explícita o validable en la respuesta SIO.", "", "## Fuentes revisadas", "", *[f"- `{path}`" for path in reviewed_files], "", "## Evidencia encontrada", "", "### Evidencia directa", "", *direct_lines, "", "### Evidencia indirecta", "", *[f"- {item}" for item in indirect], "", "### Sin evidencia", "", *absent_lines, "", "## Revisión de posiciones Row", "", f"- Archivo de mapeo revisado: `{mapping_name}`.", f"- Longitudes de Row observadas: {', '.join(str(item) for item in positional['row_lengths']) or 'ninguna'}.", f"- Posiciones con marcadores monetarios: {', '.join(positional['currency_positions']) or 'ninguna'}.", f"- Posiciones Row no utilizadas por el mapeo: {unused}.", "- Se revisaron los valores no utilizados y no apareció una posición adicional identificable como moneda; la posición de precio conserva el texto original.", "", "## Resultado", "", conclusion, "", "En Row[10], `U$S`, `US$` o `USD` explícitos se normalizan a USD; `$` explícito sin esos marcadores se normaliza a ARS. La normalización conserva el texto original y no usa contexto externo.", "", "## Decisión metodológica", "", "- Si la moneda es explícita en el campo original de precio, permitir completar `moneda`.", "- Si la moneda no es explícita, mantener `moneda=Sin especificar`.", "- Si sólo hay evidencia débil o embebida sin marcador inequívoco, no completar moneda automáticamente; marcar observación.", "- No asumir ARS ni USD por tratarse de SIO.", "", "## Impacto en aptitud dashboard", "", "`apto_piloto` puede permanecer en sí porque la muestra tiene fecha, commodity, precio válido, fuente y unidades respaldadas. `apto_dashboard` puede quedar como `parcial_piloto` si moneda y unidad están explícitas, pero no como `si` pleno porque la muestra sigue limitada a una sola página. La comparabilidad monetaria entre monedas distintas requiere separación o conversión metodológica explícita.", "", "## Próximo paso recomendado", "", "Validar una segunda respuesta o exportación manual para confirmar la regla en todas las filas. Si aparecen valores sin marcador o cambia el formato, mantenerlos como `Sin especificar`; no hacer paginación masiva ni llamadas desde el dashboard.", "",
     ]
     path = DATA_DIR / "reports" / "REPORTE_MONEDA_SIO.md"
-    path.write_text("\n".join(lines), encoding="utf-8")
+    report_text = "\n".join(lines)
+    embedded_section = "\n\n## Moneda embebida en campo de precio\n\nRow[10] contiene el campo original de precio. El símbolo monetario se extrae sólo si aparece explícitamente: `U$S`/`US$`/`USD` se normaliza a `USD`, y `$` sin esos marcadores se normaliza a `ARS`. No se infiere moneda por contexto, y siempre se conserva `precio_original_texto`."
+    report_text = report_text.replace("\n## Decisión metodológica", embedded_section + "\n\n## Decisión metodológica", 1)
+    path.write_text(report_text, encoding="utf-8")
     return path
 
 
@@ -601,7 +621,8 @@ def run_currency_analysis() -> int:
     print("Análisis de moneda SIO finalizado en modo local; no se realizaron requests web.")
     print(f"Archivos raw revisados: {len(raw_files)}; marcadores monetarios: {len(currency_rows)} valores Row con evidencia.")
     print(f"Posiciones Row con marcadores: {', '.join(currency_positions) or 'ninguna'}; posiciones no utilizadas: {', '.join(str(item) for item in positional['unused_positions']) or 'ninguna'}.")
-    print("Resultado: C. Moneda no determinable con los archivos actuales.")
+    analysis_result = "A. Moneda explícita detectada en el campo original de precio." if currency_rows and all(item.get("currency") for item in currency_rows) else "B. Moneda parcialmente identificable; quedan valores sin marcador explícito." if currency_rows else "C. Moneda no determinable con los archivos actuales."
+    print(f"Resultado: {analysis_result}")
     print(f"Reporte generado: {report}")
     return 0
 

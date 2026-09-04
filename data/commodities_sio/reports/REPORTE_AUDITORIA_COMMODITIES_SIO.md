@@ -4,36 +4,42 @@ Fecha de auditoría: 2026-09-04
 
 ## Resumen
 
-- Moneda explícitamente informada: no (0/15).
+- Moneda explícitamente informada: sí (15/15).
 - Moneda inferida: no (0/15).
-- Moneda sin especificar: sí (15/15).
-- Porcentaje de filas con moneda válida/explícita: 0.0%.
-- Conteo por moneda explícita: ninguna.
+- Moneda sin especificar: no (0/15).
+- Porcentaje de filas con moneda válida/explícita: 100.0%.
+- Conteo por moneda explícita: ARS=8, USD=7.
+- Precios válidos por moneda: ARS=8, USD=7.
+- Estado apto_dashboard: si=0, parcial_piloto=15, no=0.
 - Muestra piloto de una sola página GetOperaciones: sí; filas piloto: 15.
 - Filas totales: 15.
 - Columnas mapeadas con dato: fecha, operacion, tipo_precio, commodity, volumen, procedencia, precio, zona, condicion_pago.
-- Columnas faltantes/no separadas: moneda, precio_total, precio_puesto_en, frecuencia.
+- Columnas faltantes/no separadas: precio_total, precio_puesto_en, frecuencia.
 - Commodities detectados: CEBADA FORR., Girasol, Maíz, Soja, TRIGO PAN.
 - Años disponibles: 2026.
 - Meses disponibles: 2026-09.
 - Rango de fechas: 2026-09-04 a 2026-09-04.
 - Fecha máxima: 2026-09-04; días desde último dato: 0.
 - Precios válidos: 15; faltantes: 0; cero: 0; negativos: 0.
-- Monedas especificadas: 0/15; sin especificar: 15.
+- Monedas especificadas: 15/15; sin especificar: 0.
 - Unidades de precio especificadas: 15/15; sin especificar: 0.
 - Unidades de volumen especificadas: 15/15; sin especificar: 0.
 - Campos originales de precio: Precio/TN Monto; campos originales de volumen: Cant. (TN).
 - Precio unitario con dato: 15; precio total con dato: 0; inconsistencias detectadas: 0.
 - Volumen con dato numérico: 15; procedencia con dato: 15; lugar de entrega (zona) con dato: 15; condición de pago con dato: 15.
 - apto_piloto: sí (15/15 filas).
-- apto_dashboard: no (0/15 filas).
+- apto_dashboard pleno: no (0/15 filas); estado piloto: parcial_piloto (15/15 filas).
 - Series utilizables para dashboard analítico futuro: 0 de 5.
+
+## Moneda embebida en campo de precio
+
+`Row[10]` contiene el campo original de precio. El símbolo monetario se extrae sólo si aparece explícitamente: `U$S`/`US$`/`USD` se normaliza a `USD`, y `$` sin esos marcadores se normaliza a `ARS`. No se infiere moneda por contexto y se conserva `precio_original_texto`.
 
 ## Moneda y comparabilidad
 
-Moneda explícitamente informada: no (0/15 filas). Moneda inferida: no (0/15 filas). Moneda sin especificar: sí (15/15 filas).
+Moneda explícitamente informada: sí (15/15 filas). Moneda inferida: no (0/15 filas). Moneda sin especificar: no (0/15 filas).
 Comparabilidad monetaria: no.
-Los valores no deben compararse ni usarse para variaciones monetarias mientras la moneda permanezca embebida o no informada explícitamente. La auditoría conserva `moneda=Sin especificar` y no habilita `apto_dashboard`.
+Los precios sólo deben compararse dentro de una misma moneda; en esta muestra hay ARS y USD explícitos, por lo que no corresponde calcular variaciones monetarias conjuntas. El estado queda como `parcial_piloto` y no como `si` pleno.
 
 ## Actualidad de la información
 
@@ -62,13 +68,13 @@ No publicar en el dashboard ni mezclar con BCR o frutas/hortalizas antes de esa 
 
 | Commodity | Moneda | Unidad | Tipo | Frecuencia | Apto piloto | Apto dashboard | Calidad | Aptitud analítica |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| CEBADA FORR. |  | TN | Precio Hecho | Sin especificar | Sí | No | Baja | No |
-| Girasol |  | TN | Precio Hecho | Sin especificar | Sí | No | Baja | No |
-| Maíz |  | TN | Precio Hecho | Sin especificar | Sí | No | Media | No |
-| Soja |  | TN | Precio Hecho | Sin especificar | Sí | No | Media | No |
-| TRIGO PAN |  | TN | Precio Hecho | Sin especificar | Sí | No | Media | No |
+| CEBADA FORR. | USD | TN | Precio Hecho | Sin especificar | Sí | parcial_piloto | Baja | No |
+| Girasol | USD | TN | Precio Hecho | Sin especificar | Sí | parcial_piloto | Baja | No |
+| Maíz | ARS/USD | TN | Precio Hecho | Sin especificar | Sí | parcial_piloto | Media | No |
+| Soja | ARS/USD | TN | Precio Hecho | Sin especificar | Sí | parcial_piloto | Media | No |
+| TRIGO PAN | ARS | TN | Precio Hecho | Sin especificar | Sí | parcial_piloto | Media | No |
 
-Casos problemáticos: 18. Ver CASOS_PROBLEMATICOS_COMMODITIES_SIO.csv.
+Casos problemáticos: 4. Ver CASOS_PROBLEMATICOS_COMMODITIES_SIO.csv.
 
 ## Próximos pasos
 

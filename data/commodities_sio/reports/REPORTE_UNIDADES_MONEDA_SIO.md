@@ -43,7 +43,11 @@ La etiqueta fuente `Cant. (TN)` respalda que `volumen_unidad=TN`. El volumen se 
 
 ## Moneda
 
-La moneda aparece embebida en el valor original del campo de precio, no como una columna separada validada de moneda. Por eso `moneda` queda `Sin especificar` en esta etapa. No se infiere ARS, USD, `$`, `U$S` ni ninguna otra moneda a partir del texto embebido.
+La moneda aparece embebida en el valor original del campo de precio, no como una columna separada. Cuando el marcador es inequívoco, el integrador normaliza `U$S`/`US$`/`USD` a `USD` y `$` sin esos marcadores a `ARS`; sin marcador explícito, conserva `Sin especificar`. No se infiere moneda por contexto.
+
+## Moneda embebida en campo de precio
+
+`Row[10]` contiene el campo original `Precio/TN Monto`. Cuando el texto original incluye un marcador inequívoco, la extracción controlada puede normalizar `U$S`, `US$` o `USD` a `USD`, y `$` sin esos marcadores a `ARS`. La regla se aplica sólo al texto original: no usa fuente, país, commodity ni conocimiento externo para inferir moneda. Siempre se conserva `precio_original_texto` junto con `campo_precio_original`.
 
 ## Unidad de precio
 
@@ -63,7 +67,7 @@ La unidad `TN` está respaldada por la etiqueta explícita `Cant. (TN)`; por eso
 
 ## Riesgos
 
-- No asumir ARS, USD, `$` o `U$S` como moneda de la serie sin un campo o documentación fuente que lo confirme.
+- No asumir ARS o USD sin un marcador explícito en el campo original o un campo de moneda validado.
 - No presentar `precio_unidad` como `precio_total`.
 - No combinar series si difieren en moneda, unidad, frecuencia o tipo de precio.
 - La muestra es un piloto de una sola página y no prueba cobertura histórica, paginación ni estabilidad del origen.

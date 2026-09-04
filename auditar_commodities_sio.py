@@ -94,11 +94,20 @@ def coverage_count(rows: list[dict[str, str]], field: str) -> int:
 
 
 def pilot_eligible(row: dict[str, str]) -> bool:
-    return bool(parse_date(value(row, "fecha")) and value(row, "commodity") and parse_price(value(row, "precio")) is not None and value(row, "fuente") and value(row, "campo_precio_original") and value(row, "campo_precio_original") != "Sin especificar" and (value(row, "unidad") != "Sin especificar" or "unidad" in value(row, "observaciones").lower()))
+    return bool(parse_date(value(row, "fecha")) and value(row, "commodity") and parse_price(value(row, "precio")) is not None and value(row, "fuente") and value(row, "campo_precio_original") and value(row, "campo_precio_original") != "Sin especificar" and value(row, "unidad") and value(row, "unidad") != "Sin especificar")
+
+
+def dashboard_status(row: dict[str, str], currency_values: list[str], unit_values: list[str]) -> str:
+    explicit_currency = value(row, "moneda_explicitamente_informada").lower() in {"sí", "si", "true"} and value(row, "moneda") != "Sin especificar"
+    explicit_unit = value(row, "unidad") != "Sin especificar" and bool(value(row, "unidad"))
+    pilot_page = "integración piloto una página GetOperaciones" in value(row, "observaciones")
+    if pilot_eligible(row) and explicit_currency and not currency_was_inferred(row) and explicit_unit and pilot_page:
+        return "parcial_piloto"
+    return "no"
 
 
 def dashboard_eligible(row: dict[str, str], currency_values: list[str], unit_values: list[str]) -> bool:
-    return pilot_eligible(row) and coverage_count([row], "moneda") == 1 and coverage_count([row], "unidad") == 1 and len(currency_values) == 1 and len(unit_values) == 1
+    return dashboard_status(row, currency_values, unit_values) != "no"
 
 
 def currency_was_inferred(row: dict[str, str]) -> bool:
@@ -198,12 +207,14 @@ def main() -> int:
         types = display_values(subset, "tipo_precio")
         frequencies = display_values(subset, "frecuencia")
         quality = "Alta" if len(prices) >= 5 and len(dates) >= 5 and len(currencies) == 1 and len(units) == 1 else "Media" if len(prices) >= 2 and len(dates) >= 2 else "Baja"
-        usable = "Sí" if len(prices) >= 2 and len(dates) >= 2 and len(currencies) == 1 and len(units) == 1 and len(types) == 1 and status not in {"Fecha futura", "Sin fecha"} else "No"
+        dashboard_statuses = [dashboard_status(row, all_currency_values, all_unit_values) for row in subset]
+        dashboard_status_value = "si" if dashboard_statuses and all(item == "si" for item in dashboard_statuses) else "parcial_piloto" if dashboard_statuses and all(item == "parcial_piloto" for item in dashboard_statuses) else "no"
+        usable = "Sí" if len(prices) >= 2 and len(dates) >= 2 and len(currencies) == 1 and len(units) == 1 and len(types) == 1 and status not in {"Fecha futura", "Sin fecha"} and dashboard_status_value == "si" else "No"
         actuality.append({"commodity": commodity, "fecha_max": max_date.isoformat() if max_date else "", "dias_desde_ultimo_dato": str(age) if max_date else "", "registros_ultimos_7_dias": str(count_7), "registros_ultimos_30_dias": str(count_30), "estado_actualidad": status})
         pilot_count = sum(1 for row in subset if pilot_eligible(row))
         dashboard_count = sum(1 for row in subset if dashboard_eligible(row, all_currency_values, all_unit_values))
-        summary.append({"commodity": commodity, "filas_totales": str(len(subset)), "años": "|".join(str(item.year) for item in sorted(set(dates))), "meses": "|".join(sorted({item.strftime('%Y-%m') for item in dates})), "fecha_min": min_date.isoformat() if min_date else "", "fecha_max": max_date.isoformat() if max_date else "", "precios_validos": str(len(prices)), "precios_faltantes": str(sum(1 for row in subset if parse_price(value(row, "precio")) is None)), "precios_cero": str(sum(1 for item in prices if item == 0)), "precios_negativos": str(sum(1 for item in prices if item < 0)), "moneda": "|".join(currencies), "unidad": "|".join(units), "tipo_precio": "|".join(types), "precio_unidad_con_dato": str(coverage_count(subset, "precio_unidad")), "precio_total_con_dato": str(coverage_count(subset, "precio_total")), "campo_precio_original": "|".join(display_values(subset, "campo_precio_original")), "campo_volumen_original": "|".join(display_values(subset, "campo_volumen_original")), "volumen_con_dato": str(coverage_count(subset, "volumen")), "volumen_unidad_con_dato": str(coverage_count(subset, "volumen_unidad")), "procedencia_con_dato": str(coverage_count(subset, "procedencia")), "precio_puesto_en_con_dato": str(coverage_count(subset, "precio_puesto_en")), "operacion_con_dato": str(coverage_count(subset, "operacion")), "condicion_pago_con_dato": str(coverage_count(subset, "condicion_pago")), "apto_piloto": "Sí" if pilot_count == len(subset) else "No", "apto_dashboard": "Sí" if dashboard_count == len(subset) else "No"})
-        series.append({"commodity": commodity, "moneda": "|".join(currencies), "unidad": "|".join(units), "tipo_precio": "|".join(types), "frecuencia": "|".join(frequencies) or "Sin especificar", "registros": str(len(subset)), "fechas_validas": str(len(dates)), "precios_validos": str(len(prices)), "precio_unidad_con_dato": str(coverage_count(subset, "precio_unidad")), "precio_total_con_dato": str(coverage_count(subset, "precio_total")), "campo_precio_original": "|".join(display_values(subset, "campo_precio_original")), "campo_volumen_original": "|".join(display_values(subset, "campo_volumen_original")), "apto_piloto": "Sí" if pilot_count == len(subset) else "No", "apto_dashboard": "Sí" if dashboard_count == len(subset) else "No", "calidad_serie": quality, "aptitud_dashboard_analitico": usable, "motivo": "" if usable == "Sí" else "Se requieren moneda y unidad homogéneas, además de fechas y precios válidos; la serie debe validarse antes de publicar."})
+        summary.append({"commodity": commodity, "filas_totales": str(len(subset)), "años": "|".join(str(item.year) for item in sorted(set(dates))), "meses": "|".join(sorted({item.strftime('%Y-%m') for item in dates})), "fecha_min": min_date.isoformat() if min_date else "", "fecha_max": max_date.isoformat() if max_date else "", "precios_validos": str(len(prices)), "precios_faltantes": str(sum(1 for row in subset if parse_price(value(row, "precio")) is None)), "precios_cero": str(sum(1 for item in prices if item == 0)), "precios_negativos": str(sum(1 for item in prices if item < 0)), "moneda": "|".join(currencies), "unidad": "|".join(units), "tipo_precio": "|".join(types), "precio_unidad_con_dato": str(coverage_count(subset, "precio_unidad")), "precio_total_con_dato": str(coverage_count(subset, "precio_total")), "campo_precio_original": "|".join(display_values(subset, "campo_precio_original")), "campo_volumen_original": "|".join(display_values(subset, "campo_volumen_original")), "volumen_con_dato": str(coverage_count(subset, "volumen")), "volumen_unidad_con_dato": str(coverage_count(subset, "volumen_unidad")), "procedencia_con_dato": str(coverage_count(subset, "procedencia")), "precio_puesto_en_con_dato": str(coverage_count(subset, "precio_puesto_en")), "operacion_con_dato": str(coverage_count(subset, "operacion")), "condicion_pago_con_dato": str(coverage_count(subset, "condicion_pago")), "apto_piloto": "Sí" if pilot_count == len(subset) else "No", "apto_dashboard": dashboard_status_value})
+        series.append({"commodity": commodity, "moneda": "|".join(currencies), "unidad": "|".join(units), "tipo_precio": "|".join(types), "frecuencia": "|".join(frequencies) or "Sin especificar", "registros": str(len(subset)), "fechas_validas": str(len(dates)), "precios_validos": str(len(prices)), "precio_unidad_con_dato": str(coverage_count(subset, "precio_unidad")), "precio_total_con_dato": str(coverage_count(subset, "precio_total")), "campo_precio_original": "|".join(display_values(subset, "campo_precio_original")), "campo_volumen_original": "|".join(display_values(subset, "campo_volumen_original")), "apto_piloto": "Sí" if pilot_count == len(subset) else "No", "apto_dashboard": dashboard_status_value, "calidad_serie": quality, "aptitud_dashboard_analitico": usable, "motivo": "" if usable == "Sí" else "Se requieren validación de cobertura histórica/paginación y moneda/unidad homogéneas antes de publicar."})
         for year in sorted({item.year for item in dates}):
             coverage.append({"nivel": "commodity_año", "commodity": commodity, "año": str(year), "mes": "", "registros": str(sum(1 for item in dates if item.year == year))})
         coverage.append({"nivel": "commodity", "commodity": commodity, "año": "", "mes": "", "registros": str(len(dates))})
@@ -245,17 +256,26 @@ def main() -> int:
     volume_unit_count = coverage_count(rows, "volumen_unidad")
     price_field_values = display_values(rows, "campo_precio_original")
     volume_field_values = display_values(rows, "campo_volumen_original")
-    currency_explicit_count = coverage_count(rows, "moneda")
+    currency_explicit_count = sum(1 for row in rows if value(row, "moneda_explicitamente_informada").lower() in {"sí", "si", "true"} and value(row, "moneda") != "Sin especificar")
     currency_inferred_count = sum(1 for row in rows if currency_was_inferred(row))
     currency_unspecified_count = len(rows) - currency_explicit_count - currency_inferred_count
     currency_counts = Counter(value(row, "moneda") for row in rows if value(row, "moneda") and value(row, "moneda") != "Sin especificar")
+    valid_prices_by_currency = Counter(value(row, "moneda") for row in rows if parse_price(value(row, "precio")) is not None and value(row, "moneda") != "Sin especificar")
     currency_valid_pct = (currency_explicit_count / len(rows) * 100) if rows else 0
+    dashboard_status_values = [dashboard_status(row, currency_values, unit_values) for row in rows]
+    dashboard_status_counts = Counter(dashboard_status_values)
+    dashboard_full_count = dashboard_status_counts.get("si", 0)
+    dashboard_partial_count = dashboard_status_counts.get("parcial_piloto", 0)
+    dashboard_no_count = dashboard_status_counts.get("no", 0)
+    dashboard_eligible_count = dashboard_full_count
     currency_audit_lines = [
         f"- Moneda explícitamente informada: {'sí' if currency_explicit_count else 'no'} ({currency_explicit_count}/{len(rows)}).",
         f"- Moneda inferida: {'sí' if currency_inferred_count else 'no'} ({currency_inferred_count}/{len(rows)}).",
         f"- Moneda sin especificar: {'sí' if currency_unspecified_count else 'no'} ({currency_unspecified_count}/{len(rows)}).",
         f"- Porcentaje de filas con moneda válida/explícita: {currency_valid_pct:.1f}%.",
         f"- Conteo por moneda explícita: {', '.join(f'{name}={count}' for name, count in sorted(currency_counts.items())) or 'ninguna'}.",
+        f"- Precios válidos por moneda: {', '.join(f'{name}={count}' for name, count in sorted(valid_prices_by_currency.items())) or 'ninguno'}.",
+        f"- Estado apto_dashboard: si={dashboard_full_count}, parcial_piloto={dashboard_partial_count}, no={dashboard_no_count}.",
     ]
     lines = [
         "# Reporte de auditoría de commodities SIO", "", f"Fecha de auditoría: {today.isoformat()}", "", "## Resumen", "",
@@ -269,7 +289,13 @@ def main() -> int:
         "## Actualidad de la información", "", f"Fecha máxima disponible: {max_date.isoformat() if max_date else 'sin fecha válida'}.", f"Días desde el último dato: {age if age is not None else 'sin fecha válida'}.", f"Commodities actualizados (últimos 7 días): {', '.join(updated) if updated else 'ninguno'}.", f"Commodities recientes o actualizados (últimos 30 días): {', '.join(recent) if recent else 'ninguno'}.", f"Commodities sin dato reciente: {', '.join(no_recent) if no_recent else 'ninguno'}.", f"Cobertura últimos 7 días: {sum(int(item['registros_ultimos_7_dias']) for item in actuality)} registro(s). Cobertura últimos 30 días: {sum(int(item['registros_ultimos_30_dias']) for item in actuality)} registro(s).", "", markdown_table(["Commodity", "Fecha máxima", "Días", "Últimos 7 días", "Últimos 30 días", "Estado"], [[item["commodity"], item["fecha_max"] or "—", item["dias_desde_ultimo_dato"] or "—", item["registros_ultimos_7_dias"], item["registros_ultimos_30_dias"], item["estado_actualidad"]] for item in actuality]), "",
         "## Recomendación de automatización", "", "SIO Granos debe mantenerse como exploración separada hasta validar la procedencia, la definición del precio, los permisos de uso, la estabilidad de la consulta pública y la homogeneidad de moneda, unidad, frecuencia y tipo de precio.", "Si hay datos recientes y la consulta/exportación pública es estable, conviene automatizar con ventanas de hasta 180 días y auditoría previa. Si no hay exportación estable, mantener la descarga manual en raw/ y conservar la respuesta original.", "No publicar en el dashboard ni mezclar con BCR o frutas/hortalizas antes de esa validación.", "", "## Series y aptitud analítica", "", markdown_table(["Commodity", "Moneda", "Unidad", "Tipo", "Frecuencia", "Apto piloto", "Apto dashboard", "Calidad", "Aptitud analítica"], [[item["commodity"], item["moneda"], item["unidad"], item["tipo_precio"], item["frecuencia"], item["apto_piloto"], item["apto_dashboard"], item["calidad_serie"], item["aptitud_dashboard_analitico"]] for item in series]), "", f"Casos problemáticos: {len(problems)}. Ver CASOS_PROBLEMATICOS_COMMODITIES_SIO.csv.", "", "## Próximos pasos", "", "Validar una respuesta real de SIO y revisar especialmente fecha, condición de pago, operación, volumen, procedencia, precio puesto en, unidad, moneda y permisos. No inventar datos ni usar fuentes alternativas como equivalentes de SIO/BCR sin evidencia.",
     ])
-    REPORTS["report"].write_text("\n".join(lines) + "\n", encoding="utf-8")
+    report_text = "\n".join(lines) + "\n"
+    dashboard_summary = f"- apto_dashboard pleno: {'sí' if dashboard_full_count == len(rows) else 'no'} ({dashboard_full_count}/{len(rows)} filas); estado piloto: {'parcial_piloto' if dashboard_partial_count else 'no'} ({dashboard_partial_count}/{len(rows)} filas)."
+    report_text = re.sub(r"- apto_dashboard: [^\n]*", dashboard_summary, report_text, count=1)
+    report_text = report_text.replace("Los valores no deben compararse ni usarse para variaciones monetarias mientras la moneda permanezca embebida o no informada explícitamente. La auditoría conserva `moneda=Sin especificar` y no habilita `apto_dashboard`.", "Los precios sólo deben compararse dentro de una misma moneda; en esta muestra hay ARS y USD explícitos, por lo que no corresponde calcular variaciones monetarias conjuntas. El estado queda como `parcial_piloto` y no como `si` pleno.")
+    embedded_section = "## Moneda embebida en campo de precio\n\n`Row[10]` contiene el campo original de precio. El símbolo monetario se extrae sólo si aparece explícitamente: `U$S`/`US$`/`USD` se normaliza a `USD`, y `$` sin esos marcadores se normaliza a `ARS`. No se infiere moneda por contexto y se conserva `precio_original_texto`."
+    report_text = report_text.replace("## Moneda y comparabilidad", embedded_section + "\n\n## Moneda y comparabilidad", 1)
+    REPORTS["report"].write_text(report_text, encoding="utf-8")
     print(f"Auditoría SIO finalizada: {len(rows)} filas, {len(commodities)} commodity(s).")
     print(f"Fecha máxima: {max_date.isoformat() if max_date else 'sin fecha válida'}; precios válidos: {len(all_prices)}; faltantes: {missing_price}.")
     for path in REPORTS.values():

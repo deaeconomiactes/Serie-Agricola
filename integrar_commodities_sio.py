@@ -22,10 +22,10 @@ MAPPING_EXAMPLE_PATH = ROOT / "data" / "commodities_sio" / "mapeo_getoperaciones
 OUTPUT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_INTEGRADO.csv"
 OUTPUT_COLUMNS = [
     "fecha", "año", "mes", "commodity", "fuente", "mercado", "tipo_precio",
-    "precio_tipo_original", "precio_unidad", "precio_total", "campo_precio_original", "valor_precio_original", "moneda", "campo_moneda_original", "valor_moneda_original", "unidad", "precio", "volumen", "volumen_unidad", "campo_volumen_original", "procedencia",
-    "provincia", "localidad", "zona", "precio_puesto_en", "operacion",
+    "precio_tipo_original", "precio_unidad", "precio_total", "campo_precio_original", "valor_precio_original", "precio_original_texto", "moneda", "moneda_explicitamente_informada", "moneda_inferida", "campo_moneda_original", "valor_moneda_original", "unidad", "precio", "volumen", "volumen_unidad", "campo_volumen_original", "procedencia",
+    "provincia", "localidad", "zona", "lugar_entrega", "precio_puesto_en", "operacion",
     "condicion_pago", "condicion_comercial", "frecuencia", "archivo_origen",
-    "fecha_integracion", "observaciones",
+    "fecha_integracion", "observaciones", "apto_piloto", "apto_dashboard",
 ]
 EXTENSIONS = {".json", ".csv", ".xlsx", ".xls", ".html", ".htm"}
 NON_REAL_MARKERS = ("plantilla", "simul", "prueba", "ejemplo", "sample")
@@ -84,6 +84,31 @@ def parse_number(value: Any) -> float | None:
         return float(raw)
     except ValueError:
         return None
+
+
+def extract_explicit_currency(value: Any) -> tuple[str, str, str]:
+    """Normaliza sólo símbolos/textos monetarios presentes en el valor original."""
+
+    raw = text(value)
+    if re.search(r"U\s*\$\s*S|US\s*\$|\bUSD\b", raw, flags=re.I):
+        return "USD", "sí", "no"
+    if "$" in raw:
+        return "ARS", "sí", "no"
+    return "Sin especificar", "no", "no"
+
+
+def normalize_explicit_currency_field(value: Any) -> str:
+    raw = text(value)
+    if not raw:
+        return ""
+    currency, explicit, _ = extract_explicit_currency(raw)
+    if explicit == "sí":
+        return currency
+    if re.fullmatch(r"USD|US DOLLARS?|DOLARES?|DÓLARES?", raw, flags=re.I):
+        return "USD"
+    if re.fullmatch(r"ARS|PESOS?|PESOS? ARGENTINOS?", raw, flags=re.I):
+        return "ARS"
+    return raw
 
 
 def read_aliases() -> dict[str, str]:
@@ -365,9 +390,12 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
         price_label = text(source.get("__source_label_precio")) or detected_price_field
         price_type_original = first_text(source, "precio_tipo_original", "Precio tipo original", "Precio")
         raw_currency, detected_currency_field = value_with_field(source, "Moneda", "Currency", "Código moneda", "Codigo moneda")
-        moneda = text(raw_currency)
-        currency_original = text(raw_currency)
-        currency_label = detected_currency_field
+        moneda, moneda_explicitamente_informada, moneda_inferida = extract_explicit_currency(price_original)
+        currency_original = price_original if moneda_explicitamente_informada == "sí" else text(raw_currency)
+        currency_label = price_label if moneda_explicitamente_informada == "sí" else detected_currency_field
+        if moneda_explicitamente_informada != "sí" and text(raw_currency):
+            moneda = normalize_explicit_currency_field(raw_currency)
+            moneda_explicitamente_informada = "sí"
         source_unit = first_text(source, "Unidad", "Unit")
         explicit_price_unit = explicit_unit_from_label(price_label, text(source.get("__unit_value_unidad")))
         unidad = source_unit or explicit_price_unit
@@ -381,7 +409,9 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
         if not volumen_unidad and key(volume_label) in {"cantidadtn", "cantidadtns", "volumentn", "toneladas", "tn"}:
             volumen_unidad = "TN"
         row_missing: list[str] = []
-        if not moneda:
+        if moneda_explicitamente_informada == "sí":
+            row_missing.append(f"moneda extraída explícitamente del campo precio original: {moneda}" if currency_label == price_label else f"moneda informada explícitamente en campo original: {moneda}")
+        else:
             moneda = "Sin especificar"
             row_missing.append("moneda no informada explícitamente en endpoint GetOperaciones; no se infiere del valor original")
         if not unidad:
@@ -400,13 +430,17 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
         observation = first_text(source, "Observación", "Observaciones", "Nota", "Notas")
         pilot_note = "integración piloto una página GetOperaciones" if used_positional else ""
         notes = "; ".join(dict.fromkeys([part for part in [observation, commodity_note, pilot_note] + row_missing if part]))
+        source_name = first_text(source, "Fuente", "Source") or DEFAULT_SOURCE
+        delivery_place = first_text(source, "Zona", "Lugar de entrega", "lugar_entrega")
+        pilot_status = "sí" if market_date and commodity != "Sin especificar" and price is not None and source_name and price_label and price_label != "Sin especificar" and explicit_price_unit else "no"
+        dashboard_status = "parcial_piloto" if pilot_status == "sí" and moneda_explicitamente_informada == "sí" and explicit_price_unit and used_positional else "no"
         commodities.add(commodity)
         rows.append({
             "fecha": market_date.isoformat() if market_date else "",
             "año": str(market_date.year) if market_date else "",
             "mes": str(market_date.month) if market_date else "",
             "commodity": commodity,
-            "fuente": first_text(source, "Fuente", "Source") or DEFAULT_SOURCE,
+            "fuente": source_name,
             "mercado": first_text(source, "Mercado", "Market"),
             "tipo_precio": tipo,
             "precio_tipo_original": price_type_original,
@@ -414,7 +448,10 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
             "precio_total": "" if precio_total is None else f"{precio_total:g}",
             "campo_precio_original": price_label or "Sin especificar",
             "valor_precio_original": price_original,
+            "precio_original_texto": price_original,
             "moneda": moneda,
+            "moneda_explicitamente_informada": moneda_explicitamente_informada,
+            "moneda_inferida": moneda_inferida,
             "campo_moneda_original": currency_label or "Sin especificar",
             "valor_moneda_original": currency_original,
             "unidad": unidad,
@@ -425,7 +462,8 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
             "procedencia": first_text(source, "Procedencia"),
             "provincia": first_text(source, "Provincia", "Pcia"),
             "localidad": first_text(source, "Localidad"),
-            "zona": first_text(source, "Zona", "Lugar de entrega", "lugar_entrega"),
+            "zona": delivery_place,
+            "lugar_entrega": delivery_place,
             "precio_puesto_en": first_text(source, "Precio puesto en", "Destino", "Puerto"),
             "operacion": operation,
             "condicion_pago": payment,
@@ -434,6 +472,8 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
             "archivo_origen": path.name,
             "fecha_integracion": date.today().isoformat(),
             "observaciones": notes,
+            "apto_piloto": pilot_status,
+            "apto_dashboard": dashboard_status,
         })
     return rows, {"read": len(source_rows), "integrated": len(rows), "positional_skipped": positional_skipped, "positional_applied": positional_applied, "columns": columns, "commodities": sorted(commodities), "dates": dates, "prices": prices}
 

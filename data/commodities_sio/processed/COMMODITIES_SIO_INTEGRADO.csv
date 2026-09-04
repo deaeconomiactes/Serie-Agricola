@@ -1,31 +1,61 @@
-﻿fecha;año;mes;commodity;fuente;mercado;tipo_precio;precio_tipo_original;precio_unidad;precio_total;campo_precio_original;valor_precio_original;moneda;campo_moneda_original;valor_moneda_original;unidad;precio;volumen;volumen_unidad;campo_volumen_original;procedencia;provincia;localidad;zona;precio_puesto_en;operacion;condicion_pago;condicion_comercial;frecuencia;archivo_origen;fecha_integracion;observaciones
+﻿fecha;año;mes;commodity;fuente;mercado;tipo_precio;precio_tipo_original;precio_unidad;precio_total;campo_precio_original;valor_precio_original;precio_original_texto;moneda;moneda_explicitamente_informada;moneda_inferida;campo_moneda_original;valor_moneda_original;unidad;precio;volumen;volumen_unidad;campo_volumen_original;procedencia;provincia;localidad;zona;lugar_entrega;precio_puesto_en;operacion;condicion_pago;condicion_comercial;frecuencia;archivo_origen;fecha_integracion;observaciones;apto_piloto;apto_dashboard
 2026-09-04;2026;9;Soja;SIO Granos / Secretaría de Agricultura;;Precio Hecho;Precio Hecho;377;;Precio/TN Monto;"377,00
-U$S";Sin especificar;Sin especificar;;TN;377;200,00;TN;Cant. (TN);SANTA FEAARON CASTELLANOS;;;Rosario NEn destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda no informada explícitamente en endpoint GetOperaciones; no se infiere del valor original"
+U$S";"377,00
+U$S";USD;sí;no;Precio/TN Monto;"377,00
+U$S";TN;377;200,00;TN;Cant. (TN);SANTA FEAARON CASTELLANOS;;;Rosario NEn destino;Rosario NEn destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: USD";sí;parcial_piloto
 2026-09-04;2026;9;Maíz;SIO Granos / Secretaría de Agricultura;;Precio Hecho;Precio Hecho;286000;;Precio/TN Monto;"286000,00
-$";Sin especificar;Sin especificar;;TN;286000;600,00;TN;Cant. (TN);SANTIAGO DEL ESTEROQUIMILI;;;Rosario SEn destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda no informada explícitamente en endpoint GetOperaciones; no se infiere del valor original"
+$";"286000,00
+$";ARS;sí;no;Precio/TN Monto;"286000,00
+$";TN;286000;600,00;TN;Cant. (TN);SANTIAGO DEL ESTEROQUIMILI;;;Rosario SEn destino;Rosario SEn destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS";sí;parcial_piloto
 2026-09-04;2026;9;Soja;SIO Granos / Secretaría de Agricultura;;Precio Hecho;Precio Hecho;552720;;Precio/TN Monto;"552720,00
-$";Sin especificar;Sin especificar;;TN;552720;25,00;TN;Cant. (TN);BUENOS AIRESFRANCISCO A. BERRA;;;Zona 4En destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda no informada explícitamente en endpoint GetOperaciones; no se infiere del valor original"
+$";"552720,00
+$";ARS;sí;no;Precio/TN Monto;"552720,00
+$";TN;552720;25,00;TN;Cant. (TN);BUENOS AIRESFRANCISCO A. BERRA;;;Zona 4En destino;Zona 4En destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS";sí;parcial_piloto
 2026-09-04;2026;9;Maíz;SIO Granos / Secretaría de Agricultura;;Precio Hecho;Precio Hecho;180;;Precio/TN Monto;"180,00
-U$S";Sin especificar;Sin especificar;;TN;180;110,00;TN;Cant. (TN);CATAMARCAALTA GRACIA;;;Rosario SEn destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda no informada explícitamente en endpoint GetOperaciones; no se infiere del valor original"
+U$S";"180,00
+U$S";USD;sí;no;Precio/TN Monto;"180,00
+U$S";TN;180;110,00;TN;Cant. (TN);CATAMARCAALTA GRACIA;;;Rosario SEn destino;Rosario SEn destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: USD";sí;parcial_piloto
 2026-09-04;2026;9;Maíz;SIO Granos / Secretaría de Agricultura;;Precio Hecho;Precio Hecho;190;;Precio/TN Monto;"190,00
-U$S";Sin especificar;Sin especificar;;TN;190;120,00;TN;Cant. (TN);SANTA FEDIAZ;;;Rosario NEn destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda no informada explícitamente en endpoint GetOperaciones; no se infiere del valor original"
+U$S";"190,00
+U$S";USD;sí;no;Precio/TN Monto;"190,00
+U$S";TN;190;120,00;TN;Cant. (TN);SANTA FEDIAZ;;;Rosario NEn destino;Rosario NEn destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: USD";sí;parcial_piloto
 2026-09-04;2026;9;Girasol;SIO Granos / Secretaría de Agricultura;;Precio Hecho;Precio Hecho;400;;Precio/TN Monto;"400,00
-U$S";Sin especificar;Sin especificar;;TN;400;150,00;TN;Cant. (TN);BUENOS AIRESCHILLAR;;;QuequenEn destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda no informada explícitamente en endpoint GetOperaciones; no se infiere del valor original"
+U$S";"400,00
+U$S";USD;sí;no;Precio/TN Monto;"400,00
+U$S";TN;400;150,00;TN;Cant. (TN);BUENOS AIRESCHILLAR;;;QuequenEn destino;QuequenEn destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: USD";sí;parcial_piloto
 2026-09-04;2026;9;TRIGO PAN;SIO Granos / Secretaría de Agricultura;;Precio Hecho;Precio Hecho;340000;;Precio/TN Monto;"340000,00
-$";Sin especificar;Sin especificar;;TN;340000;90,00;TN;Cant. (TN);SANTA FETIMBUES;;;Zona 5En destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"commodity no catalogado; se conserva para revisión; integración piloto una página GetOperaciones; moneda no informada explícitamente en endpoint GetOperaciones; no se infiere del valor original"
+$";"340000,00
+$";ARS;sí;no;Precio/TN Monto;"340000,00
+$";TN;340000;90,00;TN;Cant. (TN);SANTA FETIMBUES;;;Zona 5En destino;Zona 5En destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"commodity no catalogado; se conserva para revisión; integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS";sí;parcial_piloto
 2026-09-04;2026;9;Soja;SIO Granos / Secretaría de Agricultura;;Precio Hecho;Precio Hecho;560000;;Precio/TN Monto;"560000,00
-$";Sin especificar;Sin especificar;;TN;560000;60,00;TN;Cant. (TN);BUENOS AIRESBRAGADO;;;B.BlancaEn destino;;Contrato;Anticipado a la entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda no informada explícitamente en endpoint GetOperaciones; no se infiere del valor original"
+$";"560000,00
+$";ARS;sí;no;Precio/TN Monto;"560000,00
+$";TN;560000;60,00;TN;Cant. (TN);BUENOS AIRESBRAGADO;;;B.BlancaEn destino;B.BlancaEn destino;;Contrato;Anticipado a la entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS";sí;parcial_piloto
 2026-09-04;2026;9;Soja;SIO Granos / Secretaría de Agricultura;;Precio Hecho;Precio Hecho;360;;Precio/TN Monto;"360,00
-U$S";Sin especificar;Sin especificar;;TN;360;3200,00;TN;Cant. (TN);SANTA FEPUERTO Gral SAN MARTIN;;;Rosario NEn destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda no informada explícitamente en endpoint GetOperaciones; no se infiere del valor original"
+U$S";"360,00
+U$S";USD;sí;no;Precio/TN Monto;"360,00
+U$S";TN;360;3200,00;TN;Cant. (TN);SANTA FEPUERTO Gral SAN MARTIN;;;Rosario NEn destino;Rosario NEn destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: USD";sí;parcial_piloto
 2026-09-04;2026;9;Soja;SIO Granos / Secretaría de Agricultura;;Precio Hecho;Precio Hecho;565000;;Precio/TN Monto;"565000,00
-$";Sin especificar;Sin especificar;;TN;565000;60,00;TN;Cant. (TN);SANTA FESAN RICARDO;;;Zona 12En destino;;Contrato;A plazo;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda no informada explícitamente en endpoint GetOperaciones; no se infiere del valor original"
+$";"565000,00
+$";ARS;sí;no;Precio/TN Monto;"565000,00
+$";TN;565000;60,00;TN;Cant. (TN);SANTA FESAN RICARDO;;;Zona 12En destino;Zona 12En destino;;Contrato;A plazo;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS";sí;parcial_piloto
 2026-09-04;2026;9;CEBADA FORR.;SIO Granos / Secretaría de Agricultura;;Precio Hecho;Precio Hecho;215.6;;Precio/TN Monto;"215,60
-U$S";Sin especificar;Sin especificar;;TN;215.6;200,00;TN;Cant. (TN);BUENOS AIRESNECOCHEA;;;QuequenEn destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"commodity no catalogado; se conserva para revisión; integración piloto una página GetOperaciones; moneda no informada explícitamente en endpoint GetOperaciones; no se infiere del valor original"
+U$S";"215,60
+U$S";USD;sí;no;Precio/TN Monto;"215,60
+U$S";TN;215.6;200,00;TN;Cant. (TN);BUENOS AIRESNECOCHEA;;;QuequenEn destino;QuequenEn destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"commodity no catalogado; se conserva para revisión; integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: USD";sí;parcial_piloto
 2026-09-04;2026;9;Soja;SIO Granos / Secretaría de Agricultura;;Precio Hecho;Precio Hecho;546056;;Precio/TN Monto;"546056,00
-$";Sin especificar;Sin especificar;;TN;546056;100,00;TN;Cant. (TN);BUENOS AIRESGONZALEZ RISOS;;;Zona 4En destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda no informada explícitamente en endpoint GetOperaciones; no se infiere del valor original"
+$";"546056,00
+$";ARS;sí;no;Precio/TN Monto;"546056,00
+$";TN;546056;100,00;TN;Cant. (TN);BUENOS AIRESGONZALEZ RISOS;;;Zona 4En destino;Zona 4En destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS";sí;parcial_piloto
 2026-09-04;2026;9;TRIGO PAN;SIO Granos / Secretaría de Agricultura;;Precio Hecho;Precio Hecho;335854;;Precio/TN Monto;"335854,01
-$";Sin especificar;Sin especificar;;TN;335854;36,34;TN;Cant. (TN);SALTAVILLA SAN LORENZO;;;Zona 17En destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"commodity no catalogado; se conserva para revisión; integración piloto una página GetOperaciones; moneda no informada explícitamente en endpoint GetOperaciones; no se infiere del valor original"
+$";"335854,01
+$";ARS;sí;no;Precio/TN Monto;"335854,01
+$";TN;335854;36,34;TN;Cant. (TN);SALTAVILLA SAN LORENZO;;;Zona 17En destino;Zona 17En destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"commodity no catalogado; se conserva para revisión; integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS";sí;parcial_piloto
 2026-09-04;2026;9;Soja;SIO Granos / Secretaría de Agricultura;;Precio Hecho;Precio Hecho;560000;;Precio/TN Monto;"560000,00
-$";Sin especificar;Sin especificar;;TN;560000;180,00;TN;Cant. (TN);CÓRDOBAONCATIVO;;;Rosario NEn destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda no informada explícitamente en endpoint GetOperaciones; no se infiere del valor original"
+$";"560000,00
+$";ARS;sí;no;Precio/TN Monto;"560000,00
+$";TN;560000;180,00;TN;Cant. (TN);CÓRDOBAONCATIVO;;;Rosario NEn destino;Rosario NEn destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS";sí;parcial_piloto
 2026-09-04;2026;9;Maíz;SIO Granos / Secretaría de Agricultura;;Precio Hecho;Precio Hecho;202;;Precio/TN Monto;"202,00
-U$S";Sin especificar;Sin especificar;;TN;202;30,00;TN;Cant. (TN);SANTA FEGALVEZ;;;Rosario NEn destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda no informada explícitamente en endpoint GetOperaciones; no se infiere del valor original"
+U$S";"202,00
+U$S";USD;sí;no;Precio/TN Monto;"202,00
+U$S";TN;202;30,00;TN;Cant. (TN);SANTA FEGALVEZ;;;Rosario NEn destino;Rosario NEn destino;;Contrato;Contra entrega;;;SIO_test_GetOperaciones_20260904102034.json;2026-09-04;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: USD";sí;parcial_piloto

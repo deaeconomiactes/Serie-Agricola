@@ -73,8 +73,15 @@
       "target_field": "precio",
       "unit_field": "unidad",
       "unit_value_if_label_matches": "TN",
+      "contains_currency_symbol": true,
+      "currency_extraction_allowed": true,
+      "currency_normalization_rules": [
+        "U$S, US$ o USD explícitos -> USD",
+        "$ explícito sin U$S, US$ ni USD -> ARS",
+        "sin símbolo o texto monetario -> Sin especificar"
+      ],
       "confidence": "alta",
-      "notes": "El rótulo explicita Precio/TN; conservar también el valor original y no inferir moneda."
+      "notes": "El rótulo explicita Precio/TN. Extraer moneda sólo desde el texto original del valor, conservarlo completo y no inferir por contexto; este example permanece pendiente_validacion."
     },
     "11": {
       "source_label": "Lugar Entrega",

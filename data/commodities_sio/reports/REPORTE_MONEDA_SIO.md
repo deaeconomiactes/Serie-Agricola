@@ -38,6 +38,7 @@ Determinar si la moneda del precio puede recuperarse de forma explícita o valid
 - `data/commodities_sio/raw/SIO_test_GetOperaciones_20260904102034.json`: `U$S` en contexto `SOJA","3200,00","Fábrica","SANTA FE\rPUERTO Gral SAN MARTIN","360,00\nU$S","Rosario N\rEn destino","01/05/2027\n31/05/2027","Contra entrega","False"]},{"ID":8460567,"Row":["`.
 - `data/commodities_sio/raw/SIO_test_GetOperaciones_20260904102034.json`: `U$S` en contexto `o","CEBADA FORR.","200,00","Cámara","BUENOS AIRES\rNECOCHEA","215,60\nU$S","Quequen\rEn destino","15/12/2026\n15/01/2027","Contra entrega","False"]},{"ID":8460542,"Row":["84`.
 - `data/commodities_sio/raw/SIO_test_GetOperaciones_20260904102034.json`: `U$S` en contexto `a","Precio Hecho","MAIZ","30,00","Cámara","SANTA FE\rGALVEZ","202,00\nU$S","Rosario N\rEn destino","15/09/2026\n15/10/2026","Contra entrega","False"]}]}}`.
+- Normalización explícita de valores Row: ARS (8), USD (7).
 
 ### Evidencia indirecta
 
@@ -60,21 +61,26 @@ Determinar si la moneda del precio puede recuperarse de forma explícita o valid
 
 ## Resultado
 
-C. Moneda no determinable con los archivos actuales.
+A. Moneda explícita detectada en el campo original de precio.
 
-La presencia de `U$S` o `$` dentro del valor original del precio no se trata como una moneda separada y validada. No permite por sí sola completar `moneda` ni habilitar comparaciones monetarias.
+En Row[10], `U$S`, `US$` o `USD` explícitos se normalizan a USD; `$` explícito sin esos marcadores se normaliza a ARS. La normalización conserva el texto original y no usa contexto externo.
+
+
+## Moneda embebida en campo de precio
+
+Row[10] contiene el campo original de precio. El símbolo monetario se extrae sólo si aparece explícitamente: `U$S`/`US$`/`USD` se normaliza a `USD`, y `$` sin esos marcadores se normaliza a `ARS`. No se infiere moneda por contexto, y siempre se conserva `precio_original_texto`.
 
 ## Decisión metodológica
 
-- Si la moneda es explícita en un campo respaldado por la respuesta, permitir completar `moneda`.
+- Si la moneda es explícita en el campo original de precio, permitir completar `moneda`.
 - Si la moneda no es explícita, mantener `moneda=Sin especificar`.
-- Si sólo hay evidencia débil o embebida en un valor, no completar moneda automáticamente; marcar observación.
+- Si sólo hay evidencia débil o embebida sin marcador inequívoco, no completar moneda automáticamente; marcar observación.
 - No asumir ARS ni USD por tratarse de SIO.
 
 ## Impacto en aptitud dashboard
 
-`apto_piloto` puede permanecer en sí porque la muestra tiene fecha, commodity, precio válido, fuente y unidades respaldadas. `apto_dashboard` debe permanecer en no mientras la moneda no quede validada y no exista homogeneidad monetaria. Sin moneda no se deben comparar precios ni variaciones monetarias en el dashboard.
+`apto_piloto` puede permanecer en sí porque la muestra tiene fecha, commodity, precio válido, fuente y unidades respaldadas. `apto_dashboard` puede quedar como `parcial_piloto` si moneda y unidad están explícitas, pero no como `si` pleno porque la muestra sigue limitada a una sola página. La comparabilidad monetaria entre monedas distintas requiere separación o conversión metodológica explícita.
 
 ## Próximo paso recomendado
 
-Buscar una exportación manual o respuesta de navegador/DevTools que exponga una columna o metadato de moneda. Si `GetOperaciones` no la devuelve, evaluar otro endpoint o parámetro sólo mediante una prueba controlada y documentada; no hacer paginación masiva ni llamadas desde el dashboard.
+Validar una segunda respuesta o exportación manual para confirmar la regla en todas las filas. Si aparecen valores sin marcador o cambia el formato, mantenerlos como `Sin especificar`; no hacer paginación masiva ni llamadas desde el dashboard.
