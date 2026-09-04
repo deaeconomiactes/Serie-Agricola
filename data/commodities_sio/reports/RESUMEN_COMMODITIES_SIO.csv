@@ -1,6 +1,7 @@
 ﻿commodity;filas_totales;años;meses;fecha_min;fecha_max;precios_validos;precios_faltantes;precios_cero;precios_negativos;moneda;unidad;tipo_precio;precio_unidad_con_dato;precio_total_con_dato;campo_precio_original;campo_volumen_original;volumen_con_dato;volumen_unidad_con_dato;procedencia_con_dato;precio_puesto_en_con_dato;operacion_con_dato;condicion_pago_con_dato;apto_piloto;apto_dashboard
 CEBADA FORR.;1;2026;2026-09;2026-09-04;2026-09-04;1;0;0;0;USD;TN;Precio Hecho;1;0;Precio/TN Monto;Cant. (TN);1;1;1;0;1;1;Sí;parcial_piloto
-Girasol;2;2026;2026-09;2026-09-04;2026-09-04;2;0;0;0;USD;TN;Precio Hecho;2;0;Precio/TN Monto;Cant. (TN);2;2;2;0;2;2;Sí;parcial_piloto
-Maíz;9;2026;2026-09;2026-09-04;2026-09-04;9;0;0;0;ARS|USD;TN;Precio Hecho;9;0;Precio/TN Monto;Cant. (TN);9;9;9;0;9;9;Sí;parcial_piloto
-Soja;15;2026;2026-09;2026-09-04;2026-09-04;15;0;0;0;ARS|USD;TN;Precio Hecho;15;0;Precio/TN Monto;Cant. (TN);15;15;15;0;15;15;Sí;parcial_piloto
-TRIGO PAN;3;2026;2026-09;2026-09-04;2026-09-04;3;0;0;0;ARS;TN;Precio Hecho;3;0;Precio/TN Monto;Cant. (TN);3;3;3;0;3;3;Sí;parcial_piloto
+Girasol;3;2026;2026-09;2026-09-04;2026-09-04;3;0;0;0;USD;TN;Precio Hecho;3;0;Precio/TN Monto;Cant. (TN);3;3;3;0;3;3;Sí;parcial_piloto
+Maíz;18;2026;2026-09;2026-09-04;2026-09-04;18;0;0;0;ARS|USD;TN;Precio Hecho;18;0;Precio/TN Monto;Cant. (TN);18;18;18;0;18;18;Sí;parcial_piloto
+Soja;16;2026;2026-09;2026-09-04;2026-09-04;16;0;0;0;ARS|USD;TN;Precio Hecho;16;0;Precio/TN Monto;Cant. (TN);16;16;16;0;16;16;Sí;parcial_piloto
+TRIGO CAND.;1;2026;2026-09;2026-09-04;2026-09-04;1;0;0;0;ARS;TN;Precio Hecho;1;0;Precio/TN Monto;Cant. (TN);1;1;1;0;1;1;Sí;parcial_piloto
+TRIGO PAN;5;2026;2026-09;2026-09-04;2026-09-04;5;0;0;0;ARS|USD;TN;Precio Hecho;5;0;Precio/TN Monto;Cant. (TN);5;5;5;0;5;5;Sí;parcial_piloto

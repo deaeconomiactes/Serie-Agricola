@@ -40,6 +40,14 @@ python .\explorar_sio_granos.py --sample-pages --allow-web --save-response --pag
 
 Este modo no es scraping masivo: limita páginas y requests, conserva el `raw` fuera del repo, no integra al dashboard y requiere auditoría antes de ampliar la extracción.
 
+Para diagnosticar específicamente si la paginación de `GetOperaciones` es real:
+
+```powershell
+python .\explorar_sio_granos.py --test-pagination --allow-web --save-response --max-requests 3
+```
+
+Este modo usa únicamente parámetros respaldados por la evidencia local (`pPageSize` y `pCurrentPage`), registra cada payload, compara IDs/Rows y tiene un máximo efectivo de tres requests. No descarga masivamente ni integra el dashboard. Si las páginas se repiten, no ampliar la extracción: revisar `reports/REPORTE_PAGINACION_SIO.md` y observar el request real en DevTools antes de probar otra variante.
+
 3. Si la automatización aún no está validada, generar URLs para consulta/descarga manual:
 
 ```powershell

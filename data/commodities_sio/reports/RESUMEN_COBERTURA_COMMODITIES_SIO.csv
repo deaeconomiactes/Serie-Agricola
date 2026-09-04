@@ -29,18 +29,35 @@ mes;;2026;2026-09;1
 mes;;2026;2026-09;1
 mes;;2026;2026-09;1
 mes;;2026;2026-09;1
+mes;;2026;2026-09;1
+mes;;2026;2026-09;1
+mes;;2026;2026-09;1
+mes;;2026;2026-09;1
+mes;;2026;2026-09;1
+mes;;2026;2026-09;1
+mes;;2026;2026-09;1
+mes;;2026;2026-09;1
+mes;;2026;2026-09;1
+mes;;2026;2026-09;1
+mes;;2026;2026-09;1
+mes;;2026;2026-09;1
+mes;;2026;2026-09;1
+mes;;2026;2026-09;1
 commodity_año;CEBADA FORR.;2026;;1
 commodity;CEBADA FORR.;;;1
 commodity_ultimos_30_dias;CEBADA FORR.;;;1
-commodity_año;Girasol;2026;;2
-commodity;Girasol;;;2
-commodity_ultimos_30_dias;Girasol;;;2
-commodity_año;Maíz;2026;;9
-commodity;Maíz;;;9
-commodity_ultimos_30_dias;Maíz;;;9
-commodity_año;Soja;2026;;15
-commodity;Soja;;;15
-commodity_ultimos_30_dias;Soja;;;15
-commodity_año;TRIGO PAN;2026;;3
-commodity;TRIGO PAN;;;3
-commodity_ultimos_30_dias;TRIGO PAN;;;3
+commodity_año;Girasol;2026;;3
+commodity;Girasol;;;3
+commodity_ultimos_30_dias;Girasol;;;3
+commodity_año;Maíz;2026;;18
+commodity;Maíz;;;18
+commodity_ultimos_30_dias;Maíz;;;18
+commodity_año;Soja;2026;;16
+commodity;Soja;;;16
+commodity_ultimos_30_dias;Soja;;;16
+commodity_año;TRIGO CAND.;2026;;1
+commodity;TRIGO CAND.;;;1
+commodity_ultimos_30_dias;TRIGO CAND.;;;1
+commodity_año;TRIGO PAN;2026;;5
+commodity;TRIGO PAN;;;5
+commodity_ultimos_30_dias;TRIGO PAN;;;5

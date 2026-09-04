@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import csv
+import json
 import re
 from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta
@@ -12,8 +13,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 PROCESSED_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_INTEGRADO.csv"
+RAW_DIR = ROOT / "data" / "commodities_sio" / "raw"
 REPORT_DIR = ROOT / "data" / "commodities_sio" / "reports"
 PAGINATED_REPORT_PATH = REPORT_DIR / "REPORTE_MUESTRA_PAGINADA_SIO.md"
+PAGINATION_REPORT_PATH = REPORT_DIR / "REPORTE_PAGINACION_SIO.md"
 REPORTS = {
     "report": REPORT_DIR / "REPORTE_AUDITORIA_COMMODITIES_SIO.md",
     "coverage": REPORT_DIR / "RESUMEN_COBERTURA_COMMODITIES_SIO.csv",
@@ -125,8 +128,60 @@ def format_counts(counts: Counter[str]) -> str:
     return ", ".join(f"{name or 'sin dato'}={count}" for name, count in sorted(counts.items())) or "sin dato"
 
 
+def read_page_items(path: Path) -> list[dict[str, object]]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        return []
+    if isinstance(payload, dict) and isinstance(payload.get("d"), dict):
+        payload = payload["d"]
+    if not isinstance(payload, dict) or not isinstance(payload.get("Items"), list):
+        return []
+    return [item for item in payload["Items"] if isinstance(item, dict)]
+
+
+def pagination_metrics() -> dict[str, object]:
+    preferred_files = sorted(RAW_DIR.glob("SIO_test_pagination_page_*.json"))
+    fallback_files = sorted(RAW_DIR.glob("SIO_GetOperaciones_page_*.json"))
+    candidates = preferred_files or fallback_files
+    latest_by_page: dict[str, Path] = {}
+    for path in candidates:
+        page_match = re.search(r"page[_-](\d+)", path.stem, flags=re.I)
+        page_key = page_match.group(1) if page_match else path.name
+        if page_key not in latest_by_page or path.name > latest_by_page[page_key].name:
+            latest_by_page[page_key] = path
+    page_files = [latest_by_page[key] for key in sorted(latest_by_page, key=lambda item: int(item) if item.isdigit() else item)]
+    page_groups: dict[str, list[str]] = {}
+    raw_items: list[dict[str, object]] = []
+    for path in page_files:
+        items = read_page_items(path)
+        if not items:
+            continue
+        signatures = [json.dumps({"ID": item.get("ID"), "Row": item.get("Row")}, ensure_ascii=False, sort_keys=True, separators=(",", ":")) for item in items]
+        page_match = re.search(r"page[_-](\d+)", path.stem, flags=re.I)
+        page_key = page_match.group(1) if page_match else path.name
+        page_groups[page_key] = signatures
+        raw_items.extend(items)
+    all_signatures = [json.dumps({"ID": item.get("ID"), "Row": item.get("Row")}, ensure_ascii=False, sort_keys=True, separators=(",", ":")) for item in raw_items]
+    ids = [str(item.get("ID")) for item in raw_items if item.get("ID") is not None]
+    duplicate_ids = sum(count - 1 for count in Counter(ids).values() if count > 1)
+    unique_rows = len(set(all_signatures))
+    duplicate_exact = max(len(all_signatures) - unique_rows, 0)
+    first = next(iter(page_groups.values()), [])
+    if len(page_groups) == 0:
+        status = "no_probada"
+    elif len(page_groups) >= 2 and first and all(signatures == first for signatures in page_groups.values()):
+        status = "duplicada"
+    elif len(page_groups) >= 2:
+        status = "validada" if duplicate_exact == 0 else "parcial"
+    else:
+        status = "parcial"
+    return {"pages": len(page_groups), "raw_rows": len(all_signatures), "unique_rows": unique_rows, "duplicate_ids": duplicate_ids, "duplicate_exact": duplicate_exact, "duplication_pct": (duplicate_exact / len(all_signatures) * 100) if all_signatures else 0, "status": status}
+
+
 def update_paginated_audit_report(rows: list[dict[str, str]]) -> None:
-    if not PAGINATED_REPORT_PATH.exists():
+    report_paths = [path for path in (REPORTS["report"], PAGINATED_REPORT_PATH, PAGINATION_REPORT_PATH) if path.exists()]
+    if not report_paths:
         return
     pages = sorted({value(row, "pagina_origen") for row in rows if value(row, "pagina_origen")}, key=lambda item: int(item))
     sample_page_count = max((int(value(row, "muestra_paginas")) for row in rows if value(row, "muestra_paginas").isdigit()), default=len(pages))
@@ -142,12 +197,20 @@ def update_paginated_audit_report(rows: list[dict[str, str]]) -> None:
     dashboard_statuses = Counter(value(row, "apto_dashboard") for row in rows)
     dates = [parse_date(value(row, "fecha")) for row in rows]
     dates = [item for item in dates if item]
+    metrics = pagination_metrics()
+    pagination_section = "\n".join(["## Paginación y duplicados", "", f"- Páginas procesadas: {metrics['pages']}.", f"- Filas brutas: {metrics['raw_rows']}.", f"- Filas únicas por ID/Row: {metrics['unique_rows']}.", f"- Duplicados por ID: {metrics['duplicate_ids']}.", f"- Duplicados exactos por Row: {metrics['duplicate_exact']}.", f"- Porcentaje de duplicación: {metrics['duplication_pct']:.1f}%.", f"- estado_paginacion: `{metrics['status']}`.", "- Si las páginas repiten contenido, no se habilita `apto_dashboard=si`; el estado se mantiene en `parcial_piloto` o `no`.", ""])
     result_section = "\n".join([
         "## Resultado de auditoría", "", f"- Commodities: {', '.join(sorted({value(row, 'commodity') for row in rows if value(row, 'commodity')})) or 'ninguno'}.", f"- Rango de fechas: {min(dates).isoformat() if dates else 'sin fecha válida'} a {max(dates).isoformat() if dates else 'sin fecha válida'}.", f"- Monedas: {', '.join(currencies) or 'ninguna'}; mezcla ARS/USD: {'sí' if {'ARS', 'USD'}.issubset(set(currencies)) else 'no'}.", f"- Unidades: {', '.join(units) or 'ninguna'}.", f"- Precios válidos por moneda: {', '.join(f'{name}={count}' for name, count in sorted(prices_by_currency.items())) or 'ninguno'}.", f"- Volumen válido: {sum(1 for row in rows if parse_price(value(row, 'volumen')) is not None)}/{len(rows)}.", f"- Procedencias con dato: {coverage_count(rows, 'procedencia')}; lugares de entrega con dato: {coverage_count(rows, 'lugar_entrega')}; condiciones de pago con dato: {coverage_count(rows, 'condicion_pago')}.", f"- Páginas solicitadas/procesadas: {sample_page_count}; páginas con filas finales: {', '.join(pages) or 'no identificadas'}; registros finales por página: {', '.join(f'{page}={records_by_page[page]}' for page in pages) or 'no identificados'}.", f"- Duplicados por id_operacion_sio en CSV final: {duplicate_ids}; duplicados compuestos sin ID: {duplicate_composites}.", f"- apto_piloto: {format_counts(pilot_statuses)}.", f"- apto_dashboard: {format_counts(dashboard_statuses)}.", "- Comparabilidad conjunta ARS/USD: no; deben mantenerse series separadas por moneda.", "",
     ])
-    report = PAGINATED_REPORT_PATH.read_text(encoding="utf-8")
-    report = re.sub(r"## Resultado de auditoría\n.*?(?=\n## Riesgos)", result_section.rstrip(), report, flags=re.S)
-    PAGINATED_REPORT_PATH.write_text(report, encoding="utf-8")
+    for report_path in report_paths:
+        report = report_path.read_text(encoding="utf-8")
+        report = re.sub(r"## Resultado de auditoría\n.*?(?=\n## Riesgos)", result_section.rstrip(), report, flags=re.S)
+        if "## Paginación y duplicados" in report:
+            report = re.sub(r"## Paginación y duplicados\n.*?(?=\n## |\Z)", pagination_section.rstrip() + "\n", report, flags=re.S)
+        else:
+            insertion = "\n" + pagination_section + "\n"
+            report = report.replace("\n## Actualidad de la información", insertion + "\n## Actualidad de la información", 1)
+        report_path.write_text(report, encoding="utf-8")
 
 
 def main() -> int:

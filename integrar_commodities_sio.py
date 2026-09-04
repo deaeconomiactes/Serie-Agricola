@@ -21,6 +21,7 @@ MAPPING_LOCAL_PATH = ROOT / "data" / "commodities_sio" / "mapeo_getoperaciones_s
 MAPPING_EXAMPLE_PATH = ROOT / "data" / "commodities_sio" / "mapeo_getoperaciones_sio.example.json"
 OUTPUT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_INTEGRADO.csv"
 PAGINATED_REPORT_PATH = ROOT / "data" / "commodities_sio" / "reports" / "REPORTE_MUESTRA_PAGINADA_SIO.md"
+PAGINATION_REPORT_PATH = ROOT / "data" / "commodities_sio" / "reports" / "REPORTE_PAGINACION_SIO.md"
 OUTPUT_COLUMNS = [
     "fecha", "año", "mes", "commodity", "fuente", "mercado", "tipo_precio",
     "precio_tipo_original", "precio_unidad", "precio_total", "campo_precio_original", "valor_precio_original", "precio_original_texto", "moneda", "moneda_explicitamente_informada", "moneda_inferida", "campo_moneda_original", "valor_moneda_original", "unidad", "precio", "volumen", "volumen_unidad", "campo_volumen_original", "procedencia",
@@ -362,6 +363,7 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
     commodities: set[str] = set()
     positional_skipped = 0
     positional_applied = 0
+    row_signatures: list[str] = []
     page_match = re.search(r"page[_-](\d+)", path.stem, flags=re.I)
     page_origin = page_match.group(1) if page_match else ""
     sample_type = "paginacion_controlada" if page_match else "piloto_una_pagina"
@@ -369,6 +371,8 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
         used_positional = False
         source_id = first_text(source, "ID", "id_operacion_sio")
         has_positional_row = any(key(name) == "row" for name in source)
+        raw_row = value_for(source, "Row") if has_positional_row else ""
+        raw_row_signature = json.dumps(raw_row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) if has_positional_row else json.dumps(source, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         if has_positional_row:
             if positional_mapping is None:
                 positional_skipped += 1
@@ -485,8 +489,10 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
             "id_operacion_sio": source_id or first_text(source, "id_operacion_sio", "ID"),
             "muestra_tipo": sample_type,
             "muestra_paginas": str(sample_pages),
+            "_row_signature": raw_row_signature,
         })
-    return rows, {"read": len(source_rows), "integrated": len(rows), "positional_skipped": positional_skipped, "positional_applied": positional_applied, "columns": columns, "commodities": sorted(commodities), "dates": dates, "prices": prices}
+        row_signatures.append(raw_row_signature)
+    return rows, {"read": len(source_rows), "integrated": len(rows), "positional_skipped": positional_skipped, "positional_applied": positional_applied, "columns": columns, "commodities": sorted(commodities), "dates": dates, "prices": prices, "page_origin": page_origin, "row_signatures": row_signatures}
 
 
 def real_files() -> list[Path]:
@@ -498,6 +504,10 @@ def real_files() -> list[Path]:
 def row_signature(row: dict[str, str]) -> tuple[str, ...]:
     excluded = {"archivo_origen", "fecha_integracion", "observaciones", "pagina_origen", "muestra_paginas", "muestra_tipo"}
     return tuple(str(row.get(column, "")) for column in OUTPUT_COLUMNS if column not in excluded)
+
+
+def raw_row_signature(row: dict[str, str]) -> str:
+    return text(row.get("_row_signature")) or json.dumps(row_signature(row), ensure_ascii=False, separators=(",", ":"))
 
 
 def deduplicate_rows(rows: list[dict[str, str]]) -> tuple[list[dict[str, str]], list[dict[str, str]], list[dict[str, str]]]:
@@ -517,25 +527,32 @@ def deduplicate_rows(rows: list[dict[str, str]]) -> tuple[list[dict[str, str]], 
             else:
                 seen_by_key[key_value] = row
             continue
-        if row_signature(previous) == row_signature(row):
-            duplicates.append({"id_operacion_sio": operation_id, "archivo_origen": row.get("archivo_origen", ""), "pagina_origen": row.get("pagina_origen", ""), "motivo": "duplicado exacto; se conserva la primera aparición"})
+        if raw_row_signature(previous) == raw_row_signature(row):
+            duplicate_type = "duplicado por id_operacion_sio y Row" if operation_id else "duplicado exacto por Row"
+            duplicates.append({"id_operacion_sio": operation_id, "archivo_origen": row.get("archivo_origen", ""), "pagina_origen": row.get("pagina_origen", ""), "tipo": duplicate_type, "motivo": "duplicado exacto; se conserva la primera aparición"})
         else:
-            conflicts.append({"id_operacion_sio": operation_id, "archivo_origen": row.get("archivo_origen", ""), "pagina_origen": row.get("pagina_origen", ""), "motivo": "mismo ID/claves pero contenido diferente; se conservan ambas filas para revisión"})
+            conflicts.append({"id_operacion_sio": operation_id, "archivo_origen": row.get("archivo_origen", ""), "pagina_origen": row.get("pagina_origen", ""), "tipo": "conflicto de ID/claves", "motivo": "mismo ID/claves pero Row o contenido diferente; se conservan ambas filas para revisión"})
             kept.append(row)
     return kept, duplicates, conflicts
 
 
-def update_paginated_report(files: list[Path], diagnostics: list[dict[str, Any]], rows: list[dict[str, str]], duplicates: list[dict[str, str]], conflicts: list[dict[str, str]], page_count: int) -> None:
-    if not PAGINATED_REPORT_PATH.exists():
+def update_paginated_report(files: list[Path], diagnostics: list[dict[str, Any]], rows: list[dict[str, str]], duplicates: list[dict[str, str]], conflicts: list[dict[str, str]], page_count: int, pagination_status: str) -> None:
+    report_paths = [path for path in (PAGINATED_REPORT_PATH, PAGINATION_REPORT_PATH) if path.exists()]
+    if not report_paths:
         return
-    report = PAGINATED_REPORT_PATH.read_text(encoding="utf-8")
     total_read = sum(int(item.get("read", 0)) for item in diagnostics)
     columns = [column for column in OUTPUT_COLUMNS if any(row.get(column) for row in rows)]
+    duplicate_by_id = sum(1 for item in duplicates if item.get("id_operacion_sio"))
+    duplicate_by_row = sum(1 for item in duplicates if "Row" in item.get("tipo", ""))
+    warning = "paginación no validada; páginas repetidas" if pagination_status == "duplicada" else "sin advertencia de repetición completa de páginas"
     integration_section = "\n".join([
-        "## Resultado de integración", "", f"- Filas leídas antes de deduplicar: {total_read}.", f"- Archivos procesados: {len(files)}.", f"- Páginas procesadas: {page_count}.", f"- Duplicados exactos eliminados: {len(duplicates)}.", f"- Conflictos conservados para revisión: {len(conflicts)}.", f"- Filas finales: {len(rows)}.", f"- Columnas principales: {', '.join(columns)}.", "",
+        "## Resultado de integración", "", f"- Filas leídas antes de deduplicar: {total_read}.", f"- Archivos procesados: {len(files)}.", f"- Páginas procesadas: {page_count}.", f"- Duplicados exactos eliminados: {len(duplicates)}; con ID: {duplicate_by_id}; por Row: {duplicate_by_row}.", f"- Conflictos conservados para revisión: {len(conflicts)}.", f"- Filas finales: {len(rows)}.", f"- Estado derivado de paginación: {pagination_status}.", f"- Observación: {warning}.", f"- Columnas principales: {', '.join(columns)}.", "",
     ])
-    report = re.sub(r"## Resultado de integración\n.*?(?=\n## Resultado de auditoría)", integration_section.rstrip(), report, flags=re.S)
-    PAGINATED_REPORT_PATH.write_text(report, encoding="utf-8")
+    for report_path in report_paths:
+        report = report_path.read_text(encoding="utf-8")
+        report = re.sub(r"## Resultado de integración\n.*?(?=\n## (?:Resultado de auditoría|Paginación y duplicados))", integration_section.rstrip(), report, flags=re.S)
+        report = report.replace("## Paginación y duplicados\n\nPendiente de ejecutar `auditar_commodities_sio.py`.", f"## Paginación y duplicados\n\n- Estado derivado en integración: `{pagination_status}`.\n- Observación: {warning}.")
+        report_path.write_text(report, encoding="utf-8")
 
 
 def remove_output() -> None:
@@ -594,10 +611,26 @@ def main() -> int:
         remove_output()
         print("No se integraron filas válidas de SIO Granos. No se generan reportes vacíos.")
         return 0
+    page_diagnostics = [item for item in diagnostics_by_file if item.get("page_origin")]
+    page_signature_groups = {str(item["page_origin"]): item.get("row_signatures", []) for item in page_diagnostics if item.get("row_signatures")}
+    first_page_signatures = next(iter(page_signature_groups.values()), [])
+    pagination_status = "no_probada"
+    if len(page_signature_groups) >= 2:
+        pagination_status = "duplicada" if first_page_signatures and all(signatures == first_page_signatures for signatures in page_signature_groups.values()) else "parcial"
+    elif page_signature_groups:
+        pagination_status = "parcial"
     integrated_rows, duplicates, conflicts = deduplicate_rows(all_rows)
+    if pagination_status == "duplicada":
+        for row in integrated_rows:
+            if row.get("muestra_tipo") == "paginacion_controlada":
+                note = "paginación no validada; páginas repetidas"
+                row["observaciones"] = "; ".join(dict.fromkeys(filter(None, [row.get("observaciones", ""), note])))
     write_output(integrated_rows)
-    update_paginated_report(files, diagnostics_by_file, integrated_rows, duplicates, conflicts, sample_pages)
+    update_paginated_report(files, diagnostics_by_file, integrated_rows, duplicates, conflicts, sample_pages, pagination_status)
     print(f"Duplicados exactos eliminados: {len(duplicates)}; conflictos conservados: {len(conflicts)}")
+    print(f"Estado de paginación: {pagination_status}.")
+    if pagination_status == "duplicada":
+        print("Advertencia: paginación no validada; páginas repetidas. Se conservan sólo registros únicos con trazabilidad.")
     print(f"Integración SIO finalizada: {len(integrated_rows)} filas en {OUTPUT_PATH}")
     return 1 if errors else 0
 

@@ -31,6 +31,7 @@ DEFAULT_OUTPUT = DATA_DIR / "raw"
 REPORT_DIR = DATA_DIR / "reports"
 ENDPOINT_REPORT_PATH = REPORT_DIR / "REPORTE_ENDPOINT_SIO.md"
 PAGINATED_REPORT_PATH = REPORT_DIR / "REPORTE_MUESTRA_PAGINADA_SIO.md"
+PAGINATION_REPORT_PATH = REPORT_DIR / "REPORTE_PAGINACION_SIO.md"
 USER_AGENT = "Serie-Agricola/commodities-sio-explorer (+consulta-publica)"
 SAFE_MESSAGE = (
     "Modo seguro: no se realizan llamadas externas. Use --dry-run para ver la "
@@ -707,6 +708,24 @@ def response_item_ids(content: bytes) -> list[str]:
     return []
 
 
+def response_item_signatures(content: bytes) -> list[str]:
+    """Devuelve firmas comparables de ID/Row sin publicar el contenido raw."""
+
+    payload, error = decode_json_response(content)
+    if error:
+        return []
+    if isinstance(payload, dict) and isinstance(payload.get("d"), dict):
+        payload = payload["d"]
+    if not isinstance(payload, dict) or not isinstance(payload.get("Items"), list):
+        return []
+    signatures: list[str] = []
+    for item in payload["Items"]:
+        if not isinstance(item, dict):
+            continue
+        signatures.append(json.dumps({"ID": item.get("ID"), "Row": item.get("Row")}, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
+    return signatures
+
+
 def write_sample_pages_report(command: str, endpoint: str, pages: int, page_size: int, max_requests: int, requests: list[dict[str, Any]]) -> Path:
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     lines = [
@@ -780,6 +799,102 @@ def run_sample_pages(args: argparse.Namespace, config: dict[str, Any]) -> int:
     print(f"Muestra paginada finalizada: {len(requests)} request(s); máximo solicitado: {args.max_requests}; máximo de páginas permitido: 5.")
     for item in requests:
         print(f"Página {item['page']}: status={item['status'] or 'sin respuesta'}; registros={item['records']}; raw={item['saved'] or 'no guardado'}.")
+    print(f"Reporte generado: {report}")
+    return 0
+
+
+def pagination_evidence_rows() -> list[list[str]]:
+    html_path = DATA_DIR / "raw" / "SIO_descubrimiento_01_consulta_publica.html"
+    source = str(html_path).replace("\\", "/")
+    if not html_path.exists():
+        source = "REPORTE_DESCUBRIMIENTO_SIO.md / REPORTE_ENDPOINT_SIO.md"
+    return [
+        ["pPageSize", "Clave enviada por el JavaScript del PageMethod; se alimenta de jqGrid rowNum.", source, "alta", "sí", "El payload se probó en la muestra y no demostró paginación."],
+        ["pCurrentPage", "Clave enviada por el JavaScript del PageMethod; se alimenta de jqGrid page.", source, "alta", "sí", "El payload se probó con páginas 1/2/3 y las respuestas deben compararse."],
+        ["page", "Aparece como argumento de getGridParam(\"page\") dentro de jqGrid.", source, "media", "sí", "No se observó serializado como clave del POST."],
+        ["rows", "Aparece como rowNum de jqGrid, que alimenta pPageSize.", source, "media", "sí", "No se observó serializado como clave del POST."],
+        ["jqGrid pager", "La página usa jqGrid, #pager y jsonReader page/total/records.", source, "alta", "no", "Evidencia de grilla, no de un payload alternativo."],
+    ]
+
+
+def write_pagination_report(command: str, endpoint: str, page_size: int, max_requests: int, requests: list[dict[str, Any]]) -> Path:
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    raw_rows = sum(int(item.get("records", 0)) for item in requests)
+    signatures = [signature for item in requests for signature in item.get("signatures", [])]
+    unique_signatures = len(set(signatures))
+    duplicate_rows = max(raw_rows - unique_signatures, 0)
+    duplication_pct = (duplicate_rows / raw_rows * 100) if raw_rows else 0
+    all_same_as_first = bool(requests) and all(item.get("signatures", []) == requests[0].get("signatures", []) for item in requests[1:])
+    repeated_ids = Counter(identifier for item in requests for identifier in item.get("ids", []) if identifier)
+    repeated_id_count = sum(count - 1 for count in repeated_ids.values() if count > 1)
+    repeated_id_values = ", ".join(sorted(repeated_ids)) if repeated_ids else "ninguno"
+    lines = [
+        "# Reporte de diagnóstico de paginación SIO", "", "## Objetivo", "", "Diagnosticar si el endpoint GetOperaciones admite paginación real y con qué parámetros.", "", "## Evidencia revisada", "", "- `data/commodities_sio/reports/REPORTE_DESCUBRIMIENTO_SIO.md`", "- `data/commodities_sio/reports/REPORTE_ENDPOINT_SIO.md`", "- `data/commodities_sio/reports/REPORTE_MAPEO_GETOPERACIONES_SIO.md`", "- `data/commodities_sio/reports/REPORTE_MUESTRA_PAGINADA_SIO.md`", "- `data/commodities_sio/raw/SIO_descubrimiento_01_consulta_publica.html` (ignorado por Git, si está disponible)", "- respuestas JSON raw locales de `GetOperaciones` (ignoradas por Git)", "", "## Resultado de muestra paginada", "", f"- Páginas solicitadas: {len(requests)} (límite solicitado: {max_requests}).", f"- Page size: {page_size}.", f"- Requests realizados: {len(requests)}.", f"- Registros brutos: {raw_rows}; registros únicos por ID/Row: {unique_signatures}.", f"- Porcentaje de duplicación: {duplication_pct:.1f}% ({duplicate_rows}/{raw_rows} filas excedentes).", f"- IDs repetidos en exceso: {repeated_id_count}.", f"- IDs repetidos: {repeated_id_values}.", f"- Página 2/3 idéntica a página 1: {'sí' if all_same_as_first and len(requests) >= 2 else 'no concluyente'}.", "", "| Página | Payload exacto | Status | Registros | IDs/Rows respecto de página 1 | Raw | Observaciones |", "| --- | --- | ---: | ---: | --- | --- | --- |",
+    ]
+    for item in requests:
+        comparison = item.get("comparison", "no comparable")
+        lines.append(f"| {item['page']} | `{json.dumps(item['payload'], ensure_ascii=False, separators=(',', ':'))}` | {item['status'] or 'sin respuesta'} | {item['records']} | {comparison} | {item.get('saved') or 'no guardado'} | {item['observations']} |")
+    if not requests:
+        lines.append("| — | — | — | 0 | no comparable | no guardado | No se realizaron requests. |")
+    lines.extend(["", "## Parámetros usados", "", "Se usó únicamente el payload respaldado por el JavaScript local de la grilla:", "", "```json", '{"pPageSize": 15, "pCurrentPage": 1}', '{"pPageSize": 15, "pCurrentPage": 2}', '{"pPageSize": 15, "pCurrentPage": 3}', "```", "", "No se enviaron filtros de producto, fecha o moneda.", "", "## Parámetros candidatos observados", "", "| Parámetro | Evidencia | Fuente de evidencia | Confianza | Requiere prueba | Observaciones |", "| --- | --- | --- | --- | --- | --- |"])
+    lines.extend("| " + " | ".join(row) + " |" for row in pagination_evidence_rows())
+    lines.extend(["", "## Hipótesis", "", "- `pCurrentPage` puede ser aceptado por el JavaScript pero ignorado o normalizado por el endpoint.", "- El endpoint puede requerir estado de sesión u otros datos de la grilla que no aparecen en la evidencia local disponible.", "- jqGrid puede manejar `page` y `rows` internamente, pero no se observó evidencia de que esas claves sean el POST real del PageMethod.", "- La respuesta puede devolver siempre las últimas operaciones o requerir otro endpoint/exportación.", "- `PageCount`, `CurrentPage` y `RecordCount` pueden no estar siendo informados correctamente por la respuesta observada; no se usan para inventar páginas.", "", "## Próximo paso recomendado", "", "La evidencia más fuerte identifica `pPageSize`/`pCurrentPage`, pero la prueba controlada no valida paginación si las páginas repiten IDs/Rows. No ampliar la extracción. Usar DevTools del navegador para observar el request real y la respuesta de la grilla; si coincide con este payload y sigue repitiendo contenido, limitar el uso a la última página disponible o evaluar la exportación manual. No probar variantes arbitrarias sin nueva evidencia.", "", "## Resultado de integración", "", "Pendiente de ejecutar `integrar_commodities_sio.py`.", "", "## Paginación y duplicados", "", "Pendiente de ejecutar `auditar_commodities_sio.py`.", ""])
+    PAGINATION_REPORT_PATH.write_text("\n".join(lines), encoding="utf-8")
+    return PAGINATION_REPORT_PATH
+
+
+def run_test_pagination(args: argparse.Namespace, config: dict[str, Any]) -> int:
+    request_limit = min(args.max_requests, 3)
+    base_url = str(config.get("base_url", "")).strip()
+    endpoint = endpoint_url(base_url, TEST_ENDPOINT_PATH) if base_url else TEST_ENDPOINT_PATH
+    requests: list[dict[str, Any]] = []
+    previous_signatures: list[str] = []
+    for page in range(1, request_limit + 1):
+        payload = {"pPageSize": 15, "pCurrentPage": page}
+        item: dict[str, Any] = {"page": page, "payload": payload, "status": "", "records": 0, "saved": "", "observations": "", "ids": [], "signatures": [], "comparison": "no comparable"}
+        content = b""
+        if not base_url:
+            item["observations"] = "configuración local SIO sin base_url; no se realiza request"
+            requests.append(item)
+            break
+        request = urllib.request.Request(endpoint, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json; charset=utf-8", "Accept": "application/json, text/javascript, */*; q=0.01", "X-Requested-With": "XMLHttpRequest", "User-Agent": USER_AGENT}, method="POST")
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:  # nosec B310: explicit configured endpoint plus --test-pagination and --allow-web
+                content = response.read()
+                item["status"] = response.status
+                item["content_type"] = response.headers.get_content_type()
+            result = analyze_endpoint_response(content, item["status"], item["content_type"], "")
+            item["records"] = result["record_count"]
+            item["ids"] = response_item_ids(content)
+            item["signatures"] = response_item_signatures(content)
+            item["observations"] = "respuesta recibida sin retry; payload exacto registrado"
+            if args.save_response:
+                saved_dir = Path(args.output_dir)
+                saved_path = saved_dir / f"SIO_test_pagination_page_{page}_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.json"
+                saved_dir.mkdir(parents=True, exist_ok=True)
+                saved_path.write_bytes(content)
+                item["saved"] = str(saved_path.relative_to(ROOT)).replace("\\", "/")
+        except urllib.error.HTTPError as exc:
+            content = exc.read()
+            item["status"] = exc.code
+            item["observations"] = f"error HTTP; sin retry; payload exacto registrado"
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            item["observations"] = f"{exc.__class__.__name__}; sin retry; payload exacto registrado"
+        if item["signatures"] and previous_signatures:
+            if item["signatures"] == previous_signatures:
+                item["comparison"] = "idéntica a la página anterior (IDs y Rows)"
+                item["observations"] += "; páginas repetidas"
+            else:
+                item["comparison"] = "diferente de la página anterior"
+        elif item["signatures"]:
+            item["comparison"] = "línea base"
+        if item["signatures"]:
+            previous_signatures = item["signatures"]
+        requests.append(item)
+    report = write_pagination_report(" ".join(sys.argv), endpoint, 15, args.max_requests, requests)
+    print(f"Test de paginación finalizado: {len(requests)} request(s); límite efectivo: {request_limit}.")
+    for item in requests:
+        print(f"Página {item['page']}: status={item['status'] or 'sin respuesta'}; registros={item['records']}; comparación={item['comparison']}.")
     print(f"Reporte generado: {report}")
     return 0
 
@@ -861,6 +976,7 @@ def main() -> int:
     parser.add_argument("--discover-web", action="store_true", help="analizar HTML y scripts públicos de forma controlada")
     parser.add_argument("--analyze-currency", action="store_true", help="analizar evidencia local de moneda sin usar la red")
     parser.add_argument("--sample-pages", action="store_true", help="extraer una muestra limitada de páginas GetOperaciones")
+    parser.add_argument("--test-pagination", action="store_true", help="probar de forma controlada la paginación respaldada por evidencia local")
     parser.add_argument("--test-endpoint", choices=["get-operaciones"], help="probar un único endpoint candidato documentado")
     parser.add_argument("--manual-urls", action="store_true", help="mostrar URLs para consulta manual sin llamar a la red")
     parser.add_argument("--days-back", default="30")
@@ -883,6 +999,10 @@ def main() -> int:
         raise SystemExit("Use --sample-pages como modo independiente con --allow-web")
     if args.sample_pages and args.page_size < 1:
         raise SystemExit("--page-size debe ser mayor que cero")
+    if args.test_pagination and not args.allow_web:
+        raise SystemExit("--test-pagination requiere --allow-web")
+    if args.test_pagination and any((args.dry_run, args.discover_web, args.test_endpoint, args.manual_urls, args.analyze_currency, args.sample_pages)):
+        raise SystemExit("Use --test-pagination como modo independiente con --allow-web")
     if args.allow_web and args.manual_urls:
         raise SystemExit("Use --allow-web o --manual-urls, no ambos")
     if args.discover_web and (args.dry_run or args.allow_web or args.manual_urls):
@@ -903,6 +1023,8 @@ def main() -> int:
 
     if args.sample_pages:
         return run_sample_pages(args, config)
+    if args.test_pagination:
+        return run_test_pagination(args, config)
     if args.discover_web:
         return run_discovery(args, config, endpoints, products, windows)
     if args.test_endpoint:

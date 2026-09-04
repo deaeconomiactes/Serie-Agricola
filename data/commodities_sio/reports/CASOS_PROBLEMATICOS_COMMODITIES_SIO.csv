@@ -1,7 +1,7 @@
 ﻿fila;tipo;commodity;fecha;precio;detalle
-;posible duplicado;Maíz;2026-09-04;;La clave fecha/commodity/tipo/moneda/unidad/mercado aparece 5 veces.
-;posible duplicado;Soja;2026-09-04;;La clave fecha/commodity/tipo/moneda/unidad/mercado aparece 8 veces.
+;posible duplicado;Maíz;2026-09-04;;La clave fecha/commodity/tipo/moneda/unidad/mercado aparece 7 veces.
+;posible duplicado;Soja;2026-09-04;;La clave fecha/commodity/tipo/moneda/unidad/mercado aparece 9 veces.
 ;posible duplicado;Soja;2026-09-04;;La clave fecha/commodity/tipo/moneda/unidad/mercado aparece 7 veces.
-;posible duplicado;TRIGO PAN;2026-09-04;;La clave fecha/commodity/tipo/moneda/unidad/mercado aparece 3 veces.
-;posible duplicado;Girasol;2026-09-04;;La clave fecha/commodity/tipo/moneda/unidad/mercado aparece 2 veces.
-;posible duplicado;Maíz;2026-09-04;;La clave fecha/commodity/tipo/moneda/unidad/mercado aparece 4 veces.
+;posible duplicado;TRIGO PAN;2026-09-04;;La clave fecha/commodity/tipo/moneda/unidad/mercado aparece 4 veces.
+;posible duplicado;Girasol;2026-09-04;;La clave fecha/commodity/tipo/moneda/unidad/mercado aparece 3 veces.
+;posible duplicado;Maíz;2026-09-04;;La clave fecha/commodity/tipo/moneda/unidad/mercado aparece 11 veces.
