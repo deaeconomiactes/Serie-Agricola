@@ -55,6 +55,10 @@ __pycache__/
 !data/commodities_sio/processed/.gitkeep
 !data/commodities_sio/reports/.gitkeep
 data/commodities_sio/sio_config.json
+data/commodities_sio/raw/*.html
+data/commodities_sio/raw/*.js
+data/commodities_sio/raw/*.json
+!data/commodities_sio/reports/*.md
 
 # OS
 .DS_Store

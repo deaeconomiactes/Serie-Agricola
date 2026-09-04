@@ -36,6 +36,14 @@ python .\explorar_sio_granos.py --manual-urls --days-back 30 --products soja,mai
 python .\explorar_sio_granos.py --allow-web --save-response --max-requests 3 --days-back 30 --products maiz
 ```
 
+Para realizar descubrimiento técnico controlado de HTML, scripts, grillas y posibles endpoints:
+
+```powershell
+python .\explorar_sio_granos.py --discover-web --save-response --max-requests 5 --days-back 30 --products maiz
+```
+
+`--discover-web` busca pistas técnicas en recursos públicos explícitamente configurados, sin enviar formularios complejos, inventar parámetros, integrar datos ni hacer scraping masivo. El resultado se resume en `reports/REPORTE_DESCUBRIMIENTO_SIO.md`. Los archivos HTML, JavaScript y JSON de `raw/` son diagnósticos locales y no se commitean.
+
 5. Colocar respuestas reales en `raw/`, ejecutar integración y auditoría:
 
 ```powershell
