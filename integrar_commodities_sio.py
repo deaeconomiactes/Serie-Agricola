@@ -306,7 +306,9 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
     prices: list[float] = []
     commodities: set[str] = set()
     positional_skipped = 0
+    positional_applied = 0
     for source in source_rows:
+        used_positional = False
         has_positional_row = any(key(name) == "row" for name in source)
         if has_positional_row:
             if positional_mapping is None:
@@ -317,6 +319,8 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
                 positional_skipped += 1
                 continue
             source = mapped_source
+            positional_applied += 1
+            used_positional = True
         market_date = parse_date(value_for(source, "Fecha Declaración", "Fecha Declaracion", "Fecha de Concertación", "Fecha de Concertacion", "Fecha de Entrega", "Fecha Concertación", "Fecha Concertacion", "Fecha"))
         raw_commodity = value_for(source, "Producto", "Grano", "Especie", "Commodity")
         commodity, commodity_note = normalize_commodity(raw_commodity, path.name, aliases)
@@ -353,7 +357,8 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
         payment = first_text(source, "condicion_pago", "Condición de Pago", "Condicion de Pago", "Pago")
         commercial = first_text(source, "Condición comercial", "Condicion comercial", "Condición", "Condicion", "Entrega")
         observation = first_text(source, "Observación", "Observaciones", "Nota", "Notas")
-        notes = "; ".join(dict.fromkeys([part for part in [observation, commodity_note] + row_missing if part]))
+        pilot_note = "integración piloto una página GetOperaciones" if used_positional else ""
+        notes = "; ".join(dict.fromkeys([part for part in [observation, commodity_note, pilot_note] + row_missing if part]))
         commodities.add(commodity)
         rows.append({
             "fecha": market_date.isoformat() if market_date else "",
@@ -381,7 +386,7 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
             "fecha_integracion": date.today().isoformat(),
             "observaciones": notes,
         })
-    return rows, {"read": len(source_rows), "integrated": len(rows), "positional_skipped": positional_skipped, "columns": columns, "commodities": sorted(commodities), "dates": dates, "prices": prices}
+    return rows, {"read": len(source_rows), "integrated": len(rows), "positional_skipped": positional_skipped, "positional_applied": positional_applied, "columns": columns, "commodities": sorted(commodities), "dates": dates, "prices": prices}
 
 
 def real_files() -> list[Path]:
@@ -425,6 +430,8 @@ def main() -> int:
             print(f"  Filas leídas: {diagnostics['read']}; filas integradas: {diagnostics['integrated']}")
             if diagnostics["positional_skipped"]:
                 print(f"  Filas Row posicionales omitidas: {diagnostics['positional_skipped']}")
+            if diagnostics["positional_applied"]:
+                print(f"  Filas Row con mapeo validado aplicado: {diagnostics['positional_applied']}")
             print(f"  Precio mínimo: {min(diagnostics['prices']):g}" if diagnostics["prices"] else "  Precio mínimo: sin precio válido")
             print(f"  Precio máximo: {max(diagnostics['prices']):g}" if diagnostics["prices"] else "  Precio máximo: sin precio válido")
             print(f"  Fecha mínima: {min(diagnostics['dates']).isoformat()}" if diagnostics["dates"] else "  Fecha mínima: sin fecha válida")

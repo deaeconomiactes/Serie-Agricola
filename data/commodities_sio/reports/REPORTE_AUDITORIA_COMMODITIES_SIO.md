@@ -1,0 +1,58 @@
+# Reporte de auditoría de commodities SIO
+
+Fecha de auditoría: 2026-09-04
+
+## Resumen
+
+- Muestra piloto de una sola página GetOperaciones: sí; filas piloto: 15.
+- Filas totales: 15.
+- Columnas mapeadas con dato: fecha, operacion, tipo_precio, commodity, volumen, procedencia, precio, zona, condicion_pago.
+- Columnas faltantes/no separadas: moneda, unidad, volumen_unidad, precio_puesto_en, frecuencia.
+- Commodities detectados: CEBADA FORR., Girasol, Maíz, Soja, TRIGO PAN.
+- Años disponibles: 2026.
+- Meses disponibles: 2026-09.
+- Rango de fechas: 2026-09-04 a 2026-09-04.
+- Fecha máxima: 2026-09-04; días desde último dato: 0.
+- Precios válidos: 15; faltantes: 0; cero: 0; negativos: 0.
+- Monedas: ninguna; unidades: ninguna; tipos de precio: Precio Hecho.
+- Volumen con dato numérico: 15; procedencia con dato: 15; lugar de entrega (zona) con dato: 15; condición de pago con dato: 15.
+- Series utilizables para dashboard analítico futuro: 0 de 5.
+
+## Actualidad de la información
+
+Fecha máxima disponible: 2026-09-04.
+Días desde el último dato: 0.
+Commodities actualizados (últimos 7 días): CEBADA FORR., Girasol, Maíz, Soja, TRIGO PAN.
+Commodities recientes o actualizados (últimos 30 días): CEBADA FORR., Girasol, Maíz, Soja, TRIGO PAN.
+Commodities sin dato reciente: ninguno.
+Cobertura últimos 7 días: 15 registro(s). Cobertura últimos 30 días: 15 registro(s).
+
+| Commodity | Fecha máxima | Días | Últimos 7 días | Últimos 30 días | Estado |
+| --- | --- | --- | --- | --- | --- |
+| CEBADA FORR. | 2026-09-04 | 0 | 1 | 1 | Actualizado |
+| Girasol | 2026-09-04 | 0 | 1 | 1 | Actualizado |
+| Maíz | 2026-09-04 | 0 | 4 | 4 | Actualizado |
+| Soja | 2026-09-04 | 0 | 7 | 7 | Actualizado |
+| TRIGO PAN | 2026-09-04 | 0 | 2 | 2 | Actualizado |
+
+## Recomendación de automatización
+
+SIO Granos debe mantenerse como exploración separada hasta validar la procedencia, la definición del precio, los permisos de uso, la estabilidad de la consulta pública y la homogeneidad de moneda, unidad, frecuencia y tipo de precio.
+Si hay datos recientes y la consulta/exportación pública es estable, conviene automatizar con ventanas de hasta 180 días y auditoría previa. Si no hay exportación estable, mantener la descarga manual en raw/ y conservar la respuesta original.
+No publicar en el dashboard ni mezclar con BCR o frutas/hortalizas antes de esa validación.
+
+## Series y aptitud analítica
+
+| Commodity | Moneda | Unidad | Tipo | Frecuencia | Calidad | Aptitud |
+| --- | --- | --- | --- | --- | --- | --- |
+| CEBADA FORR. |  |  | Precio Hecho | Sin especificar | Baja | No |
+| Girasol |  |  | Precio Hecho | Sin especificar | Baja | No |
+| Maíz |  |  | Precio Hecho | Sin especificar | Media | No |
+| Soja |  |  | Precio Hecho | Sin especificar | Media | No |
+| TRIGO PAN |  |  | Precio Hecho | Sin especificar | Media | No |
+
+Casos problemáticos: 33. Ver CASOS_PROBLEMATICOS_COMMODITIES_SIO.csv.
+
+## Próximos pasos
+
+Validar una respuesta real de SIO y revisar especialmente fecha, condición de pago, operación, volumen, procedencia, precio puesto en, unidad, moneda y permisos. No inventar datos ni usar fuentes alternativas como equivalentes de SIO/BCR sin evidencia.

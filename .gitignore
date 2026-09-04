@@ -54,6 +54,8 @@ __pycache__/
 !data/commodities_sio/raw/.gitkeep
 !data/commodities_sio/processed/.gitkeep
 !data/commodities_sio/reports/.gitkeep
+!data/commodities_sio/processed/*.csv
+!data/commodities_sio/reports/*.csv
 data/commodities_sio/sio_config.json
 data/commodities_sio/raw/*.html
 data/commodities_sio/raw/*.js

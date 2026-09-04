@@ -1,0 +1,6 @@
+﻿commodity;moneda;unidad;tipo_precio;frecuencia;registros;fechas_validas;precios_validos;calidad_serie;aptitud_dashboard_analitico;motivo
+CEBADA FORR.;;;Precio Hecho;Sin especificar;1;1;1;Baja;No;"Se requieren fechas, precios y metadatos homogéneos; la serie debe validarse antes de publicar."
+Girasol;;;Precio Hecho;Sin especificar;1;1;1;Baja;No;"Se requieren fechas, precios y metadatos homogéneos; la serie debe validarse antes de publicar."
+Maíz;;;Precio Hecho;Sin especificar;4;4;4;Media;No;"Se requieren fechas, precios y metadatos homogéneos; la serie debe validarse antes de publicar."
+Soja;;;Precio Hecho;Sin especificar;7;7;7;Media;No;"Se requieren fechas, precios y metadatos homogéneos; la serie debe validarse antes de publicar."
+TRIGO PAN;;;Precio Hecho;Sin especificar;2;2;2;Media;No;"Se requieren fechas, precios y metadatos homogéneos; la serie debe validarse antes de publicar."
