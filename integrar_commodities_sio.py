@@ -26,7 +26,7 @@ OUTPUT_COLUMNS = [
     "fecha_integracion", "observaciones",
 ]
 EXTENSIONS = {".json", ".csv", ".xlsx", ".xls", ".html", ".htm"}
-NON_REAL_MARKERS = ("plantilla", "simul", "prueba", "test", "ejemplo", "sample")
+NON_REAL_MARKERS = ("plantilla", "simul", "prueba", "ejemplo", "sample")
 DEFAULT_SOURCE = "SIO Granos / Secretaría de Agricultura"
 HEADER_KEYS = {
     "fecha", "fechadeclaracion", "fechaconcertacion", "fechadeentrega", "producto",
@@ -125,9 +125,10 @@ def extract_records(payload: Any) -> list[dict[str, Any]]:
             result.extend(extract_records(item))
         return result
     if isinstance(payload, dict):
-        for name in ("data", "results", "records", "items", "rows", "operaciones"):
-            if name in payload:
-                nested = extract_records(payload[name])
+        containers = {"data", "results", "records", "items", "rows", "operaciones", "d"}
+        for name, value in payload.items():
+            if str(name).lower() in containers:
+                nested = extract_records(value)
                 if nested:
                     return nested
         return [payload]
@@ -369,6 +370,8 @@ def main() -> int:
             print(f"  Precio máximo: {max(diagnostics['prices']):g}" if diagnostics["prices"] else "  Precio máximo: sin precio válido")
             print(f"  Fecha mínima: {min(diagnostics['dates']).isoformat()}" if diagnostics["dates"] else "  Fecha mínima: sin fecha válida")
             print(f"  Fecha máxima: {max(diagnostics['dates']).isoformat()}" if diagnostics["dates"] else "  Fecha máxima: sin fecha válida")
+            if path.suffix.lower() == ".json" and diagnostics["read"] and not diagnostics["integrated"]:
+                print("  Respuesta SIO no mapeable automáticamente: revisar el esquema de filas y no integrar por posición sin validación.")
         except Exception as exc:
             errors += 1
             print(f"ERROR en {path.name}: {exc}")

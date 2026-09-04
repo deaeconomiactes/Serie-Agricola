@@ -28,12 +28,14 @@ CONFIG_PATH = DATA_DIR / "sio_config.json"
 CATALOG_PATH = DATA_DIR / "catalogo_productos_sio.csv"
 DEFAULT_OUTPUT = DATA_DIR / "raw"
 REPORT_DIR = DATA_DIR / "reports"
+ENDPOINT_REPORT_PATH = REPORT_DIR / "REPORTE_ENDPOINT_SIO.md"
 USER_AGENT = "Serie-Agricola/commodities-sio-explorer (+consulta-publica)"
 SAFE_MESSAGE = (
     "Modo seguro: no se realizan llamadas externas. Use --dry-run para ver la "
     "consulta o --allow-web para ejecutar una exploración pública controlada."
 )
 MAX_DAYS_HARD_LIMIT = 180
+TEST_ENDPOINT_PATH = "/consulta_publica/operaciones_informadas_ultimas.aspx/GetOperaciones"
 
 
 def normalize(value: Any) -> str:
@@ -175,6 +177,8 @@ def safe_filename(value: str) -> str:
 def response_extension(content_type: str, content: bytes) -> str:
     lowered = content_type.lower()
     if "json" in lowered:
+        return ".json"
+    if content.lstrip()[:1] in {b"{", b"["}:
         return ".json"
     if "csv" in lowered:
         return ".csv"
@@ -409,6 +413,143 @@ def unique_endpoint_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     return result
 
 
+def decode_json_response(content: bytes) -> tuple[Any, str]:
+    try:
+        payload: Any = json.loads(content.decode("utf-8-sig"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return None, str(exc)
+    if isinstance(payload, dict) and isinstance(payload.get("d"), str):
+        try:
+            payload["d"] = json.loads(payload["d"])
+        except json.JSONDecodeError:
+            pass
+    return payload, ""
+
+
+def compact(value: Any) -> str:
+    return re.sub(r"[^a-z0-9]", "", normalize(value))
+
+
+def response_record_count(payload: Any) -> tuple[int, bool]:
+    if isinstance(payload, list):
+        return len(payload), True
+    if isinstance(payload, dict):
+        for name, value in payload.items():
+            if compact(name) in {"items", "rows", "records", "operaciones", "data"} and isinstance(value, list):
+                return len(value), compact(name) == "operaciones" or compact(name) in {"items", "rows", "records"}
+        for value in payload.values():
+            count, found = response_record_count(value)
+            if found:
+                return count, True
+    return 0, False
+
+
+def response_field_names(payload: Any) -> list[str]:
+    fields: list[str] = []
+    if isinstance(payload, dict):
+        fields.extend(str(name) for name in payload)
+        for value in payload.values():
+            fields.extend(response_field_names(value))
+    elif isinstance(payload, list):
+        for value in payload[:20]:
+            fields.extend(response_field_names(value))
+    return unique(fields)
+
+
+def analyze_endpoint_response(content: bytes, status: Any, content_type: str, error: str) -> dict[str, Any]:
+    looks_html = "html" in content_type.lower() or content.lstrip().lower().startswith((b"<!doctype html", b"<html"))
+    payload, json_error = decode_json_response(content)
+    json_valid = not json_error
+    fields = response_field_names(payload) if json_valid else []
+    compact_fields = {compact(field): field for field in fields}
+    expected = {
+        "producto": {"producto", "grano", "especie", "commodity"},
+        "precio": {"precio", "preciotn", "preciomonto", "monto", "valor"},
+        "moneda": {"moneda", "currency"},
+        "cantidad": {"cantidad", "cant", "volumen", "tn", "cantidadtn"},
+        "fecha": {"fecha", "fechaconcertacion", "fechadeclaracion", "fechaentrega"},
+        "procedencia": {"procedencia"},
+        "lugar de entrega": {"lugarentrega", "lugardeentrega", "destino", "puerto"},
+        "condición de pago": {"condicionpago", "condiciondepago", "pago"},
+    }
+    detected = {label: compact_fields[name] for label, names in expected.items() for name in names if name in compact_fields}
+    count, has_list = response_record_count(payload) if json_valid else (0, False)
+    status_number = status if isinstance(status, int) else None
+    requires_session = "sí" if status_number in {401, 403} or (looks_html and re.search(r"login|sesion|session|ingres", content.decode("utf-8", errors="replace"), flags=re.I)) else "no determinado"
+    requires_params = "sí" if json_valid and isinstance(payload, dict) and any(compact(name) in {"error", "exception", "message"} for name in payload) else "no determinado"
+    top_payload = payload.get("d") if isinstance(payload, dict) and isinstance(payload.get("d"), dict) else payload
+    return {"status": status, "content_type": content_type or "no informado", "size": len(content), "looks_html": looks_html, "json_valid": json_valid, "json_error": json_error, "top_keys": list(top_payload)[:20] if isinstance(top_payload, dict) else [], "record_count": count, "has_list": has_list, "fields": detected, "all_fields": fields, "mappable": bool(detected), "requires_session": requires_session, "requires_params": requires_params, "error": error}
+
+
+def save_endpoint_response(output_dir: Path, content: bytes, content_type: str) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    extension = response_extension(content_type, content)
+    if extension == ".bin":
+        extension = ".txt"
+    path = output_dir / f"SIO_test_GetOperaciones_{datetime.now().strftime('%Y%m%d%H%M%S')}{extension}"
+    path.write_bytes(content)
+    return path
+
+
+def write_endpoint_report(command: str, url: str, payload: dict[str, int], result: dict[str, Any], saved: str) -> Path:
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    report = [
+        "# Reporte de prueba de endpoint SIO", "", "## Fecha de ejecución", "", date.today().isoformat(), "", "## Comando ejecutado", "", f"`{command}`", "", "## Endpoint probado", "", url, "", "## Método", "", "POST", "", "## Payload enviado", "", "```json", json.dumps(payload, ensure_ascii=False, indent=2), "```", "", "## Resultado HTTP", "", str(result["status"] or "sin respuesta"), "", "## Content-Type", "", result["content_type"], "", "## Tamaño de respuesta", "", f"{result['size']} bytes", "", "## Diagnóstico de respuesta", "", f"- JSON válido: {'sí' if result['json_valid'] else 'no' }.", f"- Contiene datos/lista detectable: {'sí' if result['has_list'] and result['record_count'] > 0 else 'no'}.", f"- Cantidad aproximada de registros: {result['record_count']}.", f"- Respuesta mapeable automáticamente: {'sí' if result['mappable'] else 'no; la respuesta expone filas posicionales sin nombres semánticos'}.", f"- Requiere sesión: {result['requires_session']}.", f"- Requiere parámetros adicionales: {result['requires_params']}.", f"- Devuelve HTML: {'sí' if result['looks_html'] else 'no'}.", f"- Error de transporte: {result['error'] or 'ninguno'}.", f"- Respuesta guardada como: {saved or 'no guardada'}.", f"- Claves principales: {', '.join(result['top_keys']) or 'ninguna'}.", "", "## Campos detectados", "",
+    ]
+    if result["fields"]:
+        report.extend(f"- {label}: `{field}`" for label, field in result["fields"].items())
+    else:
+        report.append(f"No se detectaron campos esperables con nombre semántico. Campos JSON realmente detectados: {', '.join(result['all_fields']) or 'ninguno'}.")
+    if result["json_valid"] and result["record_count"] > 0 and result["mappable"]:
+        recommendation = "A. La respuesta devuelve datos estructurados: preparar integración controlada de una página, previa validación de duplicados, fechas, moneda, unidad y licencia."
+    elif result["json_valid"] and result["record_count"] > 0:
+        recommendation = "La respuesta SIO contiene datos estructurados, pero no es mapeable automáticamente: validar el esquema de las filas posicionales con el request/respuesta observado en DevTools antes de integrar."
+    elif result["requires_params"] == "sí":
+        recommendation = "B. La respuesta sugiere parámetros faltantes: analizar tráfico manual con DevTools y documentar el request real, sin inventar valores."
+    elif result["requires_session"] == "sí":
+        recommendation = "C. El endpoint requiere sesión o acceso: descartar automatización directa y usar descarga manual."
+    elif result["looks_html"]:
+        recommendation = "D. El endpoint devolvió HTML sin datos estructurados: tratarlo como no automatizable por endpoint directo."
+    else:
+        recommendation = "B. No hay datos estructurados suficientes: analizar tráfico manual con DevTools y documentar el request real."
+    report.extend(["", "## Próximo paso recomendado", "", recommendation, "", "La prueba no paginó, no envió otros parámetros y no generó CSV integrado."])
+    path = ENDPOINT_REPORT_PATH
+    path.write_text("\n".join(report) + "\n", encoding="utf-8")
+    return path
+
+
+def run_endpoint_test(args: argparse.Namespace, config: dict[str, Any]) -> int:
+    payload = {"pPageSize": 10, "pCurrentPage": 1}
+    base_url = str(config.get("base_url", "")).strip()
+    url = endpoint_url(base_url, TEST_ENDPOINT_PATH) if base_url else TEST_ENDPOINT_PATH
+    result = {"status": "", "content_type": "no informado", "size": 0, "json_valid": False, "json_error": "sin respuesta", "top_keys": [], "record_count": 0, "has_list": False, "fields": {}, "all_fields": [], "mappable": False, "requires_session": "no determinado", "requires_params": "no determinado", "looks_html": False, "error": "configuración local SIO ausente"}
+    saved = ""
+    if base_url:
+        request = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json; charset=utf-8", "Accept": "application/json, text/javascript, */*; q=0.01", "X-Requested-With": "XMLHttpRequest", "User-Agent": USER_AGENT}, method="POST")
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:  # nosec B310: explicit configured candidate plus --test-endpoint and --allow-web
+                content = response.read()
+                result = analyze_endpoint_response(content, response.status, response.headers.get_content_type(), "")
+        except urllib.error.HTTPError as exc:
+            content = exc.read()
+            result = analyze_endpoint_response(content, exc.code, exc.headers.get_content_type() if exc.headers else "", f"HTTPError: {exc.code}")
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            result["error"] = exc.__class__.__name__
+    if args.save_response and base_url and result["size"]:
+        saved_path = save_endpoint_response(Path(args.output_dir), content, result["content_type"])
+        saved = saved_path.name
+    report = write_endpoint_report(" ".join(sys.argv), url, payload, result, saved)
+    print(f"Endpoint probado: {url}")
+    print("Método: POST; requests realizados: 1; máximo permitido: 1")
+    print(f"Status code: {result['status'] or 'sin respuesta'}; Content-Type: {result['content_type']}; tamaño: {result['size']} bytes")
+    print(f"JSON válido: {'sí' if result['json_valid'] else 'no'}; registros aproximados: {result['record_count']}")
+    print(f"Campos esperables detectados: {', '.join(result['fields']) or 'ninguno'}")
+    print(f"Reporte generado: {report}")
+    if saved:
+        print(f"Respuesta raw guardada: {Path(args.output_dir) / saved}")
+    return 0
+
+
 def print_plan(products: list[str], windows: list[tuple[date, date]], endpoints: list[tuple[str, str]], output_dir: Path, max_requests: int, label: str) -> None:
     print(f"Productos solicitados: {', '.join(products)}")
     print(f"Ventanas de fechas ({len(windows)}, máximo {MAX_DAYS_HARD_LIMIT} días cada una):")
@@ -425,6 +566,7 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--allow-web", action="store_true")
     parser.add_argument("--discover-web", action="store_true", help="analizar HTML y scripts públicos de forma controlada")
+    parser.add_argument("--test-endpoint", choices=["get-operaciones"], help="probar un único endpoint candidato documentado")
     parser.add_argument("--manual-urls", action="store_true", help="mostrar URLs para consulta manual sin llamar a la red")
     parser.add_argument("--days-back", default="30")
     parser.add_argument("--date-start")
@@ -440,6 +582,10 @@ def main() -> int:
         raise SystemExit("Use --allow-web o --manual-urls, no ambos")
     if args.discover_web and (args.dry_run or args.allow_web or args.manual_urls):
         raise SystemExit("Use --discover-web como modo independiente")
+    if args.test_endpoint and not args.allow_web:
+        raise SystemExit("--test-endpoint requiere --allow-web")
+    if args.test_endpoint and (args.dry_run or args.discover_web or args.manual_urls):
+        raise SystemExit("Use --test-endpoint como modo independiente con --allow-web")
     catalog = read_catalog()
     products = parse_products(args.products, catalog)
     start, end = date_range(args)
@@ -450,6 +596,8 @@ def main() -> int:
 
     if args.discover_web:
         return run_discovery(args, config, endpoints, products, windows)
+    if args.test_endpoint:
+        return run_endpoint_test(args, config)
 
     if not args.allow_web and not args.dry_run and not args.manual_urls:
         print(SAFE_MESSAGE)
