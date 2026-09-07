@@ -11,6 +11,7 @@ SIO no se presume equivalente a los precios de pizarra BCR. La información debe
 - `reports/`: auditorías de cobertura, calidad, actualidad y aptitud analítica.
 - `devtools/`: diagnósticos locales de HAR/cURL; sus archivos sensibles están ignorados por Git.
 - `GUIA_DEVTOOLS_SIO.md`: pasos para capturar y sanear el request real de la grilla.
+- `GUIA_EXPORTAR_OPERACIONES_SIO.md`: captura segura del botón Exportar Operaciones y descarga manual.
 - `sio_config.example.json`: configuración de referencia con URLs públicas candidatas, sin credenciales.
 - `sio_config.json`: configuración local real, ignorada por Git.
 - `catalogo_productos_sio.csv`: catálogo inicial; los IDs SIO quedan pendientes de validación y no se inventan.
@@ -23,6 +24,8 @@ La exploración inicial usa los últimos 30 días. Las consultas se dividen en v
 - `COMMODITIES_SIO_MUESTRA_PAGINADA.csv`: muestra técnica de paginación, separada para diagnosticar requests, páginas y duplicados.
 
 Las pruebas paginadas no deben pisar el CSV principal. Si la paginación está duplicada, la muestra técnica no es apta para dashboard y se conserva exclusivamente como evidencia de diagnóstico.
+
+`GetOperaciones` responde, pero la prueba observada con `pCurrentPage=0/1/2` devolvió filas e IDs idénticos. La paginación no está validada y no debe ampliarse mediante ese endpoint. El siguiente camino técnico es analizar **Exportar Operaciones** o usar una descarga manual.
 
 ## Flujo recomendado
 
@@ -64,6 +67,15 @@ python .\explorar_sio_granos.py --test-observed-pagination --allow-web --save-re
 ```
 
 Este modo envía únicamente `pCurrentPage=0`, `1` y `2`, siempre con `pPageSize=20`, sin filtros ni fechas. Guarda las respuestas técnicas ignoradas por Git, genera `reports/REPORTE_PAGINACION_OBSERVADA_SIO.md` y mantiene el resultado en `COMMODITIES_SIO_MUESTRA_PAGINADA.csv`, separado del CSV principal.
+
+Para analizar el mecanismo de exportación, seguir [GUIA_EXPORTAR_OPERACIONES_SIO.md](GUIA_EXPORTAR_OPERACIONES_SIO.md). Si el navegador descarga un archivo manualmente, colocarlo en `raw/` con el nombre `SIO_exportar_operaciones_*.xlsx`, `.xls` o `.csv`; no debe commitearse. Luego ejecutar:
+
+```powershell
+python .\integrar_commodities_sio.py
+python .\auditar_commodities_sio.py
+```
+
+La exportación manual es válida cuando la automatización directa depende de sesión. Se procesa en `COMMODITIES_SIO_EXPORTACION_MANUAL.csv` sin pisar el CSV principal. Los CSV procesados y reportes pueden versionarse si corresponden a muestras controladas y no masivas.
 
 Para analizar una captura local de DevTools sin hacer llamadas web, seguir [GUIA_DEVTOOLS_SIO.md](GUIA_DEVTOOLS_SIO.md):
 

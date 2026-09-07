@@ -37,7 +37,7 @@ No se enviaron filtros, fechas ni parámetros adicionales.
 
 ## Recomendación
 
-No ampliar la extracción. Repetir DevTools limpiando Network y capturando únicamente el clic en la página 2.
+No ampliar la extracción mediante `GetOperaciones`. El próximo camino técnico es capturar el botón **Exportar Operaciones** en DevTools o usar una descarga manual desde el navegador. Si se repite la captura de grilla, limpiar Network y capturar únicamente el clic en la página 2.
 
 ## Alcance
 

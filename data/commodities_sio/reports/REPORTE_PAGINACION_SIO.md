@@ -62,7 +62,7 @@ No se enviaron filtros de producto, fecha o moneda.
 
 ## Próximo paso recomendado
 
-La evidencia más fuerte identifica `pPageSize`/`pCurrentPage`, pero la prueba controlada no valida paginación si las páginas repiten IDs/Rows. No ampliar la extracción. Usar DevTools del navegador para observar el request real y la respuesta de la grilla; si coincide con este payload y sigue repitiendo contenido, limitar el uso a la última página disponible o evaluar la exportación manual. No probar variantes arbitrarias sin nueva evidencia.
+La evidencia más fuerte identifica `pPageSize`/`pCurrentPage`, pero las pruebas controladas —incluida la observada con `pPageSize=20` y páginas 0/1/2— no validan paginación: las respuestas repiten IDs/Rows. No ampliar la extracción mediante este endpoint ni probar variantes arbitrarias sin nueva evidencia. El próximo camino técnico es analizar el request de **Exportar Operaciones** en DevTools o usar una descarga manual.
 
 ## Resultado de integración
 

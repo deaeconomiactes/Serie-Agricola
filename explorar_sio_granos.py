@@ -47,6 +47,7 @@ PAGINATION_PARAMETER_NAMES = {"page", "rows", "pcurrentpage", "ppagesize", "sidx
 SENSITIVE_NAME_PATTERN = re.compile(r"(?:authorization|cookie|token|secret|password|api[-_]?key|session|sessid|csrf|bearer)", flags=re.I)
 SENSITIVE_EXACT_NAMES = {"sid", "sessionid", "session_id", "jsessionid", "phpsessid"}
 SAFE_DEVTOOLS_HEADERS = {"accept", "content-type", "origin", "referer", "user-agent", "x-requested-with"}
+EXPORT_PATTERNS = ("exportar", "excel", ".xls", ".xlsx", ".csv", "operaciones_informadas_exportar", "download", "attachment")
 
 
 def normalize(value: Any) -> str:
@@ -749,7 +750,31 @@ def relative_display_path(path: Path) -> str:
         return str(path.resolve())
 
 
-def build_devtools_record(source_type: str, url: str, method: str, headers: Any, payload: str, evidence: str) -> dict[str, Any]:
+def classify_devtools_request(url: str, payload: str, response_headers: Any) -> str:
+    """Clasifica evidencia local; nunca infiere un endpoint ni ejecuta requests."""
+
+    haystack = " ".join([url, payload, " ".join(f"{item.get('name', '')}: {item.get('value', '')}" for item in response_headers if isinstance(item, dict))]).lower()
+    if any(pattern in haystack for pattern in EXPORT_PATTERNS) or "application/vnd.ms-excel" in haystack or "application/octet-stream" in haystack:
+        return "exportacion"
+    if "getoperaciones" in url.lower():
+        return "grilla"
+    if re.search(r"\.(?:js|css|png|jpg|jpeg|gif|svg|woff2?)(?:\?|$)", url, flags=re.I):
+        return "recurso_estatico"
+    return "desconocido"
+
+
+def export_download_evidence(url: str, response_headers: Any) -> list[str]:
+    values = [url]
+    values.extend(f"{item.get('name', '')}: {item.get('value', '')}" for item in response_headers if isinstance(item, dict))
+    joined = "\n".join(values).lower()
+    evidence: list[str] = []
+    for label, pattern in (("Content-Disposition", "content-disposition"), ("Excel", "application/vnd.ms-excel"), ("CSV", "text/csv"), ("archivo adjunto", "attachment"), ("binario", "application/octet-stream"), ("respuesta HTML", "text/html")):
+        if pattern in joined:
+            evidence.append(label)
+    return evidence
+
+
+def build_devtools_record(source_type: str, url: str, method: str, headers: Any, payload: str, evidence: str, response_headers: Any = ()) -> dict[str, Any]:
     safe_headers, sensitive_headers = headers_from_pairs(headers)
     parameters = pagination_parameters(payload)
     payload_sensitive = payload_has_sensitive_data(payload)
@@ -757,6 +782,7 @@ def build_devtools_record(source_type: str, url: str, method: str, headers: Any,
     endpoint = urllib.parse.urlsplit(url).path or url
     is_sio = "siogranos" in lowered_url
     is_get_operaciones = "getoperaciones" in lowered_url
+    request_type = classify_devtools_request(url, payload, response_headers)
     confidence = "alta" if is_get_operaciones else "media" if is_sio else "baja"
     return {
         "source_type": source_type,
@@ -769,6 +795,8 @@ def build_devtools_record(source_type: str, url: str, method: str, headers: Any,
         "parameters": parameters,
         "is_sio": is_sio,
         "is_get_operaciones": is_get_operaciones,
+        "request_type": request_type,
+        "download_evidence": export_download_evidence(url, response_headers),
         "confidence": confidence,
         "evidence": evidence,
         "sensitive_transport": sensitive_headers or payload_sensitive,
@@ -797,7 +825,9 @@ def analyze_har_file(path: Path) -> list[dict[str, Any]]:
             payload = str(post_data.get("text", ""))
             if not payload and isinstance(post_data.get("params"), list):
                 payload = urllib.parse.urlencode([(str(item.get("name", "")), str(item.get("value", ""))) for item in post_data["params"] if isinstance(item, dict)])
-        records.append(build_devtools_record("HAR", url, str(request.get("method", "GET")), request.get("headers", []), payload, f"HAR local, entrada {index}"))
+        response = entry.get("response", {}) if isinstance(entry, dict) else {}
+        response_headers = response.get("headers", []) if isinstance(response, dict) else []
+        records.append(build_devtools_record("HAR", url, str(request.get("method", "GET")), request.get("headers", []), payload, f"HAR local, entrada {index}", response_headers))
     return records
 
 
@@ -922,15 +952,51 @@ def write_devtools_report(source_type: str, path: Path, records: list[dict[str, 
     return DEVTOOLS_REPORT_PATH
 
 
+def write_export_report(source_type: str, path: Path, records: list[dict[str, Any]]) -> Path | None:
+    """Crea el reporte sólo ante una captura local con candidatos de exportación."""
+
+    candidates = [record for record in records if record["is_sio"] and record["request_type"] == "exportacion"]
+    if not candidates:
+        return None
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    observed_parameters: dict[str, str] = {}
+    for record in candidates:
+        observed_parameters.update(record["parameters"])
+    lines = [
+        "# Reporte de exportación SIO", "", "## Objetivo", "", "Analizar si el botón Exportar Operaciones ofrece un mecanismo reproducible y seguro para obtener datos tabulares.", "", "## Archivo analizado", "", f"- Tipo: {source_type} local.", f"- Archivo: `{relative_display_path(path)}`.", "- El HAR/cURL fuente permanece local e ignorado por Git; este reporte omite cookies, tokens, credenciales y sesiones.", "", "## Requests candidatos", "", "| Endpoint | Método | Tipo probable | Payload detectado | Headers no sensibles | Evidencia | Confianza | Observaciones |", "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for record in candidates:
+        payload = record["payload"] or "sin payload"
+        headers = ", ".join(f"{name}: {value}" for name, value in record["headers"]) or "ninguno"
+        download = ", ".join(record["download_evidence"]) or "sin evidencia de respuesta descargable en la captura"
+        notes = "posible dependencia de sesión; no ejecutado"
+        if record["sensitive_transport"]:
+            notes += "; material sensible redactado"
+        lines.append(f"| `{record['endpoint']}` | {record['method']} | exportación | `{payload}` | {headers} | {download}; {record['evidence']} | {record['confidence']} | {notes} |")
+    evidence = sorted({item for record in candidates for item in record["download_evidence"]})
+    lines.extend(["", "## Evidencia de archivo descargable", "", f"- Evidencia detectada: {', '.join(evidence) if evidence else 'no se observó Content-Disposition, Excel, CSV ni content-type descargable en esta captura' }.", "- Nombre de archivo: sólo se reporta si aparece explícitamente en el HAR/cURL sanitizado.", "- Respuesta binaria/HTML: se conserva como evidencia de captura; no se ejecutan requests ni descargas.", "", "## Parámetros detectados", "", "| Parámetro | Valor observado |", "| --- | --- |"])
+    if observed_parameters:
+        lines.extend(f"| {name} | `{sanitize_scalar(value)}` |" for name, value in observed_parameters.items())
+    else:
+        lines.append("| — | No se observó payload o parámetro de exportación. |")
+    lines.extend(["", "## Riesgos", "", "- Posible dependencia de sesión o cookies.", "- Posible generación server-side y límites de rango de fechas.", "- Restricciones de uso, licencia o estabilidad del mecanismo.", "- No automatizar masivamente sin validación previa.", "", "## Recomendación próxima", "", "A. Si hay endpoint de exportación claro sin sesión sensible: hacer una prueba controlada de descarga de un archivo.", "", "B. Si requiere sesión/cookies: usar descarga manual desde el navegador.", "", "C. Si no hay endpoint claro: descargar manualmente el Excel y probar el integrador local.", ""])
+    report_path = REPORT_DIR / "REPORTE_EXPORTACION_SIO.md"
+    report_path.write_text("\n".join(lines), encoding="utf-8")
+    return report_path
+
+
 def run_devtools_analysis(source_type: str, path_value: str) -> int:
     path = Path(path_value)
     if not path.is_file():
         raise SystemExit(f"No existe un archivo local analizable: {path}")
     records = analyze_har_file(path) if source_type == "HAR" else analyze_curl_file(path)
     report = write_devtools_report(source_type, path, records)
+    export_report = write_export_report(source_type, path, records)
     sio_count = sum(1 for record in records if record["is_sio"])
     print(f"Análisis local de {source_type} finalizado: {sio_count} request(s) SIO detectado(s). No se realizaron requests web.")
     print(f"Reporte generado: {report}")
+    if export_report:
+        print(f"Reporte de exportación generado: {export_report}")
     return 0
 
 

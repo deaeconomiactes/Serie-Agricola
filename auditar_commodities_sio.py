@@ -14,6 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 PROCESSED_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_INTEGRADO.csv"
 PAGINATED_PROCESSED_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_MUESTRA_PAGINADA.csv"
+MANUAL_EXPORT_PROCESSED_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_EXPORTACION_MANUAL.csv"
 RAW_DIR = ROOT / "data" / "commodities_sio" / "raw"
 REPORT_DIR = ROOT / "data" / "commodities_sio" / "reports"
 PAGINATED_REPORT_PATH = REPORT_DIR / "REPORTE_MUESTRA_PAGINADA_SIO.md"
@@ -121,7 +122,28 @@ def actuality_for_rows(rows: list[dict[str, str]], source_file: str, today: date
     return result
 
 
-def audited_files_section(primary_rows: list[dict[str, str]], technical_rows: list[dict[str, str]]) -> tuple[str, str]:
+def export_summary(rows: list[dict[str, str]]) -> str:
+    if not rows:
+        return "## Exportación manual\n\nNo existe una exportación manual procesada para auditar.\n"
+    dates = [parsed for parsed in (parse_date(value(row, "fecha")) for row in rows) if parsed]
+    currencies = display_values(rows, "moneda")
+    units = display_values(rows, "unidad")
+    commodities = sorted({value(row, "commodity") or "Sin especificar" for row in rows})
+    ids = [value(row, "id_operacion_sio") for row in rows if value(row, "id_operacion_sio")]
+    duplicate_ids = sum(count - 1 for count in Counter(ids).values() if count > 1)
+    pilot_count = sum(1 for row in rows if pilot_eligible(row))
+    dashboard_count = sum(1 for row in rows if value(row, "apto_dashboard") == "si")
+    return "\n".join([
+        "## Exportación manual", "", "La exportación manual es una tercera salida separada y no reemplaza `COMMODITIES_SIO_INTEGRADO.csv` ni la muestra paginada.",
+        f"- Filas: {len(rows)}.", f"- Rango de fechas: {min(dates).isoformat() if dates else 'sin fecha válida'} a {max(dates).isoformat() if dates else 'sin fecha válida'}.",
+        f"- Monedas: {', '.join(currencies) or 'sin especificar'}; unidades: {', '.join(units) or 'sin especificar'}.",
+        f"- Productos: {', '.join(commodities)}.", f"- Duplicados por ID: {duplicate_ids}.",
+        f"- Aptitud piloto: {pilot_count}/{len(rows)}; aptitud dashboard: {dashboard_count}/{len(rows)}.",
+        "- Diferencia frente a GetOperaciones: proviene de un archivo descargado manualmente; requiere validar columnas, moneda, unidad, cobertura y licencia antes de cualquier automatización o publicación.", "",
+    ])
+
+
+def audited_files_section(primary_rows: list[dict[str, str]], technical_rows: list[dict[str, str]], manual_rows: list[dict[str, str]]) -> tuple[str, str, str]:
     primary_status = "parcial_piloto" if primary_rows and all(value(row, "apto_dashboard") == "parcial_piloto" for row in primary_rows) else "no"
     technical_state = sorted({value(row, "estado_paginacion") for row in technical_rows if value(row, "estado_paginacion")})
     technical_aptitude = "no" if "duplicada" in technical_state else "parcial_piloto" if technical_rows else "no disponible"
@@ -129,6 +151,7 @@ def audited_files_section(primary_rows: list[dict[str, str]], technical_rows: li
         "## Archivos auditados", "", "| Archivo | Tipo | Filas | Finalidad | Aptitud |", "| --- | --- | ---: | --- | --- |",
         f"| `data/commodities_sio/processed/COMMODITIES_SIO_INTEGRADO.csv` | integración piloto principal | {len(primary_rows)} | referencia piloto base | {primary_status} |",
         f"| `data/commodities_sio/processed/COMMODITIES_SIO_MUESTRA_PAGINADA.csv` | muestra técnica de paginación | {len(technical_rows)} | diagnóstico de request, páginas y duplicados | {technical_aptitude} |" if technical_rows else "| `data/commodities_sio/processed/COMMODITIES_SIO_MUESTRA_PAGINADA.csv` | muestra técnica de paginación | 0 | no disponible | no disponible |",
+        f"| `data/commodities_sio/processed/COMMODITIES_SIO_EXPORTACION_MANUAL.csv` | exportación manual | {len(manual_rows)} | archivo descargado localmente | {'parcial_piloto' if manual_rows else 'no disponible'} |" if manual_rows else "| `data/commodities_sio/processed/COMMODITIES_SIO_EXPORTACION_MANUAL.csv` | exportación manual | 0 | no disponible | no disponible |",
         "",
     ])
     if technical_rows:
@@ -137,7 +160,7 @@ def audited_files_section(primary_rows: list[dict[str, str]], technical_rows: li
         ])
     else:
         technical_section = "\n".join(["## Muestra paginada técnica", "", "No existe una muestra técnica procesada para auditar.", ""])
-    return files_section, technical_section
+    return files_section, technical_section, export_summary(manual_rows)
 
 
 def pilot_eligible(row: dict[str, str]) -> bool:
@@ -260,11 +283,12 @@ def update_paginated_audit_report(rows: list[dict[str, str]]) -> None:
 def main() -> int:
     rows = read_rows()
     technical_rows = read_rows(PAGINATED_PROCESSED_PATH)
-    if not rows and not technical_rows:
+    manual_export_rows = read_rows(MANUAL_EXPORT_PROCESSED_PATH)
+    if not rows and not technical_rows and not manual_export_rows:
         return no_data()
     if not rows:
-        print("No hay integración piloto principal; se auditará sólo la muestra técnica disponible.")
-        rows = technical_rows
+        print("No hay integración piloto principal; se auditará la salida técnica o manual disponible.")
+        rows = technical_rows or manual_export_rows
     today = date.today()
     dates_by: dict[str, list[date]] = defaultdict(list)
     prices_by: dict[str, list[float]] = defaultdict(list)
@@ -385,8 +409,9 @@ def main() -> int:
     write_csv(REPORTS["series"], list(series[0].keys()), series)
     write_csv(REPORTS["problems"], ["fila", "tipo", "commodity", "fecha", "precio", "detalle"], problems)
     technical_actuality = actuality_for_rows(technical_rows, "muestra_paginada", today) if technical_rows else []
+    manual_export_actuality = actuality_for_rows(manual_export_rows, "exportacion_manual", today) if manual_export_rows else []
     primary_actuality = [dict(item, fuente_archivo="integrado_principal") for item in actuality]
-    actuality_export = primary_actuality + technical_actuality
+    actuality_export = primary_actuality + technical_actuality + manual_export_actuality
     write_csv(REPORTS["actuality"], ["fuente_archivo", "commodity", "fecha_max", "dias_desde_ultimo_dato", "registros_ultimos_7_dias", "registros_ultimos_30_dias", "estado_actualidad"], actuality_export)
 
     max_date = max(all_dates) if all_dates else None
@@ -403,7 +428,7 @@ def main() -> int:
         warnings.append(f"{invalid_date} fila(s) sin fecha válida.")
     if zero_price or negative_price:
         warnings.append(f"Precios cero: {zero_price}; precios negativos: {negative_price}.")
-    files_section, technical_section = audited_files_section(rows, technical_rows)
+    files_section, technical_section, manual_export_section = audited_files_section(rows, technical_rows, manual_export_rows)
     currency_values = display_values(rows, "moneda")
     unit_values = display_values(rows, "unidad")
     type_values = display_values(rows, "tipo_precio")
@@ -447,7 +472,7 @@ def main() -> int:
     ]
     if warnings:
         lines.extend(["## Advertencias", "", *[f"- {warning}" for warning in warnings], ""])
-    lines.extend([files_section, technical_section])
+    lines.extend([files_section, technical_section, manual_export_section])
     lines.extend(["## Moneda y comparabilidad", "", f"Moneda explícitamente informada: {'sí' if currency_explicit_count else 'no'} ({currency_explicit_count}/{len(rows)} filas). Moneda inferida: {'sí' if currency_inferred_count else 'no'} ({currency_inferred_count}/{len(rows)} filas). Moneda sin especificar: {'sí' if currency_unspecified_count else 'no'} ({currency_unspecified_count}/{len(rows)} filas).", f"Comparabilidad monetaria: {'sí' if currency_explicit_count and len(currency_counts) == 1 and not currency_inferred_count and not currency_unspecified_count else 'no'}.", "Los valores no deben compararse ni usarse para variaciones monetarias mientras la moneda permanezca embebida o no informada explícitamente. La auditoría conserva `moneda=Sin especificar` y no habilita `apto_dashboard`.", ""])
     lines.extend([
         "## Actualidad de la información", "", f"Fecha máxima disponible: {max_date.isoformat() if max_date else 'sin fecha válida'}.", f"Días desde el último dato: {age if age is not None else 'sin fecha válida'}.", f"Commodities actualizados (últimos 7 días): {', '.join(updated) if updated else 'ninguno'}.", f"Commodities recientes o actualizados (últimos 30 días): {', '.join(recent) if recent else 'ninguno'}.", f"Commodities sin dato reciente: {', '.join(no_recent) if no_recent else 'ninguno'}.", f"Cobertura últimos 7 días: {sum(int(item['registros_ultimos_7_dias']) for item in actuality)} registro(s). Cobertura últimos 30 días: {sum(int(item['registros_ultimos_30_dias']) for item in actuality)} registro(s).", "", markdown_table(["Commodity", "Fecha máxima", "Días", "Últimos 7 días", "Últimos 30 días", "Estado"], [[item["commodity"], item["fecha_max"] or "—", item["dias_desde_ultimo_dato"] or "—", item["registros_ultimos_7_dias"], item["registros_ultimos_30_dias"], item["estado_actualidad"]] for item in actuality]), "",

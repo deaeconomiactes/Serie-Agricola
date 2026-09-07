@@ -21,6 +21,7 @@ MAPPING_LOCAL_PATH = ROOT / "data" / "commodities_sio" / "mapeo_getoperaciones_s
 MAPPING_EXAMPLE_PATH = ROOT / "data" / "commodities_sio" / "mapeo_getoperaciones_sio.example.json"
 OUTPUT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_INTEGRADO.csv"
 PAGINATED_OUTPUT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_MUESTRA_PAGINADA.csv"
+MANUAL_EXPORT_OUTPUT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_EXPORTACION_MANUAL.csv"
 PAGINATED_REPORT_PATH = ROOT / "data" / "commodities_sio" / "reports" / "REPORTE_MUESTRA_PAGINADA_SIO.md"
 PAGINATION_REPORT_PATH = ROOT / "data" / "commodities_sio" / "reports" / "REPORTE_PAGINACION_SIO.md"
 OUTPUT_COLUMNS = [
@@ -366,7 +367,7 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
     positional_applied = 0
     row_signatures: list[str] = []
     page_origin = page_number_from_path(path)
-    sample_type = "paginacion_controlada" if page_origin else "piloto_una_pagina"
+    sample_type = "exportacion_manual" if is_manual_export_file(path) else "paginacion_controlada" if page_origin else "piloto_una_pagina"
     for source in source_rows:
         used_positional = False
         source_id = first_text(source, "ID", "id_operacion_sio")
@@ -577,6 +578,10 @@ def is_observed_pagination_file(path: Path) -> bool:
     return bool(re.search(r"observed_pcurrentpage[_-]\d+", path.stem, flags=re.I))
 
 
+def is_manual_export_file(path: Path) -> bool:
+    return bool(re.fullmatch(r"SIO_exportar_operaciones_.*", path.stem, flags=re.I)) and path.suffix.lower() in {".xlsx", ".xls", ".csv"}
+
+
 def process_group(files: list[Path], aliases: dict[str, str], positional_mapping: dict[int, dict[str, Any]] | None, sample_pages: int, pagination_status: str) -> tuple[list[dict[str, str]], list[dict[str, Any]], int]:
     rows_all: list[dict[str, str]] = []
     diagnostics_all: list[dict[str, Any]] = []
@@ -610,7 +615,8 @@ def main() -> int:
     positional_mapping, mapping_status = load_positional_mapping()
     print(f"Mapeo posicional: {mapping_status}")
     page_files = [path for path in files if is_paginated_file(path)]
-    base_files = [path for path in files if not is_paginated_file(path)]
+    manual_export_files = [path for path in files if is_manual_export_file(path)]
+    base_files = [path for path in files if not is_paginated_file(path) and not is_manual_export_file(path)]
     observed_page_files = [path for path in page_files if is_observed_pagination_file(path)]
     status_page_files = observed_page_files or page_files
     page_numbers = {int(page_number_from_path(path)) for path in status_page_files if page_number_from_path(path)}
@@ -626,8 +632,10 @@ def main() -> int:
     elif page_signature_groups:
         pagination_status = "parcial"
     base_rows_unchecked, base_diagnostics, base_errors = process_group(base_files, aliases, positional_mapping, 1, "no_aplica")
+    manual_rows_unchecked, manual_diagnostics, manual_errors = process_group(manual_export_files, aliases, positional_mapping, 1, "no_aplica")
     base_rows, base_duplicates, base_conflicts = deduplicate_rows(base_rows_unchecked)
     technical_rows, duplicates, conflicts = deduplicate_rows(technical_rows_unchecked)
+    manual_rows, manual_duplicates, manual_conflicts = deduplicate_rows(manual_rows_unchecked)
     if pagination_status == "duplicada":
         for row in technical_rows:
             row["estado_paginacion"] = "duplicada"
@@ -644,10 +652,17 @@ def main() -> int:
     if technical_rows:
         write_output(PAGINATED_OUTPUT_PATH, technical_rows)
         print(f"Muestra paginada técnica: {len(technical_rows)} filas en {PAGINATED_OUTPUT_PATH}")
+    if manual_rows:
+        write_output(MANUAL_EXPORT_OUTPUT_PATH, manual_rows)
+        print(f"Exportación manual SIO: {len(manual_rows)} filas en {MANUAL_EXPORT_OUTPUT_PATH}")
+    elif manual_export_files:
+        print("No se integraron filas de exportación manual; se preserva COMMODITIES_SIO_EXPORTACION_MANUAL.csv existente.")
     update_paginated_report(page_files, page_diagnostics, technical_rows, duplicates, conflicts, sample_pages, pagination_status)
-    errors = page_errors + base_errors
+    errors = page_errors + base_errors + manual_errors
     print(f"Piloto base: duplicados exactos={len(base_duplicates)}; conflictos={len(base_conflicts)}")
     print(f"Duplicados exactos eliminados: {len(duplicates)}; conflictos conservados: {len(conflicts)}")
+    if manual_export_files:
+        print(f"Exportación manual: duplicados exactos={len(manual_duplicates)}; conflictos={len(manual_conflicts)}")
     print(f"Estado de paginación: {pagination_status}.")
     if pagination_status == "duplicada":
         print("Advertencia: paginación no validada; páginas repetidas. Se conservan sólo registros únicos con trazabilidad.")
