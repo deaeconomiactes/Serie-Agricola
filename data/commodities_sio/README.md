@@ -57,6 +57,14 @@ python .\explorar_sio_granos.py --test-pagination --allow-web --save-response --
 
 Este modo usa únicamente parámetros respaldados por la evidencia local (`pPageSize` y `pCurrentPage`), registra cada payload, compara IDs/Rows y tiene un máximo efectivo de tres requests. No descarga masivamente ni integra el dashboard. Si las páginas se repiten, no ampliar la extracción: revisar `reports/REPORTE_PAGINACION_SIO.md` y observar el request real en DevTools antes de probar otra variante.
 
+Cuando DevTools haya mostrado el payload `{"pPageSize":"20","pCurrentPage":"1"}`, validar su índice sin asumir si empieza en cero o en uno:
+
+```powershell
+python .\explorar_sio_granos.py --test-observed-pagination --allow-web --save-response --max-requests 3
+```
+
+Este modo envía únicamente `pCurrentPage=0`, `1` y `2`, siempre con `pPageSize=20`, sin filtros ni fechas. Guarda las respuestas técnicas ignoradas por Git, genera `reports/REPORTE_PAGINACION_OBSERVADA_SIO.md` y mantiene el resultado en `COMMODITIES_SIO_MUESTRA_PAGINADA.csv`, separado del CSV principal.
+
 Para analizar una captura local de DevTools sin hacer llamadas web, seguir [GUIA_DEVTOOLS_SIO.md](GUIA_DEVTOOLS_SIO.md):
 
 ```powershell

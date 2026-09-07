@@ -36,11 +36,11 @@ Fecha de auditoría: 2026-09-07
 | Archivo | Tipo | Filas | Finalidad | Aptitud |
 | --- | --- | ---: | --- | --- |
 | `data/commodities_sio/processed/COMMODITIES_SIO_INTEGRADO.csv` | integración piloto principal | 15 | referencia piloto base | parcial_piloto |
-| `data/commodities_sio/processed/COMMODITIES_SIO_MUESTRA_PAGINADA.csv` | muestra técnica de paginación | 29 | diagnóstico de request, páginas y duplicados | no |
+| `data/commodities_sio/processed/COMMODITIES_SIO_MUESTRA_PAGINADA.csv` | muestra técnica de paginación | 44 | diagnóstico de request, páginas y duplicados | no |
 
 ## Muestra paginada técnica
 
-La muestra contiene 29 fila(s) y es evidencia técnica separada: no reemplaza `COMMODITIES_SIO_INTEGRADO.csv`.
+La muestra contiene 44 fila(s) y es evidencia técnica separada: no reemplaza `COMMODITIES_SIO_INTEGRADO.csv`.
 Estado de paginación registrado: duplicada.
 No es apta para dashboard cuando `estado_paginacion=duplicada`; se conserva para diagnosticar duplicados y paginación.
 

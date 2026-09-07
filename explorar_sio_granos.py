@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import html
 import json
 import re
@@ -33,6 +34,7 @@ REPORT_DIR = DATA_DIR / "reports"
 ENDPOINT_REPORT_PATH = REPORT_DIR / "REPORTE_ENDPOINT_SIO.md"
 PAGINATED_REPORT_PATH = REPORT_DIR / "REPORTE_MUESTRA_PAGINADA_SIO.md"
 PAGINATION_REPORT_PATH = REPORT_DIR / "REPORTE_PAGINACION_SIO.md"
+OBSERVED_PAGINATION_REPORT_PATH = REPORT_DIR / "REPORTE_PAGINACION_OBSERVADA_SIO.md"
 DEVTOOLS_REPORT_PATH = REPORT_DIR / "REPORTE_REQUEST_DEVTOOLS_SIO.md"
 USER_AGENT = "Serie-Agricola/commodities-sio-explorer (+consulta-publica)"
 SAFE_MESSAGE = (
@@ -1029,6 +1031,123 @@ def response_item_signatures(content: bytes) -> list[str]:
     return signatures
 
 
+def signature_hash(signatures: list[str]) -> str:
+    """Resume filas para comparación sin publicar el contenido original."""
+
+    return hashlib.sha256("\n".join(signatures).encode("utf-8")).hexdigest()[:16]
+
+
+def save_observed_page_response(output_dir: Path, current_page: str, content: bytes) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
+    path = output_dir / f"SIO_GetOperaciones_observed_pCurrentPage_{current_page}_{timestamp}.json"
+    path.write_bytes(content)
+    return path
+
+
+def observed_pagination_diagnosis(requests: list[dict[str, Any]]) -> tuple[str, str, str]:
+    """Clasifica sólo lo que permiten concluir las tres respuestas observadas."""
+
+    by_page = {str(item["page"]): item for item in requests}
+    signatures = {page: item.get("signatures", []) for page, item in by_page.items()}
+    if len(requests) < 3 or any(not item.get("signatures") for item in requests):
+        return (
+            "D. Requiere otro parámetro faltante o evidencia adicional",
+            "No se obtuvieron tres respuestas comparables con filas; no se infieren parámetros nuevos.",
+            "Repetir DevTools limpiando Network y capturando únicamente el clic en la página 2.",
+        )
+    if signatures["0"] == signatures["1"] == signatures["2"]:
+        return (
+            "C. pCurrentPage no cambia la respuesta",
+            "Las tres respuestas tienen las mismas firmas ID/Row.",
+            "No ampliar la extracción. Repetir DevTools limpiando Network y capturando únicamente el clic en la página 2.",
+        )
+    if signatures["0"] == signatures["1"] and signatures["1"] != signatures["2"]:
+        return (
+            "B. Paginación validada con base uno",
+            "pCurrentPage=0 se comporta como la primera página y pCurrentPage=2 devuelve filas distintas.",
+            "Actualizar --sample-pages para usar pPageSize=20 e índices desde 1; mantener auditoría previa a cualquier ampliación.",
+        )
+    if signatures["0"] != signatures["1"] and signatures["1"] != signatures["2"]:
+        return (
+            "A. Paginación validada con base cero",
+            "Las respuestas consecutivas 0/1/2 contienen firmas ID/Row distintas.",
+            "Actualizar --sample-pages para usar pPageSize=20 e índices desde 0; mantener auditoría previa a cualquier ampliación.",
+        )
+    return (
+        "D. Requiere otro parámetro faltante o evidencia adicional",
+        "El patrón de respuestas no permite validar de forma segura una base de índice.",
+        "Repetir DevTools limpiando Network y capturando únicamente el clic en la página 2.",
+    )
+
+
+def write_observed_pagination_report(command: str, endpoint: str, max_requests: int, requests: list[dict[str, Any]]) -> Path:
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    diagnosis, detail, recommendation = observed_pagination_diagnosis(requests)
+    comparisons: list[str] = []
+    for left, right in (("0", "1"), ("1", "2"), ("0", "2")):
+        left_item = next((item for item in requests if str(item["page"]) == left), None)
+        right_item = next((item for item in requests if str(item["page"]) == right), None)
+        if not left_item or not right_item:
+            comparisons.append(f"| {left} vs {right} | no comparable | no comparable | no comparable | faltan respuestas |")
+            continue
+        same_rows = left_item.get("signatures", []) == right_item.get("signatures", [])
+        same_ids = left_item.get("ids", []) == right_item.get("ids", [])
+        same_hash = left_item.get("row_hash", "") == right_item.get("row_hash", "")
+        conclusion = "idénticas" if same_rows else "diferentes"
+        comparisons.append(f"| {left} vs {right} | {'sí' if same_rows else 'no'} | {'sí' if same_ids else 'no'} | {'sí' if same_hash else 'no'} | {conclusion} |")
+    lines = [
+        "# Reporte de paginación observada SIO", "", "## Objetivo", "", "Validar el efecto real de `pCurrentPage` usando exclusivamente el payload observado en DevTools y un máximo de tres requests.", "", "## Payload observado en DevTools", "", "```json", '{"pPageSize":"20","pCurrentPage":"1"}', "```", "", "No se enviaron filtros, fechas ni parámetros adicionales.", "", "## Requests realizados", "", f"- Endpoint: `{endpoint}`", f"- Límite solicitado: {max_requests}; límite efectivo: {min(max_requests, 3)}.", "", "| pCurrentPage | pPageSize | Status | Content-Type | Registros | IDs detectados | Hash ID/Row | Raw | Notas |", "| ---: | ---: | ---: | --- | ---: | --- | --- | --- | --- |",
+    ]
+    for item in requests:
+        ids = ", ".join(item.get("ids", [])) or "ninguno"
+        lines.append(f"| {item['page']} | 20 | {item['status'] or 'sin respuesta'} | {item.get('content_type', 'no informado')} | {item['records']} | {ids} | {item.get('row_hash', 'sin hash')} | {item.get('saved') or 'no guardado'} | {item['observations']} |")
+    lines.extend(["", "## Comparación", "", "| Comparación | Filas iguales | IDs iguales | Hash Row igual | Conclusión |", "| --- | --- | --- | --- | --- |", *comparisons, "", "## Diagnóstico", "", f"- **{diagnosis}.** {detail}", "", "## Recomendación", "", recommendation, "", "## Alcance", "", "Este resultado es técnico y no reemplaza `COMMODITIES_SIO_INTEGRADO.csv`, no publica información en el dashboard y no habilita una extracción masiva.", ""])
+    OBSERVED_PAGINATION_REPORT_PATH.write_text("\n".join(lines), encoding="utf-8")
+    return OBSERVED_PAGINATION_REPORT_PATH
+
+
+def run_observed_pagination_test(args: argparse.Namespace, config: dict[str, Any]) -> int:
+    request_limit = min(args.max_requests, 3)
+    base_url = str(config.get("base_url", "")).strip()
+    endpoint = endpoint_url(base_url, TEST_ENDPOINT_PATH) if base_url else TEST_ENDPOINT_PATH
+    requests: list[dict[str, Any]] = []
+    for current_page in ("0", "1", "2")[:request_limit]:
+        payload = {"pPageSize": "20", "pCurrentPage": current_page}
+        item: dict[str, Any] = {"page": current_page, "status": "", "content_type": "no informado", "records": 0, "saved": "", "observations": "", "ids": [], "signatures": [], "row_hash": ""}
+        if not base_url:
+            item["observations"] = "configuración local SIO sin base_url; no se realiza request"
+            requests.append(item)
+            break
+        request = urllib.request.Request(endpoint, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json; charset=utf-8", "Accept": "application/json, text/javascript, */*; q=0.01", "X-Requested-With": "XMLHttpRequest", "User-Agent": USER_AGENT}, method="POST")
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:  # nosec B310: explicit observed endpoint plus --test-observed-pagination and --allow-web
+                content = response.read()
+                item["status"] = response.status
+                item["content_type"] = response.headers.get_content_type()
+            item["records"] = analyze_endpoint_response(content, item["status"], item["content_type"], "")["record_count"]
+            item["ids"] = response_item_ids(content)
+            item["signatures"] = response_item_signatures(content)
+            item["row_hash"] = signature_hash(item["signatures"])
+            item["observations"] = "respuesta recibida sin retry; payload observado exacto"
+            if args.save_response:
+                saved = save_observed_page_response(Path(args.output_dir), current_page, content)
+                item["saved"] = str(saved.relative_to(ROOT)).replace("\\", "/")
+        except urllib.error.HTTPError as exc:
+            item["status"] = exc.code
+            item["content_type"] = exc.headers.get_content_type() if exc.headers else "no informado"
+            item["observations"] = "error HTTP; sin retry; payload observado exacto"
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            item["observations"] = f"{exc.__class__.__name__}; sin retry; payload observado exacto"
+        requests.append(item)
+    report = write_observed_pagination_report(" ".join(sys.argv), endpoint, args.max_requests, requests)
+    print(f"Prueba de paginación observada finalizada: {len(requests)} request(s); límite efectivo: {request_limit}.")
+    for item in requests:
+        print(f"pCurrentPage={item['page']}: status={item['status'] or 'sin respuesta'}; registros={item['records']}; hash={item['row_hash'] or 'sin filas'}.")
+    print(f"Reporte generado: {report}")
+    return 0
+
+
 def write_sample_pages_report(command: str, endpoint: str, pages: int, page_size: int, max_requests: int, requests: list[dict[str, Any]]) -> Path:
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     lines = [
@@ -1282,6 +1401,7 @@ def main() -> int:
     parser.add_argument("--analyze-curl", metavar="RUTA_ARCHIVO", help="analizar un cURL local sin ejecutarlo ni usar la red")
     parser.add_argument("--sample-pages", action="store_true", help="extraer una muestra limitada de páginas GetOperaciones")
     parser.add_argument("--test-pagination", action="store_true", help="probar de forma controlada la paginación respaldada por evidencia local")
+    parser.add_argument("--test-observed-pagination", action="store_true", help="probar pCurrentPage 0/1/2 con el payload observado en DevTools")
     parser.add_argument("--test-endpoint", choices=["get-operaciones"], help="probar un único endpoint candidato documentado")
     parser.add_argument("--manual-urls", action="store_true", help="mostrar URLs para consulta manual sin llamar a la red")
     parser.add_argument("--days-back", default="30")
@@ -1299,7 +1419,7 @@ def main() -> int:
     local_modes = [args.analyze_currency, bool(args.analyze_har), bool(args.analyze_curl)]
     if sum(bool(item) for item in local_modes) > 1:
         raise SystemExit("Use sólo un modo de análisis local por ejecución")
-    if any(local_modes) and any((args.allow_web, args.dry_run, args.discover_web, args.test_endpoint, args.manual_urls, args.sample_pages, args.test_pagination)):
+    if any(local_modes) and any((args.allow_web, args.dry_run, args.discover_web, args.test_endpoint, args.manual_urls, args.sample_pages, args.test_pagination, args.test_observed_pagination)):
         raise SystemExit("Los modos de análisis local deben ejecutarse solos y no realizan requests web")
     if args.sample_pages and not args.allow_web:
         raise SystemExit("--sample-pages requiere --allow-web")
@@ -1311,6 +1431,10 @@ def main() -> int:
         raise SystemExit("--test-pagination requiere --allow-web")
     if args.test_pagination and any((args.dry_run, args.discover_web, args.test_endpoint, args.manual_urls, args.analyze_currency, args.sample_pages)):
         raise SystemExit("Use --test-pagination como modo independiente con --allow-web")
+    if args.test_observed_pagination and not args.allow_web:
+        raise SystemExit("--test-observed-pagination requiere --allow-web")
+    if args.test_observed_pagination and any((args.dry_run, args.discover_web, args.test_endpoint, args.manual_urls, args.analyze_currency, args.sample_pages, args.test_pagination)):
+        raise SystemExit("Use --test-observed-pagination como modo independiente con --allow-web")
     if args.allow_web and args.manual_urls:
         raise SystemExit("Use --allow-web o --manual-urls, no ambos")
     if args.discover_web and (args.dry_run or args.allow_web or args.manual_urls):
@@ -1337,6 +1461,8 @@ def main() -> int:
         return run_sample_pages(args, config)
     if args.test_pagination:
         return run_test_pagination(args, config)
+    if args.test_observed_pagination:
+        return run_observed_pagination_test(args, config)
     if args.discover_web:
         return run_discovery(args, config, endpoints, products, windows)
     if args.test_endpoint:
