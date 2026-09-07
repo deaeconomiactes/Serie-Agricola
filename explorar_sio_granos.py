@@ -12,6 +12,7 @@ import csv
 import html
 import json
 import re
+import shlex
 import sys
 import urllib.error
 import urllib.parse
@@ -32,6 +33,7 @@ REPORT_DIR = DATA_DIR / "reports"
 ENDPOINT_REPORT_PATH = REPORT_DIR / "REPORTE_ENDPOINT_SIO.md"
 PAGINATED_REPORT_PATH = REPORT_DIR / "REPORTE_MUESTRA_PAGINADA_SIO.md"
 PAGINATION_REPORT_PATH = REPORT_DIR / "REPORTE_PAGINACION_SIO.md"
+DEVTOOLS_REPORT_PATH = REPORT_DIR / "REPORTE_REQUEST_DEVTOOLS_SIO.md"
 USER_AGENT = "Serie-Agricola/commodities-sio-explorer (+consulta-publica)"
 SAFE_MESSAGE = (
     "Modo seguro: no se realizan llamadas externas. Use --dry-run para ver la "
@@ -39,6 +41,10 @@ SAFE_MESSAGE = (
 )
 MAX_DAYS_HARD_LIMIT = 180
 TEST_ENDPOINT_PATH = "/consulta_publica/operaciones_informadas_ultimas.aspx/GetOperaciones"
+PAGINATION_PARAMETER_NAMES = {"page", "rows", "pcurrentpage", "ppagesize", "sidx", "sord", "nd", "_search", "totalrows"}
+SENSITIVE_NAME_PATTERN = re.compile(r"(?:authorization|cookie|token|secret|password|api[-_]?key|session|sessid|csrf|bearer)", flags=re.I)
+SENSITIVE_EXACT_NAMES = {"sid", "sessionid", "session_id", "jsessionid", "phpsessid"}
+SAFE_DEVTOOLS_HEADERS = {"accept", "content-type", "origin", "referer", "user-agent", "x-requested-with"}
 
 
 def normalize(value: Any) -> str:
@@ -629,6 +635,288 @@ def run_currency_analysis() -> int:
     return 0
 
 
+def is_sensitive_name(name: Any) -> bool:
+    raw = str(name or "").strip()
+    return raw.lower() in SENSITIVE_EXACT_NAMES or bool(SENSITIVE_NAME_PATTERN.search(raw))
+
+
+def payload_has_sensitive_data(payload: str) -> bool:
+    return bool(re.search(r"(?i)(?:^|[,{&?;\s])[\"']?(?:authorization|cookie|token|secret|password|api[-_]?key|session|sessid|sid|csrf|bearer)[\"']?\s*[:=]", payload or ""))
+
+
+def sanitize_scalar(value: Any) -> str:
+    """Redacta valores sensibles antes de cualquier salida o reporte."""
+
+    result = str(value or "")
+    result = re.sub(r"(?i)\bBearer\s+[^\s,;]+", "Bearer [REDACTED]", result)
+    result = re.sub(
+        r"(?i)(\b(?:authorization|cookie|token|secret|password|api[-_]?key|session|sessid|sid|csrf)\b\s*[:=]\s*)([^&\s,;\"'}]+)",
+        r"\1[REDACTED]",
+        result,
+    )
+    return result
+
+
+def sanitize_structure(value: Any, name: str = "") -> Any:
+    if is_sensitive_name(name):
+        return "[REDACTED]"
+    if isinstance(value, dict):
+        return {str(key): sanitize_structure(item, str(key)) for key, item in value.items()}
+    if isinstance(value, list):
+        return [sanitize_structure(item, name) for item in value]
+    return sanitize_scalar(value)
+
+
+def sanitize_payload(payload: str) -> str:
+    raw = str(payload or "").strip()
+    if not raw:
+        return ""
+    try:
+        return json.dumps(sanitize_structure(json.loads(raw)), ensure_ascii=False, indent=2)
+    except json.JSONDecodeError:
+        pass
+    pairs = urllib.parse.parse_qsl(raw, keep_blank_values=True)
+    if pairs and ("=" in raw or "&" in raw):
+        return urllib.parse.urlencode([(name, "[REDACTED]" if is_sensitive_name(name) else sanitize_scalar(value)) for name, value in pairs])
+    return sanitize_scalar(raw)
+
+
+def sanitize_url(url: str) -> str:
+    parsed = urllib.parse.urlsplit(url)
+    if not parsed.scheme or not parsed.netloc:
+        return sanitize_scalar(url)
+    query = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
+    safe_query = urllib.parse.urlencode([(name, "[REDACTED]" if is_sensitive_name(name) else sanitize_scalar(value)) for name, value in query])
+    return urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, parsed.path, safe_query, ""))
+
+
+def headers_from_pairs(headers: Any) -> tuple[list[tuple[str, str]], bool]:
+    relevant: list[tuple[str, str]] = []
+    sensitive_found = False
+    if isinstance(headers, dict):
+        source = headers.items()
+    elif isinstance(headers, list):
+        source = ((item.get("name"), item.get("value")) for item in headers if isinstance(item, dict))
+    else:
+        source = []
+    for name, value in source:
+        normalized = str(name or "").strip()
+        if not normalized:
+            continue
+        if is_sensitive_name(normalized):
+            sensitive_found = True
+            continue
+        if normalized.lower() in SAFE_DEVTOOLS_HEADERS:
+            relevant.append((normalized, sanitize_scalar(value)))
+    return relevant, sensitive_found
+
+
+def pagination_parameters(payload: str) -> dict[str, str]:
+    raw = str(payload or "").strip()
+    if not raw:
+        return {}
+    result: dict[str, str] = {}
+
+    def collect(value: Any) -> None:
+        if isinstance(value, dict):
+            for name, item in value.items():
+                if str(name).lower() in PAGINATION_PARAMETER_NAMES:
+                    result[str(name)] = str(item)
+                collect(item)
+        elif isinstance(value, list):
+            for item in value:
+                collect(item)
+
+    try:
+        collect(json.loads(raw))
+    except json.JSONDecodeError:
+        for name, value in urllib.parse.parse_qsl(raw, keep_blank_values=True):
+            if name.lower() in PAGINATION_PARAMETER_NAMES:
+                result[name] = value
+        for match in re.finditer(r"(?i)[\"']?([A-Za-z_][A-Za-z0-9_]*)[\"']?\s*[:=]\s*[\"']?([^,}\s\"']+)", raw):
+            name, value = match.groups()
+            if name.lower() in PAGINATION_PARAMETER_NAMES:
+                result[name] = value
+    return result
+
+
+def relative_display_path(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(ROOT)).replace("\\", "/")
+    except ValueError:
+        return str(path.resolve())
+
+
+def build_devtools_record(source_type: str, url: str, method: str, headers: Any, payload: str, evidence: str) -> dict[str, Any]:
+    safe_headers, sensitive_headers = headers_from_pairs(headers)
+    parameters = pagination_parameters(payload)
+    payload_sensitive = payload_has_sensitive_data(payload)
+    lowered_url = url.lower()
+    endpoint = urllib.parse.urlsplit(url).path or url
+    is_sio = "siogranos" in lowered_url
+    is_get_operaciones = "getoperaciones" in lowered_url
+    confidence = "alta" if is_get_operaciones else "media" if is_sio else "baja"
+    return {
+        "source_type": source_type,
+        "url": sanitize_url(url),
+        "endpoint": endpoint,
+        "method": (method or "GET").upper(),
+        "headers": safe_headers,
+        "payload": sanitize_payload(payload),
+        "has_payload": bool(payload.strip()),
+        "parameters": parameters,
+        "is_sio": is_sio,
+        "is_get_operaciones": is_get_operaciones,
+        "confidence": confidence,
+        "evidence": evidence,
+        "sensitive_transport": sensitive_headers or payload_sensitive,
+    }
+
+
+def analyze_har_file(path: Path) -> list[dict[str, Any]]:
+    try:
+        document = json.loads(path.read_text(encoding="utf-8-sig", errors="replace"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SystemExit(f"No se pudo analizar HAR local: {exc}") from exc
+    entries = document.get("log", {}).get("entries", []) if isinstance(document, dict) else []
+    if not isinstance(entries, list):
+        raise SystemExit("El HAR local no contiene log.entries válido.")
+    records: list[dict[str, Any]] = []
+    for index, entry in enumerate(entries, start=1):
+        request = entry.get("request", {}) if isinstance(entry, dict) else {}
+        if not isinstance(request, dict):
+            continue
+        url = str(request.get("url", ""))
+        if "siogranos" not in url.lower():
+            continue
+        post_data = request.get("postData", {})
+        payload = ""
+        if isinstance(post_data, dict):
+            payload = str(post_data.get("text", ""))
+            if not payload and isinstance(post_data.get("params"), list):
+                payload = urllib.parse.urlencode([(str(item.get("name", "")), str(item.get("value", ""))) for item in post_data["params"] if isinstance(item, dict)])
+        records.append(build_devtools_record("HAR", url, str(request.get("method", "GET")), request.get("headers", []), payload, f"HAR local, entrada {index}"))
+    return records
+
+
+def analyze_curl_file(path: Path) -> list[dict[str, Any]]:
+    try:
+        source = path.read_text(encoding="utf-8-sig", errors="replace")
+    except OSError as exc:
+        raise SystemExit(f"No se pudo leer cURL local: {exc}") from exc
+    try:
+        tokens = shlex.split(source, posix=True)
+    except ValueError:
+        tokens = re.findall(r"(?:[^\s\"']|\"[^\"]*\"|'[^']*')+", source)
+    method = ""
+    headers: list[dict[str, str]] = []
+    payloads: list[str] = []
+    url = ""
+    index = 0
+    data_flags = {"-d", "--data", "--data-raw", "--data-binary", "--data-ascii"}
+    while index < len(tokens):
+        token = tokens[index]
+        if token in {"-X", "--request"} and index + 1 < len(tokens):
+            method = tokens[index + 1]
+            index += 2
+            continue
+        if token.startswith("--request="):
+            method = token.split("=", 1)[1]
+        elif token in {"-H", "--header"} and index + 1 < len(tokens):
+            raw_header = tokens[index + 1]
+            name, separator, value = raw_header.partition(":")
+            headers.append({"name": name.strip(), "value": value.strip() if separator else ""})
+            index += 2
+            continue
+        elif token.startswith("--header="):
+            raw_header = token.split("=", 1)[1]
+            name, separator, value = raw_header.partition(":")
+            headers.append({"name": name.strip(), "value": value.strip() if separator else ""})
+        elif token in data_flags and index + 1 < len(tokens):
+            payloads.append(tokens[index + 1])
+            index += 2
+            continue
+        elif any(token.startswith(flag + "=") for flag in data_flags):
+            payloads.append(token.split("=", 1)[1])
+        elif token in {"--url"} and index + 1 < len(tokens):
+            url = tokens[index + 1]
+            index += 2
+            continue
+        elif token.startswith("--url="):
+            url = token.split("=", 1)[1]
+        elif token.startswith(("http://", "https://")) and not url:
+            url = token
+        index += 1
+    if not method:
+        method = "POST" if payloads else "GET"
+    if not url:
+        return []
+    return [build_devtools_record("cURL", url, method, headers, "\n".join(payloads), "cURL local; no ejecutado")]
+
+
+def write_devtools_report(source_type: str, path: Path, records: list[dict[str, Any]]) -> Path:
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    candidates = [record for record in records if record["is_sio"]]
+    observed_parameters: dict[str, str] = {}
+    for record in candidates:
+        observed_parameters.update(record["parameters"])
+    headers = sorted({f"{name}: {value}" for record in candidates for name, value in record["headers"]}, key=str.lower)
+    has_sensitive_transport = any(record["sensitive_transport"] for record in candidates)
+    lines = [
+        "# Reporte de request observado en DevTools SIO", "", "## Objetivo", "", "Identificar el payload real usado por la grilla SIO para paginar operaciones.", "", "## Archivo analizado", "", f"- Tipo: {source_type} local.", f"- Archivo: `{relative_display_path(path)}`.", "- El archivo fuente no se copia ni se versiona; este reporte omite cookies, autorizaciones, tokens e IDs de sesión.", "", "## Requests candidatos detectados", "", "| Endpoint | Método | Tipo | Contiene payload | Parámetros detectados | Evidencia | Confianza | Observaciones |", "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    if candidates:
+        for record in candidates:
+            parameter_names = ", ".join(record["parameters"]) or "ninguno"
+            observations = "GetOperaciones detectado" if record["is_get_operaciones"] else "Request SIO candidato"
+            if record["sensitive_transport"]:
+                observations += "; se detectó material sensible y fue omitido/redactado"
+            lines.append(f"| `{record['endpoint']}` | {record['method']} | {record['source_type']} | {'sí' if record['has_payload'] else 'no'} | {parameter_names} | {record['evidence']} | {record['confidence']} | {observations} |")
+    else:
+        lines.append("| — | — | — | no | ninguno | No se detectó request SIO analizable. | baja | Repetir captura con Fetch/XHR visible. |")
+    lines.extend(["", "## Parámetros de paginación observados", "", "| Parámetro | Valor observado | Posible función | Evidencia | Confianza |", "| --- | --- | --- | --- | --- |"])
+    parameter_functions = {"page": "número de página", "rows": "tamaño de página", "pCurrentPage": "número de página del PageMethod", "pPageSize": "tamaño de página del PageMethod", "sidx": "campo de ordenamiento", "sord": "dirección de ordenamiento", "nd": "marca temporal de jqGrid", "_search": "indicador de búsqueda", "totalrows": "límite o total solicitado"}
+    if observed_parameters:
+        for name, value in observed_parameters.items():
+            lines.append(f"| {name} | `{sanitize_scalar(value)}` | {parameter_functions.get(name, 'parámetro observado')} | Payload local sanitizado. | alta si pertenece a GetOperaciones; media en otro request SIO. |")
+    else:
+        lines.append("| — | — | No se observó parámetro de paginación. | No hay payload SIO analizable. | baja |")
+    lines.extend(["", "## Headers relevantes", ""])
+    lines.extend([f"- `{header}`" for header in headers] or ["- No se detectaron headers no sensibles dentro de la lista permitida."])
+    lines.extend(["", "No se listan `Cookie`, `Authorization`, tokens, credenciales ni IDs de sesión.", "", "## Payload observado", ""])
+    if candidates:
+        for record in candidates:
+            lines.extend([f"### {record['endpoint']}", "", "```json", record["payload"] or "(sin payload)", "```", ""])
+    else:
+        lines.extend(["No hay payload local SIO para mostrar.", ""])
+    expected = {"pPageSize", "pCurrentPage"}
+    observed_names = set(observed_parameters)
+    missing = sorted(expected - observed_names)
+    extra = sorted(observed_names - expected)
+    lines.extend(["## Comparación con payload anterior", "", "Payload anterior controlado:", "", "```json", '{"pPageSize": 15, "pCurrentPage": 1/2/3}', "```", "", f"- Parámetros observados en DevTools: {', '.join(observed_parameters) or 'ninguno'}.", f"- Parámetros del payload anterior que no aparecen: {', '.join(missing) or 'ninguno'}.", f"- Parámetros adicionales observados: {', '.join(extra) or 'ninguno'}.", "- La comparación describe sólo la captura local; no infiere parámetros ausentes.", "", "## Recomendación próxima", ""])
+    if any(record["is_get_operaciones"] and record["has_payload"] for record in candidates) and not has_sensitive_transport:
+        recommendation = "A. El payload real parece identificable. Preparar una prueba controlada separada con máximo 2 requests, sólo después de revisar manualmente sus valores y condiciones de uso."
+    elif has_sensitive_transport:
+        recommendation = "B. La captura contiene headers o campos potencialmente sensibles. No automatizar mientras no se confirme que la consulta funciona sin sesión/cookies; mantener descarga manual."
+    else:
+        recommendation = "C. El HAR/cURL no contiene un request SIO útil de paginación. Repetir la captura con la grilla y la página 2 visibles en Fetch/XHR."
+    lines.extend([recommendation, "", "Este análisis es local: no ejecuta cURL ni realiza requests web.", ""])
+    DEVTOOLS_REPORT_PATH.write_text("\n".join(lines), encoding="utf-8")
+    return DEVTOOLS_REPORT_PATH
+
+
+def run_devtools_analysis(source_type: str, path_value: str) -> int:
+    path = Path(path_value)
+    if not path.is_file():
+        raise SystemExit(f"No existe un archivo local analizable: {path}")
+    records = analyze_har_file(path) if source_type == "HAR" else analyze_curl_file(path)
+    report = write_devtools_report(source_type, path, records)
+    sio_count = sum(1 for record in records if record["is_sio"])
+    print(f"Análisis local de {source_type} finalizado: {sio_count} request(s) SIO detectado(s). No se realizaron requests web.")
+    print(f"Reporte generado: {report}")
+    return 0
+
+
 def response_record_count(payload: Any) -> tuple[int, bool]:
     if isinstance(payload, list):
         return len(payload), True
@@ -975,6 +1263,8 @@ def main() -> int:
     parser.add_argument("--allow-web", action="store_true")
     parser.add_argument("--discover-web", action="store_true", help="analizar HTML y scripts públicos de forma controlada")
     parser.add_argument("--analyze-currency", action="store_true", help="analizar evidencia local de moneda sin usar la red")
+    parser.add_argument("--analyze-har", metavar="RUTA_ARCHIVO", help="analizar un HAR local de DevTools sin usar la red")
+    parser.add_argument("--analyze-curl", metavar="RUTA_ARCHIVO", help="analizar un cURL local sin ejecutarlo ni usar la red")
     parser.add_argument("--sample-pages", action="store_true", help="extraer una muestra limitada de páginas GetOperaciones")
     parser.add_argument("--test-pagination", action="store_true", help="probar de forma controlada la paginación respaldada por evidencia local")
     parser.add_argument("--test-endpoint", choices=["get-operaciones"], help="probar un único endpoint candidato documentado")
@@ -991,8 +1281,11 @@ def main() -> int:
     args = parser.parse_args()
     if args.max_requests < 1:
         raise SystemExit("--max-requests debe ser mayor que cero")
-    if args.analyze_currency and any((args.allow_web, args.dry_run, args.discover_web, args.test_endpoint, args.manual_urls)):
-        raise SystemExit("Use --analyze-currency como modo independiente; sólo analiza archivos locales")
+    local_modes = [args.analyze_currency, bool(args.analyze_har), bool(args.analyze_curl)]
+    if sum(bool(item) for item in local_modes) > 1:
+        raise SystemExit("Use sólo un modo de análisis local por ejecución")
+    if any(local_modes) and any((args.allow_web, args.dry_run, args.discover_web, args.test_endpoint, args.manual_urls, args.sample_pages, args.test_pagination)):
+        raise SystemExit("Los modos de análisis local deben ejecutarse solos y no realizan requests web")
     if args.sample_pages and not args.allow_web:
         raise SystemExit("--sample-pages requiere --allow-web")
     if args.sample_pages and any((args.dry_run, args.discover_web, args.test_endpoint, args.manual_urls, args.analyze_currency)):
@@ -1013,6 +1306,10 @@ def main() -> int:
         raise SystemExit("Use --test-endpoint como modo independiente con --allow-web")
     if args.analyze_currency:
         return run_currency_analysis()
+    if args.analyze_har:
+        return run_devtools_analysis("HAR", args.analyze_har)
+    if args.analyze_curl:
+        return run_devtools_analysis("cURL", args.analyze_curl)
     catalog = read_catalog()
     products = parse_products(args.products, catalog)
     start, end = date_range(args)

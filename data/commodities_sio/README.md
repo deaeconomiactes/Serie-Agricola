@@ -9,6 +9,8 @@ SIO no se presume equivalente a los precios de pizarra BCR. La información debe
 - `raw/`: respuestas originales de exploración pública controlada o descargas manuales.
 - `processed/`: CSV integrado de SIO, separado de BCR y de las fuentes frutihortícolas.
 - `reports/`: auditorías de cobertura, calidad, actualidad y aptitud analítica.
+- `devtools/`: diagnósticos locales de HAR/cURL; sus archivos sensibles están ignorados por Git.
+- `GUIA_DEVTOOLS_SIO.md`: pasos para capturar y sanear el request real de la grilla.
 - `sio_config.example.json`: configuración de referencia con URLs públicas candidatas, sin credenciales.
 - `sio_config.json`: configuración local real, ignorada por Git.
 - `catalogo_productos_sio.csv`: catálogo inicial; los IDs SIO quedan pendientes de validación y no se inventan.
@@ -47,6 +49,15 @@ python .\explorar_sio_granos.py --test-pagination --allow-web --save-response --
 ```
 
 Este modo usa únicamente parámetros respaldados por la evidencia local (`pPageSize` y `pCurrentPage`), registra cada payload, compara IDs/Rows y tiene un máximo efectivo de tres requests. No descarga masivamente ni integra el dashboard. Si las páginas se repiten, no ampliar la extracción: revisar `reports/REPORTE_PAGINACION_SIO.md` y observar el request real en DevTools antes de probar otra variante.
+
+Para analizar una captura local de DevTools sin hacer llamadas web, seguir [GUIA_DEVTOOLS_SIO.md](GUIA_DEVTOOLS_SIO.md):
+
+```powershell
+python .\explorar_sio_granos.py --analyze-har data\commodities_sio\devtools\sio_paginacion.har
+python .\explorar_sio_granos.py --analyze-curl data\commodities_sio\devtools\getoperaciones_page2.curl
+```
+
+Estos modos sólo analizan archivos locales, no ejecutan cURL ni consultan la red. Sirven para identificar el payload real de paginación y generan un reporte sanitizado. Los HAR/cURL reales no deben commitearse porque pueden contener cookies, tokens o headers de sesión.
 
 3. Si la automatización aún no está validada, generar URLs para consulta/descarga manual:
 

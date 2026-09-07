@@ -60,6 +60,11 @@ data/commodities_sio/sio_config.json
 data/commodities_sio/raw/*.html
 data/commodities_sio/raw/*.js
 data/commodities_sio/raw/*.json
+data/commodities_sio/devtools/*.har
+data/commodities_sio/devtools/*.curl
+data/commodities_sio/devtools/*.txt
+data/commodities_sio/devtools/*.json
+!data/commodities_sio/devtools/.gitkeep
 data/commodities_sio/mapeo_getoperaciones_sio.local.json
 !data/commodities_sio/reports/*.md
 
