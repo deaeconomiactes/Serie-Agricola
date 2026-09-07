@@ -68,14 +68,16 @@ python .\explorar_sio_granos.py --test-observed-pagination --allow-web --save-re
 
 Este modo envía únicamente `pCurrentPage=0`, `1` y `2`, siempre con `pPageSize=20`, sin filtros ni fechas. Guarda las respuestas técnicas ignoradas por Git, genera `reports/REPORTE_PAGINACION_OBSERVADA_SIO.md` y mantiene el resultado en `COMMODITIES_SIO_MUESTRA_PAGINADA.csv`, separado del CSV principal.
 
-Para analizar el mecanismo de exportación, seguir [GUIA_EXPORTAR_OPERACIONES_SIO.md](GUIA_EXPORTAR_OPERACIONES_SIO.md). Si el navegador descarga un archivo manualmente, colocarlo en `raw/` con el nombre `SIO_exportar_operaciones_*.xlsx`, `.xls` o `.csv`; no debe commitearse. Luego ejecutar:
+## Exportación manual desde SIO
+
+El botón Exportar Operaciones puede usarse como alternativa cuando `GetOperaciones` no pagina de forma confiable. Para analizar el mecanismo, seguir [GUIA_EXPORTAR_OPERACIONES_SIO.md](GUIA_EXPORTAR_OPERACIONES_SIO.md). Si el navegador descarga un archivo manualmente, colocarlo en `raw/` con el nombre `SIO_exportar_operaciones_*.xlsx`, `.xls` o `.csv`; `raw/` no debe commitearse. Luego ejecutar:
 
 ```powershell
 python .\integrar_commodities_sio.py
 python .\auditar_commodities_sio.py
 ```
 
-La exportación manual es válida cuando la automatización directa depende de sesión. Se procesa en `COMMODITIES_SIO_EXPORTACION_MANUAL.csv` sin pisar el CSV principal. Los CSV procesados y reportes pueden versionarse si corresponden a muestras controladas y no masivas.
+La exportación manual es válida cuando la automatización directa depende de sesión. Se procesa en `COMMODITIES_SIO_EXPORTACION_MANUAL.csv` sin pisar el CSV principal ni la muestra paginada. Los CSV procesados y reportes pueden versionarse si corresponden a muestras controladas y no masivas.
 
 Para analizar una captura local de DevTools sin hacer llamadas web, seguir [GUIA_DEVTOOLS_SIO.md](GUIA_DEVTOOLS_SIO.md):
 

@@ -10,7 +10,7 @@ import unicodedata
 from datetime import date, datetime
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 
 ROOT = Path(__file__).resolve().parent
@@ -105,6 +105,8 @@ def normalize_explicit_currency_field(value: Any) -> str:
     raw = text(value)
     if not raw:
         return ""
+    if raw.strip() in {"0", "-", "N/A", "NA"}:
+        return ""
     currency, explicit, _ = extract_explicit_currency(raw)
     if explicit == "sí":
         return currency
@@ -196,7 +198,10 @@ def normalize_commodity(value: Any, filename: str, aliases: dict[str, str]) -> t
 
 
 def value_for(row: dict[str, Any], *names: str) -> Any:
-    normalized = {key(name): value for name, value in row.items()}
+    normalized = row.get("__normalized_fields")
+    if not isinstance(normalized, dict):
+        normalized = {key(name): value for name, value in row.items() if name != "__normalized_fields"}
+        row["__normalized_fields"] = normalized
     for name in names:
         if key(name) in normalized:
             return normalized[key(name)]
@@ -204,7 +209,10 @@ def value_for(row: dict[str, Any], *names: str) -> Any:
 
 
 def value_with_field(row: dict[str, Any], *names: str) -> tuple[Any, str]:
-    normalized = {key(name): (value, str(name)) for name, value in row.items()}
+    normalized = row.get("__normalized_fields_with_names")
+    if not isinstance(normalized, dict):
+        normalized = {key(name): (value, str(name)) for name, value in row.items() if name not in {"__normalized_fields", "__normalized_fields_with_names"}}
+        row["__normalized_fields_with_names"] = normalized
     for name in names:
         if key(name) in normalized:
             return normalized[key(name)]
@@ -287,17 +295,41 @@ class HTMLTableParser(HTMLParser):
             self._table = None
 
 
-def read_file(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
+def text_encoding(path: Path) -> str:
+    with path.open("rb") as handle:
+        prefix = handle.read(4)
+    if prefix.startswith(b"\xff\xfe"):
+        return "utf-16-le"
+    if prefix.startswith(b"\xfe\xff"):
+        return "utf-16-be"
+    if len(prefix) >= 2 and prefix[1] == 0:
+        return "utf-16-le"
+    if len(prefix) >= 2 and prefix[0] == 0:
+        return "utf-16-be"
+    return "utf-8-sig"
+
+
+def read_file(path: Path) -> tuple[Iterable[dict[str, Any]], list[str]]:
     suffix = path.suffix.lower()
     if suffix == ".csv":
-        content = path.read_text(encoding="utf-8-sig", errors="replace")
+        encoding = text_encoding(path)
+        with path.open("r", encoding=encoding, errors="replace", newline="") as handle:
+            sample = handle.read(8192)
         try:
-            dialect = csv.Sniffer().sniff(content[:4096], delimiters=";,\t|")
+            dialect = csv.Sniffer().sniff(sample, delimiters=";,\t|")
         except csv.Error:
             dialect = csv.excel
             dialect.delimiter = ";"
-        reader = csv.DictReader(content.splitlines(), dialect=dialect)
-        return [dict(row) for row in reader], [text(column) for column in (reader.fieldnames or [])]
+        with path.open("r", encoding=encoding, errors="replace", newline="") as handle:
+            reader = csv.DictReader(handle, dialect=dialect)
+            columns = [text(column) for column in (reader.fieldnames or [])]
+
+        def rows() -> Iterable[dict[str, Any]]:
+            with path.open("r", encoding=encoding, errors="replace", newline="") as handle:
+                for row in csv.DictReader(handle, dialect=dialect):
+                    yield dict(row)
+
+        return rows(), columns
     if suffix == ".json":
         return extract_records(json.loads(path.read_text(encoding="utf-8-sig"))), []
     if suffix in {".html", ".htm"}:
@@ -357,7 +389,7 @@ def first_text(source: dict[str, Any], *names: str) -> str:
     return text(value_for(source, *names))
 
 
-def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[int, dict[str, Any]] | None, sample_pages: int, pagination_status: str = "no_aplica") -> tuple[list[dict[str, str]], dict[str, Any]]:
+def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[int, dict[str, Any]] | None, sample_pages: int, pagination_status: str = "no_aplica", row_sink: Any = None) -> tuple[list[dict[str, str]], dict[str, Any]]:
     source_rows, columns = read_file(path)
     rows: list[dict[str, str]] = []
     dates: list[date] = []
@@ -365,10 +397,13 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
     commodities: set[str] = set()
     positional_skipped = 0
     positional_applied = 0
+    read_count = 0
+    integrated_count = 0
     row_signatures: list[str] = []
     page_origin = page_number_from_path(path)
     sample_type = "exportacion_manual" if is_manual_export_file(path) else "paginacion_controlada" if page_origin else "piloto_una_pagina"
     for source in source_rows:
+        read_count += 1
         used_positional = False
         source_id = first_text(source, "ID", "id_operacion_sio")
         has_positional_row = any(key(name) == "row" for name in source)
@@ -387,27 +422,29 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
                 source["id_operacion_sio"] = source_id
             positional_applied += 1
             used_positional = True
-        market_date = parse_date(value_for(source, "Fecha Declaración", "Fecha Declaracion", "Fecha de Concertación", "Fecha de Concertacion", "Fecha de Entrega", "Fecha Concertación", "Fecha Concertacion", "Fecha"))
+        market_date = parse_date(value_for(source, "Fecha Operacion", "Fecha de Operacion", "Fecha Declaración", "Fecha Declaracion", "Fecha de Concertación", "Fecha de Concertacion", "Fecha de Entrega", "Fecha Concertación", "Fecha Concertacion", "Fecha"))
         raw_commodity = value_for(source, "Producto", "Grano", "Especie", "Commodity")
         commodity, commodity_note = normalize_commodity(raw_commodity, path.name, aliases)
         raw_price, detected_price_field = value_with_field(source, "Precio/TN Monto", "Precio/Monto", "Precio/TN", "Precio TN", "Precio unitario", "Precio", "Monto", "Precio hecho", "Precio Hecho", "Cotización", "Cotizacion", "Valor")
         price = parse_number(raw_price)
         if not market_date and price is None and not raw_commodity:
             continue
-        if market_date:
+        if market_date and row_sink is None:
             dates.append(market_date)
-        if price is not None:
+        if price is not None and row_sink is None:
             prices.append(price)
         price_original = text(raw_price)
         price_label = text(source.get("__source_label_precio")) or detected_price_field
         price_type_original = first_text(source, "precio_tipo_original", "Precio tipo original", "Precio")
-        raw_currency, detected_currency_field = value_with_field(source, "Moneda", "Currency", "Código moneda", "Codigo moneda")
+        raw_currency, detected_currency_field = value_with_field(source, "Precio/TN Moneda", "Moneda", "Currency", "Código moneda", "Codigo moneda")
         moneda, moneda_explicitamente_informada, moneda_inferida = extract_explicit_currency(price_original)
         currency_original = price_original if moneda_explicitamente_informada == "sí" else text(raw_currency)
         currency_label = price_label if moneda_explicitamente_informada == "sí" else detected_currency_field
         if moneda_explicitamente_informada != "sí" and text(raw_currency):
-            moneda = normalize_explicit_currency_field(raw_currency)
-            moneda_explicitamente_informada = "sí"
+            normalized_currency = normalize_explicit_currency_field(raw_currency)
+            if normalized_currency in {"ARS", "USD"}:
+                moneda = normalized_currency
+                moneda_explicitamente_informada = "sí"
         source_unit = first_text(source, "Unidad", "Unit")
         explicit_price_unit = explicit_unit_from_label(price_label, text(source.get("__unit_value_unidad")))
         unidad = source_unit or explicit_price_unit
@@ -415,10 +452,10 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
         raw_total, detected_total_field = value_with_field(source, "Precio total", "Monto total", "Total")
         precio_total = parse_number(raw_total)
         tipo = first_text(source, "tipo_precio", "Tipo de precio", "Tipo Precio", "Price Type", "Tipo") or price_type_original
-        volumen, detected_volume_field = value_with_field(source, "Cantidad (TN)", "Cantidad TN", "Volumen TN", "Toneladas", "Volumen", "Cantidad", "TN")
+        volumen, detected_volume_field = value_with_field(source, "Cant. (TN)", "Cant TN", "Cantidad (TN)", "Cantidad TN", "Volumen TN", "Toneladas", "Volumen", "Cantidad", "TN")
         volume_label = text(source.get("__source_label_volumen")) or detected_volume_field
         volumen_unidad = first_text(source, "volumen_unidad", "Unidad de volumen", "Unidad volumen", "Volume Unit") or text(source.get("__unit_value_volumen_unidad"))
-        if not volumen_unidad and key(volume_label) in {"cantidadtn", "cantidadtns", "volumentn", "toneladas", "tn"}:
+        if not volumen_unidad and key(volume_label) in {"canttn", "cantidadtn", "cantidadtns", "volumentn", "toneladas", "tn"}:
             volumen_unidad = "TN"
         row_missing: list[str] = []
         if moneda_explicitamente_informada == "sí":
@@ -443,11 +480,11 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
         pilot_note = "integración piloto una página GetOperaciones" if used_positional else ""
         notes = "; ".join(dict.fromkeys([part for part in [observation, commodity_note, pilot_note] + row_missing if part]))
         source_name = first_text(source, "Fuente", "Source") or DEFAULT_SOURCE
-        delivery_place = first_text(source, "Zona", "Lugar de entrega", "lugar_entrega")
+        delivery_place = first_text(source, "Zona", "Lugar Entrega", "Lugar de entrega", "lugar_entrega")
         pilot_status = "sí" if market_date and commodity != "Sin especificar" and price is not None and source_name and price_label and price_label != "Sin especificar" and explicit_price_unit else "no"
         dashboard_status = "parcial_piloto" if pilot_status == "sí" and moneda_explicitamente_informada == "sí" and explicit_price_unit and used_positional else "no"
         commodities.add(commodity)
-        rows.append({
+        mapped_row = {
             "fecha": market_date.isoformat() if market_date else "",
             "año": str(market_date.year) if market_date else "",
             "mes": str(market_date.month) if market_date else "",
@@ -471,8 +508,8 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
             "volumen": volumen,
             "volumen_unidad": volumen_unidad,
             "campo_volumen_original": volume_label or "Sin especificar",
-            "procedencia": first_text(source, "Procedencia"),
-            "provincia": first_text(source, "Provincia", "Pcia"),
+            "procedencia": first_text(source, "Procedencia", "Procedencia Pcia", "Procedencia Localid."),
+            "provincia": first_text(source, "Provincia", "Pcia", "Procedencia Pcia"),
             "localidad": first_text(source, "Localidad"),
             "zona": delivery_place,
             "lugar_entrega": delivery_place,
@@ -492,9 +529,15 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
             "muestra_paginas": str(sample_pages),
             "estado_paginacion": pagination_status if sample_type == "paginacion_controlada" else "no_aplica",
             "_row_signature": raw_row_signature,
-        })
-        row_signatures.append(raw_row_signature)
-    return rows, {"read": len(source_rows), "integrated": len(rows), "positional_skipped": positional_skipped, "positional_applied": positional_applied, "columns": columns, "commodities": sorted(commodities), "dates": dates, "prices": prices, "page_origin": page_origin, "row_signatures": row_signatures}
+        }
+        if row_sink is None:
+            rows.append(mapped_row)
+        else:
+            row_sink(mapped_row)
+        integrated_count += 1
+        if row_sink is None:
+            row_signatures.append(raw_row_signature)
+    return rows, {"read": read_count, "integrated": integrated_count, "positional_skipped": positional_skipped, "positional_applied": positional_applied, "columns": columns, "commodities": sorted(commodities), "dates": dates, "prices": prices, "page_origin": page_origin, "row_signatures": row_signatures}
 
 
 def real_files() -> list[Path]:
@@ -605,6 +648,56 @@ def process_group(files: list[Path], aliases: dict[str, str], positional_mapping
     return rows_all, diagnostics_all, errors
 
 
+def process_manual_exports_streaming(files: list[Path], aliases: dict[str, str], positional_mapping: dict[int, dict[str, Any]] | None) -> tuple[int, list[dict[str, Any]], int, int, int, int]:
+    """Integra exportaciones grandes sin conservar cientos de miles de filas en memoria."""
+
+    if not files:
+        return 0, [], 0, 0, 0, 0
+    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+    temporary_path = MANUAL_EXPORT_OUTPUT_PATH.with_suffix(".csv.tmp")
+    seen_by_id: dict[str, str] = {}
+    seen_by_key: dict[tuple[str, ...], str] = {}
+    diagnostics_all: list[dict[str, Any]] = []
+    counts = {"written": 0, "duplicates": 0, "conflicts": 0}
+
+    def consume(row: dict[str, str]) -> None:
+        operation_id = text(row.get("id_operacion_sio"))
+        key_value = (text(row.get("fecha")), text(row.get("commodity")), text(row.get("precio")), text(row.get("moneda")), text(row.get("unidad")), text(row.get("volumen")), text(row.get("procedencia")), text(row.get("lugar_entrega")), text(row.get("tipo_precio")))
+        signature = raw_row_signature(row)
+        previous = seen_by_id.get(operation_id) if operation_id else seen_by_key.get(key_value)
+        if previous is not None:
+            if previous == signature:
+                counts["duplicates"] += 1
+                return
+            counts["conflicts"] += 1
+        if operation_id:
+            seen_by_id.setdefault(operation_id, signature)
+        else:
+            seen_by_key.setdefault(key_value, signature)
+        writer.writerow(row)
+        counts["written"] += 1
+
+    try:
+        with temporary_path.open("w", encoding="utf-8-sig", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=OUTPUT_COLUMNS, delimiter=";", extrasaction="ignore")
+            writer.writeheader()
+            for path in files:
+                try:
+                    _, diagnostics = process_file(path, aliases, positional_mapping, 1, "no_aplica", row_sink=consume)
+                    diagnostics["archivo_origen"] = path.name
+                    diagnostics_all.append(diagnostics)
+                    print(f"Archivo procesado: {path.name}")
+                    print(f"  Filas leídas: {diagnostics['read']}; filas integradas: {diagnostics['integrated']}")
+                except Exception as exc:
+                    print(f"ERROR en {path.name}: {exc}")
+                    return 0, diagnostics_all, 1, counts["duplicates"], counts["conflicts"], counts["written"]
+        temporary_path.replace(MANUAL_EXPORT_OUTPUT_PATH)
+    finally:
+        if temporary_path.exists():
+            temporary_path.unlink()
+    return 0, diagnostics_all, 0, counts["duplicates"], counts["conflicts"], counts["written"]
+
+
 def main() -> int:
     files = real_files()
     if not files:
@@ -632,10 +725,9 @@ def main() -> int:
     elif page_signature_groups:
         pagination_status = "parcial"
     base_rows_unchecked, base_diagnostics, base_errors = process_group(base_files, aliases, positional_mapping, 1, "no_aplica")
-    manual_rows_unchecked, manual_diagnostics, manual_errors = process_group(manual_export_files, aliases, positional_mapping, 1, "no_aplica")
+    _, manual_diagnostics, manual_errors, manual_duplicates_count, manual_conflicts_count, manual_count = process_manual_exports_streaming(manual_export_files, aliases, positional_mapping)
     base_rows, base_duplicates, base_conflicts = deduplicate_rows(base_rows_unchecked)
     technical_rows, duplicates, conflicts = deduplicate_rows(technical_rows_unchecked)
-    manual_rows, manual_duplicates, manual_conflicts = deduplicate_rows(manual_rows_unchecked)
     if pagination_status == "duplicada":
         for row in technical_rows:
             row["estado_paginacion"] = "duplicada"
@@ -652,9 +744,8 @@ def main() -> int:
     if technical_rows:
         write_output(PAGINATED_OUTPUT_PATH, technical_rows)
         print(f"Muestra paginada técnica: {len(technical_rows)} filas en {PAGINATED_OUTPUT_PATH}")
-    if manual_rows:
-        write_output(MANUAL_EXPORT_OUTPUT_PATH, manual_rows)
-        print(f"Exportación manual SIO: {len(manual_rows)} filas en {MANUAL_EXPORT_OUTPUT_PATH}")
+    if manual_count:
+        print(f"Exportación manual SIO: {manual_count} filas en {MANUAL_EXPORT_OUTPUT_PATH}")
     elif manual_export_files:
         print("No se integraron filas de exportación manual; se preserva COMMODITIES_SIO_EXPORTACION_MANUAL.csv existente.")
     update_paginated_report(page_files, page_diagnostics, technical_rows, duplicates, conflicts, sample_pages, pagination_status)
@@ -662,7 +753,7 @@ def main() -> int:
     print(f"Piloto base: duplicados exactos={len(base_duplicates)}; conflictos={len(base_conflicts)}")
     print(f"Duplicados exactos eliminados: {len(duplicates)}; conflictos conservados: {len(conflicts)}")
     if manual_export_files:
-        print(f"Exportación manual: duplicados exactos={len(manual_duplicates)}; conflictos={len(manual_conflicts)}")
+        print(f"Exportación manual: duplicados exactos={manual_duplicates_count}; conflictos={manual_conflicts_count}")
     print(f"Estado de paginación: {pagination_status}.")
     if pagination_status == "duplicada":
         print("Advertencia: paginación no validada; páginas repetidas. Se conservan sólo registros únicos con trazabilidad.")

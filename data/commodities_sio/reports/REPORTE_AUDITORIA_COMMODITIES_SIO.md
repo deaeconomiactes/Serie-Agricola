@@ -37,7 +37,7 @@ Fecha de auditoría: 2026-09-07
 | --- | --- | ---: | --- | --- |
 | `data/commodities_sio/processed/COMMODITIES_SIO_INTEGRADO.csv` | integración piloto principal | 15 | referencia piloto base | parcial_piloto |
 | `data/commodities_sio/processed/COMMODITIES_SIO_MUESTRA_PAGINADA.csv` | muestra técnica de paginación | 44 | diagnóstico de request, páginas y duplicados | no |
-| `data/commodities_sio/processed/COMMODITIES_SIO_EXPORTACION_MANUAL.csv` | exportación manual | 0 | no disponible | no disponible |
+| `data/commodities_sio/processed/COMMODITIES_SIO_EXPORTACION_MANUAL.csv` | exportación manual | 396971 | archivo descargado localmente | parcial_piloto |
 
 ## Muestra paginada técnica
 
@@ -47,7 +47,14 @@ No es apta para dashboard cuando `estado_paginacion=duplicada`; se conserva para
 
 ## Exportación manual
 
-No existe una exportación manual procesada para auditar.
+La exportación manual es una tercera salida separada y no reemplaza `COMMODITIES_SIO_INTEGRADO.csv` ni la muestra paginada.
+- Filas: 396971.
+- Rango de fechas: 2026-03-12 a 2026-09-07.
+- Monedas: ARS, USD; unidades: TN.
+- Productos: ACEITE SOJA, ARROZ C.L.A, ARROZ C.L.F, CEBADA CERV., CEBADA FORR., Girasol, Maíz, Soja, Sorgo, TRIGO CAND., TRIGO PAN.
+- Duplicados por ID: 0.
+- Aptitud piloto: 396971/396971; aptitud dashboard: 0/396971.
+- Diferencia frente a GetOperaciones: proviene de un archivo descargado manualmente; requiere validar columnas, moneda, unidad, cobertura y licencia antes de cualquier automatización o publicación.
 
 ## Moneda embebida en campo de precio
 

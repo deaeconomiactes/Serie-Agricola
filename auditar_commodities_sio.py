@@ -17,6 +17,7 @@ PAGINATED_PROCESSED_PATH = ROOT / "data" / "commodities_sio" / "processed" / "CO
 MANUAL_EXPORT_PROCESSED_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_EXPORTACION_MANUAL.csv"
 RAW_DIR = ROOT / "data" / "commodities_sio" / "raw"
 REPORT_DIR = ROOT / "data" / "commodities_sio" / "reports"
+MANUAL_EXPORT_REPORT_PATH = REPORT_DIR / "REPORTE_EXPORTACION_MANUAL_SIO.md"
 PAGINATED_REPORT_PATH = REPORT_DIR / "REPORTE_MUESTRA_PAGINADA_SIO.md"
 PAGINATION_REPORT_PATH = REPORT_DIR / "REPORTE_PAGINACION_SIO.md"
 REPORTS = {
@@ -122,25 +123,108 @@ def actuality_for_rows(rows: list[dict[str, str]], source_file: str, today: date
     return result
 
 
-def export_summary(rows: list[dict[str, str]]) -> str:
-    if not rows:
+def export_summary(stats: dict[str, object]) -> str:
+    if not stats.get("rows"):
         return "## Exportación manual\n\nNo existe una exportación manual procesada para auditar.\n"
-    dates = [parsed for parsed in (parse_date(value(row, "fecha")) for row in rows) if parsed]
-    currencies = display_values(rows, "moneda")
-    units = display_values(rows, "unidad")
-    commodities = sorted({value(row, "commodity") or "Sin especificar" for row in rows})
-    ids = [value(row, "id_operacion_sio") for row in rows if value(row, "id_operacion_sio")]
-    duplicate_ids = sum(count - 1 for count in Counter(ids).values() if count > 1)
-    pilot_count = sum(1 for row in rows if pilot_eligible(row))
-    dashboard_count = sum(1 for row in rows if value(row, "apto_dashboard") == "si")
+    rows = int(stats["rows"])
+    dates = stats["dates"]
+    currencies = stats["currencies"]
+    units = stats["units"]
+    commodities = stats["commodities"]
     return "\n".join([
         "## Exportación manual", "", "La exportación manual es una tercera salida separada y no reemplaza `COMMODITIES_SIO_INTEGRADO.csv` ni la muestra paginada.",
-        f"- Filas: {len(rows)}.", f"- Rango de fechas: {min(dates).isoformat() if dates else 'sin fecha válida'} a {max(dates).isoformat() if dates else 'sin fecha válida'}.",
+        f"- Filas: {rows}.", f"- Rango de fechas: {min(dates).isoformat() if dates else 'sin fecha válida'} a {max(dates).isoformat() if dates else 'sin fecha válida'}.",
         f"- Monedas: {', '.join(currencies) or 'sin especificar'}; unidades: {', '.join(units) or 'sin especificar'}.",
-        f"- Productos: {', '.join(commodities)}.", f"- Duplicados por ID: {duplicate_ids}.",
-        f"- Aptitud piloto: {pilot_count}/{len(rows)}; aptitud dashboard: {dashboard_count}/{len(rows)}.",
+        f"- Productos: {', '.join(commodities)}.", f"- Duplicados por ID: {stats['duplicate_ids']}.",
+        f"- Aptitud piloto: {stats['pilot_count']}/{rows}; aptitud dashboard: {stats['dashboard_count']}/{rows}.",
         "- Diferencia frente a GetOperaciones: proviene de un archivo descargado manualmente; requiere validar columnas, moneda, unidad, cobertura y licencia antes de cualquier automatización o publicación.", "",
     ])
+
+
+def write_manual_export_report(stats: dict[str, object]) -> None:
+    if not stats.get("rows"):
+        return
+    columns = [str(item) for item in stats.get("source_columns", [])]
+    mapped = [
+        (["FECHA OPERACION", "FECHA CONCERTACION"], "fecha", "fecha de operación/concertación observada", "alta", "se conserva la fecha normalizada"),
+        (["PRODUCTO"], "commodity", "producto de la exportación", "alta", "se normaliza contra el catálogo SIO"),
+        (["PRECIO/TN MONTO"], "precio", "precio original", "alta", "se conserva precio_original_texto"),
+        (["PRECIO/TN MONEDA"], "moneda", "campo monetario explícito", "alta", "no se infiere por contexto"),
+        (["CANT. (TN)"], "volumen", "cantidad explícita en toneladas", "alta", "se conserva volumen_unidad=TN"),
+        (["PROCEDENCIA PCIA", "PROCEDENCIA LOCALID."], "procedencia", "procedencia de la operación", "alta", "se combinan los campos de procedencia disponibles"),
+        (["LUGAR ENTREGA"], "lugar_entrega", "lugar de entrega", "alta", "se conserva como lugar_entrega"),
+        (["CONDICION PAGO"], "condicion_pago", "condición de pago", "alta", "se conserva si tiene dato"),
+    ]
+    mapping_rows: list[str] = []
+    used: set[str] = set()
+    for originals, destination, evidence, confidence, notes in mapped:
+        matches = [column for column in columns if any(re.sub(r"[^a-z0-9]", "", column.lower()) == re.sub(r"[^a-z0-9]", "", original.lower()) for original in originals)]
+        original_display = " / ".join(matches) if matches else " / ".join(originals)
+        if matches: used.update(matches)
+        mapping_rows.append(f"| {original_display} | {destination} | {evidence} | {confidence} | {notes} |")
+    unused = [column for column in columns if column not in used]
+    valid_prices = int(stats["valid_prices"])
+    rows = int(stats["rows"])
+    currency_explicit = bool(stats["currencies"])
+    unit_explicit = bool(stats["units"])
+    decision = "A. Exportación manual apta como fuente piloto." if rows and valid_prices / rows >= 0.95 and currency_explicit and unit_explicit and not stats["zero_prices"] else "B. Exportación manual parcialmente apta; requiere ajustes."
+    source_name = str(stats.get("source_name", "SIO_exportar_operaciones_*.csv/.xls/.xlsx"))
+    lines = [
+        "# Reporte de exportación manual SIO", "", "## Objetivo", "", "Validar si el archivo descargado desde Exportar Operaciones permite construir una base tabular más completa que el endpoint GetOperaciones.", "", "## Archivo procesado", "", f"- Nombre: `{source_name}`.", "- Tipo: exportación manual tabular.", f"- Filas: {rows}.", f"- Columnas: {len(columns)}.", f"- Fecha de integración: {date.today().isoformat()}.", "", "## Columnas originales detectadas", "", *[f"- `{column}`" for column in columns], "", "## Mapeo aplicado", "", "| Columna original | Campo destino | Evidencia | Confianza | Observaciones |", "| --- | --- | --- | --- | --- |", *mapping_rows, "", "## Resultado de integración", "", f"- Filas generadas: {rows}.", "- Columnas generadas: esquema normalizado estándar de SIO.", f"- Campos faltantes: {', '.join(field for field, count in [('precio', valid_prices), ('moneda', len(stats['currencies'])), ('unidad', len(stats['units']))] if count == 0) or 'ninguno de los campos principales'}.", f"- Campos originales no utilizados o conservados sólo como evidencia: {', '.join(unused) or 'ninguno'}.", "- Advertencia: la salida normalizada conserva los campos analíticos definidos; las columnas originales no mapeadas quedan registradas en este reporte y no se descartan silenciosamente como evidencia.", "", "## Resultado de auditoría", "", f"- Commodities: {', '.join(stats['commodities']) or 'ninguno'}.", f"- Fechas: {min(stats['dates']).isoformat() if stats['dates'] else 'sin fecha'} a {max(stats['dates']).isoformat() if stats['dates'] else 'sin fecha'}.", f"- Monedas: {', '.join(stats['currencies']) or 'sin especificar'}; unidades: {', '.join(stats['units']) or 'sin especificar'}.", f"- Precios válidos: {valid_prices}; faltantes: {stats['missing_prices']}; cero: {stats['zero_prices']}; negativos: {stats['negative_prices']}.", f"- Volumen con dato: {stats['volume_count']}; procedencia: {stats['procedencia_count']}; lugar de entrega: {stats['delivery_count']}; condición de pago: {stats['payment_count']}.", f"- Duplicados por ID: {stats['duplicate_ids']}.", f"- Aptitud piloto: {stats['pilot_count']}/{rows}; aptitud dashboard: {stats['dashboard_count']}/{rows}.", "", "## Comparación con endpoint GetOperaciones", "", "- La exportación manual debe compararse por cantidad de filas, columnas y cobertura, no sólo por una respuesta puntual del endpoint.", f"- Trae más filas que la muestra piloto de GetOperaciones de 15 filas: {'sí' if rows > 15 else 'no'}.", f"- Trae moneda explícita: {'sí' if currency_explicit else 'no'}; unidad explícita: {'sí' if unit_explicit else 'no'}.", "- La exportación manual no valida `pCurrentPage`; evita el problema operativo de la paginación del endpoint sólo como descarga manual.", "", "## Decisión metodológica", "", decision, "", "## Recomendación próxima", "", "Mantener un flujo documentado de descarga manual recurrente si se confirma la procedencia, licencia, cobertura y estabilidad del archivo. Definir periodicidad, conservar raw fuera de Git y versionar sólo processed/reportes controlados. No integrar al dashboard todavía.", ""]
+    MANUAL_EXPORT_REPORT_PATH.write_text("\n".join(lines), encoding="utf-8")
+
+
+def manual_export_stats(path: Path) -> dict[str, object]:
+    stats: dict[str, object] = {"rows": 0, "columns": [], "dates": [], "currencies": set(), "units": set(), "commodities": set(), "duplicate_ids": 0, "pilot_count": 0, "dashboard_count": 0, "valid_prices": 0, "missing_prices": 0, "zero_prices": 0, "negative_prices": 0, "volume_count": 0, "procedencia_count": 0, "delivery_count": 0, "payment_count": 0}
+    ids: Counter[str] = Counter()
+    commodity_dates: dict[str, list[date]] = defaultdict(list)
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle, delimiter=";")
+        stats["columns"] = list(reader.fieldnames or [])
+        for row in reader:
+            stats["rows"] = int(stats["rows"]) + 1
+            parsed_date = parse_date(value(row, "fecha"))
+            if parsed_date:
+                stats["dates"].append(parsed_date)
+                commodity_dates.setdefault(value(row, "commodity") or "Sin especificar", []).append(parsed_date)
+            commodity = value(row, "commodity") or "Sin especificar"
+            stats["commodities"].add(commodity)
+            currency = value(row, "moneda")
+            unit = value(row, "unidad")
+            if currency and currency != "Sin especificar": stats["currencies"].add(currency)
+            if unit and unit != "Sin especificar": stats["units"].add(unit)
+            price = parse_price(value(row, "precio"))
+            if price is None: stats["missing_prices"] += 1
+            else:
+                stats["valid_prices"] += 1
+                stats["zero_prices"] += int(price == 0)
+                stats["negative_prices"] += int(price < 0)
+            stats["volume_count"] += int(parse_price(value(row, "volumen")) is not None)
+            stats["procedencia_count"] += int(bool(value(row, "procedencia")))
+            stats["delivery_count"] += int(bool(value(row, "lugar_entrega")))
+            stats["payment_count"] += int(bool(value(row, "condicion_pago")))
+            operation_id = value(row, "id_operacion_sio")
+            if operation_id: ids[operation_id] += 1
+            stats["pilot_count"] += int(value(row, "apto_piloto").lower() in {"sí", "si"})
+            stats["dashboard_count"] += int(value(row, "apto_dashboard").lower() == "si")
+    stats["dates"] = sorted(stats["dates"])
+    stats["currencies"] = sorted(stats["currencies"])
+    stats["units"] = sorted(stats["units"])
+    stats["commodities"] = sorted(stats["commodities"])
+    stats["duplicate_ids"] = sum(count - 1 for count in ids.values() if count > 1)
+    stats["commodity_dates"] = commodity_dates
+    raw_candidates = sorted((ROOT / "data" / "commodities_sio" / "raw").glob("SIO_exportar_operaciones_*.csv"))
+    if raw_candidates:
+        raw_path = raw_candidates[-1]
+        prefix = raw_path.read_bytes()[:4]
+        encoding = "utf-16-le" if len(prefix) >= 2 and prefix[1] == 0 else "utf-16-be" if len(prefix) >= 2 and prefix[0] == 0 else "utf-8-sig"
+        with raw_path.open("r", encoding=encoding, errors="replace", newline="") as raw_handle:
+            stats["source_name"] = raw_path.name
+            stats["source_columns"] = [column for column in csv.reader(raw_handle, delimiter=";").__next__() if column.strip()]
+    else:
+        stats["source_name"] = "SIO_exportar_operaciones_*.xlsx/.xls/.csv"
+        stats["source_columns"] = []
+    return stats
 
 
 def audited_files_section(primary_rows: list[dict[str, str]], technical_rows: list[dict[str, str]], manual_rows: list[dict[str, str]]) -> tuple[str, str, str]:
@@ -151,7 +235,7 @@ def audited_files_section(primary_rows: list[dict[str, str]], technical_rows: li
         "## Archivos auditados", "", "| Archivo | Tipo | Filas | Finalidad | Aptitud |", "| --- | --- | ---: | --- | --- |",
         f"| `data/commodities_sio/processed/COMMODITIES_SIO_INTEGRADO.csv` | integración piloto principal | {len(primary_rows)} | referencia piloto base | {primary_status} |",
         f"| `data/commodities_sio/processed/COMMODITIES_SIO_MUESTRA_PAGINADA.csv` | muestra técnica de paginación | {len(technical_rows)} | diagnóstico de request, páginas y duplicados | {technical_aptitude} |" if technical_rows else "| `data/commodities_sio/processed/COMMODITIES_SIO_MUESTRA_PAGINADA.csv` | muestra técnica de paginación | 0 | no disponible | no disponible |",
-        f"| `data/commodities_sio/processed/COMMODITIES_SIO_EXPORTACION_MANUAL.csv` | exportación manual | {len(manual_rows)} | archivo descargado localmente | {'parcial_piloto' if manual_rows else 'no disponible'} |" if manual_rows else "| `data/commodities_sio/processed/COMMODITIES_SIO_EXPORTACION_MANUAL.csv` | exportación manual | 0 | no disponible | no disponible |",
+        f"| `data/commodities_sio/processed/COMMODITIES_SIO_EXPORTACION_MANUAL.csv` | exportación manual | {manual_rows.get('rows', 0)} | archivo descargado localmente | {'parcial_piloto' if manual_rows.get('rows') else 'no disponible'} |" if manual_rows.get('rows') else "| `data/commodities_sio/processed/COMMODITIES_SIO_EXPORTACION_MANUAL.csv` | exportación manual | 0 | no disponible | no disponible |",
         "",
     ])
     if technical_rows:
@@ -283,12 +367,12 @@ def update_paginated_audit_report(rows: list[dict[str, str]]) -> None:
 def main() -> int:
     rows = read_rows()
     technical_rows = read_rows(PAGINATED_PROCESSED_PATH)
-    manual_export_rows = read_rows(MANUAL_EXPORT_PROCESSED_PATH)
-    if not rows and not technical_rows and not manual_export_rows:
+    manual_export_stats_value = manual_export_stats(MANUAL_EXPORT_PROCESSED_PATH) if MANUAL_EXPORT_PROCESSED_PATH.exists() else {"rows": 0, "columns": [], "dates": [], "currencies": [], "units": [], "commodities": []}
+    if not rows and not technical_rows and not manual_export_stats_value.get("rows"):
         return no_data()
     if not rows:
         print("No hay integración piloto principal; se auditará la salida técnica o manual disponible.")
-        rows = technical_rows or manual_export_rows
+        rows = technical_rows
     today = date.today()
     dates_by: dict[str, list[date]] = defaultdict(list)
     prices_by: dict[str, list[float]] = defaultdict(list)
@@ -409,7 +493,7 @@ def main() -> int:
     write_csv(REPORTS["series"], list(series[0].keys()), series)
     write_csv(REPORTS["problems"], ["fila", "tipo", "commodity", "fecha", "precio", "detalle"], problems)
     technical_actuality = actuality_for_rows(technical_rows, "muestra_paginada", today) if technical_rows else []
-    manual_export_actuality = actuality_for_rows(manual_export_rows, "exportacion_manual", today) if manual_export_rows else []
+    manual_export_actuality = [{"fuente_archivo": "exportacion_manual", "commodity": commodity, "fecha_max": max(dates).isoformat() if dates else "", "dias_desde_ultimo_dato": str((today - max(dates)).days) if dates else "", "registros_ultimos_7_dias": str(sum(1 for item in dates if today - timedelta(days=6) <= item <= today)), "registros_ultimos_30_dias": str(sum(1 for item in dates if today - timedelta(days=29) <= item <= today)), "estado_actualidad": "Actualizado" if dates and (today - max(dates)).days <= 7 else "Reciente" if dates and (today - max(dates)).days <= 30 else "Desactualizado" if dates else "Sin fecha"} for commodity, dates in manual_export_stats_value.get("commodity_dates", {}).items()]
     primary_actuality = [dict(item, fuente_archivo="integrado_principal") for item in actuality]
     actuality_export = primary_actuality + technical_actuality + manual_export_actuality
     write_csv(REPORTS["actuality"], ["fuente_archivo", "commodity", "fecha_max", "dias_desde_ultimo_dato", "registros_ultimos_7_dias", "registros_ultimos_30_dias", "estado_actualidad"], actuality_export)
@@ -428,7 +512,7 @@ def main() -> int:
         warnings.append(f"{invalid_date} fila(s) sin fecha válida.")
     if zero_price or negative_price:
         warnings.append(f"Precios cero: {zero_price}; precios negativos: {negative_price}.")
-    files_section, technical_section, manual_export_section = audited_files_section(rows, technical_rows, manual_export_rows)
+    files_section, technical_section, manual_export_section = audited_files_section(rows, technical_rows, manual_export_stats_value)
     currency_values = display_values(rows, "moneda")
     unit_values = display_values(rows, "unidad")
     type_values = display_values(rows, "tipo_precio")
@@ -485,6 +569,7 @@ def main() -> int:
     embedded_section = "## Moneda embebida en campo de precio\n\n`Row[10]` contiene el campo original de precio. El símbolo monetario se extrae sólo si aparece explícitamente: `U$S`/`US$`/`USD` se normaliza a `USD`, y `$` sin esos marcadores se normaliza a `ARS`. No se infiere moneda por contexto y se conserva `precio_original_texto`."
     report_text = report_text.replace("## Moneda y comparabilidad", embedded_section + "\n\n## Moneda y comparabilidad", 1)
     REPORTS["report"].write_text(report_text, encoding="utf-8")
+    write_manual_export_report(manual_export_stats_value)
     if technical_rows:
         update_paginated_audit_report(technical_rows)
     print(f"Auditoría SIO finalizada: {len(rows)} filas, {len(commodities)} commodity(s).")
