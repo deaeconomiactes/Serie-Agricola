@@ -59,6 +59,9 @@ __pycache__/
 data/commodities_sio/processed/COMMODITIES_SIO_EXPORTACION_MANUAL.csv
 data/commodities_sio/processed/COMMODITIES_SIO_EXPORTACION_MANUAL_*.csv
 !data/commodities_sio/processed/COMMODITIES_SIO_EXPORTACION_MANUAL_SAMPLE.csv
+data/commodities_sio/processed/COMMODITIES_SIO_ANALITICO_PRECIOS.csv
+data/commodities_sio/processed/COMMODITIES_SIO_ANALITICO_PRECIOS_*.csv
+!data/commodities_sio/processed/COMMODITIES_SIO_ANALITICO_PRECIOS_SAMPLE.csv
 data/commodities_sio/sio_config.json
 data/commodities_sio/raw/*.html
 data/commodities_sio/raw/*.js

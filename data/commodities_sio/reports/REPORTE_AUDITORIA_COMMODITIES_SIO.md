@@ -63,6 +63,19 @@ La exportación manual contiene 40796 precio(s) cero sobre 396971 fila(s) (10.28
 Clasificación principal: cero_explicito=34920, operacion_sin_precio=5876.
 La base no se considera plenamente apta para indicadores de precio hasta aplicar este filtro y revisar los casos cero.
 
+## Base analítica de precios
+
+- Filas de la base completa evaluadas: 396971.
+- Filas analíticas: 351600.
+- Filas excluidas: 45371 (11.43%).
+- Porcentaje usable: 88.57%.
+- Precios positivos válidos: 351600; precios cero excluidos: 40796.
+- Monedas: ARS, USD; unidades: TN.
+- Commodities: ACEITE SOJA, ARROZ C.L.A, ARROZ C.L.F, CEBADA CERV., CEBADA FORR., Girasol, Maíz, Soja, Sorgo, TRIGO CAND., TRIGO PAN.
+- Rango de fechas: 2026-03-12 a 2026-09-07.
+- Aptitud: apta para exploración analítica; parcial para un dashboard piloto; no apta para producción hasta validar actualización automática y metodología.
+- ARS y USD se mantienen separados en los resúmenes y no se comparan conjuntamente.
+
 ## Moneda embebida en campo de precio
 
 `Row[10]` contiene el campo original de precio. El símbolo monetario se extrae sólo si aparece explícitamente: `U$S`/`US$`/`USD` se normaliza a `USD`, y `$` sin esos marcadores se normaliza a `ARS`. No se infiere moneda por contexto y se conserva `precio_original_texto`.

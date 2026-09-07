@@ -81,6 +81,14 @@ La exportación manual es válida cuando la automatización directa depende de s
 
 Los registros con precio cero se conservan para trazabilidad, pero no deben usarse en series de precios, promedios, rankings ni semáforos. El campo `precio_valido_para_serie` indica qué registros pueden usarse para análisis de precios.
 
+## Base analítica de precios
+
+La base completa de operaciones conserva todos los registros de la exportación manual, incluidos precios cero, faltantes y filas con moneda o unidad sin especificar. La base `COMMODITIES_SIO_ANALITICO_PRECIOS.csv` aplica el filtro metodológico y conserva sólo registros con precio positivo, fecha válida, commodity, fuente, moneda explícita y unidad explícita.
+
+Los precios cero no se borran de la base completa: sólo se excluyen de la base analítica y de sus series, promedios, rankings y semáforos. La base analítica es la candidata para futuros gráficos, pero todavía no alimenta el dashboard visual. ARS y USD deben graficarse por separado, junto con commodity, unidad, tipo de precio y condición comercial.
+
+Por su tamaño, la base analítica completa se genera localmente y queda fuera de Git cuando supera el límite razonable. Se conserva una muestra liviana en `processed/COMMODITIES_SIO_ANALITICO_PRECIOS_SAMPLE.csv` y resúmenes agregados en `reports/`. No se mezclan SIO con BCR ni con frutas/hortalizas.
+
 Para analizar una captura local de DevTools sin hacer llamadas web, seguir [GUIA_DEVTOOLS_SIO.md](GUIA_DEVTOOLS_SIO.md):
 
 ```powershell

@@ -1,0 +1,40 @@
+﻿commodity;moneda;unidad;tipo_precio;condicion_comercial;filas;fecha_min;fecha_max;dias_con_datos;aptitud_serie
+ACEITE SOJA;ARS;TN;Canje;Sin especificar;4;2026-05-26;2026-08-20;4;Apta
+ACEITE SOJA;ARS;TN;Compraventa;Sin especificar;55;2026-03-13;2026-09-04;45;Apta
+ACEITE SOJA;USD;TN;Canje;Sin especificar;2;2026-03-20;2026-04-21;2;Apta
+ACEITE SOJA;USD;TN;Compraventa;Sin especificar;648;2026-03-13;2026-09-07;122;Apta
+ARROZ C.L.A;ARS;TN;Canje;Sin especificar;126;2026-03-19;2026-08-31;40;Apta
+ARROZ C.L.A;ARS;TN;Compraventa;Sin especificar;109;2026-03-13;2026-09-02;46;Apta
+ARROZ C.L.F;ARS;TN;Canje;Sin especificar;453;2026-03-13;2026-08-31;68;Apta
+ARROZ C.L.F;ARS;TN;Compraventa;Sin especificar;363;2026-03-13;2026-09-02;92;Apta
+CEBADA CERV.;ARS;TN;Canje;Sin especificar;1;2026-07-06;2026-07-06;1;Insuficiente cobertura temporal
+CEBADA CERV.;ARS;TN;Compraventa;Sin especificar;1;2026-08-13;2026-08-13;1;Insuficiente cobertura temporal
+CEBADA CERV.;USD;TN;Canje;Sin especificar;17;2026-03-19;2026-09-04;13;Apta
+CEBADA CERV.;USD;TN;Compraventa;Sin especificar;1691;2026-03-12;2026-09-07;119;Apta
+CEBADA FORR.;ARS;TN;Canje;Sin especificar;25;2026-04-17;2026-08-05;8;Apta
+CEBADA FORR.;ARS;TN;Compraventa;Sin especificar;231;2026-03-12;2026-09-03;74;Apta
+CEBADA FORR.;USD;TN;Canje;Sin especificar;221;2026-03-13;2026-09-04;82;Apta
+CEBADA FORR.;USD;TN;Compraventa;Sin especificar;2841;2026-03-12;2026-09-07;128;Apta
+Girasol;ARS;TN;Canje;Sin especificar;558;2026-03-13;2026-09-01;103;Apta
+Girasol;ARS;TN;Compraventa;Sin especificar;9109;2026-03-12;2026-09-04;130;Apta
+Girasol;USD;TN;Canje;Sin especificar;660;2026-03-13;2026-09-04;114;Apta
+Girasol;USD;TN;Compraventa;Sin especificar;11901;2026-03-12;2026-09-07;143;Apta
+Maíz;ARS;TN;Canje;Sin especificar;6412;2026-03-12;2026-09-07;143;Apta
+Maíz;ARS;TN;Compraventa;Sin especificar;59134;2026-03-12;2026-09-07;163;Apta
+Maíz;USD;TN;Canje;Sin especificar;8323;2026-03-12;2026-09-07;128;Apta
+Maíz;USD;TN;Compraventa;Sin especificar;37496;2026-03-12;2026-09-07;162;Apta
+Soja;ARS;TN;Canje;Sin especificar;10973;2026-03-13;2026-09-07;146;Apta
+Soja;ARS;TN;Compraventa;Sin especificar;122711;2026-03-12;2026-09-07;170;Apta
+Soja;USD;TN;Canje;Sin especificar;5930;2026-03-12;2026-09-04;127;Apta
+Soja;USD;TN;Compraventa;Sin especificar;14143;2026-03-12;2026-09-07;144;Apta
+Sorgo;ARS;TN;Canje;Sin especificar;260;2026-03-13;2026-09-03;85;Apta
+Sorgo;ARS;TN;Compraventa;Sin especificar;1883;2026-03-13;2026-09-07;129;Apta
+Sorgo;USD;TN;Canje;Sin especificar;146;2026-03-13;2026-08-26;74;Apta
+Sorgo;USD;TN;Compraventa;Sin especificar;2724;2026-03-12;2026-09-04;127;Apta
+TRIGO CAND.;ARS;TN;Canje;Sin especificar;2;2026-04-01;2026-04-22;2;Apta
+TRIGO CAND.;ARS;TN;Compraventa;Sin especificar;183;2026-03-13;2026-09-04;75;Apta
+TRIGO CAND.;USD;TN;Compraventa;Sin especificar;12;2026-03-27;2026-09-04;10;Apta
+TRIGO PAN;ARS;TN;Canje;Sin especificar;1701;2026-03-12;2026-09-07;131;Apta
+TRIGO PAN;ARS;TN;Compraventa;Sin especificar;27296;2026-03-12;2026-09-07;155;Apta
+TRIGO PAN;USD;TN;Canje;Sin especificar;2019;2026-03-13;2026-09-04;123;Apta
+TRIGO PAN;USD;TN;Compraventa;Sin especificar;21236;2026-03-12;2026-09-07;152;Apta

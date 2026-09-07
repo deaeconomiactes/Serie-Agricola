@@ -7,8 +7,13 @@ import csv
 import json
 import re
 from collections import Counter, defaultdict
+from contextlib import nullcontext
 from datetime import date, datetime, timedelta
 from pathlib import Path
+from statistics import median
+
+
+csv.field_size_limit(2**31 - 1)
 
 
 ROOT = Path(__file__).resolve().parent
@@ -24,6 +29,14 @@ MANUAL_EXPORT_ZERO_PATH = REPORT_DIR / "RESUMEN_PRECIOS_CERO_SIO.csv"
 MANUAL_EXPORT_COMMODITY_CURRENCY_PATH = REPORT_DIR / "RESUMEN_COMMODITY_MONEDA_SIO.csv"
 ZERO_CASES_PATH = REPORT_DIR / "CASOS_PRECIOS_CERO_SIO.csv"
 ZERO_REPORT_PATH = REPORT_DIR / "REPORTE_PRECIOS_CERO_SIO.md"
+ANALYTIC_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_ANALITICO_PRECIOS.csv"
+ANALYTIC_SAMPLE_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_ANALITICO_PRECIOS_SAMPLE.csv"
+ANALYTIC_SUMMARY_PATH = REPORT_DIR / "RESUMEN_ANALITICO_PRECIOS_SIO.csv"
+ANALYTIC_COMMODITY_CURRENCY_PATH = REPORT_DIR / "RESUMEN_ANALITICO_COMMODITY_MONEDA_SIO.csv"
+ANALYTIC_SERIES_PATH = REPORT_DIR / "RESUMEN_ANALITICO_SERIES_SIO.csv"
+ANALYTIC_PROCEDENCIA_PATH = REPORT_DIR / "RESUMEN_ANALITICO_PROCEDENCIA_SIO.csv"
+ANALYTIC_DELIVERY_PATH = REPORT_DIR / "RESUMEN_ANALITICO_LUGAR_ENTREGA_SIO.csv"
+ANALYTIC_REPORT_PATH = REPORT_DIR / "REPORTE_BASE_ANALITICA_PRECIOS_SIO.md"
 PAGINATED_REPORT_PATH = REPORT_DIR / "REPORTE_MUESTRA_PAGINADA_SIO.md"
 PAGINATION_REPORT_PATH = REPORT_DIR / "REPORTE_PAGINACION_SIO.md"
 REPORTS = {
@@ -345,6 +358,276 @@ def write_zero_report(metrics: dict[str, object]) -> None:
     ZERO_REPORT_PATH.write_text("\n".join(lines), encoding="utf-8")
 
 
+ANALYTIC_SAMPLE_LIMIT = 1000
+ANALYTIC_VERSIONABLE_LIMIT_BYTES = 100 * 1024 * 1024
+
+
+def is_yes(value_text: str) -> bool:
+    return value_text.strip().lower() in {"sí", "si", "true", "1"}
+
+
+def analytical_eligibility(row: dict[str, str]) -> tuple[bool, list[str], float | None, date | None]:
+    parsed_price = parse_price(value(row, "precio"))
+    parsed_date = parse_date(value(row, "fecha"))
+    reasons: list[str] = []
+    if not is_yes(value(row, "precio_valido_para_serie")):
+        reasons.append("precio_valido_para_serie_no")
+    if parsed_price is None:
+        reasons.append("precio_faltante_o_invalido")
+    elif parsed_price <= 0:
+        reasons.append("precio_no_positivo")
+    if is_yes(value(row, "precio_cero_flag")) or parsed_price == 0:
+        reasons.append("precio_cero")
+    if parsed_date is None:
+        reasons.append("fecha_invalida_o_faltante")
+    if not value(row, "commodity") or value(row, "commodity") == "Sin especificar":
+        reasons.append("commodity_vacio_o_sin_especificar")
+    currency = value(row, "moneda")
+    currency_explicit = is_yes(value(row, "moneda_explicitamente_informada"))
+    if not currency_explicit or not currency or currency == "Sin especificar":
+        reasons.append("moneda_no_explicita")
+    if not value(row, "unidad") or value(row, "unidad") == "Sin especificar":
+        reasons.append("unidad_no_explicita")
+    if not value(row, "fuente"):
+        reasons.append("fuente_vacia")
+    return not reasons, reasons, parsed_price, parsed_date
+
+
+def analytic_group(store: dict[tuple[str, ...], dict[str, object]], key_value: tuple[str, ...], row: dict[str, str], parsed_price: float, parsed_date: date) -> None:
+    item = store.setdefault(key_value, {"filas": 0, "precios": [], "fechas": set(), "volumen_total": 0.0})
+    item["filas"] += 1
+    item["precios"].append(parsed_price)
+    item["fechas"].add(parsed_date)
+    volume = parse_price(value(row, "volumen"))
+    if volume is not None:
+        item["volumen_total"] += volume
+
+
+def format_stat(number: float | None) -> str:
+    if number is None:
+        return ""
+    return f"{number:.6f}".rstrip("0").rstrip(".") or "0"
+
+
+def group_rows(store: dict[tuple[str, ...], dict[str, object]], names: list[str], include_volume: bool = False, series: bool = False) -> list[dict[str, str]]:
+    result: list[dict[str, str]] = []
+    for key_value, item in sorted(store.items()):
+        prices = item["precios"]
+        dates = sorted(item["fechas"])
+        row = {name: str(part) for name, part in zip(names, key_value)}
+        row.update({
+            "filas": str(item["filas"]),
+            "fecha_min": dates[0].isoformat() if dates else "",
+            "fecha_max": dates[-1].isoformat() if dates else "",
+        })
+        if series:
+            row["dias_con_datos"] = str(len(dates))
+            row["aptitud_serie"] = "Apta" if len(dates) >= 2 else "Insuficiente cobertura temporal"
+        else:
+            row.update({
+                "precio_min": format_stat(min(prices) if prices else None),
+                "precio_promedio": format_stat(sum(prices) / len(prices) if prices else None),
+                "precio_mediana": format_stat(float(median(prices)) if prices else None),
+                "precio_max": format_stat(max(prices) if prices else None),
+            })
+            if include_volume:
+                row["volumen_total"] = format_stat(float(item["volumen_total"]))
+        result.append(row)
+    return result
+
+
+def write_analytic_report(metrics: dict[str, object]) -> None:
+    total = int(metrics["filas_base_completa"])
+    analytic = int(metrics["filas_analiticas"])
+    excluded = int(metrics["filas_excluidas"])
+    usable_pct = float(metrics["porcentaje_usable"])
+    full_path = Path(str(metrics["analytic_path"]))
+    sample_path = Path(str(metrics["sample_path"]))
+    size_bytes = full_path.stat().st_size if full_path.exists() else 0
+    size_mb = size_bytes / (1024 * 1024) if size_bytes else 0
+    versioning = "no; el archivo supera 100 MB y queda ignorado por Git" if size_bytes > ANALYTIC_VERSIONABLE_LIMIT_BYTES else "posible, sujeto a revisión de tamaño"
+    source_kind = "exportación manual completa" if metrics["source_is_complete"] else "base analítica disponible localmente"
+    date_min = metrics["fecha_min"] or "sin fecha válida"
+    date_max = metrics["fecha_max"] or "sin fecha válida"
+    currencies = ", ".join(metrics["monedas"]) or "ninguna"
+    units = ", ".join(metrics["unidades"]) or "ninguna"
+    commodities = ", ".join(metrics["commodities"]) or "ninguno"
+    series_rows = metrics["series_rows"][:20]
+    lines = [
+        "# Reporte de base analítica de precios SIO", "",
+        "## Objetivo", "",
+        "Construir una base de precios apta para análisis, separada de la base completa de operaciones. Los registros excluidos permanecen en la base completa y no se imputan.", "",
+        "## Fuente", "",
+        f"- Archivo completo usado: `{metrics['source_label']}`.",
+        f"- Origen: SIO Granos / Secretaría de Agricultura.",
+        f"- Filas de la base completa procesada: {total}.",
+        f"- Fecha de integración/auditoría: {date.today().isoformat()}.",
+        f"- Archivo analítico generado: `{full_path.as_posix()}` ({size_mb:.2f} MB).",
+        f"- Versionado: {versioning}.",
+        f"- Muestra liviana: `{sample_path.as_posix()}`; máximo {ANALYTIC_SAMPLE_LIMIT} filas.", "",
+        "## Regla de inclusión", "",
+        "Se incluye una fila sólo si cumple simultáneamente:",
+        "- `precio_valido_para_serie=sí`.",
+        "- `precio > 0`.",
+        "- fecha válida.",
+        "- commodity informado y no `Sin especificar`.",
+        "- moneda explícita (`moneda_explicitamente_informada=sí`).",
+        "- unidad explícita.",
+        "- fuente no vacía.", "",
+        "## Regla de exclusión", "",
+        "Se excluyen de la base analítica los precios cero, faltantes o no positivos; registros con moneda o unidad sin especificar; fechas inválidas; commodities vacíos; fuentes vacías; y cualquier fila marcada como no válida para serie. La base completa conserva todos esos registros para trazabilidad.", "",
+        "## Resultados", "",
+        f"- Filas analíticas: {analytic}.",
+        f"- Filas excluidas: {excluded}.",
+        f"- Porcentaje usable: {usable_pct:.2f}%.",
+        f"- Precios cero excluidos: {metrics['precios_cero_excluidos']}.",
+        f"- Commodities: {commodities}.",
+        f"- Monedas: {currencies}.",
+        f"- Unidades: {units}.",
+        f"- Rango de fechas: {date_min} a {date_max}.",
+        f"- Precios positivos válidos: {metrics['precios_positivos']}.",
+        "- Principales series detectadas:",
+    ]
+    lines.extend(f"  - {item['commodity']} / {item['moneda']} / {item['unidad']} / {item['tipo_precio']} / condición {item['condicion_comercial']}: {item['filas']} filas, {item['dias_con_datos']} días." for item in series_rows)
+    if not series_rows:
+        lines.append("  - No se detectaron series.")
+    lines.extend([
+        "", "## Comparabilidad", "",
+        "- ARS y USD no deben mezclarse en una misma serie.",
+        "- Las series deben separarse por commodity, moneda, unidad, tipo_precio y condición comercial.",
+        "- No se deben comparar directamente operaciones con distinta condición comercial.",
+        "- Esta base no equivale a precio de pizarra BCR.", "",
+        "## Aptitud para dashboard", "",
+        "- Apta para exploración analítica: sí, con filtros de moneda, unidad, commodity y tipo de precio.",
+        "- Apta para dashboard piloto: parcial; requiere validar actualización, frecuencia, interpretación y selección de series.",
+        "- Apta para dashboard productivo: no, hasta validar actualización automática e interpretación metodológica.", "",
+        "## Recomendación próxima", "",
+        "Si la base analítica queda consistente, preparar un dataset mensual/diario agregado por commodity-moneda-unidad; definir reglas de visualización separando ARS/USD; no mostrar precios cero; y no integrar todavía al dashboard hasta validar actualización automática y metodología.", "",
+        "## Exclusiones por motivo", "",
+        "| Motivo | Registros |", "| --- | ---: |",
+    ])
+    lines.extend(f"| {name} | {count} |" for name, count in metrics["exclusion_reasons"].most_common())
+    ANALYTIC_REPORT_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def build_analytic_base(source_path: Path, output_path: Path | None = ANALYTIC_PATH) -> dict[str, object]:
+    """Filtra precios aptos sin cargar la exportación completa en memoria."""
+
+    if not source_path.exists():
+        return {"available": False, "source_label": source_path.as_posix()}
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    if output_path:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+    sample_rows: list[dict[str, str]] = []
+    fallback_rows: list[dict[str, str]] = []
+    sample_keys: set[tuple[str, ...]] = set()
+    sample_dimensions = {field: set() for field in ("commodity", "moneda", "año", "mes", "procedencia", "lugar_entrega", "tipo_precio")}
+    commodity_currency: dict[tuple[str, ...], dict[str, object]] = {}
+    series: dict[tuple[str, ...], dict[str, object]] = {}
+    procedencia: dict[tuple[str, ...], dict[str, object]] = {}
+    delivery: dict[tuple[str, ...], dict[str, object]] = {}
+    exclusion_reasons: Counter[str] = Counter()
+    total = analytic = positive = zero_excluded = 0
+    dates: list[date] = []
+    currencies: set[str] = set()
+    units: set[str] = set()
+    commodities: set[str] = set()
+    fieldnames: list[str] = []
+
+    def add_sample(row: dict[str, str]) -> None:
+        if len(sample_rows) >= ANALYTIC_SAMPLE_LIMIT:
+            return
+        row_key = (value(row, "id_operacion_sio"), value(row, "fecha"), value(row, "commodity"), value(row, "precio"), value(row, "moneda"), value(row, "volumen"))
+        if row_key in sample_keys:
+            return
+        dimensions = {
+            field: value(row, field) or "Sin especificar"
+            for field in sample_dimensions
+        }
+        new_dimension = any(dimensions[field] not in sample_dimensions[field] for field in sample_dimensions)
+        if len(sample_rows) < 100 or new_dimension:
+            sample_keys.add(row_key)
+            sample_rows.append(dict(row))
+            for field, dimension_value in dimensions.items():
+                sample_dimensions[field].add(dimension_value)
+
+    output_context = output_path.open("w", encoding="utf-8-sig", newline="") if output_path else nullcontext(None)
+    with source_path.open("r", encoding="utf-8-sig", newline="") as source_handle, output_context as output_handle:
+        reader = csv.DictReader(source_handle, delimiter=";")
+        fieldnames = list(reader.fieldnames or [])
+        writer = csv.DictWriter(output_handle, fieldnames=fieldnames, delimiter=";", extrasaction="ignore") if output_handle else None
+        if writer:
+            writer.writeheader()
+        for row in reader:
+            total += 1
+            eligible, reasons, parsed_price, parsed_date = analytical_eligibility(row)
+            if not eligible:
+                exclusion_reasons.update(reasons)
+                if parsed_price == 0 or is_yes(value(row, "precio_cero_flag")):
+                    zero_excluded += 1
+                continue
+            analytic += 1
+            positive += 1
+            if len(fallback_rows) < ANALYTIC_SAMPLE_LIMIT:
+                fallback_rows.append(dict(row))
+            add_sample(row)
+            if writer:
+                writer.writerow(row)
+            assert parsed_price is not None and parsed_date is not None
+            dates.append(parsed_date)
+            commodity = value(row, "commodity")
+            currency = value(row, "moneda")
+            unit = value(row, "unidad")
+            price_type = value(row, "tipo_precio") or "Sin especificar"
+            commercial = value(row, "condicion_comercial") or "Sin especificar"
+            origin = value(row, "procedencia") or "Sin especificar"
+            place = value(row, "lugar_entrega") or "Sin especificar"
+            commodities.add(commodity)
+            currencies.add(currency)
+            units.add(unit)
+            analytic_group(commodity_currency, (commodity, currency, unit), row, parsed_price, parsed_date)
+            analytic_group(series, (commodity, currency, unit, price_type, commercial), row, parsed_price, parsed_date)
+            analytic_group(procedencia, (commodity, currency, origin), row, parsed_price, parsed_date)
+            analytic_group(delivery, (commodity, currency, place), row, parsed_price, parsed_date)
+
+    for row in fallback_rows:
+        if len(sample_rows) >= ANALYTIC_SAMPLE_LIMIT:
+            break
+        add_sample(row)
+    write_csv(ANALYTIC_SAMPLE_PATH, fieldnames, sample_rows)
+    commodity_currency_rows = group_rows(commodity_currency, ["commodity", "moneda", "unidad"])
+    series_rows = group_rows(series, ["commodity", "moneda", "unidad", "tipo_precio", "condicion_comercial"], series=True)
+    procedencia_rows = group_rows(procedencia, ["commodity", "moneda", "procedencia"], include_volume=True)
+    delivery_rows = group_rows(delivery, ["commodity", "moneda", "lugar_entrega"], include_volume=True)
+    summary = {
+        "filas_base_completa": str(total),
+        "filas_analiticas": str(analytic),
+        "filas_excluidas": str(total - analytic),
+        "porcentaje_usable": format_stat((analytic / total * 100) if total else 0),
+        "precios_cero_excluidos": str(zero_excluded),
+        "monedas_detectadas": "|".join(sorted(currencies)),
+        "unidades_detectadas": "|".join(sorted(units)),
+        "fecha_min": min(dates).isoformat() if dates else "",
+        "fecha_max": max(dates).isoformat() if dates else "",
+        "commodities_detectados": "|".join(sorted(commodities)),
+    }
+    write_csv(ANALYTIC_SUMMARY_PATH, list(summary.keys()), [summary])
+    write_csv(ANALYTIC_COMMODITY_CURRENCY_PATH, ["commodity", "moneda", "unidad", "filas", "precio_min", "precio_promedio", "precio_mediana", "precio_max", "fecha_min", "fecha_max"], commodity_currency_rows)
+    write_csv(ANALYTIC_SERIES_PATH, ["commodity", "moneda", "unidad", "tipo_precio", "condicion_comercial", "filas", "fecha_min", "fecha_max", "dias_con_datos", "aptitud_serie"], series_rows)
+    write_csv(ANALYTIC_PROCEDENCIA_PATH, ["commodity", "moneda", "procedencia", "filas", "precio_min", "precio_promedio", "precio_mediana", "precio_max", "fecha_min", "fecha_max", "volumen_total"], procedencia_rows)
+    write_csv(ANALYTIC_DELIVERY_PATH, ["commodity", "moneda", "lugar_entrega", "filas", "precio_min", "precio_promedio", "precio_mediana", "precio_max", "fecha_min", "fecha_max", "volumen_total"], delivery_rows)
+    metrics: dict[str, object] = {
+        "available": True, "source_label": source_path.as_posix(), "source_is_complete": source_path == MANUAL_EXPORT_PROCESSED_PATH,
+        "analytic_path": ANALYTIC_PATH.as_posix(), "sample_path": ANALYTIC_SAMPLE_PATH.as_posix(), "filas_base_completa": total,
+        "filas_analiticas": analytic, "filas_excluidas": total - analytic, "porcentaje_usable": analytic / total * 100 if total else 0,
+        "precios_cero_excluidos": zero_excluded, "precios_positivos": positive, "monedas": sorted(currencies), "unidades": sorted(units),
+        "commodities": sorted(commodities), "fecha_min": min(dates).isoformat() if dates else "", "fecha_max": max(dates).isoformat() if dates else "",
+        "exclusion_reasons": exclusion_reasons, "series_rows": series_rows,
+    }
+    write_analytic_report(metrics)
+    return metrics
+
+
 def write_manual_lightweight_outputs(path: Path) -> None:
     """Genera sólo artefactos pequeños; el CSV completo nunca se copia al repositorio."""
 
@@ -570,9 +853,17 @@ def main() -> int:
     if manual_export_stats_value.get("rows"):
         write_manual_lightweight_outputs(MANUAL_EXPORT_PROCESSED_PATH)
         zero_metrics = write_zero_audit(MANUAL_EXPORT_PROCESSED_PATH)
+        analytic_metrics = build_analytic_base(MANUAL_EXPORT_PROCESSED_PATH)
+    elif ANALYTIC_PATH.exists():
+        zero_metrics = {"total": 0, "positive": 0, "zero": 0, "missing": 0, "zero_pct": 0.0, "types": Counter(), "dimensions": {}, "originals": Counter()}
+        analytic_metrics = build_analytic_base(ANALYTIC_PATH, output_path=None)
+    elif ANALYTIC_SAMPLE_PATH.exists():
+        zero_metrics = {"total": 0, "positive": 0, "zero": 0, "missing": 0, "zero_pct": 0.0, "types": Counter(), "dimensions": {}, "originals": Counter()}
+        analytic_metrics = build_analytic_base(ANALYTIC_SAMPLE_PATH, output_path=None)
     else:
         zero_metrics = {"total": 0, "positive": 0, "zero": 0, "missing": 0, "zero_pct": 0.0, "types": Counter(), "dimensions": {}, "originals": Counter()}
-    if not rows and not technical_rows and not manual_export_stats_value.get("rows"):
+        analytic_metrics = {"available": False}
+    if not rows and not technical_rows and not manual_export_stats_value.get("rows") and not analytic_metrics.get("available"):
         return no_data()
     if not rows:
         print("No hay integración piloto principal; se auditará la salida técnica o manual disponible.")
@@ -764,6 +1055,20 @@ def main() -> int:
     lines.extend([files_section, technical_section, manual_export_section])
     if zero_metrics["total"]:
         lines.extend(["## Precios cero y aptitud analítica", "", f"La exportación manual contiene {zero_metrics['zero']} precio(s) cero sobre {zero_metrics['total']} fila(s) ({zero_metrics['zero_pct']:.2f}%). Los ceros se conservan para trazabilidad, pero sólo las filas con `precio_valido_para_serie=sí` pueden alimentar series, promedios, rankings o semáforos.", f"Clasificación principal: {', '.join(f'{name}={count}' for name, count in zero_metrics['types'].most_common())}.", "La base no se considera plenamente apta para indicadores de precio hasta aplicar este filtro y revisar los casos cero.", ""])
+    if analytic_metrics.get("available"):
+        lines.extend([
+            "## Base analítica de precios", "",
+            f"- Filas de la base completa evaluadas: {analytic_metrics['filas_base_completa']}.",
+            f"- Filas analíticas: {analytic_metrics['filas_analiticas']}.",
+            f"- Filas excluidas: {analytic_metrics['filas_excluidas']} ({100 - float(analytic_metrics['porcentaje_usable']):.2f}%).",
+            f"- Porcentaje usable: {float(analytic_metrics['porcentaje_usable']):.2f}%.",
+            f"- Precios positivos válidos: {analytic_metrics['precios_positivos']}; precios cero excluidos: {analytic_metrics['precios_cero_excluidos']}.",
+            f"- Monedas: {', '.join(analytic_metrics['monedas']) or 'ninguna'}; unidades: {', '.join(analytic_metrics['unidades']) or 'ninguna'}.",
+            f"- Commodities: {', '.join(analytic_metrics['commodities']) or 'ninguno'}.",
+            f"- Rango de fechas: {analytic_metrics['fecha_min'] or 'sin fecha'} a {analytic_metrics['fecha_max'] or 'sin fecha'}.",
+            "- Aptitud: apta para exploración analítica; parcial para un dashboard piloto; no apta para producción hasta validar actualización automática y metodología.",
+            "- ARS y USD se mantienen separados en los resúmenes y no se comparan conjuntamente.", "",
+        ])
     lines.extend(["## Moneda y comparabilidad", "", f"Moneda explícitamente informada: {'sí' if currency_explicit_count else 'no'} ({currency_explicit_count}/{len(rows)} filas). Moneda inferida: {'sí' if currency_inferred_count else 'no'} ({currency_inferred_count}/{len(rows)} filas). Moneda sin especificar: {'sí' if currency_unspecified_count else 'no'} ({currency_unspecified_count}/{len(rows)} filas).", f"Comparabilidad monetaria: {'sí' if currency_explicit_count and len(currency_counts) == 1 and not currency_inferred_count and not currency_unspecified_count else 'no'}.", "Los valores no deben compararse ni usarse para variaciones monetarias mientras la moneda permanezca embebida o no informada explícitamente. La auditoría conserva `moneda=Sin especificar` y no habilita `apto_dashboard`.", ""])
     lines.extend([
         "## Actualidad de la información", "", f"Fecha máxima disponible: {max_date.isoformat() if max_date else 'sin fecha válida'}.", f"Días desde el último dato: {age if age is not None else 'sin fecha válida'}.", f"Commodities actualizados (últimos 7 días): {', '.join(updated) if updated else 'ninguno'}.", f"Commodities recientes o actualizados (últimos 30 días): {', '.join(recent) if recent else 'ninguno'}.", f"Commodities sin dato reciente: {', '.join(no_recent) if no_recent else 'ninguno'}.", f"Cobertura últimos 7 días: {sum(int(item['registros_ultimos_7_dias']) for item in actuality)} registro(s). Cobertura últimos 30 días: {sum(int(item['registros_ultimos_30_dias']) for item in actuality)} registro(s).", "", markdown_table(["Commodity", "Fecha máxima", "Días", "Últimos 7 días", "Últimos 30 días", "Estado"], [[item["commodity"], item["fecha_max"] or "—", item["dias_desde_ultimo_dato"] or "—", item["registros_ultimos_7_dias"], item["registros_ultimos_30_dias"], item["estado_actualidad"]] for item in actuality]), "",
