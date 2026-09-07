@@ -808,6 +808,9 @@ def analyze_curl_file(path: Path) -> list[dict[str, Any]]:
         tokens = shlex.split(source, posix=True)
     except ValueError:
         tokens = re.findall(r"(?:[^\s\"']|\"[^\"]*\"|'[^']*')+", source)
+    # "Copy as cURL" desde cmd.exe usa ^ como escape de comillas y saltos.
+    # Se elimina sólo para interpretar el texto local; el cURL nunca se ejecuta.
+    tokens = [token.replace("^", "") for token in tokens if token != "^"]
     method = ""
     headers: list[dict[str, str]] = []
     payloads: list[str] = []
@@ -862,8 +865,9 @@ def write_devtools_report(source_type: str, path: Path, records: list[dict[str, 
         observed_parameters.update(record["parameters"])
     headers = sorted({f"{name}: {value}" for record in candidates for name, value in record["headers"]}, key=str.lower)
     has_sensitive_transport = any(record["sensitive_transport"] for record in candidates)
+    get_operaciones = next((record for record in candidates if record["is_get_operaciones"]), None)
     lines = [
-        "# Reporte de request observado en DevTools SIO", "", "## Objetivo", "", "Identificar el payload real usado por la grilla SIO para paginar operaciones.", "", "## Archivo analizado", "", f"- Tipo: {source_type} local.", f"- Archivo: `{relative_display_path(path)}`.", "- El archivo fuente no se copia ni se versiona; este reporte omite cookies, autorizaciones, tokens e IDs de sesión.", "", "## Requests candidatos detectados", "", "| Endpoint | Método | Tipo | Contiene payload | Parámetros detectados | Evidencia | Confianza | Observaciones |", "| --- | --- | --- | --- | --- | --- | --- | --- |",
+        "# Reporte de request observado en DevTools SIO", "", "## Objetivo", "", "Identificar el payload real usado por la grilla SIO para paginar operaciones.", "", "## Archivo analizado", "", f"- Tipo: {source_type} local.", f"- Archivo: `{relative_display_path(path)}`.", "- El archivo fuente no se copia ni se versiona; este reporte omite cookies, autorizaciones, tokens e IDs de sesión.", "", "## Endpoint observado", "", f"- `{get_operaciones['endpoint']}`" if get_operaciones else "- No se detectó GetOperaciones.", "", "## Método", "", f"- {get_operaciones['method']}" if get_operaciones else "- No determinado.", "", "## Requests candidatos detectados", "", "| Endpoint | Método | Tipo | Contiene payload | Parámetros detectados | Evidencia | Confianza | Observaciones |", "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     if candidates:
         for record in candidates:
@@ -881,9 +885,9 @@ def write_devtools_report(source_type: str, path: Path, records: list[dict[str, 
             lines.append(f"| {name} | `{sanitize_scalar(value)}` | {parameter_functions.get(name, 'parámetro observado')} | Payload local sanitizado. | alta si pertenece a GetOperaciones; media en otro request SIO. |")
     else:
         lines.append("| — | — | No se observó parámetro de paginación. | No hay payload SIO analizable. | baja |")
-    lines.extend(["", "## Headers relevantes", ""])
+    lines.extend(["", "## Headers no sensibles", ""])
     lines.extend([f"- `{header}`" for header in headers] or ["- No se detectaron headers no sensibles dentro de la lista permitida."])
-    lines.extend(["", "No se listan `Cookie`, `Authorization`, tokens, credenciales ni IDs de sesión.", "", "## Payload observado", ""])
+    lines.extend(["", "No se listan `Cookie`, `Authorization`, tokens, credenciales ni IDs de sesión.", "", "## Payload sanitizado", ""])
     if candidates:
         for record in candidates:
             lines.extend([f"### {record['endpoint']}", "", "```json", record["payload"] or "(sin payload)", "```", ""])
@@ -893,7 +897,18 @@ def write_devtools_report(source_type: str, path: Path, records: list[dict[str, 
     observed_names = set(observed_parameters)
     missing = sorted(expected - observed_names)
     extra = sorted(observed_names - expected)
-    lines.extend(["## Comparación con payload anterior", "", "Payload anterior controlado:", "", "```json", '{"pPageSize": 15, "pCurrentPage": 1/2/3}', "```", "", f"- Parámetros observados en DevTools: {', '.join(observed_parameters) or 'ninguno'}.", f"- Parámetros del payload anterior que no aparecen: {', '.join(missing) or 'ninguno'}.", f"- Parámetros adicionales observados: {', '.join(extra) or 'ninguno'}.", "- La comparación describe sólo la captura local; no infiere parámetros ausentes.", "", "## Recomendación próxima", ""])
+    lines.extend(["## Comparación con payload anterior", "", "Payload anterior controlado:", "", "```json", '{"pPageSize": 15, "pCurrentPage": 1/2/3}', "```", "", f"- Parámetros observados en DevTools: {', '.join(observed_parameters) or 'ninguno'}.", f"- Parámetros del payload anterior que no aparecen: {', '.join(missing) or 'ninguno'}.", f"- Parámetros adicionales observados: {', '.join(extra) or 'ninguno'}.", "- La comparación describe sólo la captura local; no infiere parámetros ausentes.", "", "## Diagnóstico", ""])
+    if get_operaciones and get_operaciones["has_payload"] and not has_sensitive_transport:
+        diagnosis = "A. El payload real de GetOperaciones queda claro en esta captura local."
+        if "page2" in path.name.lower() and observed_parameters.get("pCurrentPage") == "1":
+            diagnosis += " El nombre local refiere página 2, mientras el valor observado es `pCurrentPage=1`; puede corresponder a indexación base cero o requerir confirmar la captura, sin asumir una de esas opciones."
+    elif has_sensitive_transport:
+        diagnosis = "B. La captura contiene datos de sesión, cookies o autenticación potencialmente necesarios; fueron omitidos o redactados."
+    elif candidates:
+        diagnosis = "D. Se detectó un request SIO, pero no corresponde a GetOperaciones con un payload útil."
+    else:
+        diagnosis = "C. El cURL no contiene un request SIO útil para paginación."
+    lines.extend([diagnosis, "", "## Recomendación próxima", ""])
     if any(record["is_get_operaciones"] and record["has_payload"] for record in candidates) and not has_sensitive_transport:
         recommendation = "A. El payload real parece identificable. Preparar una prueba controlada separada con máximo 2 requests, sólo después de revisar manualmente sus valores y condiciones de uso."
     elif has_sensitive_transport:
