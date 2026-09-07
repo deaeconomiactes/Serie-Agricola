@@ -365,9 +365,8 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
     positional_skipped = 0
     positional_applied = 0
     row_signatures: list[str] = []
-    page_match = re.search(r"page[_-](\d+)", path.stem, flags=re.I)
-    page_origin = page_match.group(1) if page_match else ""
-    sample_type = "paginacion_controlada" if page_match else "piloto_una_pagina"
+    page_origin = page_number_from_path(path)
+    sample_type = "paginacion_controlada" if page_origin else "piloto_una_pagina"
     for source in source_rows:
         used_positional = False
         source_id = first_text(source, "ID", "id_operacion_sio")
@@ -566,7 +565,16 @@ def write_output(path: Path, rows: list[dict[str, str]]) -> None:
 
 
 def is_paginated_file(path: Path) -> bool:
-    return bool(re.search(r"page[_-]\d+", path.stem, flags=re.I))
+    return page_number_from_path(path) != ""
+
+
+def page_number_from_path(path: Path) -> str:
+    match = re.search(r"(?:page[_-]|observed_pcurrentpage[_-])(\d+)", path.stem, flags=re.I)
+    return match.group(1) if match else ""
+
+
+def is_observed_pagination_file(path: Path) -> bool:
+    return bool(re.search(r"observed_pcurrentpage[_-]\d+", path.stem, flags=re.I))
 
 
 def process_group(files: list[Path], aliases: dict[str, str], positional_mapping: dict[int, dict[str, Any]] | None, sample_pages: int, pagination_status: str) -> tuple[list[dict[str, str]], list[dict[str, Any]], int]:
@@ -577,6 +585,7 @@ def process_group(files: list[Path], aliases: dict[str, str], positional_mapping
         try:
             rows, diagnostics = process_file(path, aliases, positional_mapping, sample_pages, pagination_status)
             rows_all.extend(rows)
+            diagnostics["archivo_origen"] = path.name
             diagnostics_all.append(diagnostics)
             print(f"Archivo procesado: {path.name}")
             print(f"  Filas leídas: {diagnostics['read']}; filas integradas: {diagnostics['integrated']}")
@@ -602,10 +611,14 @@ def main() -> int:
     print(f"Mapeo posicional: {mapping_status}")
     page_files = [path for path in files if is_paginated_file(path)]
     base_files = [path for path in files if not is_paginated_file(path)]
-    page_numbers = {int(match.group(1)) for path in page_files if (match := re.search(r"page[_-](\d+)", path.stem, flags=re.I))}
+    observed_page_files = [path for path in page_files if is_observed_pagination_file(path)]
+    status_page_files = observed_page_files or page_files
+    page_numbers = {int(page_number_from_path(path)) for path in status_page_files if page_number_from_path(path)}
     sample_pages = len(page_numbers) or 1
     technical_rows_unchecked, page_diagnostics, page_errors = process_group(page_files, aliases, positional_mapping, sample_pages, "no_probada")
-    page_signature_groups = {str(item["page_origin"]): item.get("row_signatures", []) for item in page_diagnostics if item.get("row_signatures")}
+    status_file_names = {path.name for path in status_page_files}
+    status_diagnostics = [item for item in page_diagnostics if item.get("archivo_origen") in status_file_names]
+    page_signature_groups = {str(item["page_origin"]): item.get("row_signatures", []) for item in status_diagnostics if item.get("row_signatures")}
     first_page_signatures = next(iter(page_signature_groups.values()), [])
     pagination_status = "no_probada"
     if len(page_signature_groups) >= 2:

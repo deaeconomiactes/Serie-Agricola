@@ -184,12 +184,13 @@ def read_page_items(path: Path) -> list[dict[str, object]]:
 
 
 def pagination_metrics() -> dict[str, object]:
+    observed_files = sorted(RAW_DIR.glob("SIO_GetOperaciones_observed_pCurrentPage_*.json"))
     preferred_files = sorted(RAW_DIR.glob("SIO_test_pagination_page_*.json"))
     fallback_files = sorted(RAW_DIR.glob("SIO_GetOperaciones_page_*.json"))
-    candidates = preferred_files or fallback_files
+    candidates = observed_files or preferred_files or fallback_files
     latest_by_page: dict[str, Path] = {}
     for path in candidates:
-        page_match = re.search(r"page[_-](\d+)", path.stem, flags=re.I)
+        page_match = re.search(r"(?:page[_-]|observed_pcurrentpage[_-])(\d+)", path.stem, flags=re.I)
         page_key = page_match.group(1) if page_match else path.name
         if page_key not in latest_by_page or path.name > latest_by_page[page_key].name:
             latest_by_page[page_key] = path
@@ -201,7 +202,7 @@ def pagination_metrics() -> dict[str, object]:
         if not items:
             continue
         signatures = [json.dumps({"ID": item.get("ID"), "Row": item.get("Row")}, ensure_ascii=False, sort_keys=True, separators=(",", ":")) for item in items]
-        page_match = re.search(r"page[_-](\d+)", path.stem, flags=re.I)
+        page_match = re.search(r"(?:page[_-]|observed_pcurrentpage[_-])(\d+)", path.stem, flags=re.I)
         page_key = page_match.group(1) if page_match else path.name
         page_groups[page_key] = signatures
         raw_items.extend(items)

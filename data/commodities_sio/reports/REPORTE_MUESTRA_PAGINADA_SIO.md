@@ -26,12 +26,12 @@ Validar una extracción limitada de varias páginas del endpoint GetOperaciones.
 
 ## Resultado de integración
 
-- Filas leídas antes de deduplicar: 180.
-- Archivos procesados: 12.
+- Filas leídas antes de deduplicar: 225.
+- Archivos procesados: 15.
 - Páginas procesadas: 3.
-- Duplicados exactos eliminados: 151; con ID: 151; por Row: 151.
+- Duplicados exactos eliminados: 181; con ID: 181; por Row: 181.
 - Conflictos conservados para revisión: 0.
-- Filas finales: 29.
+- Filas finales: 44.
 - Salida técnica: `data/commodities_sio/processed/COMMODITIES_SIO_MUESTRA_PAGINADA.csv`; no reemplaza `COMMODITIES_SIO_INTEGRADO.csv`.
 - Estado derivado de paginación: duplicada.
 - Observación: paginación no validada; páginas repetidas.
@@ -39,16 +39,16 @@ Validar una extracción limitada de varias páginas del endpoint GetOperaciones.
 ## Resultado de auditoría
 
 - Commodities: Girasol, Maíz, Soja, TRIGO CAND., TRIGO PAN.
-- Rango de fechas: 2026-09-04 a 2026-09-04.
+- Rango de fechas: 2026-09-04 a 2026-09-07.
 - Monedas: ARS, USD; mezcla ARS/USD: sí.
 - Unidades: TN.
-- Precios válidos por moneda: ARS=13, USD=16.
-- Volumen válido: 29/29.
-- Procedencias con dato: 29; lugares de entrega con dato: 29; condiciones de pago con dato: 29.
-- Páginas solicitadas/procesadas: 3; páginas con filas finales: 1; registros finales por página: 1=29.
+- Precios válidos por moneda: ARS=25, USD=19.
+- Volumen válido: 44/44.
+- Procedencias con dato: 44; lugares de entrega con dato: 44; condiciones de pago con dato: 44.
+- Páginas solicitadas/procesadas: 3; páginas con filas finales: 0, 1; registros finales por página: 0=15, 1=29.
 - Duplicados por id_operacion_sio en CSV final: 0; duplicados compuestos sin ID: 0.
-- apto_piloto: sí=29.
-- apto_dashboard: parcial_piloto=29.
+- apto_piloto: sí=44.
+- apto_dashboard: parcial_piloto=44.
 - Comparabilidad conjunta ARS/USD: no; deben mantenerse series separadas por moneda.
 ## Riesgos
 

@@ -66,12 +66,12 @@ La evidencia más fuerte identifica `pPageSize`/`pCurrentPage`, pero la prueba c
 
 ## Resultado de integración
 
-- Filas leídas antes de deduplicar: 180.
-- Archivos procesados: 12.
+- Filas leídas antes de deduplicar: 225.
+- Archivos procesados: 15.
 - Páginas procesadas: 3.
-- Duplicados exactos eliminados: 151; con ID: 151; por Row: 151.
+- Duplicados exactos eliminados: 181; con ID: 181; por Row: 181.
 - Conflictos conservados para revisión: 0.
-- Filas finales: 29.
+- Filas finales: 44.
 - Salida técnica: `data/commodities_sio/processed/COMMODITIES_SIO_MUESTRA_PAGINADA.csv`; no reemplaza `COMMODITIES_SIO_INTEGRADO.csv`.
 - Estado derivado de paginación: duplicada.
 - Observación: paginación no validada; páginas repetidas.
