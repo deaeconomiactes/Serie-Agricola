@@ -15,9 +15,13 @@ ROOT = Path(__file__).resolve().parent
 PROCESSED_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_INTEGRADO.csv"
 PAGINATED_PROCESSED_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_MUESTRA_PAGINADA.csv"
 MANUAL_EXPORT_PROCESSED_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_EXPORTACION_MANUAL.csv"
+MANUAL_EXPORT_SAMPLE_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_EXPORTACION_MANUAL_SAMPLE.csv"
 RAW_DIR = ROOT / "data" / "commodities_sio" / "raw"
 REPORT_DIR = ROOT / "data" / "commodities_sio" / "reports"
 MANUAL_EXPORT_REPORT_PATH = REPORT_DIR / "REPORTE_EXPORTACION_MANUAL_SIO.md"
+MANUAL_EXPORT_SUMMARY_PATH = REPORT_DIR / "RESUMEN_EXPORTACION_MANUAL_SIO.csv"
+MANUAL_EXPORT_ZERO_PATH = REPORT_DIR / "RESUMEN_PRECIOS_CERO_SIO.csv"
+MANUAL_EXPORT_COMMODITY_CURRENCY_PATH = REPORT_DIR / "RESUMEN_COMMODITY_MONEDA_SIO.csv"
 PAGINATED_REPORT_PATH = REPORT_DIR / "REPORTE_MUESTRA_PAGINADA_SIO.md"
 PAGINATION_REPORT_PATH = REPORT_DIR / "REPORTE_PAGINACION_SIO.md"
 REPORTS = {
@@ -227,6 +231,85 @@ def manual_export_stats(path: Path) -> dict[str, object]:
     return stats
 
 
+def write_manual_lightweight_outputs(path: Path) -> None:
+    """Genera sólo artefactos pequeños; el CSV completo nunca se copia al repositorio."""
+
+    sample_candidates: list[dict[str, str]] = []
+    priority_candidates: list[dict[str, str]] = []
+    zero_candidates: list[dict[str, str]] = []
+    priority_keys: set[tuple[str, str]] = set()
+    zero_keys: set[tuple[str, str]] = set()
+    commodity_stats: dict[str, dict[str, object]] = {}
+    zero_stats: dict[tuple[str, str], dict[str, object]] = {}
+    currency_stats: dict[tuple[str, str], dict[str, object]] = {}
+
+    def add_stat(store: dict, key_value: tuple[str, ...], row: dict[str, str], include_zero: bool = True) -> None:
+        commodity = value(row, "commodity") or "Sin especificar"
+        currency = value(row, "moneda") or "Sin especificar"
+        unit = value(row, "unidad") or "Sin especificar"
+        parsed_date = parse_date(value(row, "fecha"))
+        price = parse_price(value(row, "precio"))
+        item = store.setdefault(key_value, {"filas": 0, "precios_validos": 0, "precios_cero": 0, "monedas": set(), "unidades": set(), "fecha_min": None, "fecha_max": None})
+        item["filas"] += 1
+        if price is not None:
+            item["precios_validos"] += 1
+            item["precios_cero"] += int(price == 0) if include_zero else 0
+        if currency != "Sin especificar": item["monedas"].add(currency)
+        if unit != "Sin especificar": item["unidades"].add(unit)
+        if parsed_date:
+            item["fecha_min"] = min(parsed_date, item["fecha_min"]) if item["fecha_min"] else parsed_date
+            item["fecha_max"] = max(parsed_date, item["fecha_max"]) if item["fecha_max"] else parsed_date
+
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle, delimiter=";")
+        fieldnames = list(reader.fieldnames or [])
+        for row in reader:
+            commodity = value(row, "commodity") or "Sin especificar"
+            currency = value(row, "moneda") or "Sin especificar"
+            price = parse_price(value(row, "precio"))
+            valid = bool(commodity and price is not None)
+            if valid and len(sample_candidates) < 1000:
+                sample_candidates.append(dict(row))
+            priority_key = (commodity, currency)
+            if valid and priority_key not in priority_keys:
+                priority_keys.add(priority_key)
+                priority_candidates.append(dict(row))
+            if valid and price == 0 and priority_key not in zero_keys:
+                zero_keys.add(priority_key)
+                zero_candidates.append(dict(row))
+            add_stat(commodity_stats, (commodity,), row)
+            if price == 0:
+                add_stat(zero_stats, (commodity, currency), row, include_zero=True)
+            add_stat(currency_stats, (commodity, currency), row, include_zero=True)
+
+    selected: list[dict[str, str]] = []
+    seen_sample: set[tuple[str, ...]] = set()
+    for row in priority_candidates + zero_candidates + sample_candidates:
+        sample_key = (value(row, "id_operacion_sio"), value(row, "fecha"), value(row, "commodity"), value(row, "precio"), value(row, "moneda"), value(row, "volumen"))
+        if sample_key in seen_sample:
+            continue
+        seen_sample.add(sample_key)
+        selected.append(row)
+        if len(selected) >= 1000:
+            break
+    write_csv(MANUAL_EXPORT_SAMPLE_PATH, fieldnames, selected)
+
+    def summary_rows(store: dict[tuple[str, ...], dict[str, object]], names: list[str]) -> list[dict[str, str]]:
+        rows: list[dict[str, str]] = []
+        for key_value, item in sorted(store.items()):
+            row = {name: str(value) for name, value in zip(names, key_value)}
+            row.update({"filas": str(item["filas"]), "precios_validos": str(item["precios_validos"]), "precios_cero": str(item["precios_cero"]), "monedas": "|".join(sorted(item["monedas"])), "unidades": "|".join(sorted(item["unidades"])), "fecha_min": item["fecha_min"].isoformat() if item["fecha_min"] else "", "fecha_max": item["fecha_max"].isoformat() if item["fecha_max"] else ""})
+            rows.append(row)
+        return rows
+
+    fields = ["commodity", "filas", "precios_validos", "precios_cero", "monedas", "unidades", "fecha_min", "fecha_max"]
+    write_csv(MANUAL_EXPORT_SUMMARY_PATH, fields, summary_rows(commodity_stats, ["commodity"]))
+    zero_fields = ["commodity", "moneda", "filas", "precios_validos", "precios_cero", "monedas", "unidades", "fecha_min", "fecha_max"]
+    write_csv(MANUAL_EXPORT_ZERO_PATH, zero_fields, summary_rows(zero_stats, ["commodity", "moneda"]))
+    currency_fields = ["commodity", "moneda", "filas", "precios_validos", "precios_cero", "monedas", "unidades", "fecha_min", "fecha_max"]
+    write_csv(MANUAL_EXPORT_COMMODITY_CURRENCY_PATH, currency_fields, summary_rows(currency_stats, ["commodity", "moneda"]))
+
+
 def audited_files_section(primary_rows: list[dict[str, str]], technical_rows: list[dict[str, str]], manual_rows: list[dict[str, str]]) -> tuple[str, str, str]:
     primary_status = "parcial_piloto" if primary_rows and all(value(row, "apto_dashboard") == "parcial_piloto" for row in primary_rows) else "no"
     technical_state = sorted({value(row, "estado_paginacion") for row in technical_rows if value(row, "estado_paginacion")})
@@ -368,6 +451,8 @@ def main() -> int:
     rows = read_rows()
     technical_rows = read_rows(PAGINATED_PROCESSED_PATH)
     manual_export_stats_value = manual_export_stats(MANUAL_EXPORT_PROCESSED_PATH) if MANUAL_EXPORT_PROCESSED_PATH.exists() else {"rows": 0, "columns": [], "dates": [], "currencies": [], "units": [], "commodities": []}
+    if manual_export_stats_value.get("rows"):
+        write_manual_lightweight_outputs(MANUAL_EXPORT_PROCESSED_PATH)
     if not rows and not technical_rows and not manual_export_stats_value.get("rows"):
         return no_data()
     if not rows:

@@ -77,7 +77,7 @@ python .\integrar_commodities_sio.py
 python .\auditar_commodities_sio.py
 ```
 
-La exportación manual es válida cuando la automatización directa depende de sesión. Se procesa en `COMMODITIES_SIO_EXPORTACION_MANUAL.csv` sin pisar el CSV principal ni la muestra paginada. Los CSV procesados y reportes pueden versionarse si corresponden a muestras controladas y no masivas.
+La exportación manual es válida cuando la automatización directa depende de sesión. El CSV completo se genera localmente en `COMMODITIES_SIO_EXPORTACION_MANUAL.csv`, pero no se versiona por su tamaño. Tanto el raw descargado como los processed completos quedan fuera de Git. Git conserva los scripts, reportes, resúmenes livianos y muestras pequeñas, como `COMMODITIES_SIO_EXPORTACION_MANUAL_SAMPLE.csv`, sin pisar el CSV principal ni la muestra paginada.
 
 Para analizar una captura local de DevTools sin hacer llamadas web, seguir [GUIA_DEVTOOLS_SIO.md](GUIA_DEVTOOLS_SIO.md):
 
