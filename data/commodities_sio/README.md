@@ -79,6 +79,8 @@ python .\auditar_commodities_sio.py
 
 La exportación manual es válida cuando la automatización directa depende de sesión. El CSV completo se genera localmente en `COMMODITIES_SIO_EXPORTACION_MANUAL.csv`, pero no se versiona por su tamaño. Tanto el raw descargado como los processed completos quedan fuera de Git. Git conserva los scripts, reportes, resúmenes livianos y muestras pequeñas, como `COMMODITIES_SIO_EXPORTACION_MANUAL_SAMPLE.csv`, sin pisar el CSV principal ni la muestra paginada.
 
+Los registros con precio cero se conservan para trazabilidad, pero no deben usarse en series de precios, promedios, rankings ni semáforos. El campo `precio_valido_para_serie` indica qué registros pueden usarse para análisis de precios.
+
 Para analizar una captura local de DevTools sin hacer llamadas web, seguir [GUIA_DEVTOOLS_SIO.md](GUIA_DEVTOOLS_SIO.md):
 
 ```powershell

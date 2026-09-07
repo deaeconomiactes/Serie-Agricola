@@ -30,6 +30,7 @@ OUTPUT_COLUMNS = [
     "provincia", "localidad", "zona", "lugar_entrega", "precio_puesto_en", "operacion",
     "condicion_pago", "condicion_comercial", "frecuencia", "archivo_origen",
     "fecha_integracion", "observaciones", "apto_piloto", "apto_dashboard", "pagina_origen", "id_operacion_sio", "muestra_tipo", "muestra_paginas", "estado_paginacion",
+    "precio_cero_flag", "precio_cero_tipo", "precio_valido_para_serie",
 ]
 EXTENSIONS = {".json", ".csv", ".xlsx", ".xls", ".html", ".htm"}
 NON_REAL_MARKERS = ("plantilla", "simul", "prueba", "ejemplo", "sample")
@@ -115,6 +116,28 @@ def normalize_explicit_currency_field(value: Any) -> str:
     if re.fullmatch(r"ARS|PESOS?|PESOS? ARGENTINOS?", raw, flags=re.I):
         return "ARS"
     return raw
+
+
+def classify_zero_price(raw_value: Any, parsed_price: float | None, operation: Any = "") -> str:
+    """Clasifica el origen observable de un cero sin convertirlo ni eliminarlo."""
+
+    if parsed_price != 0:
+        return "no_aplica"
+    raw = text(raw_value)
+    normalized = key(raw)
+    operation_key = key(operation)
+    if not raw:
+        return "campo_vacio_parseado_cero"
+    if normalized in {"sc", "sincotizacion", "sinprecio", "afijar", "fijar"} or any(token in normalized for token in ("sincot", "sinprecio", "afijar")):
+        return "texto_sin_precio"
+    if any(token in operation_key for token in ("anulacion", "rectificacion")) and normalized in {"0", "00", "000"}:
+        return "operacion_sin_precio"
+    stripped = re.sub(r"[^0-9]", "", raw)
+    if stripped and set(stripped) == {"0"}:
+        return "cero_explicito"
+    if raw:
+        return "parsing_fallido"
+    return "no_determinado"
 
 
 def read_aliases() -> dict[str, str]:
@@ -477,8 +500,12 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
         payment = first_text(source, "condicion_pago", "Condición de Pago", "Condicion de Pago", "Pago")
         commercial = first_text(source, "Condición comercial", "Condicion comercial", "Condición", "Condicion", "Entrega")
         observation = first_text(source, "Observación", "Observaciones", "Nota", "Notas")
+        zero_type = classify_zero_price(price_original, price, operation)
+        zero_flag = "sí" if price == 0 else "no"
+        price_valid_for_series = "sí" if price is not None and price > 0 else "no"
         pilot_note = "integración piloto una página GetOperaciones" if used_positional else ""
-        notes = "; ".join(dict.fromkeys([part for part in [observation, commodity_note, pilot_note] + row_missing if part]))
+        zero_note = f"precio cero clasificado como {zero_type}; excluido de series de precios" if zero_flag == "sí" else ""
+        notes = "; ".join(dict.fromkeys([part for part in [observation, commodity_note, pilot_note, zero_note] + row_missing if part]))
         source_name = first_text(source, "Fuente", "Source") or DEFAULT_SOURCE
         delivery_place = first_text(source, "Zona", "Lugar Entrega", "Lugar de entrega", "lugar_entrega")
         pilot_status = "sí" if market_date and commodity != "Sin especificar" and price is not None and source_name and price_label and price_label != "Sin especificar" and explicit_price_unit else "no"
@@ -528,6 +555,9 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
             "muestra_tipo": sample_type,
             "muestra_paginas": str(sample_pages),
             "estado_paginacion": pagination_status if sample_type == "paginacion_controlada" else "no_aplica",
+            "precio_cero_flag": zero_flag,
+            "precio_cero_tipo": zero_type,
+            "precio_valido_para_serie": price_valid_for_series,
             "_row_signature": raw_row_signature,
         }
         if row_sink is None:

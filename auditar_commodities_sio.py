@@ -22,6 +22,8 @@ MANUAL_EXPORT_REPORT_PATH = REPORT_DIR / "REPORTE_EXPORTACION_MANUAL_SIO.md"
 MANUAL_EXPORT_SUMMARY_PATH = REPORT_DIR / "RESUMEN_EXPORTACION_MANUAL_SIO.csv"
 MANUAL_EXPORT_ZERO_PATH = REPORT_DIR / "RESUMEN_PRECIOS_CERO_SIO.csv"
 MANUAL_EXPORT_COMMODITY_CURRENCY_PATH = REPORT_DIR / "RESUMEN_COMMODITY_MONEDA_SIO.csv"
+ZERO_CASES_PATH = REPORT_DIR / "CASOS_PRECIOS_CERO_SIO.csv"
+ZERO_REPORT_PATH = REPORT_DIR / "REPORTE_PRECIOS_CERO_SIO.md"
 PAGINATED_REPORT_PATH = REPORT_DIR / "REPORTE_MUESTRA_PAGINADA_SIO.md"
 PAGINATION_REPORT_PATH = REPORT_DIR / "REPORTE_PAGINACION_SIO.md"
 REPORTS = {
@@ -231,6 +233,118 @@ def manual_export_stats(path: Path) -> dict[str, object]:
     return stats
 
 
+ZERO_CASE_FIELDS = [
+    "fecha", "commodity", "operacion", "tipo_precio", "moneda", "unidad", "precio", "precio_original_texto",
+    "campo_precio_original", "volumen", "volumen_unidad", "procedencia", "lugar_entrega", "condicion_comercial",
+    "precio_cero_tipo", "observaciones", "archivo_origen",
+]
+
+
+def classify_zero_row(row: dict[str, str]) -> str:
+    existing = value(row, "precio_cero_tipo")
+    if existing:
+        return existing
+    raw = value(row, "precio_original_texto")
+    normalized = re.sub(r"[^a-z0-9]", "", raw.lower())
+    operation = re.sub(r"[^a-z0-9]", "", value(row, "operacion").lower())
+    if not raw:
+        return "campo_vacio_parseado_cero"
+    if normalized in {"sc", "sincotizacion", "sinprecio", "afijar", "fijar"} or any(token in normalized for token in ("sincot", "sinprecio", "afijar")):
+        return "texto_sin_precio"
+    if any(token in operation for token in ("anulacion", "rectificacion")) and normalized in {"0", "00", "000"}:
+        return "operacion_sin_precio"
+    if re.sub(r"[^0-9]", "", raw) and set(re.sub(r"[^0-9]", "", raw)) == {"0"}:
+        return "cero_explicito"
+    return "parsing_fallido" if raw else "no_determinado"
+
+
+def write_zero_audit(path: Path) -> dict[str, object]:
+    metrics: dict[str, object] = {"total": 0, "positive": 0, "zero": 0, "missing": 0, "zero_pct": 0.0, "types": Counter(), "dimensions": {}, "originals": Counter()}
+    dimension_names = ["commodity", "moneda", "tipo_precio", "operacion", "condicion_pago", "procedencia", "lugar_entrega", "año", "mes", "archivo_origen"]
+    dimensions = {name: Counter() for name in dimension_names}
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    with path.open("r", encoding="utf-8-sig", newline="") as handle, ZERO_CASES_PATH.open("w", encoding="utf-8-sig", newline="") as cases_handle:
+        reader = csv.DictReader(handle, delimiter=";")
+        writer = csv.DictWriter(cases_handle, fieldnames=ZERO_CASE_FIELDS, delimiter=";", extrasaction="ignore")
+        writer.writeheader()
+        for row in reader:
+            metrics["total"] += 1
+            parsed_price = parse_price(value(row, "precio"))
+            if parsed_price is None:
+                metrics["missing"] += 1
+                continue
+            if parsed_price > 0:
+                metrics["positive"] += 1
+                continue
+            if parsed_price != 0:
+                continue
+            metrics["zero"] += 1
+            zero_type = classify_zero_row(row)
+            metrics["types"][zero_type] += 1
+            raw_original = value(row, "precio_original_texto")
+            if not raw_original:
+                metrics["originals"]["precio_original_texto vacío"] += 1
+            elif re.sub(r"[^0-9]", "", raw_original) and set(re.sub(r"[^0-9]", "", raw_original)) == {"0"}:
+                metrics["originals"]["precio_original_texto dice cero"] += 1
+            elif zero_type == "texto_sin_precio":
+                metrics["originals"]["texto sin precio"] += 1
+            else:
+                metrics["originals"]["otro valor original"] += 1
+            parsed_date = parse_date(value(row, "fecha"))
+            row["precio_cero_tipo"] = zero_type
+            for name in dimension_names:
+                if name == "año":
+                    label = str(parsed_date.year) if parsed_date else "Sin fecha"
+                elif name == "mes":
+                    label = parsed_date.strftime("%Y-%m") if parsed_date else "Sin fecha"
+                elif name == "condicion_pago":
+                    label = value(row, "condicion_pago") or "Sin especificar"
+                else:
+                    label = value(row, name) or "Sin especificar"
+                dimensions[name][label] += 1
+            writer.writerow({field: row.get(field, "") for field in ZERO_CASE_FIELDS})
+    metrics["zero_pct"] = (metrics["zero"] / metrics["total"] * 100) if metrics["total"] else 0.0
+    metrics["dimensions"] = dimensions
+    write_zero_report(metrics)
+    return metrics
+
+
+def markdown_counter(title: str, counter: Counter[str]) -> list[str]:
+    lines = [f"### {title}", "", "| Valor | Registros |", "| --- | ---: |"]
+    lines.extend(f"| {name.replace('|', '/')} | {count} |" for name, count in counter.most_common())
+    return lines + [""]
+
+
+def write_zero_report(metrics: dict[str, object]) -> None:
+    total = int(metrics["total"])
+    zero = int(metrics["zero"])
+    positive = int(metrics["positive"])
+    missing = int(metrics["missing"])
+    zero_pct = float(metrics["zero_pct"])
+    decision = "Conservar los registros en la base completa, pero excluir precio=0 de toda serie, promedio, ranking y semáforo. No imputar ni reemplazar el valor original."
+    lines = [
+        "# Reporte de precios cero SIO", "", "## Objetivo", "", "Auditar precios cero en la exportación manual SIO antes de usar la base para análisis o dashboard.", "", "## Resumen ejecutivo", "", f"- Filas totales: {total}.", f"- Precios positivos: {positive}.", f"- Precios cero: {zero} ({zero_pct:.2f}%).", f"- Precios faltantes: {missing}.", f"- Decisión metodológica: {decision}", "", "## Distribución de precios cero", "",
+    ]
+    for name, counter in metrics["dimensions"].items():
+        lines.extend(markdown_counter(name, counter))
+    lines.extend(markdown_counter("precio_cero_tipo", metrics["types"]))
+    """
+    lines.extend(["## Origen probable de los ceros", "", f"- `precio_original_texto`: {', '.join(f'{name}={count}' for name, count in metrics['originals'].most_common()) or 'sin evidencia'}.", "- La clasificación se basa en el valor original y en el campo operación; no afirma que un cero sea económicamente válido sin documentación adicional.", "- Los ceros actuales observados en esta exportación están respaldados por texto original numérico `0`/`0,00`; los casos de texto sin precio, vacío o parsing fallido quedan contemplados para futuras exportaciones.", "", "## Regla propuesta", "", "- Conservar registros y valor original para trazabilidad.", "- Excluir `precio=0` de promedios, evolución, rankings y semáforos.", "- Mantenerlos visibles sólo en auditoría/calidad.", "- No imputar precio ni convertir cero en missing sin conservar el valor original.", "- Usar `precio_valido_para_serie=sí` como filtro analítico.", "", "## Impacto en dashboard", "", "No debe graficarse precio cero como precio de mercado. Los indicadores deben usar sólo `precio_valido_para_serie=sí` y mostrar una nota metodológica si SIO se integra en el futuro.", "", "## Casos problemáticos", "", "Se generó `data/commodities_sio/reports/CASOS_PRECIOS_CERO_SIO.csv` con todos los registros con precio cero y su clasificación.", ""]
+    """
+    original_summary = ", ".join("{}={}".format(name, count) for name, count in metrics["originals"].most_common()) or "sin evidencia"
+    lines.extend([
+        "## Origen probable de los ceros", "", f"- `precio_original_texto`: {original_summary}.",
+        "- La clasificación se basa en el valor original y en el campo operación; no afirma que un cero sea económicamente válido sin documentación adicional.",
+        "- Los ceros actuales observados están respaldados por texto original numérico `0`/`0,00`; las categorías de texto sin precio, vacío o parsing fallido quedan contempladas para futuras exportaciones.",
+        "", "## Regla propuesta", "", "- Conservar registros y valor original para trazabilidad.",
+        "- Excluir `precio=0` de promedios, evolución, rankings y semáforos.", "- Mantenerlos visibles sólo en auditoría/calidad.",
+        "- No imputar precio ni convertir cero en missing sin conservar el valor original.", "- Usar `precio_valido_para_serie=sí` como filtro analítico.",
+        "", "## Impacto en dashboard", "", "No debe graficarse precio cero como precio de mercado. Los indicadores deben usar sólo `precio_valido_para_serie=sí` y mostrar una nota metodológica si SIO se integra en el futuro.",
+        "", "## Casos problemáticos", "", "Se generó `data/commodities_sio/reports/CASOS_PRECIOS_CERO_SIO.csv` con todos los registros con precio cero y su clasificación.", "",
+    ])
+    ZERO_REPORT_PATH.write_text("\n".join(lines), encoding="utf-8")
+
+
 def write_manual_lightweight_outputs(path: Path) -> None:
     """Genera sólo artefactos pequeños; el CSV completo nunca se copia al repositorio."""
 
@@ -331,10 +445,12 @@ def audited_files_section(primary_rows: list[dict[str, str]], technical_rows: li
 
 
 def pilot_eligible(row: dict[str, str]) -> bool:
-    return bool(parse_date(value(row, "fecha")) and value(row, "commodity") and parse_price(value(row, "precio")) is not None and value(row, "fuente") and value(row, "campo_precio_original") and value(row, "campo_precio_original") != "Sin especificar" and value(row, "unidad") and value(row, "unidad") != "Sin especificar")
+    return bool(parse_date(value(row, "fecha")) and value(row, "commodity") and parse_price(value(row, "precio")) is not None and parse_price(value(row, "precio")) > 0 and value(row, "fuente") and value(row, "campo_precio_original") and value(row, "campo_precio_original") != "Sin especificar" and value(row, "unidad") and value(row, "unidad") != "Sin especificar")
 
 
 def dashboard_status(row: dict[str, str], currency_values: list[str], unit_values: list[str]) -> str:
+    if value(row, "precio_valido_para_serie") == "no" or parse_price(value(row, "precio")) in {None, 0}:
+        return "no"
     explicit_currency = value(row, "moneda_explicitamente_informada").lower() in {"sí", "si", "true"} and value(row, "moneda") != "Sin especificar"
     explicit_unit = value(row, "unidad") != "Sin especificar" and bool(value(row, "unidad"))
     pilot_page = "integración piloto una página GetOperaciones" in value(row, "observaciones")
@@ -453,6 +569,9 @@ def main() -> int:
     manual_export_stats_value = manual_export_stats(MANUAL_EXPORT_PROCESSED_PATH) if MANUAL_EXPORT_PROCESSED_PATH.exists() else {"rows": 0, "columns": [], "dates": [], "currencies": [], "units": [], "commodities": []}
     if manual_export_stats_value.get("rows"):
         write_manual_lightweight_outputs(MANUAL_EXPORT_PROCESSED_PATH)
+        zero_metrics = write_zero_audit(MANUAL_EXPORT_PROCESSED_PATH)
+    else:
+        zero_metrics = {"total": 0, "positive": 0, "zero": 0, "missing": 0, "zero_pct": 0.0, "types": Counter(), "dimensions": {}, "originals": Counter()}
     if not rows and not technical_rows and not manual_export_stats_value.get("rows"):
         return no_data()
     if not rows:
@@ -586,6 +705,7 @@ def main() -> int:
     max_date = max(all_dates) if all_dates else None
     min_date = min(all_dates) if all_dates else None
     age = (today - max_date).days if max_date else None
+    positive_prices = sum(1 for item in all_prices if item > 0)
     usable_count = sum(1 for item in series if item["aptitud_dashboard_analitico"] == "Sí")
     updated = [item["commodity"] for item in actuality if item["estado_actualidad"] == "Actualizado"]
     recent = [item["commodity"] for item in actuality if item["estado_actualidad"] in {"Actualizado", "Reciente"}]
@@ -637,11 +757,13 @@ def main() -> int:
     lines = [
         "# Reporte de auditoría de commodities SIO", "", f"Fecha de auditoría: {today.isoformat()}", "", "## Resumen", "",
         *currency_audit_lines,
-        f"- Muestra piloto de una sola página GetOperaciones: {'sí' if pilot_rows else 'no'}; filas piloto: {pilot_rows or 'sin marca piloto'}.", f"- Filas totales: {len(rows)}.", f"- Columnas mapeadas con dato: {', '.join(mapped_columns) or 'ninguna'}.", f"- Columnas faltantes/no separadas: {', '.join(missing_columns) or 'ninguna'}.", f"- Commodities detectados: {', '.join(commodities)}.", f"- Años disponibles: {', '.join(str(item) for item in years) if years else 'ninguno'}.", f"- Meses disponibles: {', '.join(months) if months else 'ninguno'}.", f"- Rango de fechas: {min_date.isoformat() if min_date else 'sin fecha válida'} a {max_date.isoformat() if max_date else 'sin fecha válida'}.", f"- Fecha máxima: {max_date.isoformat() if max_date else 'sin fecha válida'}; días desde último dato: {age if max_date else 'sin fecha válida'}.", f"- Precios válidos: {len(all_prices)}; faltantes: {missing_price}; cero: {zero_price}; negativos: {negative_price}.", f"- Monedas especificadas: {coverage_count(rows, 'moneda')}/{len(rows)}; sin especificar: {len(rows) - coverage_count(rows, 'moneda')}.", f"- Unidades de precio especificadas: {coverage_count(rows, 'unidad')}/{len(rows)}; sin especificar: {len(rows) - coverage_count(rows, 'unidad')}.", f"- Unidades de volumen especificadas: {volume_unit_count}/{len(rows)}; sin especificar: {len(rows) - volume_unit_count}.", f"- Campos originales de precio: {', '.join(price_field_values) or 'ninguno'}; campos originales de volumen: {', '.join(volume_field_values) or 'ninguno'}.", f"- Precio unitario con dato: {price_unit_count}; precio total con dato: {price_total_count}; inconsistencias detectadas: {inconsistent_price}.", f"- Volumen con dato numérico: {volume_valid}; procedencia con dato: {coverage_count(rows, 'procedencia')}; lugar de entrega (zona) con dato: {coverage_count(rows, 'zona')}; condición de pago con dato: {coverage_count(rows, 'condicion_pago')}.", f"- apto_piloto: {'sí' if pilot_eligible_count == len(rows) else 'no'} ({pilot_eligible_count}/{len(rows)} filas).", f"- apto_dashboard: {'sí' if dashboard_eligible_count == len(rows) else 'no'} ({dashboard_eligible_count}/{len(rows)} filas).", f"- Series utilizables para dashboard analítico futuro: {usable_count} de {len(series)}.", "",
+        f"- Muestra piloto de una sola página GetOperaciones: {'sí' if pilot_rows else 'no'}; filas piloto: {pilot_rows or 'sin marca piloto'}.", f"- Filas totales: {len(rows)}.", f"- Columnas mapeadas con dato: {', '.join(mapped_columns) or 'ninguna'}.", f"- Columnas faltantes/no separadas: {', '.join(missing_columns) or 'ninguna'}.", f"- Commodities detectados: {', '.join(commodities)}.", f"- Años disponibles: {', '.join(str(item) for item in years) if years else 'ninguno'}.", f"- Meses disponibles: {', '.join(months) if months else 'ninguno'}.", f"- Rango de fechas: {min_date.isoformat() if min_date else 'sin fecha válida'} a {max_date.isoformat() if max_date else 'sin fecha válida'}.", f"- Fecha máxima: {max_date.isoformat() if max_date else 'sin fecha válida'}; días desde último dato: {age if max_date else 'sin fecha válida'}.", f"- Precios válidos: {len(all_prices)}; faltantes: {missing_price}; cero: {zero_price}; negativos: {negative_price}.", f"- Precios válidos para serie (positivos): {positive_prices}/{len(rows)}.", f"- Monedas especificadas: {coverage_count(rows, 'moneda')}/{len(rows)}; sin especificar: {len(rows) - coverage_count(rows, 'moneda')}.", f"- Unidades de precio especificadas: {coverage_count(rows, 'unidad')}/{len(rows)}; sin especificar: {len(rows) - coverage_count(rows, 'unidad')}.", f"- Unidades de volumen especificadas: {volume_unit_count}/{len(rows)}; sin especificar: {len(rows) - volume_unit_count}.", f"- Campos originales de precio: {', '.join(price_field_values) or 'ninguno'}; campos originales de volumen: {', '.join(volume_field_values) or 'ninguno'}.", f"- Precio unitario con dato: {price_unit_count}; precio total con dato: {price_total_count}; inconsistencias detectadas: {inconsistent_price}.", f"- Volumen con dato numérico: {volume_valid}; procedencia con dato: {coverage_count(rows, 'procedencia')}; lugar de entrega (zona) con dato: {coverage_count(rows, 'zona')}; condición de pago con dato: {coverage_count(rows, 'condicion_pago')}.", f"- apto_piloto: {'sí' if pilot_eligible_count == len(rows) else 'no'} ({pilot_eligible_count}/{len(rows)} filas).", f"- apto_dashboard: {'sí' if dashboard_eligible_count == len(rows) else 'no'} ({dashboard_eligible_count}/{len(rows)} filas).", f"- Series utilizables para dashboard analítico futuro: {usable_count} de {len(series)}.", "",
     ]
     if warnings:
         lines.extend(["## Advertencias", "", *[f"- {warning}" for warning in warnings], ""])
     lines.extend([files_section, technical_section, manual_export_section])
+    if zero_metrics["total"]:
+        lines.extend(["## Precios cero y aptitud analítica", "", f"La exportación manual contiene {zero_metrics['zero']} precio(s) cero sobre {zero_metrics['total']} fila(s) ({zero_metrics['zero_pct']:.2f}%). Los ceros se conservan para trazabilidad, pero sólo las filas con `precio_valido_para_serie=sí` pueden alimentar series, promedios, rankings o semáforos.", f"Clasificación principal: {', '.join(f'{name}={count}' for name, count in zero_metrics['types'].most_common())}.", "La base no se considera plenamente apta para indicadores de precio hasta aplicar este filtro y revisar los casos cero.", ""])
     lines.extend(["## Moneda y comparabilidad", "", f"Moneda explícitamente informada: {'sí' if currency_explicit_count else 'no'} ({currency_explicit_count}/{len(rows)} filas). Moneda inferida: {'sí' if currency_inferred_count else 'no'} ({currency_inferred_count}/{len(rows)} filas). Moneda sin especificar: {'sí' if currency_unspecified_count else 'no'} ({currency_unspecified_count}/{len(rows)} filas).", f"Comparabilidad monetaria: {'sí' if currency_explicit_count and len(currency_counts) == 1 and not currency_inferred_count and not currency_unspecified_count else 'no'}.", "Los valores no deben compararse ni usarse para variaciones monetarias mientras la moneda permanezca embebida o no informada explícitamente. La auditoría conserva `moneda=Sin especificar` y no habilita `apto_dashboard`.", ""])
     lines.extend([
         "## Actualidad de la información", "", f"Fecha máxima disponible: {max_date.isoformat() if max_date else 'sin fecha válida'}.", f"Días desde el último dato: {age if age is not None else 'sin fecha válida'}.", f"Commodities actualizados (últimos 7 días): {', '.join(updated) if updated else 'ninguno'}.", f"Commodities recientes o actualizados (últimos 30 días): {', '.join(recent) if recent else 'ninguno'}.", f"Commodities sin dato reciente: {', '.join(no_recent) if no_recent else 'ninguno'}.", f"Cobertura últimos 7 días: {sum(int(item['registros_ultimos_7_dias']) for item in actuality)} registro(s). Cobertura últimos 30 días: {sum(int(item['registros_ultimos_30_dias']) for item in actuality)} registro(s).", "", markdown_table(["Commodity", "Fecha máxima", "Días", "Últimos 7 días", "Últimos 30 días", "Estado"], [[item["commodity"], item["fecha_max"] or "—", item["dias_desde_ultimo_dato"] or "—", item["registros_ultimos_7_dias"], item["registros_ultimos_30_dias"], item["estado_actualidad"]] for item in actuality]), "",

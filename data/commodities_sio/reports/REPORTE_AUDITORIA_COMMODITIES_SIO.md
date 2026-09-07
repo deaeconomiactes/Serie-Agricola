@@ -21,6 +21,7 @@ Fecha de auditoría: 2026-09-07
 - Rango de fechas: 2026-09-04 a 2026-09-04.
 - Fecha máxima: 2026-09-04; días desde último dato: 3.
 - Precios válidos: 15; faltantes: 0; cero: 0; negativos: 0.
+- Precios válidos para serie (positivos): 15/15.
 - Monedas especificadas: 15/15; sin especificar: 0.
 - Unidades de precio especificadas: 15/15; sin especificar: 0.
 - Unidades de volumen especificadas: 15/15; sin especificar: 0.
@@ -55,6 +56,12 @@ La exportación manual es una tercera salida separada y no reemplaza `COMMODITIE
 - Duplicados por ID: 0.
 - Aptitud piloto: 396971/396971; aptitud dashboard: 0/396971.
 - Diferencia frente a GetOperaciones: proviene de un archivo descargado manualmente; requiere validar columnas, moneda, unidad, cobertura y licencia antes de cualquier automatización o publicación.
+
+## Precios cero y aptitud analítica
+
+La exportación manual contiene 40796 precio(s) cero sobre 396971 fila(s) (10.28%). Los ceros se conservan para trazabilidad, pero sólo las filas con `precio_valido_para_serie=sí` pueden alimentar series, promedios, rankings o semáforos.
+Clasificación principal: cero_explicito=34920, operacion_sin_precio=5876.
+La base no se considera plenamente apta para indicadores de precio hasta aplicar este filtro y revisar los casos cero.
 
 ## Moneda embebida en campo de precio
 
