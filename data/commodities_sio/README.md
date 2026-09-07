@@ -17,6 +17,13 @@ SIO no se presume equivalente a los precios de pizarra BCR. La información debe
 
 La exploración inicial usa los últimos 30 días. Las consultas se dividen en ventanas de hasta 180 días. No se realizan llamadas externas por defecto: sólo `--allow-web` habilita una exploración pública controlada con timeout, User-Agent explícito y límite de requests.
 
+## Salidas procesadas
+
+- `COMMODITIES_SIO_INTEGRADO.csv`: integración piloto principal, generada sólo a partir de respuestas base no paginadas.
+- `COMMODITIES_SIO_MUESTRA_PAGINADA.csv`: muestra técnica de paginación, separada para diagnosticar requests, páginas y duplicados.
+
+Las pruebas paginadas no deben pisar el CSV principal. Si la paginación está duplicada, la muestra técnica no es apta para dashboard y se conserva exclusivamente como evidencia de diagnóstico.
+
 ## Flujo recomendado
 
 1. Copiar `sio_config.example.json` como `sio_config.json` sólo si se validaron las URLs públicas que se usarán.

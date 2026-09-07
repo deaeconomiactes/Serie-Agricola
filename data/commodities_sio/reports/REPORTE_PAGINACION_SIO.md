@@ -66,15 +66,16 @@ La evidencia más fuerte identifica `pPageSize`/`pCurrentPage`, pero la prueba c
 
 ## Resultado de integración
 
-- Filas leídas antes de deduplicar: 195.
-- Archivos procesados: 14.
+- Filas leídas antes de deduplicar: 180.
+- Archivos procesados: 12.
 - Páginas procesadas: 3.
 - Duplicados exactos eliminados: 151; con ID: 151; por Row: 151.
 - Conflictos conservados para revisión: 0.
-- Filas finales: 44.
+- Filas finales: 29.
+- Salida técnica: `data/commodities_sio/processed/COMMODITIES_SIO_MUESTRA_PAGINADA.csv`; no reemplaza `COMMODITIES_SIO_INTEGRADO.csv`.
 - Estado derivado de paginación: duplicada.
 - Observación: paginación no validada; páginas repetidas.
-- Columnas principales: fecha, año, mes, commodity, fuente, tipo_precio, precio_tipo_original, precio_unidad, campo_precio_original, valor_precio_original, precio_original_texto, moneda, moneda_explicitamente_informada, moneda_inferida, campo_moneda_original, valor_moneda_original, unidad, precio, volumen, volumen_unidad, campo_volumen_original, procedencia, zona, lugar_entrega, operacion, condicion_pago, archivo_origen, fecha_integracion, observaciones, apto_piloto, apto_dashboard, pagina_origen, id_operacion_sio, muestra_tipo, muestra_paginas.
+- Columnas principales: fecha, año, mes, commodity, fuente, tipo_precio, precio_tipo_original, precio_unidad, campo_precio_original, valor_precio_original, precio_original_texto, moneda, moneda_explicitamente_informada, moneda_inferida, campo_moneda_original, valor_moneda_original, unidad, precio, volumen, volumen_unidad, campo_volumen_original, procedencia, zona, lugar_entrega, operacion, condicion_pago, archivo_origen, fecha_integracion, observaciones, apto_piloto, apto_dashboard, pagina_origen, id_operacion_sio, muestra_tipo, muestra_paginas, estado_paginacion.
 ## Paginación y duplicados
 
 - Páginas procesadas: 3.

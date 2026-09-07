@@ -20,6 +20,7 @@ CATALOG_PATH = ROOT / "data" / "commodities_sio" / "catalogo_productos_sio.csv"
 MAPPING_LOCAL_PATH = ROOT / "data" / "commodities_sio" / "mapeo_getoperaciones_sio.local.json"
 MAPPING_EXAMPLE_PATH = ROOT / "data" / "commodities_sio" / "mapeo_getoperaciones_sio.example.json"
 OUTPUT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_INTEGRADO.csv"
+PAGINATED_OUTPUT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_MUESTRA_PAGINADA.csv"
 PAGINATED_REPORT_PATH = ROOT / "data" / "commodities_sio" / "reports" / "REPORTE_MUESTRA_PAGINADA_SIO.md"
 PAGINATION_REPORT_PATH = ROOT / "data" / "commodities_sio" / "reports" / "REPORTE_PAGINACION_SIO.md"
 OUTPUT_COLUMNS = [
@@ -27,7 +28,7 @@ OUTPUT_COLUMNS = [
     "precio_tipo_original", "precio_unidad", "precio_total", "campo_precio_original", "valor_precio_original", "precio_original_texto", "moneda", "moneda_explicitamente_informada", "moneda_inferida", "campo_moneda_original", "valor_moneda_original", "unidad", "precio", "volumen", "volumen_unidad", "campo_volumen_original", "procedencia",
     "provincia", "localidad", "zona", "lugar_entrega", "precio_puesto_en", "operacion",
     "condicion_pago", "condicion_comercial", "frecuencia", "archivo_origen",
-    "fecha_integracion", "observaciones", "apto_piloto", "apto_dashboard", "pagina_origen", "id_operacion_sio", "muestra_tipo", "muestra_paginas",
+    "fecha_integracion", "observaciones", "apto_piloto", "apto_dashboard", "pagina_origen", "id_operacion_sio", "muestra_tipo", "muestra_paginas", "estado_paginacion",
 ]
 EXTENSIONS = {".json", ".csv", ".xlsx", ".xls", ".html", ".htm"}
 NON_REAL_MARKERS = ("plantilla", "simul", "prueba", "ejemplo", "sample")
@@ -355,7 +356,7 @@ def first_text(source: dict[str, Any], *names: str) -> str:
     return text(value_for(source, *names))
 
 
-def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[int, dict[str, Any]] | None, sample_pages: int) -> tuple[list[dict[str, str]], dict[str, Any]]:
+def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[int, dict[str, Any]] | None, sample_pages: int, pagination_status: str = "no_aplica") -> tuple[list[dict[str, str]], dict[str, Any]]:
     source_rows, columns = read_file(path)
     rows: list[dict[str, str]] = []
     dates: list[date] = []
@@ -489,6 +490,7 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
             "id_operacion_sio": source_id or first_text(source, "id_operacion_sio", "ID"),
             "muestra_tipo": sample_type,
             "muestra_paginas": str(sample_pages),
+            "estado_paginacion": pagination_status if sample_type == "paginacion_controlada" else "no_aplica",
             "_row_signature": raw_row_signature,
         })
         row_signatures.append(raw_row_signature)
@@ -502,7 +504,7 @@ def real_files() -> list[Path]:
 
 
 def row_signature(row: dict[str, str]) -> tuple[str, ...]:
-    excluded = {"archivo_origen", "fecha_integracion", "observaciones", "pagina_origen", "muestra_paginas", "muestra_tipo"}
+    excluded = {"archivo_origen", "fecha_integracion", "observaciones", "pagina_origen", "muestra_paginas", "muestra_tipo", "estado_paginacion"}
     return tuple(str(row.get(column, "")) for column in OUTPUT_COLUMNS if column not in excluded)
 
 
@@ -546,7 +548,7 @@ def update_paginated_report(files: list[Path], diagnostics: list[dict[str, Any]]
     duplicate_by_row = sum(1 for item in duplicates if "Row" in item.get("tipo", ""))
     warning = "paginación no validada; páginas repetidas" if pagination_status == "duplicada" else "sin advertencia de repetición completa de páginas"
     integration_section = "\n".join([
-        "## Resultado de integración", "", f"- Filas leídas antes de deduplicar: {total_read}.", f"- Archivos procesados: {len(files)}.", f"- Páginas procesadas: {page_count}.", f"- Duplicados exactos eliminados: {len(duplicates)}; con ID: {duplicate_by_id}; por Row: {duplicate_by_row}.", f"- Conflictos conservados para revisión: {len(conflicts)}.", f"- Filas finales: {len(rows)}.", f"- Estado derivado de paginación: {pagination_status}.", f"- Observación: {warning}.", f"- Columnas principales: {', '.join(columns)}.", "",
+        "## Resultado de integración", "", f"- Filas leídas antes de deduplicar: {total_read}.", f"- Archivos procesados: {len(files)}.", f"- Páginas procesadas: {page_count}.", f"- Duplicados exactos eliminados: {len(duplicates)}; con ID: {duplicate_by_id}; por Row: {duplicate_by_row}.", f"- Conflictos conservados para revisión: {len(conflicts)}.", f"- Filas finales: {len(rows)}.", f"- Salida técnica: `data/commodities_sio/processed/{PAGINATED_OUTPUT_PATH.name}`; no reemplaza `COMMODITIES_SIO_INTEGRADO.csv`.", f"- Estado derivado de paginación: {pagination_status}.", f"- Observación: {warning}.", f"- Columnas principales: {', '.join(columns)}.", "",
     ])
     for report_path in report_paths:
         report = report_path.read_text(encoding="utf-8")
@@ -555,63 +557,54 @@ def update_paginated_report(files: list[Path], diagnostics: list[dict[str, Any]]
         report_path.write_text(report, encoding="utf-8")
 
 
-def remove_output() -> None:
-    if OUTPUT_PATH.exists():
-        OUTPUT_PATH.unlink()
-
-
-def write_output(rows: list[dict[str, str]]) -> None:
+def write_output(path: Path, rows: list[dict[str, str]]) -> None:
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
-    with OUTPUT_PATH.open("w", encoding="utf-8-sig", newline="") as handle:
+    with path.open("w", encoding="utf-8-sig", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=OUTPUT_COLUMNS, delimiter=";", extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
 
 
-def main() -> int:
-    files = real_files()
-    if not files:
-        remove_output()
-        print("No hay archivos reales de SIO Granos en data/commodities_sio/raw/.")
-        print("No hay datos integrados ni se generan reportes vacíos.")
-        return 0
-    aliases = read_aliases()
-    positional_mapping, mapping_status = load_positional_mapping()
-    print(f"Mapeo posicional: {mapping_status}")
-    page_files = [path for path in files if re.search(r"page[_-]\d+", path.stem, flags=re.I)]
-    page_numbers = {int(match.group(1)) for path in page_files if (match := re.search(r"page[_-](\d+)", path.stem, flags=re.I))}
-    sample_pages = len(page_numbers) or 1
-    all_rows: list[dict[str, str]] = []
-    diagnostics_by_file: list[dict[str, Any]] = []
+def is_paginated_file(path: Path) -> bool:
+    return bool(re.search(r"page[_-]\d+", path.stem, flags=re.I))
+
+
+def process_group(files: list[Path], aliases: dict[str, str], positional_mapping: dict[int, dict[str, Any]] | None, sample_pages: int, pagination_status: str) -> tuple[list[dict[str, str]], list[dict[str, Any]], int]:
+    rows_all: list[dict[str, str]] = []
+    diagnostics_all: list[dict[str, Any]] = []
     errors = 0
     for path in files:
         try:
-            rows, diagnostics = process_file(path, aliases, positional_mapping, sample_pages)
-            all_rows.extend(rows)
-            diagnostics_by_file.append(diagnostics)
+            rows, diagnostics = process_file(path, aliases, positional_mapping, sample_pages, pagination_status)
+            rows_all.extend(rows)
+            diagnostics_all.append(diagnostics)
             print(f"Archivo procesado: {path.name}")
-            print(f"  Columnas detectadas: {', '.join(diagnostics['columns']) or '(JSON/estructura anidada)'}")
-            print(f"  Commodities detectados: {', '.join(diagnostics['commodities']) or 'sin identificar'}")
             print(f"  Filas leídas: {diagnostics['read']}; filas integradas: {diagnostics['integrated']}")
             if diagnostics["positional_skipped"]:
                 print(f"  Filas Row posicionales omitidas: {diagnostics['positional_skipped']}")
             if diagnostics["positional_applied"]:
                 print(f"  Filas Row con mapeo validado aplicado: {diagnostics['positional_applied']}")
-            print(f"  Precio mínimo: {min(diagnostics['prices']):g}" if diagnostics["prices"] else "  Precio mínimo: sin precio válido")
-            print(f"  Precio máximo: {max(diagnostics['prices']):g}" if diagnostics["prices"] else "  Precio máximo: sin precio válido")
-            print(f"  Fecha mínima: {min(diagnostics['dates']).isoformat()}" if diagnostics["dates"] else "  Fecha mínima: sin fecha válida")
-            print(f"  Fecha máxima: {max(diagnostics['dates']).isoformat()}" if diagnostics["dates"] else "  Fecha máxima: sin fecha válida")
-            if path.suffix.lower() == ".json" and diagnostics["read"] and not diagnostics["integrated"]:
-                print("  Respuesta SIO no mapeable automáticamente: revisar el esquema de filas y no integrar por posición sin validación.")
         except Exception as exc:
             errors += 1
             print(f"ERROR en {path.name}: {exc}")
             print("  Sugerencia: revisar encabezados o conservar la respuesta original para ajustar el mapeo.")
-    if not all_rows:
-        remove_output()
-        print("No se integraron filas válidas de SIO Granos. No se generan reportes vacíos.")
+    return rows_all, diagnostics_all, errors
+
+
+def main() -> int:
+    files = real_files()
+    if not files:
+        print("No hay archivos reales de SIO Granos en data/commodities_sio/raw/.")
+        print("Se preservan las salidas procesadas existentes; no se generan archivos vacíos.")
         return 0
-    page_diagnostics = [item for item in diagnostics_by_file if item.get("page_origin")]
+    aliases = read_aliases()
+    positional_mapping, mapping_status = load_positional_mapping()
+    print(f"Mapeo posicional: {mapping_status}")
+    page_files = [path for path in files if is_paginated_file(path)]
+    base_files = [path for path in files if not is_paginated_file(path)]
+    page_numbers = {int(match.group(1)) for path in page_files if (match := re.search(r"page[_-](\d+)", path.stem, flags=re.I))}
+    sample_pages = len(page_numbers) or 1
+    technical_rows_unchecked, page_diagnostics, page_errors = process_group(page_files, aliases, positional_mapping, sample_pages, "no_probada")
     page_signature_groups = {str(item["page_origin"]): item.get("row_signatures", []) for item in page_diagnostics if item.get("row_signatures")}
     first_page_signatures = next(iter(page_signature_groups.values()), [])
     pagination_status = "no_probada"
@@ -619,19 +612,32 @@ def main() -> int:
         pagination_status = "duplicada" if first_page_signatures and all(signatures == first_page_signatures for signatures in page_signature_groups.values()) else "parcial"
     elif page_signature_groups:
         pagination_status = "parcial"
-    integrated_rows, duplicates, conflicts = deduplicate_rows(all_rows)
+    base_rows_unchecked, base_diagnostics, base_errors = process_group(base_files, aliases, positional_mapping, 1, "no_aplica")
+    base_rows, base_duplicates, base_conflicts = deduplicate_rows(base_rows_unchecked)
+    technical_rows, duplicates, conflicts = deduplicate_rows(technical_rows_unchecked)
     if pagination_status == "duplicada":
-        for row in integrated_rows:
-            if row.get("muestra_tipo") == "paginacion_controlada":
-                note = "paginación no validada; páginas repetidas"
-                row["observaciones"] = "; ".join(dict.fromkeys(filter(None, [row.get("observaciones", ""), note])))
-    write_output(integrated_rows)
-    update_paginated_report(files, diagnostics_by_file, integrated_rows, duplicates, conflicts, sample_pages, pagination_status)
+        for row in technical_rows:
+            row["estado_paginacion"] = "duplicada"
+            note = "paginación no validada; páginas repetidas"
+            row["observaciones"] = "; ".join(dict.fromkeys(filter(None, [row.get("observaciones", ""), note])))
+    elif technical_rows:
+        for row in technical_rows:
+            row["estado_paginacion"] = pagination_status
+    if base_rows:
+        write_output(OUTPUT_PATH, base_rows)
+        print(f"Integración piloto principal: {len(base_rows)} filas en {OUTPUT_PATH}")
+    else:
+        print("No se encontraron filas piloto base; se preserva COMMODITIES_SIO_INTEGRADO.csv existente.")
+    if technical_rows:
+        write_output(PAGINATED_OUTPUT_PATH, technical_rows)
+        print(f"Muestra paginada técnica: {len(technical_rows)} filas en {PAGINATED_OUTPUT_PATH}")
+    update_paginated_report(page_files, page_diagnostics, technical_rows, duplicates, conflicts, sample_pages, pagination_status)
+    errors = page_errors + base_errors
+    print(f"Piloto base: duplicados exactos={len(base_duplicates)}; conflictos={len(base_conflicts)}")
     print(f"Duplicados exactos eliminados: {len(duplicates)}; conflictos conservados: {len(conflicts)}")
     print(f"Estado de paginación: {pagination_status}.")
     if pagination_status == "duplicada":
         print("Advertencia: paginación no validada; páginas repetidas. Se conservan sólo registros únicos con trazabilidad.")
-    print(f"Integración SIO finalizada: {len(integrated_rows)} filas en {OUTPUT_PATH}")
     return 1 if errors else 0
 
 
