@@ -1,0 +1,12 @@
+﻿commodity;moneda;filas;precios_validos;precios_cero;monedas;unidades;fecha_min;fecha_max
+ARROZ C.L.A;Sin especificar;20;20;20;;TN;2026-03-16;2026-08-21
+ARROZ C.L.F;Sin especificar;85;85;85;;TN;2026-03-16;2026-09-07
+CEBADA CERV.;Sin especificar;289;289;289;;TN;2026-03-13;2026-09-07
+CEBADA FORR.;Sin especificar;227;227;227;;TN;2026-03-13;2026-09-04
+Girasol;Sin especificar;1048;1048;1048;;TN;2026-03-12;2026-09-04
+Maíz;ARS;1;1;1;ARS;TN;2026-08-21;2026-08-21
+Maíz;Sin especificar;14293;14293;14293;;TN;2026-03-12;2026-09-07
+Soja;Sin especificar;18413;18413;18413;;TN;2026-03-12;2026-09-07
+Sorgo;Sin especificar;398;398;398;;TN;2026-03-16;2026-09-03
+TRIGO CAND.;Sin especificar;57;57;57;;TN;2026-03-13;2026-09-04
+TRIGO PAN;Sin especificar;5965;5965;5965;;TN;2026-03-13;2026-09-07

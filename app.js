@@ -8,6 +8,7 @@ const MONTHS_FULL = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Jul
 const CSV_PATH = 'REGISTRO 2025 INTEGRADO.csv';
 const PRICE_CSV_PATH = 'PRECIOS_MAYORISTAS_INTEGRADO.csv';
 const PRICE_CSV_FALLBACK_PATH = 'PRECIOS_MAYORISTAS_2026_INTEGRADO.csv';
+const COMMODITY_DASHBOARD_PATH = 'data/commodities_sio/dashboard/';
 
 // Canonical names used by filters, aggregations and chart data. The keys are
 // compact location keys so accents, punctuation and spacing cannot create
@@ -306,6 +307,10 @@ let selectedYear = '2025';
 const selectedUnit = 'TN';
 let quantityFrequency = 'mensual';
 let priceFrequency = 'mensual';
+let commodityFrequency = 'mensual';
+let commodityData = { diario: [], mensual: [], ultimos: [], resumen: [], semaforo: [] };
+let commoditySelectedValues = [];
+const commodityCharts = { trend: null, ranking: null, volume: null };
 
 // ─── Boot ───────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', init);
@@ -325,6 +330,13 @@ async function init() {
     } catch (e) {
         console.error('Error loading wholesale price CSV:', e);
         setPriceStatus('No se pudo cargar la base de precios mayoristas.', true);
+    }
+    try {
+        await loadCommodityData();
+    } catch (e) {
+        console.error('Error loading SIO commodity dashboard CSV:', e);
+        setCommodityDataStatus('No se pudo cargar el módulo de commodities.', 'error');
+        renderCommodityEmptyState();
     }
     hideLoading();
 }
@@ -1433,6 +1445,379 @@ function priceChartOptions(axisLabel, horizontal = false) {
     options.scales.y.ticks.callback = horizontal ? function(value) { return this.getLabelForValue(value); } : value => formatCurrency(value);
     options.plugins.tooltip = { ...tooltipConfig(), callbacks: { label: context => ` ${formatCurrency(context.parsed.y ?? context.parsed.x)}` } };
     return options;
+}
+
+// ─── Independent agricultural commodities module ───────────────────────
+async function loadCommodityData() {
+    const files = { diario: 'COMMODITIES_SIO_DASHBOARD_DIARIO.csv', mensual: 'COMMODITIES_SIO_DASHBOARD_MENSUAL.csv', ultimos: 'COMMODITIES_SIO_DASHBOARD_ULTIMOS.csv', resumen: 'COMMODITIES_SIO_DASHBOARD_RESUMEN.csv', semaforo: 'COMMODITIES_SIO_DASHBOARD_SEMAFORO.csv' };
+    const entries = await Promise.all(Object.entries(files).map(async ([key, file]) => {
+        const response = await fetch(`${COMMODITY_DASHBOARD_PATH}${file}`);
+        if (!response.ok) throw new Error(`${file}: HTTP ${response.status}`);
+        return [key, parseCommodityCSV(await response.text())];
+    }));
+    commodityData = Object.fromEntries(entries);
+    initCommodityFilters();
+    updateCommodityDashboard();
+    const summary = commodityData.resumen[0] || {};
+    const sampleMode = summary.modo === 'muestra';
+    setCommodityDataStatus(`${sampleMode ? 'Muestra de respaldo' : 'Base analítica'} · ${formatNumber(Number(summary.filas_analiticas) || 0)} operaciones`, sampleMode ? 'sample' : 'ready');
+}
+
+function parseCommodityCSV(text) {
+    const clean = String(text || '').replace(/^\uFEFF/, '').trim();
+    if (!clean) return [];
+    const lines = clean.split(/\r?\n/);
+    const headers = parseDelimitedLine(lines[0], ';').map(normalizeCommodityHeader);
+    return lines.slice(1).filter(line => line.trim()).map(line => {
+        const values = parseDelimitedLine(line, ';');
+        return headers.reduce((row, header, index) => { row[header] = values[index] ?? ''; return row; }, {});
+    });
+}
+
+function normalizeCommodityHeader(value) {
+    return String(value || '').trim().toLocaleLowerCase('es-AR').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+}
+
+function commodityNumber(value) {
+    const source = String(value ?? '').trim().replace(/\s/g, '');
+    if (!source) return null;
+    const scientific = /^[-+]?\d+(?:\.\d+)?e[-+]?\d+$/i.test(source);
+    const raw = source.replace(/[^0-9,.\-eE+]/g, '');
+    if (!raw) return null;
+    const normalized = scientific
+        ? raw
+        : raw.includes(',') && raw.includes('.')
+            ? raw.replace(/\./g, '').replace(',', '.')
+            : raw.includes(',')
+                ? raw.replace(',', '.')
+                : raw;
+    const number = Number(normalized);
+    return Number.isFinite(number) ? number : null;
+}
+
+function commodityFilterValues(id) {
+    if (id === 'commodityFilterCommodity') return commoditySelectedValues.length ? [...commoditySelectedValues] : ['TODOS'];
+    const value = document.getElementById(id)?.value || 'TODOS';
+    return [value];
+}
+
+function setCommodityFilterHint(message = '', warning = false) {
+    const hint = document.getElementById('commodityFilterCommodityHint');
+    if (!hint) return;
+    hint.textContent = message || 'Todos los commodities · seleccioná hasta 3 para comparar';
+    hint.classList.toggle('is-warning', warning);
+}
+
+function updateCommodityMultiSummary() {
+    const control = document.getElementById('commodityFilterCommodity');
+    const summary = document.getElementById('commodityFilterCommoditySummary');
+    const menu = document.getElementById('commodityFilterCommodityMenu');
+    if (!control || !summary || !menu) return;
+    summary.textContent = commoditySelectedValues.length ? commoditySelectedValues.slice(0, 2).join(', ') + (commoditySelectedValues.length > 2 ? ` +${commoditySelectedValues.length - 2}` : '') : 'Todos';
+    menu.querySelectorAll('input[data-commodity-value]').forEach(input => {
+        const value = input.dataset.commodityValue;
+        const selected = value === 'TODOS' ? commoditySelectedValues.length === 0 : commoditySelectedValues.includes(value);
+        input.checked = selected;
+        input.closest('.commodity-multi-option')?.classList.toggle('is-selected', selected);
+        const checkbox = input.closest('.commodity-multi-option')?.querySelector('.commodity-multi-checkbox');
+        if (checkbox) checkbox.textContent = selected ? '✓' : '';
+    });
+}
+
+function populateCommodityMultiSelect(values) {
+    const control = document.getElementById('commodityFilterCommodity');
+    const menu = document.getElementById('commodityFilterCommodityMenu');
+    const trigger = document.getElementById('commodityFilterCommodityTrigger');
+    if (!control || !menu || !trigger) return;
+    const unique = [...new Set(values.filter(value => String(value || '').trim()))].sort((a, b) => String(a).localeCompare(String(b), 'es'));
+    const initialized = control.dataset.initialized === 'true';
+    commoditySelectedValues = initialized ? commoditySelectedValues.filter(value => unique.includes(value)).slice(0, 3) : [];
+    menu.innerHTML = [
+        { value: 'TODOS', label: 'Todos los commodities' },
+        ...unique.map(value => ({ value, label: value })),
+    ].map(option => `<label class="commodity-multi-option"><input type="checkbox" data-commodity-value="${escapeHtml(option.value)}"><span class="commodity-multi-checkbox" aria-hidden="true"></span><span class="commodity-multi-option-label">${escapeHtml(option.label)}</span></label>`).join('');
+    if (!control.dataset.commodityBound) {
+        trigger.addEventListener('click', () => {
+            const isOpen = control.classList.toggle('is-open');
+            trigger.setAttribute('aria-expanded', String(isOpen));
+        });
+        menu.addEventListener('change', event => {
+            const input = event.target.closest('input[data-commodity-value]');
+            if (!input) return;
+            const value = input.dataset.commodityValue;
+            if (value === 'TODOS') {
+                if (input.checked) commoditySelectedValues = [];
+                else input.checked = true;
+                setCommodityFilterHint();
+            } else if (input.checked) {
+                if (commoditySelectedValues.length >= 3 && !commoditySelectedValues.includes(value)) {
+                    input.checked = false;
+                    setCommodityFilterHint('Máximo 3 commodities por comparación.', true);
+                    updateCommodityMultiSummary();
+                    return;
+                }
+                commoditySelectedValues = [...commoditySelectedValues.filter(item => item !== value), value];
+                setCommodityFilterHint();
+            } else {
+                commoditySelectedValues = commoditySelectedValues.filter(item => item !== value);
+                setCommodityFilterHint();
+            }
+            updateCommodityMultiSummary();
+            updateCommodityDashboard();
+        });
+        document.addEventListener('click', event => {
+            if (!control.contains(event.target)) {
+                control.classList.remove('is-open');
+                trigger.setAttribute('aria-expanded', 'false');
+            }
+        });
+        control.dataset.commodityBound = 'true';
+    }
+    control.dataset.initialized = 'true';
+    updateCommodityMultiSummary();
+}
+
+function populateCommoditySelect(id, values, allLabel, defaultValue) {
+    const select = document.getElementById(id);
+    if (!select) return;
+    const unique = [...new Set(values.filter(value => String(value || '').trim()))].sort((a, b) => String(a).localeCompare(String(b), 'es'));
+    if (id === 'commodityFilterCommodity') {
+        populateCommodityMultiSelect(unique);
+        return;
+    }
+    const initialized = select.dataset.initialized === 'true';
+    const previous = initialized ? select.value : defaultValue;
+    select.innerHTML = `<option value="TODOS">${allLabel}</option>`;
+    unique.forEach(value => { const option = new Option(value, value); select.appendChild(option); });
+    select.value = previous === 'TODOS' || unique.includes(previous) ? previous : defaultValue;
+    if (select.value !== 'TODOS' && !unique.includes(select.value)) select.value = unique[0] || 'TODOS';
+    select.dataset.initialized = 'true';
+    if (!select.dataset.commodityBound) {
+        select.addEventListener('change', updateCommodityDashboard);
+        select.dataset.commodityBound = 'true';
+    }
+}
+
+function initCommodityFilters() {
+    const optionRows = [...commodityData.mensual, ...commodityData.diario, ...commodityData.ultimos];
+    const currencies = [...new Set(optionRows.map(row => row.moneda).filter(Boolean))];
+    const units = [...new Set(optionRows.map(row => row.unidad).filter(Boolean))];
+    populateCommoditySelect('commodityFilterCommodity', optionRows.map(row => row.commodity), 'Todos', 'TODOS');
+    populateCommoditySelect('commodityFilterCurrency', currencies, 'Todas', currencies[0] || 'TODOS');
+    populateCommoditySelect('commodityFilterUnit', units, 'Todas', units[0] || 'TODOS');
+    populateCommoditySelect('commodityFilterType', optionRows.map(row => row.tipo_precio), 'Todos', 'TODOS');
+    const frequency = document.getElementById('commodityFilterFrequency');
+    if (frequency && !frequency.dataset.commodityBound) {
+        frequency.value = commodityFrequency;
+        frequency.addEventListener('change', () => { commodityFrequency = frequency.value; updateCommodityDashboard(); });
+        frequency.dataset.commodityBound = 'true';
+    }
+}
+
+function commodityRowMatches(row) {
+    return [['commodityFilterCommodity', 'commodity'], ['commodityFilterCurrency', 'moneda'], ['commodityFilterUnit', 'unidad'], ['commodityFilterType', 'tipo_precio']].every(([filterId, field]) => {
+        const selected = commodityFilterValues(filterId);
+        return selected.includes('TODOS') || selected.includes(String(row[field] || ''));
+    });
+}
+
+function getCommodityFilteredRows() {
+    const rows = commodityFrequency === 'diaria' ? commodityData.diario : commodityData.mensual;
+    return rows.filter(commodityRowMatches).filter(row => {
+        const price = commodityNumber(row.precio_mediana);
+        return Number.isFinite(price) && price > 0;
+    });
+}
+
+function getCommodityLatestRows() {
+    return commodityData.ultimos.filter(commodityRowMatches).filter(row => {
+        const price = commodityNumber(row.precio_mediana_ultimo_dia);
+        return Number.isFinite(price) && price > 0;
+    });
+}
+
+function setCommodityDataStatus(message, state = '') {
+    const status = document.getElementById('commodityDataStatus');
+    if (!status) return;
+    status.textContent = message;
+    status.classList.remove('is-ready', 'is-error');
+    if (state === 'ready' || state === 'sample') status.classList.add('is-ready');
+    if (state === 'error') status.classList.add('is-error');
+}
+
+function commodityPeriodLabel(value) {
+    const raw = String(value || '');
+    if (/^\d{4}-\d{2}$/.test(raw)) return `${MONTHS[Number(raw.slice(5, 7)) - 1]} ${raw.slice(0, 4)}`;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return `${raw.slice(8, 10)}/${raw.slice(5, 7)}/${raw.slice(0, 4)}`;
+    return raw || 'Sin dato';
+}
+
+function commodityPercent(value) {
+    const number = commodityNumber(value);
+    return Number.isFinite(number) ? `${formatNumber(number)}%` : '–';
+}
+
+function commodityStateClass(state) {
+    return String(state || 'Sin dato').toLocaleLowerCase('es-AR').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-');
+}
+
+function commoditySeriesKey(row, includeCondition = false) {
+    return [row.commodity, row.moneda, row.unidad, row.tipo_precio, includeCondition ? row.condicion_comercial : ''].join('|');
+}
+
+function commoditySeriesLabel(row, includeCondition = false) {
+    const parts = [row.commodity, row.moneda, row.unidad, row.tipo_precio];
+    if (includeCondition && row.condicion_comercial && row.condicion_comercial !== 'Sin especificar') parts.push(row.condicion_comercial);
+    return parts.filter(Boolean).join(' · ');
+}
+
+function commodityChartOptions(type = 'line') {
+    const options = type === 'bar' ? defaultBarOptions(false) : defaultLineOptions();
+    options.plugins.tooltip = { ...tooltipConfig(), callbacks: { label: context => {
+        const value = context.chart.options.indexAxis === 'y' ? context.parsed.x : (Number.isFinite(context.parsed.y) ? context.parsed.y : context.parsed.x);
+        return ` ${context.dataset.label || context.label}: ${formatNumber(value)}`;
+    } } };
+    options.scales.y.ticks.callback = value => formatNumber(value);
+    return options;
+}
+
+function setCommodityChart(chartKey, canvasId, statusId, config, emptyMessage) {
+    if (commodityCharts[chartKey]) commodityCharts[chartKey].destroy();
+    commodityCharts[chartKey] = null;
+    const canvas = document.getElementById(canvasId);
+    const status = document.getElementById(statusId);
+    if (!canvas || !status) return;
+    if (!config) {
+        canvas.style.display = 'none';
+        status.textContent = emptyMessage;
+        status.classList.add('is-visible');
+        return;
+    }
+    canvas.style.display = 'block';
+    status.classList.remove('is-visible');
+    commodityCharts[chartKey] = new Chart(canvas.getContext('2d'), config);
+}
+
+function renderCommodityTrend(rows) {
+    const includeCondition = commodityFrequency === 'diaria';
+    const groups = new Map();
+    rows.forEach(row => {
+        const key = commoditySeriesKey(row, includeCondition);
+        const period = commodityFrequency === 'diaria' ? row.fecha : row.periodo_ym;
+        const group = groups.get(key) || { label: commoditySeriesLabel(row, includeCondition), values: new Map() };
+        group.values.set(period, commodityNumber(row.precio_mediana));
+        groups.set(key, group);
+    });
+    const selected = [...groups.values()].sort((a, b) => [...b.values.keys()].at(-1).localeCompare([...a.values.keys()].at(-1))).slice(0, 16);
+    const labels = [...new Set(selected.flatMap(group => [...group.values.keys()]))].sort();
+    const config = selected.length && labels.length ? { type: 'line', data: { labels: labels.map(commodityPeriodLabel), datasets: selected.map((group, index) => ({ label: group.label, data: labels.map(label => group.values.get(label) ?? null), borderColor: PALETTE[index % PALETTE.length], backgroundColor: PALETTE_ALPHA[index % PALETTE_ALPHA.length], borderWidth: 2, pointRadius: 2, tension: .22, spanGaps: commodityFrequency !== 'diaria' })) }, options: commodityChartOptions('line') } : null;
+    setCommodityChart('trend', 'commodityPriceTrend', 'commodityPriceTrendStatus', config, 'No hay datos de precios para los filtros seleccionados.');
+}
+
+function renderCommodityRanking(latestRows) {
+    const rows = [...latestRows].sort((a, b) => commodityNumber(b.precio_mediana_ultimo_dia) - commodityNumber(a.precio_mediana_ultimo_dia)).slice(0, 15);
+    const labels = rows.map(row => commoditySeriesLabel(row));
+    const config = rows.length ? { type: 'bar', data: { labels, datasets: [{ label: 'Precio mediano último dato', data: rows.map(row => commodityNumber(row.precio_mediana_ultimo_dia)), backgroundColor: rows.map((_, index) => PALETTE[index % PALETTE.length]), borderRadius: 4, borderSkipped: false }] }, options: { ...commodityChartOptions('bar'), indexAxis: 'y', scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8', callback: value => formatNumber(value) } }, y: { grid: { display: false }, ticks: { color: '#b2c0cd', font: { family: "'Inter'", size: 10 } } } } } } : null;
+    setCommodityChart('ranking', 'commodityRanking', 'commodityRankingStatus', config, 'No hay últimos precios para los filtros seleccionados.');
+}
+
+function renderCommodityVolume(rows) {
+    const groups = new Map();
+    rows.forEach(row => {
+        const volume = commodityNumber(row.volumen_total);
+        if (!Number.isFinite(volume) || volume < 0) return;
+        const key = commoditySeriesKey(row);
+        const group = groups.get(key) || { label: commoditySeriesLabel(row), volume: 0 };
+        group.volume += volume;
+        groups.set(key, group);
+    });
+    const values = [...groups.values()].sort((a, b) => b.volume - a.volume).slice(0, 15);
+    const config = values.length ? { type: 'bar', data: { labels: values.map(item => item.label), datasets: [{ label: 'Volumen informado', data: values.map(item => item.volume), backgroundColor: '#60a5fa', borderRadius: 4, borderSkipped: false }] }, options: { ...commodityChartOptions('bar'), indexAxis: 'y', scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8', callback: value => formatNumber(value) } }, y: { grid: { display: false }, ticks: { color: '#b2c0cd', font: { family: "'Inter'", size: 10 } } } } } } : null;
+    setCommodityChart('volume', 'commodityVolume', 'commodityVolumeStatus', config, 'No hay volumen válido para los filtros seleccionados.');
+}
+
+function updateCommodityKpis(rows, latestRows) {
+    const summary = commodityData.resumen[0] || {};
+    const prices = rows.map(row => commodityNumber(row.precio_mediana)).filter(value => Number.isFinite(value) && value > 0);
+    const products = new Set(rows.map(row => row.commodity).filter(Boolean));
+    const currencies = new Set(rows.map(row => row.moneda).filter(Boolean));
+    const units = new Set(rows.map(row => row.unidad).filter(Boolean));
+    const priceTypes = new Set(rows.map(row => row.tipo_precio).filter(Boolean));
+    const dates = rows.map(row => commodityFrequency === 'diaria' ? row.fecha : row.periodo_ym).filter(Boolean).sort();
+    const series = new Set(latestRows.map(row => commoditySeriesKey(row)));
+    const latestPrice = latestRows.length === 1 ? commodityNumber(latestRows[0].precio_mediana_ultimo_dia) : null;
+    const currencyLabel = currencies.size === 1 ? [...currencies][0] : currencies.size ? `${[...currencies].sort().join(' / ')} (separadas)` : 'moneda seleccionada';
+    const unitLabel = units.size === 1 ? [...units][0] : units.size ? 'unidades separadas' : 'unidad seleccionada';
+    const typeLabel = priceTypes.size === 1 ? ` · ${[...priceTypes][0]}` : ' · tipos de precio separados';
+    document.getElementById('commodityKpiUpdate').textContent = commodityPeriodLabel(summary.fecha_actualizacion);
+    document.getElementById('commodityKpiRange').textContent = dates.length ? `${commodityPeriodLabel(dates[0])} — ${commodityPeriodLabel(dates.at(-1))}` : 'Rango sin datos';
+    document.getElementById('commodityKpiProducts').textContent = products.size || '–';
+    document.getElementById('commodityKpiOperations').textContent = formatNumber(rows.reduce((sum, row) => sum + (commodityNumber(row.operaciones) || 0), 0));
+    document.getElementById('commodityKpiCurrency').textContent = currencies.size === 1 ? [...currencies][0] : currencies.size ? 'Separadas' : '–';
+    document.getElementById('commodityKpiMedian').textContent = Number.isFinite(latestPrice) ? formatNumber(latestPrice) : series.size ? 'Varias series' : '–';
+    document.getElementById('commodityKpiMedianUnit').textContent = latestRows.length === 1 ? `${latestRows[0].moneda} / ${latestRows[0].unidad}` : latestRows.length ? 'seleccioná commodity y tipo' : 'sin último precio';
+    document.getElementById('commodityPriceScope').textContent = `Precios en ${currencyLabel} / ${unitLabel}${typeLabel} · mediana de operaciones con precio positivo`;
+}
+
+function renderCommoditySemaphore(rows) {
+    const body = document.getElementById('commoditySemaphoreBody');
+    const status = document.getElementById('commoditySemaphoreStatus');
+    if (!body || !status) return;
+    if (!rows.length) { body.innerHTML = ''; status.textContent = 'No hay datos mensuales para los filtros seleccionados.'; status.classList.add('is-visible'); return; }
+    status.classList.remove('is-visible');
+    body.innerHTML = [...rows].sort((a, b) => `${b.periodo_ym}|${a.commodity}`.localeCompare(`${a.periodo_ym}|${b.commodity}`)).map(row => {
+        const state = row.estado || 'Sin dato';
+        return `<tr><td>${escapeHtml(row.commodity)}</td><td>${escapeHtml(row.moneda)}</td><td>${escapeHtml(row.unidad)}</td><td>${escapeHtml(row.tipo_precio)}</td><td>${escapeHtml(commodityPeriodLabel(row.periodo_ym))}</td><td>${formatNumber(commodityNumber(row.precio_mediana))}</td><td>${commodityPercent(row.variacion_mensual_pct)}</td><td><span class="commodity-state ${commodityStateClass(state)}">${escapeHtml(state)}</span></td></tr>`;
+    }).join('');
+}
+
+function renderCommodityLatest(latestRows) {
+    const body = document.getElementById('commodityLatestBody');
+    const status = document.getElementById('commodityLatestStatus');
+    if (!body || !status) return;
+    if (!latestRows.length) { body.innerHTML = ''; status.textContent = 'No hay últimos precios para los filtros seleccionados.'; status.classList.add('is-visible'); return; }
+    status.classList.remove('is-visible');
+    body.innerHTML = [...latestRows].sort((a, b) => `${a.commodity}|${a.moneda}|${a.tipo_precio}`.localeCompare(`${b.commodity}|${b.moneda}|${b.tipo_precio}`)).map(row => {
+        const state = row.estado || 'Sin dato';
+        return `<tr><td>${escapeHtml(row.commodity)}</td><td>${escapeHtml(row.moneda)}</td><td>${escapeHtml(row.unidad)}</td><td>${escapeHtml(row.tipo_precio)}</td><td>${escapeHtml(commodityPeriodLabel(row.fecha_ultima))}</td><td>${formatNumber(commodityNumber(row.precio_mediana_ultimo_dia))}</td><td>${formatNumber(commodityNumber(row.operaciones_ultimo_dia))}</td><td>${commodityPercent(row.variacion_7d_pct)}</td><td>${commodityPercent(row.variacion_30d_pct)}</td><td><span class="commodity-state ${commodityStateClass(state)}">${escapeHtml(state)}</span></td></tr>`;
+    }).join('');
+}
+
+function updateCommodityChartHeadings() {
+    const selectedCount = commoditySelectedValues.length;
+    const trendTitle = document.getElementById('commodityTrendTitle');
+    const trendDesc = document.getElementById('commodityTrendDesc');
+    const rankingTitle = document.getElementById('commodityRankingTitle');
+    const rankingDesc = document.getElementById('commodityRankingDesc');
+    const volumeTitle = document.getElementById('commodityVolumeTitle');
+    const volumeDesc = document.getElementById('commodityVolumeDesc');
+    const periodLabel = commodityFrequency === 'diaria' ? 'diario' : 'mensual';
+    const gapLabel = commodityFrequency === 'diaria' ? 'Los días sin operaciones quedan como huecos.' : 'Cada punto resume el mes seleccionado.';
+    if (trendTitle) trendTitle.textContent = `Precio mediano ${periodLabel}`;
+    if (trendDesc) trendDesc.textContent = `Una serie por commodity, moneda, unidad y tipo de operación. ${gapLabel}`;
+    if (rankingTitle) rankingTitle.textContent = selectedCount >= 2 ? 'Comparación de precios medianos recientes' : selectedCount === 1 ? 'Precio mediano reciente por tipo' : 'Precios medianos recientes';
+    if (rankingDesc) rankingDesc.textContent = selectedCount >= 2 ? 'Último precio por commodity, moneda y tipo de operación' : selectedCount === 1 ? 'Comparación entre Canje y Compraventa cuando existen' : 'Precio por commodity en el último dato disponible';
+    if (volumeTitle) volumeTitle.textContent = selectedCount >= 2 ? 'Volumen acumulado por commodity' : 'Volumen acumulado del período (TN)';
+    if (volumeDesc) volumeDesc.textContent = selectedCount >= 2 ? 'Suma de toneladas del período visible para cada commodity' : 'Suma de toneladas informadas en el período visible';
+}
+
+function renderCommodityEmptyState() {
+    Object.keys(commodityCharts).forEach(key => { if (commodityCharts[key]) commodityCharts[key].destroy(); commodityCharts[key] = null; });
+    ['commodityPriceTrendStatus', 'commodityRankingStatus', 'commodityVolumeStatus', 'commoditySemaphoreStatus', 'commodityLatestStatus'].forEach(id => document.getElementById(id)?.classList.add('is-visible'));
+    ['commoditySemaphoreBody', 'commodityLatestBody'].forEach(id => { const element = document.getElementById(id); if (element) element.innerHTML = ''; });
+    ['commodityKpiUpdate', 'commodityKpiProducts', 'commodityKpiOperations', 'commodityKpiCurrency', 'commodityKpiMedian'].forEach(id => { const element = document.getElementById(id); if (element) element.textContent = '–'; });
+}
+
+function updateCommodityDashboard() {
+    const rows = getCommodityFilteredRows();
+    const latestRows = getCommodityLatestRows();
+    updateCommodityChartHeadings();
+    updateCommodityKpis(rows, latestRows);
+    renderCommodityTrend(rows);
+    renderCommodityRanking(latestRows);
+    renderCommodityVolume(rows);
+    renderCommoditySemaphore(commodityData.semaforo.filter(commodityRowMatches));
+    renderCommodityLatest(latestRows);
 }
 
 // ─── CSV Parsing ────────────────────────────────────────────────────────

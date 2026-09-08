@@ -1,0 +1,7 @@
+commodity;aliases;sio_id_producto;activo;prioridad;observaciones
+Soja;soja|soya;;true;alta;pendiente validar id SIO
+Maíz;maiz|maíz|corn;;true;alta;pendiente validar id SIO
+Trigo;trigo|wheat;;true;alta;pendiente validar id SIO
+Girasol;girasol|sunflower;;true;alta;pendiente validar id SIO
+Sorgo;sorgo|sorghum;;true;alta;pendiente validar id SIO
+Cebada;cebada|barley;;true;media;pendiente validar id SIO

@@ -1,0 +1,10 @@
+{
+  "base_url": "https://www.siogranos.com.ar",
+  "endpoints": {
+    "consulta_publica": "/consulta_publica/",
+    "operaciones_informadas": "/consulta_publica/operaciones_informadas.aspx",
+    "operaciones_informadas_exportar": "/Consulta_publica/operaciones_informadas_exportar.aspx"
+  },
+  "max_days_per_request": 180,
+  "notes": "Usar sólo endpoints públicos documentados o validados. No incluir credenciales."
+}

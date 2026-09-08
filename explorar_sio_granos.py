@@ -1,0 +1,1607 @@
+#!/usr/bin/env python3
+"""Exploración pública controlada de SIO Granos.
+
+El modo seguro es el comportamiento por defecto. La red sólo se habilita con
+``--allow-web`` y usando endpoints explícitos de ``sio_config.json``.
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import hashlib
+import html
+import json
+import re
+import shlex
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+from collections import Counter
+from datetime import date, datetime, timedelta
+from html.parser import HTMLParser
+from pathlib import Path
+from typing import Any
+
+
+ROOT = Path(__file__).resolve().parent
+DATA_DIR = ROOT / "data" / "commodities_sio"
+CONFIG_PATH = DATA_DIR / "sio_config.json"
+CATALOG_PATH = DATA_DIR / "catalogo_productos_sio.csv"
+DEFAULT_OUTPUT = DATA_DIR / "raw"
+REPORT_DIR = DATA_DIR / "reports"
+ENDPOINT_REPORT_PATH = REPORT_DIR / "REPORTE_ENDPOINT_SIO.md"
+PAGINATED_REPORT_PATH = REPORT_DIR / "REPORTE_MUESTRA_PAGINADA_SIO.md"
+PAGINATION_REPORT_PATH = REPORT_DIR / "REPORTE_PAGINACION_SIO.md"
+OBSERVED_PAGINATION_REPORT_PATH = REPORT_DIR / "REPORTE_PAGINACION_OBSERVADA_SIO.md"
+DEVTOOLS_REPORT_PATH = REPORT_DIR / "REPORTE_REQUEST_DEVTOOLS_SIO.md"
+USER_AGENT = "Serie-Agricola/commodities-sio-explorer (+consulta-publica)"
+SAFE_MESSAGE = (
+    "Modo seguro: no se realizan llamadas externas. Use --dry-run para ver la "
+    "consulta o --allow-web para ejecutar una exploración pública controlada."
+)
+MAX_DAYS_HARD_LIMIT = 180
+TEST_ENDPOINT_PATH = "/consulta_publica/operaciones_informadas_ultimas.aspx/GetOperaciones"
+PAGINATION_PARAMETER_NAMES = {"page", "rows", "pcurrentpage", "ppagesize", "sidx", "sord", "nd", "_search", "totalrows"}
+SENSITIVE_NAME_PATTERN = re.compile(r"(?:authorization|cookie|token|secret|password|api[-_]?key|session|sessid|csrf|bearer)", flags=re.I)
+SENSITIVE_EXACT_NAMES = {"sid", "sessionid", "session_id", "jsessionid", "phpsessid"}
+SAFE_DEVTOOLS_HEADERS = {"accept", "content-type", "origin", "referer", "user-agent", "x-requested-with"}
+EXPORT_PATTERNS = ("exportar", "excel", ".xls", ".xlsx", ".csv", "operaciones_informadas_exportar", "download", "attachment")
+
+
+def normalize(value: Any) -> str:
+    import unicodedata
+
+    value = unicodedata.normalize("NFKD", str(value or "").strip().lower())
+    value = "".join(char for char in value if not unicodedata.combining(char))
+    return re.sub(r"\s+", " ", value)
+
+
+def read_catalog() -> list[dict[str, str]]:
+    if not CATALOG_PATH.exists():
+        return []
+    with CATALOG_PATH.open("r", encoding="utf-8-sig", newline="") as handle:
+        return list(csv.DictReader(handle, delimiter=";"))
+
+
+def parse_products(value: str | None, catalog: list[dict[str, str]]) -> list[str]:
+    requested = [item.strip() for item in (value or "").split(",") if item.strip()]
+    if not requested:
+        requested = [
+            row["commodity"]
+            for row in catalog
+            if row.get("commodity") and normalize(row.get("activo", "true")) == "true"
+        ]
+    aliases: dict[str, str] = {}
+    for row in catalog:
+        canonical = row.get("commodity", "").strip()
+        for alias in [canonical] + row.get("aliases", "").split("|"):
+            if alias:
+                aliases[normalize(alias)] = canonical
+    result: list[str] = []
+    for item in requested:
+        canonical = aliases.get(normalize(item), item)
+        if canonical not in result:
+            result.append(canonical)
+    if not result:
+        raise SystemExit("No se especificaron productos y el catálogo SIO está vacío.")
+    return result
+
+
+def parse_date_arg(value: str, option: str) -> date:
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise SystemExit(f"{option} debe tener formato YYYY-MM-DD: {value}") from exc
+
+
+def date_range(args: argparse.Namespace) -> tuple[date, date]:
+    end = parse_date_arg(args.date_end, "--date-end") if args.date_end else date.today()
+    if args.date_start:
+        start = parse_date_arg(args.date_start, "--date-start")
+    else:
+        try:
+            days_back = int(args.days_back)
+        except ValueError as exc:
+            raise SystemExit("--days-back debe ser un entero") from exc
+        if days_back < 0:
+            raise SystemExit("--days-back no puede ser negativo")
+        start = end - timedelta(days=days_back)
+    if start > end:
+        raise SystemExit("--date-start no puede ser posterior a --date-end")
+    return start, end
+
+
+def split_date_range(start: date, end: date, max_days: int = MAX_DAYS_HARD_LIMIT) -> list[tuple[date, date]]:
+    """Divide un rango inclusivo en ventanas de no más de ``max_days`` días."""
+
+    if max_days < 1:
+        raise ValueError("max_days debe ser mayor que cero")
+    max_days = min(max_days, MAX_DAYS_HARD_LIMIT)
+    windows: list[tuple[date, date]] = []
+    cursor = start
+    while cursor <= end:
+        window_end = min(cursor + timedelta(days=max_days - 1), end)
+        windows.append((cursor, window_end))
+        cursor = window_end + timedelta(days=1)
+    return windows
+
+
+def load_config() -> dict[str, Any]:
+    if not CONFIG_PATH.exists():
+        return {"base_url": "", "endpoints": {}, "max_days_per_request": MAX_DAYS_HARD_LIMIT, "configured": False}
+    try:
+        raw = json.loads(CONFIG_PATH.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"ERROR leyendo {CONFIG_PATH}: {exc}")
+        return {"base_url": "", "endpoints": {}, "max_days_per_request": MAX_DAYS_HARD_LIMIT, "configured": False}
+    if not isinstance(raw, dict):
+        return {"base_url": "", "endpoints": {}, "max_days_per_request": MAX_DAYS_HARD_LIMIT, "configured": False}
+    endpoints = raw.get("endpoints", {})
+    endpoints = {str(name): str(value).strip() for name, value in endpoints.items() if str(value).strip()} if isinstance(endpoints, dict) else {}
+    try:
+        configured_limit = int(raw.get("max_days_per_request", MAX_DAYS_HARD_LIMIT))
+    except (TypeError, ValueError):
+        configured_limit = MAX_DAYS_HARD_LIMIT
+    return {
+        "base_url": str(raw.get("base_url", "")).strip(),
+        "endpoints": endpoints,
+        "max_days_per_request": min(max(configured_limit, 1), MAX_DAYS_HARD_LIMIT),
+        "configured": bool(str(raw.get("base_url", "")).strip() and endpoints),
+    }
+
+
+def endpoint_url(base_url: str, endpoint: str) -> str:
+    if endpoint.startswith(("http://", "https://")):
+        return endpoint
+    return f"{base_url.rstrip('/')}/{endpoint.lstrip('/')}"
+
+
+def candidate_endpoints(config: dict[str, Any]) -> list[tuple[str, str]]:
+    preferred = ("consulta_publica", "operaciones_informadas", "operaciones_informadas_exportar")
+    names = list(dict.fromkeys([name for name in preferred if config["endpoints"].get(name)] + list(config["endpoints"])))
+    return [(name, endpoint_url(config["base_url"], config["endpoints"][name])) for name in names]
+
+
+def catalog_row(catalog: list[dict[str, str]], product: str) -> dict[str, str] | None:
+    target = normalize(product)
+    for row in catalog:
+        names = [row.get("commodity", "")] + row.get("aliases", "").split("|")
+        if target in {normalize(name) for name in names if name}:
+            return row
+    return None
+
+
+def suggested_url(endpoint: str, product: str, product_id: str, start: date, end: date) -> str:
+    # Estos parámetros son sólo una consulta orientativa: no se asume el payload
+    # real de SIO hasta inspeccionar la respuesta pública.
+    params = {"date_start": start.isoformat(), "date_end": end.isoformat(), "producto": product}
+    if product_id:
+        params["sio_id_producto"] = product_id
+    return endpoint + ("&" if "?" in endpoint else "?") + urllib.parse.urlencode(params)
+
+
+def safe_filename(value: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_.-]", "_", value)
+
+
+def response_extension(content_type: str, content: bytes) -> str:
+    lowered = content_type.lower()
+    if "json" in lowered:
+        return ".json"
+    if content.lstrip()[:1] in {b"{", b"["}:
+        return ".json"
+    if "csv" in lowered:
+        return ".csv"
+    if "spreadsheet" in lowered or "excel" in lowered or content[:4] == b"PK\x03\x04":
+        return ".xlsx"
+    return ".html" if b"<html" in content[:1000].lower() or b"<form" in content[:1000].lower() else ".bin"
+
+
+def save_response(output_dir: Path, product: str, start: date, end: date, endpoint_name: str, content: bytes, content_type: str) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    filename = f"SIO_{endpoint_name}_{start}_{end}_{datetime.now().strftime('%Y%m%d%H%M%S')}_{normalize(product).replace(' ', '_')}{response_extension(content_type, content)}"
+    path = output_dir / safe_filename(filename)
+    path.write_bytes(content)
+    return path
+
+
+def inspect_public_html(content: bytes) -> dict[str, list[str]]:
+    source = content.decode("utf-8", errors="replace")
+    fields = sorted(set(re.findall(r"<(?:input|select|textarea)\b[^>]*(?:name|id)=['\"]([^'\"]+)['\"]", source, flags=re.I)))
+    exports = sorted(set(html.unescape(value) for value in re.findall(r"(?:href|action)=['\"]([^'\"]+\.(?:csv|xlsx?|xls)(?:\?[^'\"]*)?)['\"]", source, flags=re.I)))
+    forms = re.findall(r"<form\b[^>]*(?:action=['\"]([^'\"]*)['\"])?[^>]*>", source, flags=re.I)
+    return {"fields": fields, "exports": exports, "forms": [html.unescape(value) for value in forms]}
+
+
+def print_html_diagnostic(content: bytes) -> dict[str, list[str]]:
+    diagnostic = inspect_public_html(content)
+    print(f"Campos detectados (sin asumir payload): {', '.join(diagnostic['fields']) or 'ninguno'}")
+    print(f"Formularios detectados: {len(diagnostic['forms'])}")
+    print(f"Enlaces de exportación detectados: {', '.join(diagnostic['exports']) or 'ninguno'}")
+    return diagnostic
+
+
+def save_html_diagnostic(output_dir: Path, content: bytes) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    path = output_dir / f"SIO_diagnostico_consulta_publica_{timestamp}.html"
+    path.write_bytes(content)
+    return path
+
+
+def unique(values: list[str]) -> list[str]:
+    return list(dict.fromkeys(value for value in values if value))
+
+
+def same_domain(url: str, base_url: str) -> bool:
+    return urllib.parse.urlparse(url).netloc.lower() == urllib.parse.urlparse(base_url).netloc.lower()
+
+
+def generic_script(url: str) -> bool:
+    name = urllib.parse.urlparse(url).path.lower()
+    return any(marker in name for marker in ("jquery", "jqgrid", "bootstrap", "analytics", "google-analytics", "jquery-ui", "grid.locale"))
+
+
+def extract_discovery_evidence(content: bytes, page_url: str) -> dict[str, Any]:
+    source = content.decode("utf-8", errors="replace")
+    title_match = re.search(r"<title\b[^>]*>(.*?)</title>", source, flags=re.I | re.S)
+    scripts = [urllib.parse.urljoin(page_url, html.unescape(value)) for value in re.findall(r"<script\b[^>]*\bsrc=['\"]([^'\"]+)['\"]", source, flags=re.I)]
+    urls = unique([html.unescape(value) for value in re.findall(r"(?:href|src|action|url)\s*[:=]\s*['\"]([^'\"]+)['\"]", source, flags=re.I)])
+    endpoint_refs = unique(re.findall(r"(?:[A-Za-z0-9_./-]+\.(?:aspx|ashx|asmx)(?:/[A-Za-z0-9_./-]+)?(?:[?#][^'\"\s]*)?)", source, flags=re.I))
+    endpoint_refs = [html.unescape(value) for value in endpoint_refs]
+    endpoint_urls = unique([urllib.parse.urljoin(page_url, value) for value in endpoint_refs])
+    ajax_markers = unique(re.findall(r"(?i)(?:fetch\s*\(|XMLHttpRequest|\$\.ajax|PageMethods|WebMethods|\.ajax\s*\(|dataType\s*:|contentType\s*:)", source))
+    export_refs = unique([value for value in urls + endpoint_refs if re.search(r"export|excel|xlsx|csv|descarg|download", value, flags=re.I)])
+    grid_markers = unique(re.findall(r"(?i)(?:jqGrid|jsonReader|colNames|colModel|#grid|\bgrid\b)", source))
+    column_blocks = re.findall(r"colNames\s*:\s*\[(.*?)\]", source, flags=re.I | re.S)
+    columns: list[str] = []
+    for block in column_blocks:
+        columns.extend(re.findall(r"['\"]([^'\"]+)['\"]", block))
+    columns.extend(re.findall(r"\b(?:label|index)\s*:\s*['\"]([^'\"]+)['\"]", source, flags=re.I))
+    columns = [re.sub(r"<[^>]+>", " ", html.unescape(value)).strip() for value in columns]
+    methods = unique(re.findall(r"(?:/|\.)((?:Get|Set|Post|Put|Export|Buscar|Consulta|Search|Download|Refresh)[A-Za-z0-9_]*)\b", source))
+    function_names = unique(re.findall(r"function\s+([A-Za-z_$][\w$]*)\s*\(", source))
+    linked_functions = [name for name in function_names if re.search(r"grid|search|buscar|consulta|export|download|refresh|ajax|data", name, flags=re.I)]
+    parameter_keys: list[str] = []
+    parameters_by_endpoint: dict[str, list[str]] = {}
+    for endpoint in endpoint_refs:
+        endpoint_parameters: list[str] = []
+        for match in re.finditer(re.escape(endpoint), source, flags=re.I):
+            context = source[max(0, match.start() - 500): match.end() + 800]
+            if re.search(r"\.(?:aspx|ashx|asmx)/[A-Za-z_][A-Za-z0-9_]*", endpoint, flags=re.I):
+                endpoint_parameters.extend(re.findall(r"['\"]([A-Za-z_][A-Za-z0-9_]*)['\"]\s*:", context))
+        parameters_by_endpoint[urllib.parse.urljoin(page_url, endpoint)] = unique(endpoint_parameters)
+        parameter_keys.extend(endpoint_parameters)
+    html_diagnostic = inspect_public_html(content)
+    return {
+        "title": re.sub(r"\s+", " ", html.unescape(title_match.group(1))).strip() if title_match else "",
+        "size": len(content),
+        "scripts": scripts,
+        "urls": urls,
+        "endpoint_refs": endpoint_refs,
+        "endpoint_urls": endpoint_urls,
+        "ajax_markers": ajax_markers,
+        "export_refs": export_refs,
+        "grid_markers": grid_markers,
+        "columns": unique(columns),
+        "methods": methods,
+        "functions": linked_functions,
+        "parameters": unique(parameter_keys),
+        "parameters_by_endpoint": parameters_by_endpoint,
+        "fields": html_diagnostic["fields"],
+        "forms": html_diagnostic["forms"],
+    }
+
+
+def fetch_resource(url: str) -> dict[str, Any]:
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,application/javascript,text/javascript,*/*;q=0.1"}, method="GET")
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:  # nosec B310: URL comes from the configured public page or same-domain HTML
+            content = response.read()
+            return {"url": url, "content": content, "status": response.status, "content_type": response.headers.get_content_type(), "error": ""}
+    except urllib.error.HTTPError as exc:
+        return {"url": url, "content": b"", "status": exc.code, "content_type": "", "error": f"HTTPError: {exc.code}"}
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        return {"url": url, "content": b"", "status": "", "content_type": "", "error": exc.__class__.__name__}
+
+
+def save_discovery_resource(output_dir: Path, content: bytes, resource_type: str, index: int, source_url: str) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    parsed = urllib.parse.urlparse(source_url)
+    stem = Path(parsed.path).stem or resource_type
+    extension = ".js" if resource_type == "script" else ".html"
+    filename = f"SIO_descubrimiento_{index:02d}_{safe_filename(stem)}{extension}"
+    path = output_dir / filename
+    path.write_bytes(content)
+    return path
+
+
+def discovery_endpoint_rows(evidence: dict[str, Any], source_url: str) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for endpoint in evidence["endpoint_urls"]:
+        raw = urllib.parse.urlparse(endpoint)
+        path = raw.path.lower()
+        probable = "WebMethod/PageMethod AJAX" if re.search(r"\.(?:aspx|ashx|asmx)/[A-Za-z_][A-Za-z0-9_]*", raw.path, flags=re.I) else "página ASP.NET pública" if path.endswith((".aspx", ".ashx", ".asmx")) else "recurso server-side"
+        confidence = "alta" if any(method.lower() in endpoint.lower() for method in evidence["methods"]) and any(marker in evidence["ajax_markers"] for marker in ["fetch(", "XMLHttpRequest", "$.ajax", ".ajax(", "PageMethods", "WebMethods"]) else "media" if path.endswith((".aspx", ".ashx", ".asmx")) else "baja"
+        parameters = evidence.get("parameters_by_endpoint", {}).get(endpoint, [])
+        rows.append({"endpoint": endpoint, "evidencia": f"Referencia encontrada en {source_url}", "tipo": probable, "parametros": ", ".join(parameters) or "no detectados", "confianza": confidence, "validacion": "sí", "observaciones": "No se ejecutó este endpoint durante el descubrimiento."})
+    return rows
+
+
+def write_discovery_report(command: str, requests: list[dict[str, Any]], html_evidence: dict[str, Any] | None, scripts: list[dict[str, Any]], endpoint_rows: list[dict[str, str]], recommendation: str) -> Path:
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    report_path = REPORT_DIR / "REPORTE_DESCUBRIMIENTO_SIO.md"
+    lines = ["# Reporte de descubrimiento técnico SIO Granos", "", "## Fecha de ejecución", "", date.today().isoformat(), "", "## Comando ejecutado", "", f"`{command}`", "", "## Requests realizados", "", "| Número | URL | Tipo de recurso | Status code | Guardado como | Observaciones |", "| --- | --- | --- | --- | --- | --- |"]
+    for index, item in enumerate(requests, start=1):
+        lines.append(f"| {index} | {item['url']} | {item['type']} | {item['status'] or 'sin respuesta'} | {item.get('saved', 'no')} | {item.get('observations', '')} |")
+    if not requests:
+        lines.append("| — | — | — | — | no | No había endpoint público configurado. |")
+    lines.extend(["", "## HTML analizado", ""])
+    if html_evidence:
+        lines.extend([f"- Título: {html_evidence['title'] or 'no detectado'}.", f"- Tamaño: {html_evidence['size']} bytes.", f"- Scripts detectados: {len(html_evidence['scripts'])}.", f"- Grillas detectadas: {', '.join(html_evidence['grid_markers']) or 'ninguna'}.", f"- Columnas detectadas: {', '.join(html_evidence['columns']) or 'ninguna'}.", f"- Formularios detectados: {len(html_evidence['forms'])}.", f"- Inputs/selects detectados: {', '.join(html_evidence['fields']) or 'ninguno'}.", f"- Llamadas AJAX/JavaScript detectadas: {', '.join(html_evidence['ajax_markers']) or 'ninguna'}.", f"- Referencias de exportación: {', '.join(html_evidence['export_refs']) or 'ninguna'}."])
+    else:
+        lines.append("No se recibió HTML para analizar.")
+    lines.extend(["", "## Scripts analizados", "", "| Archivo/script | Tipo | Evidencia útil | Endpoints candidatos | Observaciones |", "| --- | --- | --- | --- | --- |"])
+    for script in scripts:
+        evidence = "; ".join([f"grillas: {', '.join(script['evidence']['grid_markers'])}" if script["evidence"]["grid_markers"] else "", f"métodos: {', '.join(script['evidence']['methods'])}" if script["evidence"]["methods"] else "", f"funciones: {', '.join(script['evidence']['functions'])}" if script["evidence"]["functions"] else ""])
+        lines.append(f"| {script['url']} | {script['type']} | {evidence or 'sin evidencia útil'} | {', '.join(script['evidence']['endpoint_urls']) or 'ninguno'} | {script.get('observations', '')} |")
+    if not scripts:
+        lines.append("| — | — | No se analizaron scripts. | — | — |")
+    lines.extend(["", "## Endpoints candidatos", ""])
+    if endpoint_rows:
+        lines.extend(["| Endpoint | Evidencia | Tipo probable | Parámetros detectados | Confianza | Requiere validación | Observaciones |", "| --- | --- | --- | --- | --- | --- | --- |"])
+        lines.extend(f"| {row['endpoint']} | {row['evidencia']} | {row['tipo']} | {row['parametros']} | {row['confianza']} | {row['validacion']} | {row['observaciones']} |" for row in endpoint_rows)
+    else:
+        lines.append("No se detectaron endpoints candidatos robustos en HTML/scripts analizados.")
+    lines.extend(["", "## Columnas y campos detectados", ""])
+    columns = html_evidence["columns"] if html_evidence else []
+    fields = html_evidence["fields"] if html_evidence else []
+    for field in unique(columns + fields):
+        lines.append(f"- {field}")
+    if not columns and not fields:
+        lines.append("No se detectaron nombres de columnas o campos HTML.")
+    lines.extend(["", "## Hipótesis técnica", "", "- " + ("La página contiene una grilla/configuración JavaScript y referencias a servicios ASP.NET; los endpoints y parámetros requieren validación adicional." if html_evidence and (html_evidence["grid_markers"] or html_evidence["endpoint_refs"]) else "No hay evidencia suficiente para formular una hipótesis técnica."), "- No se enviaron formularios ni se ejecutaron endpoints candidatos durante este descubrimiento.", "- Los parámetros se informan sólo cuando aparecen literalmente en el HTML/script analizado.", "", "## Recomendación próxima", "", recommendation, ""])
+    report_path.write_text("\n".join(lines), encoding="utf-8")
+    return report_path
+
+
+def run_discovery(args: argparse.Namespace, config: dict[str, Any], endpoints: list[tuple[str, str]], products: list[str], windows: list[tuple[date, date]]) -> int:
+    consultation = next(((name, url) for name, url in endpoints if name in {"consulta_publica", "operaciones_informadas"}), None)
+    requests: list[dict[str, Any]] = []
+    scripts: list[dict[str, Any]] = []
+    html_evidence: dict[str, Any] | None = None
+    endpoint_rows: list[dict[str, str]] = []
+    output_dir = Path(args.output_dir)
+    if consultation:
+        result = fetch_resource(consultation[1])
+        requests.append({"url": consultation[1], "type": "HTML público", "status": result["status"], "saved": "no", "observations": result["error"] or "respuesta recibida"})
+        if result["content"]:
+            html_evidence = extract_discovery_evidence(result["content"], consultation[1])
+            if args.save_response:
+                saved = save_discovery_resource(output_dir, result["content"], "html", 1, consultation[1])
+                requests[-1]["saved"] = saved.name
+            endpoint_rows.extend(discovery_endpoint_rows(html_evidence, consultation[1]))
+            script_index = 1
+            for script_url in html_evidence["scripts"]:
+                if len(requests) >= args.max_requests:
+                    break
+                if not same_domain(script_url, config["base_url"]):
+                    scripts.append({"url": script_url, "type": "script externo", "evidence": {"grid_markers": [], "methods": [], "functions": [], "endpoint_urls": []}, "observations": "No descargado: dominio externo."})
+                    continue
+                if generic_script(script_url):
+                    scripts.append({"url": script_url, "type": "script interno", "evidence": {"grid_markers": [], "methods": [], "functions": [], "endpoint_urls": []}, "observations": "No descargado: librería genérica."})
+                    continue
+                script_result = fetch_resource(script_url)
+                requests.append({"url": script_url, "type": "script interno", "status": script_result["status"], "saved": "no", "observations": script_result["error"] or "script recibido"})
+                if script_result["content"]:
+                    script_evidence = extract_discovery_evidence(script_result["content"], script_url)
+                    script_item = {"url": script_url, "type": "script interno", "evidence": script_evidence, "observations": "analizado"}
+                    scripts.append(script_item)
+                    endpoint_rows.extend(discovery_endpoint_rows(script_evidence, script_url))
+                    if args.save_response:
+                        saved = save_discovery_resource(output_dir, script_result["content"], "script", script_index + 1, script_url)
+                        requests[-1]["saved"] = saved.name
+                    script_index += 1
+    recommendation = "Realizar prueba controlada del endpoint candidato con máximo 1 request." if any(row["confianza"] == "alta" for row in endpoint_rows) else "Usar descarga manual desde navegador y probar integrador con archivo real." if html_evidence and not endpoint_rows else "Analizar tráfico desde navegador/DevTools manualmente y documentar request observado." if endpoint_rows else "Usar descarga manual desde navegador y probar integrador con archivo real."
+    report = write_discovery_report(" ".join(sys.argv), requests, html_evidence, scripts, unique_endpoint_rows(endpoint_rows), recommendation)
+    print(f"Descubrimiento finalizado: {len(requests)} request(s) realizados; máximo permitido: {args.max_requests}.")
+    print(f"Reporte generado: {report}")
+    if html_evidence:
+        print(f"Título: {html_evidence['title'] or 'no detectado'}; scripts: {len(html_evidence['scripts'])}; grillas: {', '.join(html_evidence['grid_markers']) or 'ninguna'}; columnas: {', '.join(html_evidence['columns']) or 'ninguna'}.")
+    else:
+        print("No se recibió HTML para analizar.")
+    return 0
+
+
+def unique_endpoint_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    result: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for row in rows:
+        if row["endpoint"] not in seen:
+            seen.add(row["endpoint"])
+            result.append(row)
+    return result
+
+
+def decode_json_response(content: bytes) -> tuple[Any, str]:
+    try:
+        payload: Any = json.loads(content.decode("utf-8-sig"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return None, str(exc)
+    if isinstance(payload, dict) and isinstance(payload.get("d"), str):
+        try:
+            payload["d"] = json.loads(payload["d"])
+        except json.JSONDecodeError:
+            pass
+    return payload, ""
+
+
+def compact(value: Any) -> str:
+    return re.sub(r"[^a-z0-9]", "", normalize(value))
+
+
+def currency_marker_hits(source: str) -> list[dict[str, str]]:
+    patterns = (
+        ("U$S", r"U\s*\$\s*S"),
+        ("USD", r"\bUSD\b"),
+        ("ARS", r"\bARS\b"),
+        ("pesos", r"\bpesos?\b"),
+        ("dólares", r"\bd[oó]lares?\b"),
+        ("moneda", r"\bmoneda\b"),
+        ("símbolo $", r"(?<![A-Za-z0-9_])\$(?![A-Za-z])"),
+    )
+    hits: list[dict[str, str]] = []
+    for label, pattern in patterns:
+        for match in re.finditer(pattern, source, flags=re.I):
+            context = re.sub(r"\s+", " ", source[max(0, match.start() - 70):match.end() + 100]).strip()
+            hits.append({"marker": label, "context": context})
+            if len(hits) >= 60:
+                return hits
+    return hits
+
+
+def normalize_currency_from_text(value: Any) -> str:
+    raw = str(value or "")
+    if re.search(r"U\s*\$\s*S|US\s*\$|\bUSD\b", raw, flags=re.I):
+        return "USD"
+    if "$" in raw:
+        return "ARS"
+    return ""
+
+
+def load_local_json(path: Path) -> Any:
+    try:
+        payload: Any = json.loads(path.read_text(encoding="utf-8-sig", errors="replace"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if isinstance(payload, dict) and isinstance(payload.get("d"), str):
+        try:
+            payload["d"] = json.loads(payload["d"])
+        except json.JSONDecodeError:
+            pass
+    return payload
+
+
+def inspect_json_currency(payload: Any) -> dict[str, Any]:
+    named_fields: list[str] = []
+    row_evidence: list[dict[str, str]] = []
+    row_lengths: list[int] = []
+    currency_names = {"moneda", "currency", "codigomoneda", "monedaprecio"}
+
+    def visit(value: Any, path: str = "") -> None:
+        if isinstance(value, dict):
+            for name, child in value.items():
+                child_path = f"{path}.{name}" if path else str(name)
+                if compact(name) in currency_names:
+                    named_fields.append(child_path)
+                if compact(name) == "row" and isinstance(child, list):
+                    row_lengths.append(len(child))
+                    for position, item in enumerate(child):
+                        item_text = str(item or "")
+                        if currency_marker_hits(item_text):
+                            row_evidence.append({"position": str(position), "value": re.sub(r"\s+", " ", item_text).strip(), "currency": normalize_currency_from_text(item_text)})
+                visit(child, child_path)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                visit(child, f"{path}[{index}]")
+
+    visit(payload)
+    return {"named_fields": unique(named_fields), "row_evidence": row_evidence, "row_lengths": sorted(set(row_lengths))}
+
+
+def load_local_mapping_positions() -> tuple[dict[int, dict[str, str]], str]:
+    paths = (DATA_DIR / "mapeo_getoperaciones_sio.local.json", DATA_DIR / "mapeo_getoperaciones_sio.example.json")
+    for path in paths:
+        if not path.exists():
+            continue
+        try:
+            document = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        raw_mapping = document.get("row_mapping") if isinstance(document, dict) else None
+        if not isinstance(raw_mapping, dict):
+            continue
+        mapping: dict[int, dict[str, str]] = {}
+        for position, specification in raw_mapping.items():
+            try:
+                position_number = int(position)
+            except (TypeError, ValueError):
+                continue
+            if isinstance(specification, str):
+                mapping[position_number] = {"target_field": specification}
+            elif isinstance(specification, dict) and specification.get("target_field"):
+                mapping[position_number] = {key: str(value) for key, value in specification.items() if value is not None}
+        if mapping:
+            return mapping, path.name
+    return {}, "ningún archivo de mapeo"
+
+
+def write_currency_report(reviewed_files: list[str], raw_files: list[Path], scan_results: list[dict[str, Any]], positional: dict[str, Any], mapping_name: str) -> Path:
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    named_fields = sorted({field for result in scan_results for field in result["json"]["named_fields"]})
+    column_names = sorted({column for result in scan_results for column in result["columns"]})
+    all_hits = [hit for result in scan_results for hit in result["hits"]]
+    direct: list[str] = []
+    indirect: list[str] = []
+    absent: list[str] = []
+    if named_fields:
+        direct.append("Campos JSON con nombre de moneda: " + ", ".join(f"`{field}`" for field in named_fields) + ".")
+    else:
+        absent.append("No se encontró un campo JSON con nombre `moneda`, `currency` o equivalente.")
+    if all_hits:
+        markers = Counter(hit["marker"] for hit in all_hits)
+        direct.append("Marcadores textuales encontrados en archivos locales: " + ", ".join(f"{name} ({count})" for name, count in sorted(markers.items())) + ".")
+        direct.append("Los símbolos `$` hallados en HTML/JavaScript también corresponden a selectores jQuery; no se consideran por sí solos evidencia de moneda.")
+        for result in scan_results:
+            for hit in result["hits"][:8]:
+                direct.append(f"`{result['file']}`: `{hit['marker']}` en contexto `{hit['context']}`.")
+    else:
+        absent.append("No se encontraron símbolos ni textos monetarios en los archivos raw/ y el CSV local revisados.")
+    currency_columns = [column for column in column_names if compact(column) in {"moneda", "currency", "codigomoneda", "monedaprecio"}]
+    if currency_columns:
+        direct.append("Columnas HTML/JavaScript relacionadas con moneda: " + ", ".join(f"`{column}`" for column in currency_columns) + ".")
+    else:
+        absent.append("Las columnas `colNames`/`colModel` observadas no contienen una columna separada de moneda.")
+    for result in scan_results:
+        if result["html"] and not result["html_currency"]:
+            absent.append(f"`{result['file']}` no presenta una etiqueta HTML visible de moneda.")
+    if any("moneda" in line.lower() or "embeb" in line.lower() for result in scan_results for line in result["documentation"]):
+        indirect.append("Los reportes locales previos documentan la presencia de texto monetario embebido en el valor original, pero no validan una columna separada.")
+    if positional["currency_rows"]:
+        indirect.append("Los valores de `Row` contienen marcadores monetarios en las posiciones " + ", ".join(positional["currency_positions"]) + "; el mapeo estructural las asocia al precio, no a una columna `moneda`.")
+    if not indirect:
+        indirect.append("No se encontró evidencia indirecta adicional que permita validar la moneda.")
+    unused = ", ".join(str(position) for position in positional["unused_positions"]) or "ninguna"
+    currency_row_values = Counter(item.get("currency", "") for item in positional["currency_rows"] if item.get("currency"))
+    if positional["currency_rows"] and all(item.get("currency") for item in positional["currency_rows"]):
+        conclusion = "A. Moneda explícita detectada en el campo original de precio."
+    elif positional["currency_rows"]:
+        conclusion = "B. Moneda parcialmente identificable; quedan valores sin marcador explícito."
+    else:
+        conclusion = "C. Moneda no determinable con los archivos actuales."
+    if currency_row_values:
+        direct.append("Normalización explícita de valores Row: " + ", ".join(f"{name} ({count})" for name, count in sorted(currency_row_values.items())) + ".")
+    direct_lines = [f"- {item}" for item in direct] or ["- No se encontró evidencia directa."]
+    absent_lines = [f"- {item}" for item in absent] or ["- No se registraron ausencias específicas."]
+    lines = [
+        "# Reporte de moneda SIO", "", f"Fecha de análisis: {date.today().isoformat()}", "", "## Objetivo", "", "Determinar si la moneda del precio puede recuperarse de forma explícita o validable en la respuesta SIO.", "", "## Fuentes revisadas", "", *[f"- `{path}`" for path in reviewed_files], "", "## Evidencia encontrada", "", "### Evidencia directa", "", *direct_lines, "", "### Evidencia indirecta", "", *[f"- {item}" for item in indirect], "", "### Sin evidencia", "", *absent_lines, "", "## Revisión de posiciones Row", "", f"- Archivo de mapeo revisado: `{mapping_name}`.", f"- Longitudes de Row observadas: {', '.join(str(item) for item in positional['row_lengths']) or 'ninguna'}.", f"- Posiciones con marcadores monetarios: {', '.join(positional['currency_positions']) or 'ninguna'}.", f"- Posiciones Row no utilizadas por el mapeo: {unused}.", "- Se revisaron los valores no utilizados y no apareció una posición adicional identificable como moneda; la posición de precio conserva el texto original.", "", "## Resultado", "", conclusion, "", "En Row[10], `U$S`, `US$` o `USD` explícitos se normalizan a USD; `$` explícito sin esos marcadores se normaliza a ARS. La normalización conserva el texto original y no usa contexto externo.", "", "## Decisión metodológica", "", "- Si la moneda es explícita en el campo original de precio, permitir completar `moneda`.", "- Si la moneda no es explícita, mantener `moneda=Sin especificar`.", "- Si sólo hay evidencia débil o embebida sin marcador inequívoco, no completar moneda automáticamente; marcar observación.", "- No asumir ARS ni USD por tratarse de SIO.", "", "## Impacto en aptitud dashboard", "", "`apto_piloto` puede permanecer en sí porque la muestra tiene fecha, commodity, precio válido, fuente y unidades respaldadas. `apto_dashboard` puede quedar como `parcial_piloto` si moneda y unidad están explícitas, pero no como `si` pleno porque la muestra sigue limitada a una sola página. La comparabilidad monetaria entre monedas distintas requiere separación o conversión metodológica explícita.", "", "## Próximo paso recomendado", "", "Validar una segunda respuesta o exportación manual para confirmar la regla en todas las filas. Si aparecen valores sin marcador o cambia el formato, mantenerlos como `Sin especificar`; no hacer paginación masiva ni llamadas desde el dashboard.", "",
+    ]
+    path = DATA_DIR / "reports" / "REPORTE_MONEDA_SIO.md"
+    report_text = "\n".join(lines)
+    embedded_section = "\n\n## Moneda embebida en campo de precio\n\nRow[10] contiene el campo original de precio. El símbolo monetario se extrae sólo si aparece explícitamente: `U$S`/`US$`/`USD` se normaliza a `USD`, y `$` sin esos marcadores se normaliza a `ARS`. No se infiere moneda por contexto, y siempre se conserva `precio_original_texto`."
+    report_text = report_text.replace("\n## Decisión metodológica", embedded_section + "\n\n## Decisión metodológica", 1)
+    path.write_text(report_text, encoding="utf-8")
+    return path
+
+
+def run_currency_analysis() -> int:
+    raw_files = sorted(path for path in DEFAULT_OUTPUT.iterdir() if path.is_file() and path.suffix.lower() in {".html", ".htm", ".json", ".js"}) if DEFAULT_OUTPUT.exists() else []
+    documentation_paths = [
+        DATA_DIR / "reports" / name
+        for name in ("REPORTE_DESCUBRIMIENTO_SIO.md", "REPORTE_ENDPOINT_SIO.md", "REPORTE_MAPEO_GETOPERACIONES_SIO.md", "REPORTE_VALIDACION_MAPEO_SIO.md", "REPORTE_UNIDADES_MONEDA_SIO.md")
+        if (DATA_DIR / "reports" / name).exists()
+    ]
+    processed_path = DATA_DIR / "processed" / "COMMODITIES_SIO_INTEGRADO.csv"
+    reviewed = [str(path.relative_to(ROOT)).replace("\\", "/") for path in raw_files + documentation_paths + ([processed_path] if processed_path.exists() else [])]
+    scan_paths = raw_files + ([processed_path] if processed_path.exists() else [])
+    results: list[dict[str, Any]] = []
+    for path in scan_paths:
+        try:
+            source = path.read_text(encoding="utf-8-sig", errors="replace")
+        except OSError:
+            continue
+        html_evidence = extract_discovery_evidence(source.encode("utf-8"), "local://" + path.name) if path.suffix.lower() in {".html", ".htm"} else None
+        payload = load_local_json(path) if path.suffix.lower() == ".json" else None
+        json_evidence = inspect_json_currency(payload)
+        documentation = []
+        for doc_path in documentation_paths:
+            try:
+                documentation.append(doc_path.read_text(encoding="utf-8-sig", errors="replace"))
+            except OSError:
+                pass
+        results.append({"file": str(path.relative_to(ROOT)).replace("\\", "/"), "hits": currency_marker_hits(source) if path in raw_files else [], "columns": html_evidence["columns"] if html_evidence else [], "html": bool(html_evidence), "html_currency": bool(html_evidence and any(compact(column) in {"moneda", "currency", "codigomoneda", "monedaprecio"} for column in html_evidence["columns"])), "json": json_evidence, "documentation": documentation})
+    mapping, mapping_name = load_local_mapping_positions()
+    currency_rows = [item for result in results for item in result["json"]["row_evidence"]]
+    row_lengths = sorted({length for result in results for length in result["json"]["row_lengths"]})
+    mapped_positions = set(mapping)
+    currency_positions = sorted({item["position"] for item in currency_rows}, key=int)
+    positional = {"currency_rows": currency_rows, "currency_positions": currency_positions, "row_lengths": row_lengths, "unused_positions": sorted(set(range(max(row_lengths or [0]))) - mapped_positions)}
+    report = write_currency_report(reviewed, raw_files, results, positional, mapping_name)
+    print("Análisis de moneda SIO finalizado en modo local; no se realizaron requests web.")
+    print(f"Archivos raw revisados: {len(raw_files)}; marcadores monetarios: {len(currency_rows)} valores Row con evidencia.")
+    print(f"Posiciones Row con marcadores: {', '.join(currency_positions) or 'ninguna'}; posiciones no utilizadas: {', '.join(str(item) for item in positional['unused_positions']) or 'ninguna'}.")
+    analysis_result = "A. Moneda explícita detectada en el campo original de precio." if currency_rows and all(item.get("currency") for item in currency_rows) else "B. Moneda parcialmente identificable; quedan valores sin marcador explícito." if currency_rows else "C. Moneda no determinable con los archivos actuales."
+    print(f"Resultado: {analysis_result}")
+    print(f"Reporte generado: {report}")
+    return 0
+
+
+def is_sensitive_name(name: Any) -> bool:
+    raw = str(name or "").strip()
+    return raw.lower() in SENSITIVE_EXACT_NAMES or bool(SENSITIVE_NAME_PATTERN.search(raw))
+
+
+def payload_has_sensitive_data(payload: str) -> bool:
+    return bool(re.search(r"(?i)(?:^|[,{&?;\s])[\"']?(?:authorization|cookie|token|secret|password|api[-_]?key|session|sessid|sid|csrf|bearer)[\"']?\s*[:=]", payload or ""))
+
+
+def sanitize_scalar(value: Any) -> str:
+    """Redacta valores sensibles antes de cualquier salida o reporte."""
+
+    result = str(value or "")
+    result = re.sub(r"(?i)\bBearer\s+[^\s,;]+", "Bearer [REDACTED]", result)
+    result = re.sub(
+        r"(?i)(\b(?:authorization|cookie|token|secret|password|api[-_]?key|session|sessid|sid|csrf)\b\s*[:=]\s*)([^&\s,;\"'}]+)",
+        r"\1[REDACTED]",
+        result,
+    )
+    return result
+
+
+def sanitize_structure(value: Any, name: str = "") -> Any:
+    if is_sensitive_name(name):
+        return "[REDACTED]"
+    if isinstance(value, dict):
+        return {str(key): sanitize_structure(item, str(key)) for key, item in value.items()}
+    if isinstance(value, list):
+        return [sanitize_structure(item, name) for item in value]
+    return sanitize_scalar(value)
+
+
+def sanitize_payload(payload: str) -> str:
+    raw = str(payload or "").strip()
+    if not raw:
+        return ""
+    try:
+        return json.dumps(sanitize_structure(json.loads(raw)), ensure_ascii=False, indent=2)
+    except json.JSONDecodeError:
+        pass
+    pairs = urllib.parse.parse_qsl(raw, keep_blank_values=True)
+    if pairs and ("=" in raw or "&" in raw):
+        return urllib.parse.urlencode([(name, "[REDACTED]" if is_sensitive_name(name) else sanitize_scalar(value)) for name, value in pairs])
+    return sanitize_scalar(raw)
+
+
+def sanitize_url(url: str) -> str:
+    parsed = urllib.parse.urlsplit(url)
+    if not parsed.scheme or not parsed.netloc:
+        return sanitize_scalar(url)
+    query = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
+    safe_query = urllib.parse.urlencode([(name, "[REDACTED]" if is_sensitive_name(name) else sanitize_scalar(value)) for name, value in query])
+    return urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, parsed.path, safe_query, ""))
+
+
+def headers_from_pairs(headers: Any) -> tuple[list[tuple[str, str]], bool]:
+    relevant: list[tuple[str, str]] = []
+    sensitive_found = False
+    if isinstance(headers, dict):
+        source = headers.items()
+    elif isinstance(headers, list):
+        source = ((item.get("name"), item.get("value")) for item in headers if isinstance(item, dict))
+    else:
+        source = []
+    for name, value in source:
+        normalized = str(name or "").strip()
+        if not normalized:
+            continue
+        if is_sensitive_name(normalized):
+            sensitive_found = True
+            continue
+        if normalized.lower() in SAFE_DEVTOOLS_HEADERS:
+            relevant.append((normalized, sanitize_scalar(value)))
+    return relevant, sensitive_found
+
+
+def pagination_parameters(payload: str) -> dict[str, str]:
+    raw = str(payload or "").strip()
+    if not raw:
+        return {}
+    result: dict[str, str] = {}
+
+    def collect(value: Any) -> None:
+        if isinstance(value, dict):
+            for name, item in value.items():
+                if str(name).lower() in PAGINATION_PARAMETER_NAMES:
+                    result[str(name)] = str(item)
+                collect(item)
+        elif isinstance(value, list):
+            for item in value:
+                collect(item)
+
+    try:
+        collect(json.loads(raw))
+    except json.JSONDecodeError:
+        for name, value in urllib.parse.parse_qsl(raw, keep_blank_values=True):
+            if name.lower() in PAGINATION_PARAMETER_NAMES:
+                result[name] = value
+        for match in re.finditer(r"(?i)[\"']?([A-Za-z_][A-Za-z0-9_]*)[\"']?\s*[:=]\s*[\"']?([^,}\s\"']+)", raw):
+            name, value = match.groups()
+            if name.lower() in PAGINATION_PARAMETER_NAMES:
+                result[name] = value
+    return result
+
+
+def relative_display_path(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(ROOT)).replace("\\", "/")
+    except ValueError:
+        return str(path.resolve())
+
+
+def classify_devtools_request(url: str, payload: str, response_headers: Any) -> str:
+    """Clasifica evidencia local; nunca infiere un endpoint ni ejecuta requests."""
+
+    haystack = " ".join([url, payload, " ".join(f"{item.get('name', '')}: {item.get('value', '')}" for item in response_headers if isinstance(item, dict))]).lower()
+    if any(pattern in haystack for pattern in EXPORT_PATTERNS) or "application/vnd.ms-excel" in haystack or "application/octet-stream" in haystack:
+        return "exportacion"
+    if "getoperaciones" in url.lower():
+        return "grilla"
+    if re.search(r"\.(?:js|css|png|jpg|jpeg|gif|svg|woff2?)(?:\?|$)", url, flags=re.I):
+        return "recurso_estatico"
+    return "desconocido"
+
+
+def export_download_evidence(url: str, response_headers: Any) -> list[str]:
+    values = [url]
+    values.extend(f"{item.get('name', '')}: {item.get('value', '')}" for item in response_headers if isinstance(item, dict))
+    joined = "\n".join(values).lower()
+    evidence: list[str] = []
+    for label, pattern in (("Content-Disposition", "content-disposition"), ("Excel", "application/vnd.ms-excel"), ("CSV", "text/csv"), ("archivo adjunto", "attachment"), ("binario", "application/octet-stream"), ("respuesta HTML", "text/html")):
+        if pattern in joined:
+            evidence.append(label)
+    return evidence
+
+
+def build_devtools_record(source_type: str, url: str, method: str, headers: Any, payload: str, evidence: str, response_headers: Any = ()) -> dict[str, Any]:
+    safe_headers, sensitive_headers = headers_from_pairs(headers)
+    parameters = pagination_parameters(payload)
+    payload_sensitive = payload_has_sensitive_data(payload)
+    lowered_url = url.lower()
+    endpoint = urllib.parse.urlsplit(url).path or url
+    is_sio = "siogranos" in lowered_url
+    is_get_operaciones = "getoperaciones" in lowered_url
+    request_type = classify_devtools_request(url, payload, response_headers)
+    confidence = "alta" if is_get_operaciones else "media" if is_sio else "baja"
+    return {
+        "source_type": source_type,
+        "url": sanitize_url(url),
+        "endpoint": endpoint,
+        "method": (method or "GET").upper(),
+        "headers": safe_headers,
+        "payload": sanitize_payload(payload),
+        "has_payload": bool(payload.strip()),
+        "parameters": parameters,
+        "is_sio": is_sio,
+        "is_get_operaciones": is_get_operaciones,
+        "request_type": request_type,
+        "download_evidence": export_download_evidence(url, response_headers),
+        "confidence": confidence,
+        "evidence": evidence,
+        "sensitive_transport": sensitive_headers or payload_sensitive,
+    }
+
+
+def analyze_har_file(path: Path) -> list[dict[str, Any]]:
+    try:
+        document = json.loads(path.read_text(encoding="utf-8-sig", errors="replace"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SystemExit(f"No se pudo analizar HAR local: {exc}") from exc
+    entries = document.get("log", {}).get("entries", []) if isinstance(document, dict) else []
+    if not isinstance(entries, list):
+        raise SystemExit("El HAR local no contiene log.entries válido.")
+    records: list[dict[str, Any]] = []
+    for index, entry in enumerate(entries, start=1):
+        request = entry.get("request", {}) if isinstance(entry, dict) else {}
+        if not isinstance(request, dict):
+            continue
+        url = str(request.get("url", ""))
+        if "siogranos" not in url.lower():
+            continue
+        post_data = request.get("postData", {})
+        payload = ""
+        if isinstance(post_data, dict):
+            payload = str(post_data.get("text", ""))
+            if not payload and isinstance(post_data.get("params"), list):
+                payload = urllib.parse.urlencode([(str(item.get("name", "")), str(item.get("value", ""))) for item in post_data["params"] if isinstance(item, dict)])
+        response = entry.get("response", {}) if isinstance(entry, dict) else {}
+        response_headers = response.get("headers", []) if isinstance(response, dict) else []
+        records.append(build_devtools_record("HAR", url, str(request.get("method", "GET")), request.get("headers", []), payload, f"HAR local, entrada {index}", response_headers))
+    return records
+
+
+def analyze_curl_file(path: Path) -> list[dict[str, Any]]:
+    try:
+        source = path.read_text(encoding="utf-8-sig", errors="replace")
+    except OSError as exc:
+        raise SystemExit(f"No se pudo leer cURL local: {exc}") from exc
+    try:
+        tokens = shlex.split(source, posix=True)
+    except ValueError:
+        tokens = re.findall(r"(?:[^\s\"']|\"[^\"]*\"|'[^']*')+", source)
+    # "Copy as cURL" desde cmd.exe usa ^ como escape de comillas y saltos.
+    # Se elimina sólo para interpretar el texto local; el cURL nunca se ejecuta.
+    tokens = [token.replace("^", "") for token in tokens if token != "^"]
+    method = ""
+    headers: list[dict[str, str]] = []
+    payloads: list[str] = []
+    url = ""
+    index = 0
+    data_flags = {"-d", "--data", "--data-raw", "--data-binary", "--data-ascii"}
+    while index < len(tokens):
+        token = tokens[index]
+        if token in {"-X", "--request"} and index + 1 < len(tokens):
+            method = tokens[index + 1]
+            index += 2
+            continue
+        if token.startswith("--request="):
+            method = token.split("=", 1)[1]
+        elif token in {"-H", "--header"} and index + 1 < len(tokens):
+            raw_header = tokens[index + 1]
+            name, separator, value = raw_header.partition(":")
+            headers.append({"name": name.strip(), "value": value.strip() if separator else ""})
+            index += 2
+            continue
+        elif token.startswith("--header="):
+            raw_header = token.split("=", 1)[1]
+            name, separator, value = raw_header.partition(":")
+            headers.append({"name": name.strip(), "value": value.strip() if separator else ""})
+        elif token in data_flags and index + 1 < len(tokens):
+            payloads.append(tokens[index + 1])
+            index += 2
+            continue
+        elif any(token.startswith(flag + "=") for flag in data_flags):
+            payloads.append(token.split("=", 1)[1])
+        elif token in {"--url"} and index + 1 < len(tokens):
+            url = tokens[index + 1]
+            index += 2
+            continue
+        elif token.startswith("--url="):
+            url = token.split("=", 1)[1]
+        elif token.startswith(("http://", "https://")) and not url:
+            url = token
+        index += 1
+    if not method:
+        method = "POST" if payloads else "GET"
+    if not url:
+        return []
+    return [build_devtools_record("cURL", url, method, headers, "\n".join(payloads), "cURL local; no ejecutado")]
+
+
+def write_devtools_report(source_type: str, path: Path, records: list[dict[str, Any]]) -> Path:
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    candidates = [record for record in records if record["is_sio"]]
+    observed_parameters: dict[str, str] = {}
+    for record in candidates:
+        observed_parameters.update(record["parameters"])
+    headers = sorted({f"{name}: {value}" for record in candidates for name, value in record["headers"]}, key=str.lower)
+    has_sensitive_transport = any(record["sensitive_transport"] for record in candidates)
+    get_operaciones = next((record for record in candidates if record["is_get_operaciones"]), None)
+    lines = [
+        "# Reporte de request observado en DevTools SIO", "", "## Objetivo", "", "Identificar el payload real usado por la grilla SIO para paginar operaciones.", "", "## Archivo analizado", "", f"- Tipo: {source_type} local.", f"- Archivo: `{relative_display_path(path)}`.", "- El archivo fuente no se copia ni se versiona; este reporte omite cookies, autorizaciones, tokens e IDs de sesión.", "", "## Endpoint observado", "", f"- `{get_operaciones['endpoint']}`" if get_operaciones else "- No se detectó GetOperaciones.", "", "## Método", "", f"- {get_operaciones['method']}" if get_operaciones else "- No determinado.", "", "## Requests candidatos detectados", "", "| Endpoint | Método | Tipo | Contiene payload | Parámetros detectados | Evidencia | Confianza | Observaciones |", "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    if candidates:
+        for record in candidates:
+            parameter_names = ", ".join(record["parameters"]) or "ninguno"
+            observations = "GetOperaciones detectado" if record["is_get_operaciones"] else "Request SIO candidato"
+            if record["sensitive_transport"]:
+                observations += "; se detectó material sensible y fue omitido/redactado"
+            lines.append(f"| `{record['endpoint']}` | {record['method']} | {record['source_type']} | {'sí' if record['has_payload'] else 'no'} | {parameter_names} | {record['evidence']} | {record['confidence']} | {observations} |")
+    else:
+        lines.append("| — | — | — | no | ninguno | No se detectó request SIO analizable. | baja | Repetir captura con Fetch/XHR visible. |")
+    lines.extend(["", "## Parámetros de paginación observados", "", "| Parámetro | Valor observado | Posible función | Evidencia | Confianza |", "| --- | --- | --- | --- | --- |"])
+    parameter_functions = {"page": "número de página", "rows": "tamaño de página", "pCurrentPage": "número de página del PageMethod", "pPageSize": "tamaño de página del PageMethod", "sidx": "campo de ordenamiento", "sord": "dirección de ordenamiento", "nd": "marca temporal de jqGrid", "_search": "indicador de búsqueda", "totalrows": "límite o total solicitado"}
+    if observed_parameters:
+        for name, value in observed_parameters.items():
+            lines.append(f"| {name} | `{sanitize_scalar(value)}` | {parameter_functions.get(name, 'parámetro observado')} | Payload local sanitizado. | alta si pertenece a GetOperaciones; media en otro request SIO. |")
+    else:
+        lines.append("| — | — | No se observó parámetro de paginación. | No hay payload SIO analizable. | baja |")
+    lines.extend(["", "## Headers no sensibles", ""])
+    lines.extend([f"- `{header}`" for header in headers] or ["- No se detectaron headers no sensibles dentro de la lista permitida."])
+    lines.extend(["", "No se listan `Cookie`, `Authorization`, tokens, credenciales ni IDs de sesión.", "", "## Payload sanitizado", ""])
+    if candidates:
+        for record in candidates:
+            lines.extend([f"### {record['endpoint']}", "", "```json", record["payload"] or "(sin payload)", "```", ""])
+    else:
+        lines.extend(["No hay payload local SIO para mostrar.", ""])
+    expected = {"pPageSize", "pCurrentPage"}
+    observed_names = set(observed_parameters)
+    missing = sorted(expected - observed_names)
+    extra = sorted(observed_names - expected)
+    lines.extend(["## Comparación con payload anterior", "", "Payload anterior controlado:", "", "```json", '{"pPageSize": 15, "pCurrentPage": 1/2/3}', "```", "", f"- Parámetros observados en DevTools: {', '.join(observed_parameters) or 'ninguno'}.", f"- Parámetros del payload anterior que no aparecen: {', '.join(missing) or 'ninguno'}.", f"- Parámetros adicionales observados: {', '.join(extra) or 'ninguno'}.", "- La comparación describe sólo la captura local; no infiere parámetros ausentes.", "", "## Diagnóstico", ""])
+    if get_operaciones and get_operaciones["has_payload"] and not has_sensitive_transport:
+        diagnosis = "A. El payload real de GetOperaciones queda claro en esta captura local."
+        if "page2" in path.name.lower() and observed_parameters.get("pCurrentPage") == "1":
+            diagnosis += " El nombre local refiere página 2, mientras el valor observado es `pCurrentPage=1`; puede corresponder a indexación base cero o requerir confirmar la captura, sin asumir una de esas opciones."
+    elif has_sensitive_transport:
+        diagnosis = "B. La captura contiene datos de sesión, cookies o autenticación potencialmente necesarios; fueron omitidos o redactados."
+    elif candidates:
+        diagnosis = "D. Se detectó un request SIO, pero no corresponde a GetOperaciones con un payload útil."
+    else:
+        diagnosis = "C. El cURL no contiene un request SIO útil para paginación."
+    lines.extend([diagnosis, "", "## Recomendación próxima", ""])
+    if any(record["is_get_operaciones"] and record["has_payload"] for record in candidates) and not has_sensitive_transport:
+        recommendation = "A. El payload real parece identificable. Preparar una prueba controlada separada con máximo 2 requests, sólo después de revisar manualmente sus valores y condiciones de uso."
+    elif has_sensitive_transport:
+        recommendation = "B. La captura contiene headers o campos potencialmente sensibles. No automatizar mientras no se confirme que la consulta funciona sin sesión/cookies; mantener descarga manual."
+    else:
+        recommendation = "C. El HAR/cURL no contiene un request SIO útil de paginación. Repetir la captura con la grilla y la página 2 visibles en Fetch/XHR."
+    lines.extend([recommendation, "", "Este análisis es local: no ejecuta cURL ni realiza requests web.", ""])
+    DEVTOOLS_REPORT_PATH.write_text("\n".join(lines), encoding="utf-8")
+    return DEVTOOLS_REPORT_PATH
+
+
+def write_export_report(source_type: str, path: Path, records: list[dict[str, Any]]) -> Path | None:
+    """Crea el reporte sólo ante una captura local con candidatos de exportación."""
+
+    candidates = [record for record in records if record["is_sio"] and record["request_type"] == "exportacion"]
+    if not candidates:
+        return None
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    observed_parameters: dict[str, str] = {}
+    for record in candidates:
+        observed_parameters.update(record["parameters"])
+    lines = [
+        "# Reporte de exportación SIO", "", "## Objetivo", "", "Analizar si el botón Exportar Operaciones ofrece un mecanismo reproducible y seguro para obtener datos tabulares.", "", "## Archivo analizado", "", f"- Tipo: {source_type} local.", f"- Archivo: `{relative_display_path(path)}`.", "- El HAR/cURL fuente permanece local e ignorado por Git; este reporte omite cookies, tokens, credenciales y sesiones.", "", "## Requests candidatos", "", "| Endpoint | Método | Tipo probable | Payload detectado | Headers no sensibles | Evidencia | Confianza | Observaciones |", "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for record in candidates:
+        payload = record["payload"] or "sin payload"
+        headers = ", ".join(f"{name}: {value}" for name, value in record["headers"]) or "ninguno"
+        download = ", ".join(record["download_evidence"]) or "sin evidencia de respuesta descargable en la captura"
+        notes = "posible dependencia de sesión; no ejecutado"
+        if record["sensitive_transport"]:
+            notes += "; material sensible redactado"
+        lines.append(f"| `{record['endpoint']}` | {record['method']} | exportación | `{payload}` | {headers} | {download}; {record['evidence']} | {record['confidence']} | {notes} |")
+    evidence = sorted({item for record in candidates for item in record["download_evidence"]})
+    lines.extend(["", "## Evidencia de archivo descargable", "", f"- Evidencia detectada: {', '.join(evidence) if evidence else 'no se observó Content-Disposition, Excel, CSV ni content-type descargable en esta captura' }.", "- Nombre de archivo: sólo se reporta si aparece explícitamente en el HAR/cURL sanitizado.", "- Respuesta binaria/HTML: se conserva como evidencia de captura; no se ejecutan requests ni descargas.", "", "## Parámetros detectados", "", "| Parámetro | Valor observado |", "| --- | --- |"])
+    if observed_parameters:
+        lines.extend(f"| {name} | `{sanitize_scalar(value)}` |" for name, value in observed_parameters.items())
+    else:
+        lines.append("| — | No se observó payload o parámetro de exportación. |")
+    lines.extend(["", "## Riesgos", "", "- Posible dependencia de sesión o cookies.", "- Posible generación server-side y límites de rango de fechas.", "- Restricciones de uso, licencia o estabilidad del mecanismo.", "- No automatizar masivamente sin validación previa.", "", "## Recomendación próxima", "", "A. Si hay endpoint de exportación claro sin sesión sensible: hacer una prueba controlada de descarga de un archivo.", "", "B. Si requiere sesión/cookies: usar descarga manual desde el navegador.", "", "C. Si no hay endpoint claro: descargar manualmente el Excel y probar el integrador local.", ""])
+    report_path = REPORT_DIR / "REPORTE_EXPORTACION_SIO.md"
+    report_path.write_text("\n".join(lines), encoding="utf-8")
+    return report_path
+
+
+def run_devtools_analysis(source_type: str, path_value: str) -> int:
+    path = Path(path_value)
+    if not path.is_file():
+        raise SystemExit(f"No existe un archivo local analizable: {path}")
+    records = analyze_har_file(path) if source_type == "HAR" else analyze_curl_file(path)
+    report = write_devtools_report(source_type, path, records)
+    export_report = write_export_report(source_type, path, records)
+    sio_count = sum(1 for record in records if record["is_sio"])
+    print(f"Análisis local de {source_type} finalizado: {sio_count} request(s) SIO detectado(s). No se realizaron requests web.")
+    print(f"Reporte generado: {report}")
+    if export_report:
+        print(f"Reporte de exportación generado: {export_report}")
+    return 0
+
+
+def response_record_count(payload: Any) -> tuple[int, bool]:
+    if isinstance(payload, list):
+        return len(payload), True
+    if isinstance(payload, dict):
+        for name, value in payload.items():
+            if compact(name) in {"items", "rows", "records", "operaciones", "data"} and isinstance(value, list):
+                return len(value), compact(name) == "operaciones" or compact(name) in {"items", "rows", "records"}
+        for value in payload.values():
+            count, found = response_record_count(value)
+            if found:
+                return count, True
+    return 0, False
+
+
+def response_field_names(payload: Any) -> list[str]:
+    fields: list[str] = []
+    if isinstance(payload, dict):
+        fields.extend(str(name) for name in payload)
+        for value in payload.values():
+            fields.extend(response_field_names(value))
+    elif isinstance(payload, list):
+        for value in payload[:20]:
+            fields.extend(response_field_names(value))
+    return unique(fields)
+
+
+def analyze_endpoint_response(content: bytes, status: Any, content_type: str, error: str) -> dict[str, Any]:
+    looks_html = "html" in content_type.lower() or content.lstrip().lower().startswith((b"<!doctype html", b"<html"))
+    payload, json_error = decode_json_response(content)
+    json_valid = not json_error
+    fields = response_field_names(payload) if json_valid else []
+    compact_fields = {compact(field): field for field in fields}
+    expected = {
+        "producto": {"producto", "grano", "especie", "commodity"},
+        "precio": {"precio", "preciotn", "preciomonto", "monto", "valor"},
+        "moneda": {"moneda", "currency"},
+        "cantidad": {"cantidad", "cant", "volumen", "tn", "cantidadtn"},
+        "fecha": {"fecha", "fechaconcertacion", "fechadeclaracion", "fechaentrega"},
+        "procedencia": {"procedencia"},
+        "lugar de entrega": {"lugarentrega", "lugardeentrega", "destino", "puerto"},
+        "condición de pago": {"condicionpago", "condiciondepago", "pago"},
+    }
+    detected = {label: compact_fields[name] for label, names in expected.items() for name in names if name in compact_fields}
+    count, has_list = response_record_count(payload) if json_valid else (0, False)
+    status_number = status if isinstance(status, int) else None
+    requires_session = "sí" if status_number in {401, 403} or (looks_html and re.search(r"login|sesion|session|ingres", content.decode("utf-8", errors="replace"), flags=re.I)) else "no determinado"
+    requires_params = "sí" if json_valid and isinstance(payload, dict) and any(compact(name) in {"error", "exception", "message"} for name in payload) else "no determinado"
+    top_payload = payload.get("d") if isinstance(payload, dict) and isinstance(payload.get("d"), dict) else payload
+    return {"status": status, "content_type": content_type or "no informado", "size": len(content), "looks_html": looks_html, "json_valid": json_valid, "json_error": json_error, "top_keys": list(top_payload)[:20] if isinstance(top_payload, dict) else [], "record_count": count, "has_list": has_list, "fields": detected, "all_fields": fields, "mappable": bool(detected), "requires_session": requires_session, "requires_params": requires_params, "error": error}
+
+
+def save_endpoint_response(output_dir: Path, content: bytes, content_type: str) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    extension = response_extension(content_type, content)
+    if extension == ".bin":
+        extension = ".txt"
+    path = output_dir / f"SIO_test_GetOperaciones_{datetime.now().strftime('%Y%m%d%H%M%S')}{extension}"
+    path.write_bytes(content)
+    return path
+
+
+def save_sample_page_response(output_dir: Path, page: int, content: bytes) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    path = output_dir / f"SIO_GetOperaciones_page_{page}_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.json"
+    path.write_bytes(content)
+    return path
+
+
+def response_item_ids(content: bytes) -> list[str]:
+    payload, error = decode_json_response(content)
+    if error:
+        return []
+    if isinstance(payload, dict) and isinstance(payload.get("d"), dict):
+        payload = payload["d"]
+    if isinstance(payload, dict) and isinstance(payload.get("Items"), list):
+        return [str(item.get("ID")) for item in payload["Items"] if isinstance(item, dict) and item.get("ID") is not None]
+    return []
+
+
+def response_item_signatures(content: bytes) -> list[str]:
+    """Devuelve firmas comparables de ID/Row sin publicar el contenido raw."""
+
+    payload, error = decode_json_response(content)
+    if error:
+        return []
+    if isinstance(payload, dict) and isinstance(payload.get("d"), dict):
+        payload = payload["d"]
+    if not isinstance(payload, dict) or not isinstance(payload.get("Items"), list):
+        return []
+    signatures: list[str] = []
+    for item in payload["Items"]:
+        if not isinstance(item, dict):
+            continue
+        signatures.append(json.dumps({"ID": item.get("ID"), "Row": item.get("Row")}, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
+    return signatures
+
+
+def signature_hash(signatures: list[str]) -> str:
+    """Resume filas para comparación sin publicar el contenido original."""
+
+    return hashlib.sha256("\n".join(signatures).encode("utf-8")).hexdigest()[:16]
+
+
+def save_observed_page_response(output_dir: Path, current_page: str, content: bytes) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
+    path = output_dir / f"SIO_GetOperaciones_observed_pCurrentPage_{current_page}_{timestamp}.json"
+    path.write_bytes(content)
+    return path
+
+
+def observed_pagination_diagnosis(requests: list[dict[str, Any]]) -> tuple[str, str, str]:
+    """Clasifica sólo lo que permiten concluir las tres respuestas observadas."""
+
+    by_page = {str(item["page"]): item for item in requests}
+    signatures = {page: item.get("signatures", []) for page, item in by_page.items()}
+    if len(requests) < 3 or any(not item.get("signatures") for item in requests):
+        return (
+            "D. Requiere otro parámetro faltante o evidencia adicional",
+            "No se obtuvieron tres respuestas comparables con filas; no se infieren parámetros nuevos.",
+            "Repetir DevTools limpiando Network y capturando únicamente el clic en la página 2.",
+        )
+    if signatures["0"] == signatures["1"] == signatures["2"]:
+        return (
+            "C. pCurrentPage no cambia la respuesta",
+            "Las tres respuestas tienen las mismas firmas ID/Row.",
+            "No ampliar la extracción. Repetir DevTools limpiando Network y capturando únicamente el clic en la página 2.",
+        )
+    if signatures["0"] == signatures["1"] and signatures["1"] != signatures["2"]:
+        return (
+            "B. Paginación validada con base uno",
+            "pCurrentPage=0 se comporta como la primera página y pCurrentPage=2 devuelve filas distintas.",
+            "Actualizar --sample-pages para usar pPageSize=20 e índices desde 1; mantener auditoría previa a cualquier ampliación.",
+        )
+    if signatures["0"] != signatures["1"] and signatures["1"] != signatures["2"]:
+        return (
+            "A. Paginación validada con base cero",
+            "Las respuestas consecutivas 0/1/2 contienen firmas ID/Row distintas.",
+            "Actualizar --sample-pages para usar pPageSize=20 e índices desde 0; mantener auditoría previa a cualquier ampliación.",
+        )
+    return (
+        "D. Requiere otro parámetro faltante o evidencia adicional",
+        "El patrón de respuestas no permite validar de forma segura una base de índice.",
+        "Repetir DevTools limpiando Network y capturando únicamente el clic en la página 2.",
+    )
+
+
+def write_observed_pagination_report(command: str, endpoint: str, max_requests: int, requests: list[dict[str, Any]]) -> Path:
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    diagnosis, detail, recommendation = observed_pagination_diagnosis(requests)
+    comparisons: list[str] = []
+    for left, right in (("0", "1"), ("1", "2"), ("0", "2")):
+        left_item = next((item for item in requests if str(item["page"]) == left), None)
+        right_item = next((item for item in requests if str(item["page"]) == right), None)
+        if not left_item or not right_item:
+            comparisons.append(f"| {left} vs {right} | no comparable | no comparable | no comparable | faltan respuestas |")
+            continue
+        same_rows = left_item.get("signatures", []) == right_item.get("signatures", [])
+        same_ids = left_item.get("ids", []) == right_item.get("ids", [])
+        same_hash = left_item.get("row_hash", "") == right_item.get("row_hash", "")
+        conclusion = "idénticas" if same_rows else "diferentes"
+        comparisons.append(f"| {left} vs {right} | {'sí' if same_rows else 'no'} | {'sí' if same_ids else 'no'} | {'sí' if same_hash else 'no'} | {conclusion} |")
+    lines = [
+        "# Reporte de paginación observada SIO", "", "## Objetivo", "", "Validar el efecto real de `pCurrentPage` usando exclusivamente el payload observado en DevTools y un máximo de tres requests.", "", "## Payload observado en DevTools", "", "```json", '{"pPageSize":"20","pCurrentPage":"1"}', "```", "", "No se enviaron filtros, fechas ni parámetros adicionales.", "", "## Requests realizados", "", f"- Endpoint: `{endpoint}`", f"- Límite solicitado: {max_requests}; límite efectivo: {min(max_requests, 3)}.", "", "| pCurrentPage | pPageSize | Status | Content-Type | Registros | IDs detectados | Hash ID/Row | Raw | Notas |", "| ---: | ---: | ---: | --- | ---: | --- | --- | --- | --- |",
+    ]
+    for item in requests:
+        ids = ", ".join(item.get("ids", [])) or "ninguno"
+        lines.append(f"| {item['page']} | 20 | {item['status'] or 'sin respuesta'} | {item.get('content_type', 'no informado')} | {item['records']} | {ids} | {item.get('row_hash', 'sin hash')} | {item.get('saved') or 'no guardado'} | {item['observations']} |")
+    lines.extend(["", "## Comparación", "", "| Comparación | Filas iguales | IDs iguales | Hash Row igual | Conclusión |", "| --- | --- | --- | --- | --- |", *comparisons, "", "## Diagnóstico", "", f"- **{diagnosis}.** {detail}", "", "## Recomendación", "", recommendation, "", "## Alcance", "", "Este resultado es técnico y no reemplaza `COMMODITIES_SIO_INTEGRADO.csv`, no publica información en el dashboard y no habilita una extracción masiva.", ""])
+    OBSERVED_PAGINATION_REPORT_PATH.write_text("\n".join(lines), encoding="utf-8")
+    return OBSERVED_PAGINATION_REPORT_PATH
+
+
+def run_observed_pagination_test(args: argparse.Namespace, config: dict[str, Any]) -> int:
+    request_limit = min(args.max_requests, 3)
+    base_url = str(config.get("base_url", "")).strip()
+    endpoint = endpoint_url(base_url, TEST_ENDPOINT_PATH) if base_url else TEST_ENDPOINT_PATH
+    requests: list[dict[str, Any]] = []
+    for current_page in ("0", "1", "2")[:request_limit]:
+        payload = {"pPageSize": "20", "pCurrentPage": current_page}
+        item: dict[str, Any] = {"page": current_page, "status": "", "content_type": "no informado", "records": 0, "saved": "", "observations": "", "ids": [], "signatures": [], "row_hash": ""}
+        if not base_url:
+            item["observations"] = "configuración local SIO sin base_url; no se realiza request"
+            requests.append(item)
+            break
+        request = urllib.request.Request(endpoint, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json; charset=utf-8", "Accept": "application/json, text/javascript, */*; q=0.01", "X-Requested-With": "XMLHttpRequest", "User-Agent": USER_AGENT}, method="POST")
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:  # nosec B310: explicit observed endpoint plus --test-observed-pagination and --allow-web
+                content = response.read()
+                item["status"] = response.status
+                item["content_type"] = response.headers.get_content_type()
+            item["records"] = analyze_endpoint_response(content, item["status"], item["content_type"], "")["record_count"]
+            item["ids"] = response_item_ids(content)
+            item["signatures"] = response_item_signatures(content)
+            item["row_hash"] = signature_hash(item["signatures"])
+            item["observations"] = "respuesta recibida sin retry; payload observado exacto"
+            if args.save_response:
+                saved = save_observed_page_response(Path(args.output_dir), current_page, content)
+                item["saved"] = str(saved.relative_to(ROOT)).replace("\\", "/")
+        except urllib.error.HTTPError as exc:
+            item["status"] = exc.code
+            item["content_type"] = exc.headers.get_content_type() if exc.headers else "no informado"
+            item["observations"] = "error HTTP; sin retry; payload observado exacto"
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            item["observations"] = f"{exc.__class__.__name__}; sin retry; payload observado exacto"
+        requests.append(item)
+    report = write_observed_pagination_report(" ".join(sys.argv), endpoint, args.max_requests, requests)
+    print(f"Prueba de paginación observada finalizada: {len(requests)} request(s); límite efectivo: {request_limit}.")
+    for item in requests:
+        print(f"pCurrentPage={item['page']}: status={item['status'] or 'sin respuesta'}; registros={item['records']}; hash={item['row_hash'] or 'sin filas'}.")
+    print(f"Reporte generado: {report}")
+    return 0
+
+
+def write_sample_pages_report(command: str, endpoint: str, pages: int, page_size: int, max_requests: int, requests: list[dict[str, Any]]) -> Path:
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "# Reporte de muestra paginada SIO", "", "## Objetivo", "", "Validar una extracción limitada de varias páginas del endpoint GetOperaciones.", "", "## Comando ejecutado", "", f"`{command}`", "", "## Parámetros", "", f"- pages: {pages}", f"- page_size: {page_size}", f"- max_requests: {max_requests}", f"- endpoint: `{endpoint}`", "- payload base: `{\"pPageSize\": page_size, \"pCurrentPage\": pagina}`", "", "## Requests realizados", "", "| Página | Status code | Content-Type | Tamaño respuesta | Registros detectados | Archivo raw | Observaciones |", "| --- | --- | --- | ---: | ---: | --- | --- |",
+    ]
+    if requests:
+        for item in requests:
+            lines.append(f"| {item['page']} | {item['status'] or 'sin respuesta'} | {item['content_type']} | {item['size']} bytes | {item['records']} | {item['saved'] or 'no guardado'} | {item['observations']} |")
+    else:
+        lines.append("| — | — | — | 0 bytes | 0 | no | No se realizaron requests. |")
+    lines.extend([
+        "", "## Resultado de integración", "", "Pendiente de ejecutar `integrar_commodities_sio.py`.", "", "## Resultado de auditoría", "", "Pendiente de ejecutar `auditar_commodities_sio.py`.", "", "## Riesgos", "", "- La extracción sigue siendo una muestra limitada y no representa toda la serie histórica.", "- No publicar todavía en el dashboard ni mezclar monedas.", "- El endpoint puede no cubrir todos los productos ni todo el mercado.", "", "## Recomendación próxima", "", "Si la muestra es consistente, preparar extracción controlada de N páginas con límite configurable y auditoría previa. Si hay duplicados o inconsistencias, ajustar deduplicación y mapeo antes de ampliar.", "",
+    ])
+    report_text = "\n".join(lines)
+    if any("contenido idéntico" in str(item.get("observations", "")) for item in requests):
+        report_text = report_text.replace("Si la muestra es consistente, preparar extracción controlada de N páginas con límite configurable y auditoría previa. Si hay duplicados o inconsistencias, ajustar deduplicación y mapeo antes de ampliar.", "Las páginas 2/3 devolvieron contenido idéntico a la página anterior y no evidenciaron el efecto de `pCurrentPage`; no ampliar la extracción hasta validar la paginación real. Mantener la deduplicación exacta y repetir la prueba sólo con un request validado en DevTools.")
+    PAGINATED_REPORT_PATH.write_text(report_text, encoding="utf-8")
+    return PAGINATED_REPORT_PATH
+
+
+def run_sample_pages(args: argparse.Namespace, config: dict[str, Any]) -> int:
+    if args.pages < 1:
+        raise SystemExit("--pages debe ser mayor que cero")
+    if args.pages > 5:
+        raise SystemExit("--pages no puede superar 5 en la muestra controlada")
+    base_url = str(config.get("base_url", "")).strip()
+    endpoint = endpoint_url(base_url, TEST_ENDPOINT_PATH) if base_url else TEST_ENDPOINT_PATH
+    requests: list[dict[str, Any]] = []
+    output_dir = Path(args.output_dir)
+    request_limit = min(args.pages, args.max_requests)
+    for page in range(1, request_limit + 1):
+        payload = {"pPageSize": args.page_size, "pCurrentPage": page}
+        item: dict[str, Any] = {"page": page, "status": "", "content_type": "no informado", "size": 0, "records": 0, "saved": "", "observations": ""}
+        content = b""
+        if not base_url:
+            item["observations"] = "configuración local SIO sin base_url"
+            requests.append(item)
+            break
+        request = urllib.request.Request(endpoint, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json; charset=utf-8", "Accept": "application/json, text/javascript, */*; q=0.01", "X-Requested-With": "XMLHttpRequest", "User-Agent": USER_AGENT}, method="POST")
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:  # nosec B310: explicit configured endpoint plus --sample-pages and --allow-web
+                content = response.read()
+                item["status"] = response.status
+                item["content_type"] = response.headers.get_content_type()
+                item["size"] = len(content)
+            result = analyze_endpoint_response(content, item["status"], item["content_type"], "")
+            item["records"] = result["record_count"]
+            item["observations"] = "respuesta recibida sin retry"
+            item["ids"] = response_item_ids(content)
+            if args.save_response:
+                item["saved"] = str(save_sample_page_response(output_dir, page, content).relative_to(ROOT)).replace("\\", "/")
+        except urllib.error.HTTPError as exc:
+            content = exc.read()
+            item["status"] = exc.code
+            item["content_type"] = exc.headers.get_content_type() if exc.headers else "no informado"
+            item["size"] = len(content)
+            result = analyze_endpoint_response(content, item["status"], item["content_type"], f"HTTPError: {exc.code}")
+            item["records"] = result["record_count"]
+            item["observations"] = "error HTTP; sin retry"
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            item["observations"] = f"{exc.__class__.__name__}; sin retry"
+        requests.append(item)
+    previous_ids: list[str] = []
+    for item in requests:
+        current_ids = item.get("ids", [])
+        if current_ids and previous_ids and current_ids == previous_ids:
+            item["observations"] += "; contenido idéntico a la página anterior; pCurrentPage no evidenciado por la respuesta"
+        if current_ids:
+            previous_ids = current_ids
+    report = write_sample_pages_report(" ".join(sys.argv), endpoint, args.pages, args.page_size, args.max_requests, requests)
+    print(f"Muestra paginada finalizada: {len(requests)} request(s); máximo solicitado: {args.max_requests}; máximo de páginas permitido: 5.")
+    for item in requests:
+        print(f"Página {item['page']}: status={item['status'] or 'sin respuesta'}; registros={item['records']}; raw={item['saved'] or 'no guardado'}.")
+    print(f"Reporte generado: {report}")
+    return 0
+
+
+def pagination_evidence_rows() -> list[list[str]]:
+    html_path = DATA_DIR / "raw" / "SIO_descubrimiento_01_consulta_publica.html"
+    source = str(html_path).replace("\\", "/")
+    if not html_path.exists():
+        source = "REPORTE_DESCUBRIMIENTO_SIO.md / REPORTE_ENDPOINT_SIO.md"
+    return [
+        ["pPageSize", "Clave enviada por el JavaScript del PageMethod; se alimenta de jqGrid rowNum.", source, "alta", "sí", "El payload se probó en la muestra y no demostró paginación."],
+        ["pCurrentPage", "Clave enviada por el JavaScript del PageMethod; se alimenta de jqGrid page.", source, "alta", "sí", "El payload se probó con páginas 1/2/3 y las respuestas deben compararse."],
+        ["page", "Aparece como argumento de getGridParam(\"page\") dentro de jqGrid.", source, "media", "sí", "No se observó serializado como clave del POST."],
+        ["rows", "Aparece como rowNum de jqGrid, que alimenta pPageSize.", source, "media", "sí", "No se observó serializado como clave del POST."],
+        ["jqGrid pager", "La página usa jqGrid, #pager y jsonReader page/total/records.", source, "alta", "no", "Evidencia de grilla, no de un payload alternativo."],
+    ]
+
+
+def write_pagination_report(command: str, endpoint: str, page_size: int, max_requests: int, requests: list[dict[str, Any]]) -> Path:
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    raw_rows = sum(int(item.get("records", 0)) for item in requests)
+    signatures = [signature for item in requests for signature in item.get("signatures", [])]
+    unique_signatures = len(set(signatures))
+    duplicate_rows = max(raw_rows - unique_signatures, 0)
+    duplication_pct = (duplicate_rows / raw_rows * 100) if raw_rows else 0
+    all_same_as_first = bool(requests) and all(item.get("signatures", []) == requests[0].get("signatures", []) for item in requests[1:])
+    repeated_ids = Counter(identifier for item in requests for identifier in item.get("ids", []) if identifier)
+    repeated_id_count = sum(count - 1 for count in repeated_ids.values() if count > 1)
+    repeated_id_values = ", ".join(sorted(repeated_ids)) if repeated_ids else "ninguno"
+    lines = [
+        "# Reporte de diagnóstico de paginación SIO", "", "## Objetivo", "", "Diagnosticar si el endpoint GetOperaciones admite paginación real y con qué parámetros.", "", "## Evidencia revisada", "", "- `data/commodities_sio/reports/REPORTE_DESCUBRIMIENTO_SIO.md`", "- `data/commodities_sio/reports/REPORTE_ENDPOINT_SIO.md`", "- `data/commodities_sio/reports/REPORTE_MAPEO_GETOPERACIONES_SIO.md`", "- `data/commodities_sio/reports/REPORTE_MUESTRA_PAGINADA_SIO.md`", "- `data/commodities_sio/raw/SIO_descubrimiento_01_consulta_publica.html` (ignorado por Git, si está disponible)", "- respuestas JSON raw locales de `GetOperaciones` (ignoradas por Git)", "", "## Resultado de muestra paginada", "", f"- Páginas solicitadas: {len(requests)} (límite solicitado: {max_requests}).", f"- Page size: {page_size}.", f"- Requests realizados: {len(requests)}.", f"- Registros brutos: {raw_rows}; registros únicos por ID/Row: {unique_signatures}.", f"- Porcentaje de duplicación: {duplication_pct:.1f}% ({duplicate_rows}/{raw_rows} filas excedentes).", f"- IDs repetidos en exceso: {repeated_id_count}.", f"- IDs repetidos: {repeated_id_values}.", f"- Página 2/3 idéntica a página 1: {'sí' if all_same_as_first and len(requests) >= 2 else 'no concluyente'}.", "", "| Página | Payload exacto | Status | Registros | IDs/Rows respecto de página 1 | Raw | Observaciones |", "| --- | --- | ---: | ---: | --- | --- | --- |",
+    ]
+    for item in requests:
+        comparison = item.get("comparison", "no comparable")
+        lines.append(f"| {item['page']} | `{json.dumps(item['payload'], ensure_ascii=False, separators=(',', ':'))}` | {item['status'] or 'sin respuesta'} | {item['records']} | {comparison} | {item.get('saved') or 'no guardado'} | {item['observations']} |")
+    if not requests:
+        lines.append("| — | — | — | 0 | no comparable | no guardado | No se realizaron requests. |")
+    lines.extend(["", "## Parámetros usados", "", "Se usó únicamente el payload respaldado por el JavaScript local de la grilla:", "", "```json", '{"pPageSize": 15, "pCurrentPage": 1}', '{"pPageSize": 15, "pCurrentPage": 2}', '{"pPageSize": 15, "pCurrentPage": 3}', "```", "", "No se enviaron filtros de producto, fecha o moneda.", "", "## Parámetros candidatos observados", "", "| Parámetro | Evidencia | Fuente de evidencia | Confianza | Requiere prueba | Observaciones |", "| --- | --- | --- | --- | --- | --- |"])
+    lines.extend("| " + " | ".join(row) + " |" for row in pagination_evidence_rows())
+    lines.extend(["", "## Hipótesis", "", "- `pCurrentPage` puede ser aceptado por el JavaScript pero ignorado o normalizado por el endpoint.", "- El endpoint puede requerir estado de sesión u otros datos de la grilla que no aparecen en la evidencia local disponible.", "- jqGrid puede manejar `page` y `rows` internamente, pero no se observó evidencia de que esas claves sean el POST real del PageMethod.", "- La respuesta puede devolver siempre las últimas operaciones o requerir otro endpoint/exportación.", "- `PageCount`, `CurrentPage` y `RecordCount` pueden no estar siendo informados correctamente por la respuesta observada; no se usan para inventar páginas.", "", "## Próximo paso recomendado", "", "La evidencia más fuerte identifica `pPageSize`/`pCurrentPage`, pero la prueba controlada no valida paginación si las páginas repiten IDs/Rows. No ampliar la extracción. Usar DevTools del navegador para observar el request real y la respuesta de la grilla; si coincide con este payload y sigue repitiendo contenido, limitar el uso a la última página disponible o evaluar la exportación manual. No probar variantes arbitrarias sin nueva evidencia.", "", "## Resultado de integración", "", "Pendiente de ejecutar `integrar_commodities_sio.py`.", "", "## Paginación y duplicados", "", "Pendiente de ejecutar `auditar_commodities_sio.py`.", ""])
+    PAGINATION_REPORT_PATH.write_text("\n".join(lines), encoding="utf-8")
+    return PAGINATION_REPORT_PATH
+
+
+def run_test_pagination(args: argparse.Namespace, config: dict[str, Any]) -> int:
+    request_limit = min(args.max_requests, 3)
+    base_url = str(config.get("base_url", "")).strip()
+    endpoint = endpoint_url(base_url, TEST_ENDPOINT_PATH) if base_url else TEST_ENDPOINT_PATH
+    requests: list[dict[str, Any]] = []
+    previous_signatures: list[str] = []
+    for page in range(1, request_limit + 1):
+        payload = {"pPageSize": 15, "pCurrentPage": page}
+        item: dict[str, Any] = {"page": page, "payload": payload, "status": "", "records": 0, "saved": "", "observations": "", "ids": [], "signatures": [], "comparison": "no comparable"}
+        content = b""
+        if not base_url:
+            item["observations"] = "configuración local SIO sin base_url; no se realiza request"
+            requests.append(item)
+            break
+        request = urllib.request.Request(endpoint, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json; charset=utf-8", "Accept": "application/json, text/javascript, */*; q=0.01", "X-Requested-With": "XMLHttpRequest", "User-Agent": USER_AGENT}, method="POST")
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:  # nosec B310: explicit configured endpoint plus --test-pagination and --allow-web
+                content = response.read()
+                item["status"] = response.status
+                item["content_type"] = response.headers.get_content_type()
+            result = analyze_endpoint_response(content, item["status"], item["content_type"], "")
+            item["records"] = result["record_count"]
+            item["ids"] = response_item_ids(content)
+            item["signatures"] = response_item_signatures(content)
+            item["observations"] = "respuesta recibida sin retry; payload exacto registrado"
+            if args.save_response:
+                saved_dir = Path(args.output_dir)
+                saved_path = saved_dir / f"SIO_test_pagination_page_{page}_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.json"
+                saved_dir.mkdir(parents=True, exist_ok=True)
+                saved_path.write_bytes(content)
+                item["saved"] = str(saved_path.relative_to(ROOT)).replace("\\", "/")
+        except urllib.error.HTTPError as exc:
+            content = exc.read()
+            item["status"] = exc.code
+            item["observations"] = f"error HTTP; sin retry; payload exacto registrado"
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            item["observations"] = f"{exc.__class__.__name__}; sin retry; payload exacto registrado"
+        if item["signatures"] and previous_signatures:
+            if item["signatures"] == previous_signatures:
+                item["comparison"] = "idéntica a la página anterior (IDs y Rows)"
+                item["observations"] += "; páginas repetidas"
+            else:
+                item["comparison"] = "diferente de la página anterior"
+        elif item["signatures"]:
+            item["comparison"] = "línea base"
+        if item["signatures"]:
+            previous_signatures = item["signatures"]
+        requests.append(item)
+    report = write_pagination_report(" ".join(sys.argv), endpoint, 15, args.max_requests, requests)
+    print(f"Test de paginación finalizado: {len(requests)} request(s); límite efectivo: {request_limit}.")
+    for item in requests:
+        print(f"Página {item['page']}: status={item['status'] or 'sin respuesta'}; registros={item['records']}; comparación={item['comparison']}.")
+    print(f"Reporte generado: {report}")
+    return 0
+
+
+def write_endpoint_report(command: str, url: str, payload: dict[str, int], result: dict[str, Any], saved: str) -> Path:
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    report = [
+        "# Reporte de prueba de endpoint SIO", "", "## Fecha de ejecución", "", date.today().isoformat(), "", "## Comando ejecutado", "", f"`{command}`", "", "## Endpoint probado", "", url, "", "## Método", "", "POST", "", "## Payload enviado", "", "```json", json.dumps(payload, ensure_ascii=False, indent=2), "```", "", "## Resultado HTTP", "", str(result["status"] or "sin respuesta"), "", "## Content-Type", "", result["content_type"], "", "## Tamaño de respuesta", "", f"{result['size']} bytes", "", "## Diagnóstico de respuesta", "", f"- JSON válido: {'sí' if result['json_valid'] else 'no' }.", f"- Contiene datos/lista detectable: {'sí' if result['has_list'] and result['record_count'] > 0 else 'no'}.", f"- Cantidad aproximada de registros: {result['record_count']}.", f"- Respuesta mapeable automáticamente: {'sí' if result['mappable'] else 'no; la respuesta expone filas posicionales sin nombres semánticos'}.", f"- Requiere sesión: {result['requires_session']}.", f"- Requiere parámetros adicionales: {result['requires_params']}.", f"- Devuelve HTML: {'sí' if result['looks_html'] else 'no'}.", f"- Error de transporte: {result['error'] or 'ninguno'}.", f"- Respuesta guardada como: {saved or 'no guardada'}.", f"- Claves principales: {', '.join(result['top_keys']) or 'ninguna'}.", "", "## Campos detectados", "",
+    ]
+    if result["fields"]:
+        report.extend(f"- {label}: `{field}`" for label, field in result["fields"].items())
+    else:
+        report.append(f"No se detectaron campos esperables con nombre semántico. Campos JSON realmente detectados: {', '.join(result['all_fields']) or 'ninguno'}.")
+    if result["json_valid"] and result["record_count"] > 0 and result["mappable"]:
+        recommendation = "A. La respuesta devuelve datos estructurados: preparar integración controlada de una página, previa validación de duplicados, fechas, moneda, unidad y licencia."
+    elif result["json_valid"] and result["record_count"] > 0:
+        recommendation = "La respuesta SIO contiene datos estructurados, pero no es mapeable automáticamente: validar el esquema de las filas posicionales con el request/respuesta observado en DevTools antes de integrar."
+    elif result["requires_params"] == "sí":
+        recommendation = "B. La respuesta sugiere parámetros faltantes: analizar tráfico manual con DevTools y documentar el request real, sin inventar valores."
+    elif result["requires_session"] == "sí":
+        recommendation = "C. El endpoint requiere sesión o acceso: descartar automatización directa y usar descarga manual."
+    elif result["looks_html"]:
+        recommendation = "D. El endpoint devolvió HTML sin datos estructurados: tratarlo como no automatizable por endpoint directo."
+    else:
+        recommendation = "B. No hay datos estructurados suficientes: analizar tráfico manual con DevTools y documentar el request real."
+    report.extend(["", "## Próximo paso recomendado", "", recommendation, "", "La prueba no paginó, no envió otros parámetros y no generó CSV integrado."])
+    path = ENDPOINT_REPORT_PATH
+    path.write_text("\n".join(report) + "\n", encoding="utf-8")
+    return path
+
+
+def run_endpoint_test(args: argparse.Namespace, config: dict[str, Any]) -> int:
+    payload = {"pPageSize": 10, "pCurrentPage": 1}
+    base_url = str(config.get("base_url", "")).strip()
+    url = endpoint_url(base_url, TEST_ENDPOINT_PATH) if base_url else TEST_ENDPOINT_PATH
+    result = {"status": "", "content_type": "no informado", "size": 0, "json_valid": False, "json_error": "sin respuesta", "top_keys": [], "record_count": 0, "has_list": False, "fields": {}, "all_fields": [], "mappable": False, "requires_session": "no determinado", "requires_params": "no determinado", "looks_html": False, "error": "configuración local SIO ausente"}
+    saved = ""
+    if base_url:
+        request = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json; charset=utf-8", "Accept": "application/json, text/javascript, */*; q=0.01", "X-Requested-With": "XMLHttpRequest", "User-Agent": USER_AGENT}, method="POST")
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:  # nosec B310: explicit configured candidate plus --test-endpoint and --allow-web
+                content = response.read()
+                result = analyze_endpoint_response(content, response.status, response.headers.get_content_type(), "")
+        except urllib.error.HTTPError as exc:
+            content = exc.read()
+            result = analyze_endpoint_response(content, exc.code, exc.headers.get_content_type() if exc.headers else "", f"HTTPError: {exc.code}")
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            result["error"] = exc.__class__.__name__
+    if args.save_response and base_url and result["size"]:
+        saved_path = save_endpoint_response(Path(args.output_dir), content, result["content_type"])
+        saved = saved_path.name
+    report = write_endpoint_report(" ".join(sys.argv), url, payload, result, saved)
+    print(f"Endpoint probado: {url}")
+    print("Método: POST; requests realizados: 1; máximo permitido: 1")
+    print(f"Status code: {result['status'] or 'sin respuesta'}; Content-Type: {result['content_type']}; tamaño: {result['size']} bytes")
+    print(f"JSON válido: {'sí' if result['json_valid'] else 'no'}; registros aproximados: {result['record_count']}")
+    print(f"Campos esperables detectados: {', '.join(result['fields']) or 'ninguno'}")
+    print(f"Reporte generado: {report}")
+    if saved:
+        print(f"Respuesta raw guardada: {Path(args.output_dir) / saved}")
+    return 0
+
+
+def print_plan(products: list[str], windows: list[tuple[date, date]], endpoints: list[tuple[str, str]], output_dir: Path, max_requests: int, label: str) -> None:
+    print(f"Productos solicitados: {', '.join(products)}")
+    print(f"Ventanas de fechas ({len(windows)}, máximo {MAX_DAYS_HARD_LIMIT} días cada una):")
+    for start, end in windows:
+        print(f"  {start.isoformat()} a {end.isoformat()}")
+    print(f"Endpoints candidatos configurados: {', '.join(name for name, _ in endpoints) if endpoints else 'ninguno'}")
+    print(f"Carpeta raw de salida: {output_dir}")
+    print(f"Cantidad máxima de requests: {max_requests}")
+    print(label)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Exploración controlada de SIO Granos")
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--allow-web", action="store_true")
+    parser.add_argument("--discover-web", action="store_true", help="analizar HTML y scripts públicos de forma controlada")
+    parser.add_argument("--analyze-currency", action="store_true", help="analizar evidencia local de moneda sin usar la red")
+    parser.add_argument("--analyze-har", metavar="RUTA_ARCHIVO", help="analizar un HAR local de DevTools sin usar la red")
+    parser.add_argument("--analyze-curl", metavar="RUTA_ARCHIVO", help="analizar un cURL local sin ejecutarlo ni usar la red")
+    parser.add_argument("--sample-pages", action="store_true", help="extraer una muestra limitada de páginas GetOperaciones")
+    parser.add_argument("--test-pagination", action="store_true", help="probar de forma controlada la paginación respaldada por evidencia local")
+    parser.add_argument("--test-observed-pagination", action="store_true", help="probar pCurrentPage 0/1/2 con el payload observado en DevTools")
+    parser.add_argument("--test-endpoint", choices=["get-operaciones"], help="probar un único endpoint candidato documentado")
+    parser.add_argument("--manual-urls", action="store_true", help="mostrar URLs para consulta manual sin llamar a la red")
+    parser.add_argument("--days-back", default="30")
+    parser.add_argument("--date-start")
+    parser.add_argument("--date-end")
+    parser.add_argument("--products", default="soja,maiz,trigo,girasol,sorgo,cebada")
+    parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT))
+    parser.add_argument("--save-response", action="store_true")
+    parser.add_argument("--max-requests", type=int, default=5)
+    parser.add_argument("--pages", type=int, default=3)
+    parser.add_argument("--page-size", type=int, default=15)
+    args = parser.parse_args()
+    if args.max_requests < 1:
+        raise SystemExit("--max-requests debe ser mayor que cero")
+    local_modes = [args.analyze_currency, bool(args.analyze_har), bool(args.analyze_curl)]
+    if sum(bool(item) for item in local_modes) > 1:
+        raise SystemExit("Use sólo un modo de análisis local por ejecución")
+    if any(local_modes) and any((args.allow_web, args.dry_run, args.discover_web, args.test_endpoint, args.manual_urls, args.sample_pages, args.test_pagination, args.test_observed_pagination)):
+        raise SystemExit("Los modos de análisis local deben ejecutarse solos y no realizan requests web")
+    if args.sample_pages and not args.allow_web:
+        raise SystemExit("--sample-pages requiere --allow-web")
+    if args.sample_pages and any((args.dry_run, args.discover_web, args.test_endpoint, args.manual_urls, args.analyze_currency)):
+        raise SystemExit("Use --sample-pages como modo independiente con --allow-web")
+    if args.sample_pages and args.page_size < 1:
+        raise SystemExit("--page-size debe ser mayor que cero")
+    if args.test_pagination and not args.allow_web:
+        raise SystemExit("--test-pagination requiere --allow-web")
+    if args.test_pagination and any((args.dry_run, args.discover_web, args.test_endpoint, args.manual_urls, args.analyze_currency, args.sample_pages)):
+        raise SystemExit("Use --test-pagination como modo independiente con --allow-web")
+    if args.test_observed_pagination and not args.allow_web:
+        raise SystemExit("--test-observed-pagination requiere --allow-web")
+    if args.test_observed_pagination and any((args.dry_run, args.discover_web, args.test_endpoint, args.manual_urls, args.analyze_currency, args.sample_pages, args.test_pagination)):
+        raise SystemExit("Use --test-observed-pagination como modo independiente con --allow-web")
+    if args.allow_web and args.manual_urls:
+        raise SystemExit("Use --allow-web o --manual-urls, no ambos")
+    if args.discover_web and (args.dry_run or args.allow_web or args.manual_urls):
+        raise SystemExit("Use --discover-web como modo independiente")
+    if args.test_endpoint and not args.allow_web:
+        raise SystemExit("--test-endpoint requiere --allow-web")
+    if args.test_endpoint and (args.dry_run or args.discover_web or args.manual_urls):
+        raise SystemExit("Use --test-endpoint como modo independiente con --allow-web")
+    if args.analyze_currency:
+        return run_currency_analysis()
+    if args.analyze_har:
+        return run_devtools_analysis("HAR", args.analyze_har)
+    if args.analyze_curl:
+        return run_devtools_analysis("cURL", args.analyze_curl)
+    catalog = read_catalog()
+    products = parse_products(args.products, catalog)
+    start, end = date_range(args)
+    config = load_config()
+    max_days = config["max_days_per_request"]
+    windows = split_date_range(start, end, max_days)
+    endpoints = candidate_endpoints(config)
+
+    if args.sample_pages:
+        return run_sample_pages(args, config)
+    if args.test_pagination:
+        return run_test_pagination(args, config)
+    if args.test_observed_pagination:
+        return run_observed_pagination_test(args, config)
+    if args.discover_web:
+        return run_discovery(args, config, endpoints, products, windows)
+    if args.test_endpoint:
+        return run_endpoint_test(args, config)
+
+    if not args.allow_web and not args.dry_run and not args.manual_urls:
+        print(SAFE_MESSAGE)
+        return 0
+
+    print("Fuente: SIO Granos / Secretaría de Agricultura")
+    print_plan(products, windows, endpoints, Path(args.output_dir), args.max_requests, "")
+    if args.dry_run:
+        print("Dry-run: no se descargará nada.")
+        for name, endpoint in endpoints:
+            print(f"  {name}: {endpoint}")
+        print("No se realizan llamadas externas ni se guardan respuestas.")
+        return 0
+
+    consultation = next(((name, url) for name, url in endpoints if name in {"consulta_publica", "operaciones_informadas"}), None)
+    if args.manual_urls:
+        if not consultation:
+            print("No hay endpoint de consulta pública configurado; use la URL pública de SIO y coloque las descargas en raw/.")
+            return 0
+        for product in products:
+            row = catalog_row(catalog, product)
+            product_id = row.get("sio_id_producto", "").strip() if row else ""
+            for window_start, window_end in windows:
+                print(suggested_url(consultation[1], product, product_id, window_start, window_end))
+        print("URLs generadas para descarga manual; no se realizaron llamadas externas.")
+        return 0
+
+    if not endpoints or not consultation:
+        print("No hay endpoints SIO configurados. Complete data/commodities_sio/sio_config.json con una URL pública documentada o use una respuesta manual en raw/.")
+        return 0
+
+    output_dir = Path(args.output_dir)
+    requests_done = 0
+    diagnostic_saved = False
+    exports_found = False
+    for product in products:
+        for window_start, window_end in windows:
+            if requests_done >= args.max_requests:
+                print("Se alcanzó --max-requests; no se harán más consultas.")
+                break
+            row = catalog_row(catalog, product)
+            product_id = row.get("sio_id_producto", "").strip() if row else ""
+            url = suggested_url(consultation[1], product, product_id, window_start, window_end)
+            request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,application/json,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}, method="GET")
+            try:
+                with urllib.request.urlopen(request, timeout=30) as response:  # nosec B310: explicit local config plus --allow-web
+                    content = response.read()
+                    content_type = response.headers.get_content_type()
+                requests_done += 1
+                print(f"Consulta pública completada para {product} ({window_start} a {window_end}).")
+                if "html" in content_type or b"<form" in content[:1000].lower():
+                    diagnostic = print_html_diagnostic(content)
+                    exports_found = exports_found or bool(diagnostic["exports"])
+                    if args.save_response and not diagnostic_saved:
+                        saved = save_html_diagnostic(output_dir, content)
+                        diagnostic_saved = True
+                        print(f"Diagnóstico HTML guardado: {saved}")
+                elif args.save_response:
+                    saved = save_response(output_dir, product, window_start, window_end, consultation[0], content, content_type)
+                    print(f"Respuesta guardada: {saved}")
+            except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError) as exc:
+                requests_done += 1
+                print(f"No se pudo consultar SIO para {product}: {exc.__class__.__name__}")
+        if requests_done >= args.max_requests:
+            break
+    if not exports_found:
+        print("No se pudo automatizar la exportación todavía. Use --manual-urls o descargue manualmente desde la consulta pública.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

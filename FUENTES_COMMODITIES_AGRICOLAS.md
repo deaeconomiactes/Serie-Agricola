@@ -1,35 +1,23 @@
-# Evaluación exploratoria de fuentes de commodities agrícolas
+# Evaluación de fuentes para commodities agrícolas
 
-Este documento es una evaluación preliminar. No se incorporan commodities al dashboard ni se agregan llamadas externas desde `app.js`.
+**Estado:** evaluación exploratoria de BCR/Cámara Arbitral. **No hay integración de precios BCR en el dashboard.** El módulo Commodities SIO es una línea independiente y no se mezcla con este piloto.
 
-## Fuentes consideradas
+Este documento evalúa fuentes potenciales para una incorporación futura. En esta etapa no se integran commodities al dashboard ni se realizan llamadas automáticas de red. Sí se deja preparada documentación, estructura técnica exploratoria y scripts de apoyo para futuras pruebas controladas.
 
-| Fuente | Productos | Frecuencia/cobertura | Acceso y credenciales | Ventajas | Limitaciones y mantenimiento | Recomendación |
-|---|---|---|---|---|---|---|
-| Bolsa de Comercio de Rosario / Cámara Arbitral de Cereales | Soja, maíz, trigo, sorgo, girasol y otros granos | Cotizaciones y referencias locales; verificar calendario y cobertura histórica por producto | Revisar disponibilidad de archivos, servicios o publicaciones; no asumir API pública | Referencia local argentina y alta pertinencia para granos | Puede requerir acuerdos, descarga manual o adaptación ante cambios de publicación | Prioridad para precios locales, sujeto a validar formato, licencia y automatización permitida |
-| MATba Rofex / Primary API | Futuros, contratos y market data de commodities | Intradiaria/diaria según instrumento y permiso | Puede requerir cuenta, credenciales y autorización comercial | Datos de mercado estructurados y útiles para seguimiento de futuros | No equivale al precio físico mayorista; acceso y condiciones pueden restringir el uso | Evaluar sólo con acceso institucional y revisión legal/técnica previa |
-| World Bank Pink Sheet | Granos, aceites, alimentos y otros commodities internacionales | Principalmente mensual; series históricas extensas | Publicación descargable; confirmar versión y licencia vigente | Fuente internacional estable y comparable | No representa precios locales diarios ni mercados argentinos | Usar como contexto internacional en un módulo separado |
-| Secretaría de Agricultura / datos.gob.ar | Datasets oficiales agropecuarios, según disponibilidad | Variable; depende de cada dataset | Portal abierto o descarga; validar actualización y licencia | Fuente pública nacional y potencialmente reutilizable | Cobertura y actualización pueden ser discontinuas | Buscar datasets específicos antes de diseñar una integración |
-| USDA / FAO / FRED | Precios y series internacionales agroalimentarias | Variable: diaria, mensual o anual según serie | Portales y APIs con condiciones propias | Buen contexto internacional y series documentadas | No reemplazan fuentes locales; unidades, monedas y metodologías pueden diferir | Usar sólo para referencia contextual, con ficha metodológica |
+Los scripts disponibles preparan integración, auditoría y descarga controlada, pero no publican información en el dashboard.
 
-## Criterios de evaluación antes de integrar
+## 1. Objetivo
 
-- Definir producto, unidad, moneda, mercado y frecuencia original.
-- Confirmar cobertura histórica, fecha de actualización y tratamiento de revisiones.
-- Verificar formato estable: CSV, API, descarga oficial o publicación estructurada.
-- Revisar credenciales, límites de uso, licencia y autorización para redistribución.
-- Registrar fuente, fecha de descarga y versión de cada archivo.
-- Mantener commodities separados de frutas y hortalizas mayoristas.
-- No mezclar precios locales, futuros e índices internacionales en un mismo indicador.
+Evaluar la posibilidad de incorporar precios de commodities agrícolas como una tercera familia de datos del dashboard **“Tránsito y Comercialización Frutihortícola”**.
 
-## Recomendación de arquitectura
+El módulo sería conceptualmente separado de:
 
-1. Priorizar BCR/Cámara Arbitral para referencias físicas locales si existe un mecanismo de acceso autorizado y estable.
-2. Evaluar MATba Rofex para futuros sólo con credenciales y permisos confirmados.
-3. Utilizar World Bank Pink Sheet para contexto internacional mensual, no para sustituir precios mayoristas diarios.
-4. Crear en el futuro un módulo independiente de commodities con su propia unidad, frecuencia, filtros y notas metodológicas.
+- las cantidades frutihortícolas transadas;
+- los precios mayoristas frutihortícolas.
 
 La incorporación futura deberá mantener separados los precios de commodities, los precios frutihortícolas y las cantidades transadas. No se deben inferir causalidad, escasez ni relaciones precio-cantidad entre esas fuentes sin una metodología específica y una coincidencia validada de período, mercado, producto y unidad.
+
+La evaluación cubre fuentes, cobertura, unidades, monedas, frecuencia de actualización, factibilidad técnica, riesgos y una posible arquitectura futura. Las fuentes y CSV actualmente disponibles en el proyecto corresponden al dominio frutihortícola; ninguna de ellas se interpreta aquí como fuente de commodities.
 
 ## 2. Alcance posible
 
@@ -254,34 +242,46 @@ Como controles mínimos, cada registro debería conservar la procedencia, la uni
 7. Diseñar el módulo visual separado, con filtros, series, tabla reciente y ficha metodológica.
 8. Documentar fecha de actualización, versión de fuente y procedimiento de reproducción antes de publicar cualquier dato.
 
-## Estado de integración
-
-En esta etapa no se modifican `app.js`, `index.html`, `styles.css`, scripts de integración ni las bases CSV actuales. Tampoco se incorporan datos externos al dashboard. Este archivo es únicamente una evaluación técnica para orientar una decisión posterior.
-
-## Decisión de fuente piloto
-
-Se decidió iniciar la exploración con **BCR / Cámara Arbitral de Cereales**, específicamente con precios de pizarra, porque es una referencia local argentina para granos y permite evaluar un piloto antes de sumar otras fuentes.
-
-En esta primera etapa:
-
-- no se integran todavía otras fuentes;
-- no se implementa scraping automático;
-- las descargas serán inicialmente manuales;
-- luego se evaluará la automatización si el formato y los permisos lo permiten.
-
-La capa de trabajo y auditoría de este piloto se encuentra en `data/commodities_bcr/`. Continúa siendo una tercera familia de datos separada de las cantidades y los precios mayoristas frutihortícolas.
-
 ## Decisión operativa inicial para BCR
 
 - Se prioriza BCR/Cámara Arbitral como fuente piloto.
 - Se priorizan Precios de Pizarra / Precios Cámara por su cercanía con precios locales de mercado.
-- Se incluirán todos los commodities disponibles con cobertura útil, comenzando por soja, maíz, trigo, girasol y sorgo; cebada y otros granos u oleaginosas se incorporarán si presentan datos consistentes.
+- Se incluirán todos los commodities disponibles con cobertura útil, empezando por soja, maíz, trigo, girasol, sorgo y cebada si resulta consistente.
 - El foco inicial será lo más actual posible.
 - El módulo futuro tendrá uso analítico, no sólo informativo.
-- La actualización ideal será automatizada.
-- La automatización deberá evitar exponer credenciales y respetar las condiciones de uso de la fuente.
-- Si la API requiere autenticación, las credenciales deberán manejarse con variables de entorno o un gestor de secretos.
-- Nunca se expondrán credenciales en `app.js` ni en recursos entregados al frontend.
-- Si no hay una API estable o autorizada, se mantendrá el fallback de descarga manual.
+- La actualización ideal será automatizada desde el inicio cuando exista un canal autorizado y técnicamente estable.
+- La automatización evitará exponer credenciales y respetará las condiciones de uso de la fuente.
+- Si una API requiere autenticación, las credenciales se manejarán con variables de entorno y nunca desde el frontend.
+- Si no hay API disponible, se mantendrá el fallback de descarga manual.
 
-La automatización se limita por ahora a preparar configuración, validaciones y un modo de simulación. No se incluyen tokens, credenciales reales ni endpoints sensibles no confirmados.
+## Evaluación de fuentes alternativas con API
+
+BCR/Cámara Arbitral sigue siendo la fuente local preferida para precios de pizarra. Como actualmente no se cuenta con credenciales BCR/GIX, se evaluarán alternativas automatizables sin presentarlas como equivalentes metodológicos ni como reemplazos automáticos de la pizarra local.
+
+### SIO Granos / Secretaría de Agricultura
+
+SIO-Granos es una plataforma argentina para informar operaciones de compraventa y publicar precios de referencia. La plataforma publica documentación de acceso y una documentación de API pública; debe verificarse qué datos están disponibles sin autenticación, qué límites aplican y si la licencia permite el uso previsto. Pasa a ser la primera alternativa local automatizable a explorar por su posible relación con operaciones, precios de referencia y un dashboard analítico argentino. El módulo SIO existente se mantiene como línea independiente, con sus propios archivos procesados y reglas de validación; no representa precios de pizarra BCR. Antes de ampliar esa línea se deben confirmar endpoints, producto, frecuencia, condición comercial, unidad, moneda, cobertura histórica y permisos.
+
+### World Bank Pink Sheet
+
+El Banco Mundial ofrece archivos públicos mensuales y anuales de precios de commodities. Es una alternativa internacional estable para contexto y comparación de tendencias, pero no reemplaza una cotización local argentina ni sirve para seguimiento operativo diario. Deben conservarse serie original, unidad, moneda, versión del archivo y fecha de descarga.
+
+### BCRA IPMP
+
+El Índice de Precios de las Materias Primas del BCRA se publica diariamente y combina precios internacionales de materias primas relevantes para las exportaciones argentinas. Incluye, entre otros, maíz, trigo, soja y cebada, además de derivados y otras materias primas. Es útil como indicador agregado/contextual, no como precio local individual por commodity; debe mantenerse separado de precios de mercado físico.
+
+### FAOSTAT / FAO
+
+FAOSTAT ofrece acceso público a datos estadísticos agrícolas mediante API y descargas masivas. Puede aportar precios de productores, índices o datos agrícolas según el dominio y la cobertura, pero probablemente sea más estructural que operativo diario. Se debe validar periodicidad, país, producto, unidad, moneda y definición antes de usarlo para commodities.
+
+### granos.ar
+
+granos.ar expone un monitor técnico con información JSON aparentemente accesible sin una API key obligatoria y declara utilizar fuentes externas, entre ellas SIO-Granos, BCR/CAC, MATBA-ROFEX y organismos públicos. Es técnicamente cómodo para un piloto, pero no es la fuente primaria oficial y sus propios términos advierten sobre limitaciones de exactitud, actualidad e idoneidad. Sólo debe usarse como complemento no oficial después de validar estabilidad, procedencia, licencia y metodología.
+
+No debe usarse como fuente principal para reportes institucionales sin validación previa de procedencia, licencia y estabilidad.
+
+La comparación detallada y el catálogo de evaluación se encuentran en [data/commodities_bcr/FUENTES_API_COMMODITIES_COMPARATIVO.md](data/commodities_bcr/FUENTES_API_COMMODITIES_COMPARATIVO.md) y [data/commodities/catalogo_fuentes_commodities.csv](data/commodities/catalogo_fuentes_commodities.csv). El pipeline SIO y el pipeline BCR se mantienen separados. No se crean todavía descargadores específicos para World Bank, BCRA, FAO o granos.ar. El pipeline BCR existente se mantiene como prueba controlada separada.
+
+## Estado de integración
+
+En esta etapa no se integra el piloto BCR al dashboard ni se realizan llamadas automáticas de red desde el navegador. El módulo Commodities SIO, sus CSV dashboard-ready y su lógica visual son una línea independiente; no se mezclan con el pipeline BCR ni con frutas y hortalizas. La automatización BCR permanece limitada a configuración, validaciones y pruebas controladas.

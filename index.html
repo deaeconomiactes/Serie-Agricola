@@ -50,6 +50,7 @@
     <nav class="module-nav module-tabs" aria-label="Módulos del dashboard">
         <button class="module-tab is-active" type="button" data-module="quantityView" aria-controls="quantityView" aria-selected="true">Cantidades transadas</button>
         <button class="module-tab" type="button" data-module="priceView" aria-controls="priceView" aria-selected="false">Precios mayoristas</button>
+        <button class="module-tab" type="button" data-module="commodityView" aria-controls="commodityView" aria-selected="false">Commodities agrícolas</button>
     </nav>
 
     <div id="quantityView" class="module-view module-panel is-active">
@@ -423,6 +424,88 @@
                 <div class="chart-header"><h2 class="chart-title" id="priceDecreaseTitle">Ranking de mayores bajas</h2><p class="chart-desc" id="priceDecreaseDesc">Productos con mayor disminución entre el primer y último período</p></div>
                 <div class="chart-body price-chart-canvas"><canvas id="priceChartDecreases"></canvas><div id="priceDecreaseStatus" class="price-inline-status"></div></div>
             </div>
+        </div>
+    </section>
+    </div>
+
+    <!-- Independent agricultural commodities module: powered only by light SIO aggregates. -->
+    <div id="commodityView" class="module-view module-panel">
+    <section class="commodities-section" id="commoditiesSection">
+        <div class="commodities-heading">
+            <div>
+                <span class="section-eyebrow">Fuente operativa independiente</span>
+                <h2 class="commodities-title">Commodities agrícolas</h2>
+                <p class="commodities-subtitle">Fuente SIO Granos — operaciones informadas</p>
+            </div>
+            <span id="commodityDataStatus" class="commodity-data-status" role="status" aria-live="polite">Cargando datos…</span>
+        </div>
+        <p class="method-note methodology-note commodity-method-note">Fuente: SIO Granos / Secretaría de Agricultura. Los datos corresponden a operaciones informadas y no equivalen a precios de pizarra BCR, futuros ni precios mayoristas frutihortícolas. Los precios cero se excluyen de los cálculos de series. Las monedas ARS y USD se analizan por separado.</p>
+        <p id="commodityPriceScope" class="commodity-price-scope">Precios en la moneda y unidad seleccionadas · mediana de operaciones con precio positivo</p>
+
+        <div class="commodity-filters filters-card filters-grid" aria-label="Filtros de commodities agrícolas">
+            <div class="filter-group">
+                <label class="filter-label" for="commodityFilterCommodityTrigger">Commodity para comparar</label>
+                <div id="commodityFilterCommodity" class="commodity-multi-select" data-max-selections="3">
+                    <button id="commodityFilterCommodityTrigger" class="commodity-multi-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="commodityFilterCommodityMenu">
+                        <span id="commodityFilterCommoditySummary" class="commodity-multi-summary">Todos</span><span class="commodity-multi-chevron" aria-hidden="true">⌄</span>
+                    </button>
+                    <div id="commodityFilterCommodityMenu" class="commodity-multi-dropdown" role="listbox" aria-multiselectable="true" aria-label="Seleccionar hasta tres commodities"></div>
+                </div>
+                <p id="commodityFilterCommodityHint" class="commodity-filter-hint">Todos los commodities · seleccioná hasta 3 para comparar</p>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="commodityFilterCurrency">Moneda</label>
+                <select id="commodityFilterCurrency" class="filter-select"><option value="TODOS">Todas</option></select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="commodityFilterUnit">Unidad</label>
+                <select id="commodityFilterUnit" class="filter-select"><option value="TODOS">Todas</option></select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="commodityFilterType">Tipo de precio</label>
+                <select id="commodityFilterType" class="filter-select"><option value="TODOS">Todos</option></select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="commodityFilterFrequency">Frecuencia</label>
+                <select id="commodityFilterFrequency" class="filter-select">
+                    <option value="mensual" selected>Mensual</option>
+                    <option value="diaria">Diaria</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="commodity-kpi-grid">
+            <div class="kpi-card commodity-kpi-update"><div class="kpi-icon">◷</div><div class="kpi-content"><span class="kpi-label">Última actualización</span><span class="kpi-value" id="commodityKpiUpdate">–</span><span class="kpi-unit" id="commodityKpiRange">Rango sin datos</span></div></div>
+            <div class="kpi-card commodity-kpi-median"><div class="kpi-icon">$</div><div class="kpi-content"><span class="kpi-label">Precio mediano reciente</span><span class="kpi-value" id="commodityKpiMedian">–</span><span class="kpi-unit" id="commodityKpiMedianUnit">por unidad</span></div></div>
+            <div class="kpi-card commodity-kpi-products"><div class="kpi-icon">✦</div><div class="kpi-content"><span class="kpi-label">Commodities disponibles</span><span class="kpi-value" id="commodityKpiProducts">–</span><span class="kpi-unit">dentro del filtro</span></div></div>
+            <div class="kpi-card commodity-kpi-operations"><div class="kpi-icon">#</div><div class="kpi-content"><span class="kpi-label">Operaciones con precio</span><span class="kpi-value" id="commodityKpiOperations">–</span><span class="kpi-unit">precios positivos</span></div></div>
+            <div class="kpi-card commodity-kpi-currency"><div class="kpi-icon">◉</div><div class="kpi-content"><span class="kpi-label">Moneda seleccionada</span><span class="kpi-value" id="commodityKpiCurrency">–</span><span class="kpi-unit">serie sin mezcla monetaria</span></div></div>
+        </div>
+
+        <div class="chart-card commodity-latest-card commodity-latest-featured">
+            <div class="chart-header"><h2 class="chart-title">Últimos precios por serie</h2><p class="chart-desc">Precio mediano del último día disponible por commodity, moneda, unidad y tipo de precio</p></div>
+            <div class="commodity-table-wrap"><table class="commodity-latest-table"><thead><tr><th>Commodity</th><th>Moneda</th><th>Unidad</th><th>Tipo</th><th>Fecha</th><th>Precio mediano</th><th>Operaciones</th><th>Var. 7 días</th><th>Var. 30 días</th><th>Estado</th></tr></thead><tbody id="commodityLatestBody"></tbody></table><div id="commodityLatestStatus" class="commodity-inline-status is-visible">No hay últimos precios para mostrar.</div></div>
+        </div>
+
+        <div class="commodity-charts-grid">
+            <div class="chart-card commodity-chart-card commodity-chart-main">
+                <div class="chart-header"><h2 class="chart-title" id="commodityTrendTitle">Precios medianos por período</h2><p class="chart-desc" id="commodityTrendDesc">Valor del precio mediano, separado por moneda y serie homogénea</p></div>
+                <div class="chart-body commodity-chart-body"><canvas id="commodityPriceTrend"></canvas><div id="commodityPriceTrendStatus" class="commodity-inline-status">No hay datos para los filtros seleccionados.</div></div>
+            </div>
+            <div class="chart-card commodity-chart-card">
+                <div class="chart-header"><h2 class="chart-title" id="commodityRankingTitle">Precios medianos recientes</h2><p class="chart-desc" id="commodityRankingDesc">Precio por commodity en el último dato disponible</p></div>
+                <div class="chart-body commodity-chart-body"><canvas id="commodityRanking"></canvas><div id="commodityRankingStatus" class="commodity-inline-status">No hay datos para los filtros seleccionados.</div></div>
+            </div>
+            <div class="chart-card commodity-chart-card">
+                <div class="chart-header"><h2 class="chart-title" id="commodityVolumeTitle">Volumen acumulado informado (TN)</h2><p class="chart-desc" id="commodityVolumeDesc">Suma de toneladas del período visible</p></div>
+                <div class="chart-body commodity-chart-body"><canvas id="commodityVolume"></canvas><div id="commodityVolumeStatus" class="commodity-inline-status">No hay volumen válido para mostrar.</div></div>
+            </div>
+        </div>
+
+        <div class="chart-card commodity-semaphore-card">
+            <div class="chart-header"><h2 class="chart-title">Semáforo mensual de variaciones</h2><p class="chart-desc">Cambios de mediana respecto del mes anterior dentro de cada serie</p></div>
+            <div class="commodity-semaphore-note">Los estados describen variaciones de precios. No representan escasez ni desabastecimiento.</div>
+            <div class="commodity-table-wrap"><table class="commodity-semaphore-table"><thead><tr><th>Commodity</th><th>Moneda</th><th>Unidad</th><th>Tipo</th><th>Período</th><th>Precio mediano</th><th>Variación</th><th>Estado</th></tr></thead><tbody id="commoditySemaphoreBody"></tbody></table><div id="commoditySemaphoreStatus" class="commodity-inline-status is-visible">No hay datos mensuales para mostrar.</div></div>
         </div>
     </section>
     </div>
