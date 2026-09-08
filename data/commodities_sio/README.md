@@ -95,6 +95,14 @@ El módulo visual de commodities usa únicamente los archivos agregados livianos
 
 La base completa permanece local y fuera de Git; los precios cero, faltantes y registros no aptos se excluyen antes de generar los agregados. ARS y USD se mantienen separados por commodity, unidad y tipo de precio. El dashboard permite seleccionar hasta tres commodities para comparación simultánea. SIO Granos corresponde a operaciones informadas y no equivale a BCR.
 
+## Cobertura histórica por tramos
+
+La consulta pública observada de SIO Granos no permite solicitar rangos superiores a 180 días. Por lo tanto, una ampliación histórica debe realizarse mediante ventanas consecutivas de hasta 180 días; no debe asumirse que una sola exportación cubre un año completo ni que todos los años anteriores están disponibles.
+
+Cada tramo debe conservar su archivo original, fecha solicitada, fecha mínima y máxima efectivamente recibida, cantidad de filas, commodities, monedas, unidades, operaciones y advertencias. Antes de unir tramos se debe auditar cada ventana, deduplicar por `id_operacion_sio` o por una clave compuesta documentada y conservar los conflictos para revisión. No se debe automatizar scraping masivo ni publicar la ampliación en el dashboard hasta validar continuidad temporal y comparabilidad.
+
+La estrategia detallada está documentada en [PLAN_HISTORICO_SIO_POR_TRAMOS.md](reports/PLAN_HISTORICO_SIO_POR_TRAMOS.md). La cobertura actualmente visible se resume en [REPORTE_COBERTURA_TEMPORAL_SIO.md](reports/REPORTE_COBERTURA_TEMPORAL_SIO.md).
+
 Para regenerar las salidas dashboard-ready después de actualizar la base analítica:
 
 ```powershell

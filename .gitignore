@@ -99,6 +99,18 @@ data/commodities_sio/devtools/*.json
 data/commodities_sio/mapeo_getoperaciones_sio.local.json
 !data/commodities_sio/reports/*.md
 
+# Línea futura World Bank Pink Sheet: raw y salidas completas permanecen locales.
+data/commodities_worldbank/raw/*
+data/commodities_worldbank/processed/*
+data/commodities_worldbank/dashboard/*
+data/commodities_worldbank/reports/*
+!data/commodities_worldbank/raw/.gitkeep
+!data/commodities_worldbank/processed/.gitkeep
+!data/commodities_worldbank/dashboard/.gitkeep
+!data/commodities_worldbank/reports/.gitkeep
+!data/commodities_worldbank/README.md
+!data/commodities_worldbank/WORLDBANK_PINKSHEET_PLAN.md
+
 # OS
 .DS_Store
 Thumbs.db

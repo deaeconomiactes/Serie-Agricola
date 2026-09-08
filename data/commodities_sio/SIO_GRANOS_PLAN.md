@@ -2,7 +2,7 @@
 
 ## 1. Objetivo y alcance
 
-Evaluar SIO Granos como fuente local argentina para precios y operaciones de commodities agrícolas. Esta fase es exploratoria: no integra commodities al dashboard, no modifica sus archivos visuales y no supone que SIO sea equivalente a BCR.
+Evaluar SIO Granos como fuente local argentina para precios y operaciones de commodities agrícolas. Esta fase sigue siendo exploratoria en cuanto a su ampliación histórica: el dashboard ya muestra un módulo separado con agregados locales, pero no supone que SIO sea equivalente a BCR.
 
 El foco inicial es la consulta pública de operaciones informadas y la detección prudente de exportaciones disponibles para soja, maíz, trigo, girasol, sorgo y cebada. Se prioriza lo más actual posible, comenzando con los últimos 30 días.
 
@@ -33,7 +33,13 @@ El integrador no completa automáticamente moneda, unidad ni tipo de precio: cua
 
 ## 4. Relación con BCR y el dashboard
 
-SIO debe permanecer separado del pipeline BCR y de las familias frutihortícolas. No se mezclan fuentes con distinta moneda, unidad, frecuencia o definición de precio. Tampoco se presentan operaciones SIO como precios de pizarra BCR, ni se cargan datos SIO en `app.js`, `index.html` o `styles.css`.
+SIO debe permanecer separado del pipeline BCR, de cualquier futura serie World Bank y de las familias frutihortícolas. No se mezclan fuentes con distinta moneda, unidad, frecuencia o definición de precio. Tampoco se presentan operaciones SIO como precios de pizarra BCR ni como precios internacionales. El módulo visual actual usa únicamente agregados dashboard-ready livianos y no carga las bases completas en el navegador.
+
+## Cobertura histórica por tramos
+
+La consulta pública observada tiene un límite de hasta 180 días por rango. Para solicitar historia anterior se deben usar ventanas consecutivas de como máximo 180 días, conservar cada descarga original y auditar sus fechas, filas, commodities, monedas, unidades y campos de precio. No se debe asumir cobertura completa de un año anterior.
+
+Antes de consolidar los tramos, deduplicar por `id_operacion_sio` cuando exista o por una clave compuesta de fecha, commodity, precio, moneda, unidad, volumen, procedencia, entrega y tipo de precio. Los conflictos de una misma clave no se deben descartar silenciosamente. El detalle operativo se encuentra en `reports/PLAN_HISTORICO_SIO_POR_TRAMOS.md`.
 
 ## 5. Riesgos metodológicos
 

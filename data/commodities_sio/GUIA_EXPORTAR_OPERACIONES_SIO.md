@@ -39,3 +39,16 @@ Si la exportación depende de sesión, descargar el archivo desde el navegador y
 - `SIO_exportar_operaciones_*.csv`
 
 Luego ejecutar `python .\integrar_commodities_sio.py` y `python .\auditar_commodities_sio.py`. La salida se conserva en `COMMODITIES_SIO_EXPORTACION_MANUAL.csv`, separada del piloto de GetOperaciones.
+
+## Historia anterior por tramos
+
+La consulta pública observada admite rangos de hasta 180 días. Para recuperar un período histórico mayor:
+
+1. dividir el período en ventanas consecutivas de hasta 180 días;
+2. guardar cada exportación con un nombre que identifique inicio y fin, por ejemplo `SIO_exportar_operaciones_2024-01-01_2024-06-28.xlsx`;
+3. registrar para cada tramo el rango pedido, el rango recibido, filas, commodities, monedas, unidades y posibles errores;
+4. auditar cada archivo antes de unirlo;
+5. deduplicar por `id_operacion_sio` o por una clave compuesta, conservando conflictos para revisión;
+6. verificar continuidad entre ventanas y recién entonces evaluar una base histórica.
+
+No asumir que todo año anterior está disponible y no ejecutar scraping masivo. La ampliación no debe llegar al dashboard hasta validar continuidad, comparabilidad metodológica, permisos y ausencia de duplicados relevantes. Ver [PLAN_HISTORICO_SIO_POR_TRAMOS.md](reports/PLAN_HISTORICO_SIO_POR_TRAMOS.md).
