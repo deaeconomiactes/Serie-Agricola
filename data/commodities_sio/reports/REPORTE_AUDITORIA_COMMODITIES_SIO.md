@@ -1,6 +1,6 @@
 # Reporte de auditoría de commodities SIO
 
-Fecha de auditoría: 2026-09-07
+Fecha de auditoría: 2026-09-08
 
 ## Resumen
 
@@ -19,7 +19,7 @@ Fecha de auditoría: 2026-09-07
 - Años disponibles: 2026.
 - Meses disponibles: 2026-09.
 - Rango de fechas: 2026-09-04 a 2026-09-04.
-- Fecha máxima: 2026-09-04; días desde último dato: 3.
+- Fecha máxima: 2026-09-04; días desde último dato: 4.
 - Precios válidos: 15; faltantes: 0; cero: 0; negativos: 0.
 - Precios válidos para serie (positivos): 15/15.
 - Monedas especificadas: 15/15; sin especificar: 0.
@@ -89,7 +89,7 @@ Los precios sólo deben compararse dentro de una misma moneda; en esta muestra h
 ## Actualidad de la información
 
 Fecha máxima disponible: 2026-09-04.
-Días desde el último dato: 3.
+Días desde el último dato: 4.
 Commodities actualizados (últimos 7 días): CEBADA FORR., Girasol, Maíz, Soja, TRIGO PAN.
 Commodities recientes o actualizados (últimos 30 días): CEBADA FORR., Girasol, Maíz, Soja, TRIGO PAN.
 Commodities sin dato reciente: ninguno.
@@ -97,11 +97,11 @@ Cobertura últimos 7 días: 15 registro(s). Cobertura últimos 30 días: 15 regi
 
 | Commodity | Fecha máxima | Días | Últimos 7 días | Últimos 30 días | Estado |
 | --- | --- | --- | --- | --- | --- |
-| CEBADA FORR. | 2026-09-04 | 3 | 1 | 1 | Actualizado |
-| Girasol | 2026-09-04 | 3 | 1 | 1 | Actualizado |
-| Maíz | 2026-09-04 | 3 | 4 | 4 | Actualizado |
-| Soja | 2026-09-04 | 3 | 7 | 7 | Actualizado |
-| TRIGO PAN | 2026-09-04 | 3 | 2 | 2 | Actualizado |
+| CEBADA FORR. | 2026-09-04 | 4 | 1 | 1 | Actualizado |
+| Girasol | 2026-09-04 | 4 | 1 | 1 | Actualizado |
+| Maíz | 2026-09-04 | 4 | 4 | 4 | Actualizado |
+| Soja | 2026-09-04 | 4 | 7 | 7 | Actualizado |
+| TRIGO PAN | 2026-09-04 | 4 | 2 | 2 | Actualizado |
 
 ## Recomendación de automatización
 

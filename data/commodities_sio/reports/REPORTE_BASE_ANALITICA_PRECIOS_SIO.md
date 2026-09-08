@@ -9,7 +9,7 @@ Construir una base de precios apta para análisis, separada de la base completa 
 - Archivo completo usado: `C:/Users/acer/Oficina/Serie-Agricola/data/commodities_sio/processed/COMMODITIES_SIO_EXPORTACION_MANUAL.csv`.
 - Origen: SIO Granos / Secretaría de Agricultura.
 - Filas de la base completa procesada: 396971.
-- Fecha de integración/auditoría: 2026-09-07.
+- Fecha de integración/auditoría: 2026-09-08.
 - Archivo analítico generado: `C:/Users/acer/Oficina/Serie-Agricola/data/commodities_sio/processed/COMMODITIES_SIO_ANALITICO_PRECIOS.csv` (152.79 MB).
 - Versionado: no; el archivo supera 100 MB y queda ignorado por Git.
 - Muestra liviana: `C:/Users/acer/Oficina/Serie-Agricola/data/commodities_sio/processed/COMMODITIES_SIO_ANALITICO_PRECIOS_SAMPLE.csv`; máximo 1000 filas.

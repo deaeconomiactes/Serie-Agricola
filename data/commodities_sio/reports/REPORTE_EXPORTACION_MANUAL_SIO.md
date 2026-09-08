@@ -10,7 +10,7 @@ Validar si el archivo descargado desde Exportar Operaciones permite construir un
 - Tipo: exportación manual tabular.
 - Filas: 396971.
 - Columnas: 21.
-- Fecha de integración: 2026-09-07.
+- Fecha de integración: 2026-09-08.
 
 ## Columnas originales detectadas
 

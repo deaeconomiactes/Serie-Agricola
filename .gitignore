@@ -46,11 +46,14 @@ __pycache__/
 !explorar_sio_granos.py
 !integrar_commodities_sio.py
 !auditar_commodities_sio.py
+!preparar_commodities_dashboard.py
 !data/commodities_sio/
 !data/commodities_sio/**/
 !data/commodities_sio/*.md
 !data/commodities_sio/*.json
 !data/commodities_sio/*.csv
+!data/commodities_sio/dashboard/
+!data/commodities_sio/dashboard/*.csv
 !data/commodities_sio/raw/.gitkeep
 !data/commodities_sio/processed/.gitkeep
 !data/commodities_sio/reports/.gitkeep
