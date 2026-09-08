@@ -1,53 +1,63 @@
-# Guía de descarga BCR / Cámara Arbitral
+# Guía de descarga manual BCR
 
-## Próximo paso operativo
+## Objetivo
 
-Realizar primero una descarga real desde la consulta oficial de Precios de Pizarra / Precios Cámara para maíz. Luego ampliar, si hay cobertura, a soja, trigo, girasol y sorgo.
+La carpeta `data/commodities_bcr/raw/` recibe las descargas originales del piloto de commodities agrícolas de la Bolsa de Comercio de Rosario / Cámara Arbitral de Cereales. El objetivo es conservar una copia sin modificar de la fuente antes de integrarla y auditarla. La fuente prioritaria es BCR/Cámara Arbitral y el tipo de precio preferido es pizarra / precio Cámara.
 
-Usar inicialmente los últimos 30 días o, si la cobertura diaria es escasa, los últimos 3 meses. Guardar los archivos en `data/commodities_bcr/raw/`.
+## Archivos a colocar en `raw/`
 
-Nombres sugeridos:
+Colocar únicamente archivos descargados manualmente desde BCR/Cámara Arbitral:
+
+- Excel (`.xlsx` o `.xls`);
+- CSV (`.csv`), si la fuente ofrece ese formato.
+
+No se realiza scraping automático ni se hacen llamadas de red desde este repositorio. Los archivos temporales de Excel, `desktop.ini` y la plantilla generada por el integrador se ignoran.
+
+## Productos iniciales
+
+Para la primera prueba, priorizar:
+
+- soja;
+- maíz;
+- trigo;
+- girasol;
+- sorgo.
+
+La cebada y otros granos pueden incorporarse después de confirmar que la fuente publica una serie consistente. Se incluirá todo commodity con cobertura útil y el foco inicial será lo más actual posible.
+
+## Período sugerido
+
+1. Descargar primero una muestra corta, por ejemplo los últimos 3 o 6 meses.
+2. Verificar que el formato, las fechas, las unidades, la moneda y la condición comercial se integren correctamente.
+3. Si el formato funciona, ampliar la prueba al período 2024–2026.
+
+No se deben inventar fechas diarias a partir de archivos mensuales o anuales.
+
+## Nombres de archivo
+
+Usar nombres claros que incluyan fuente, tipo de precio, commodity y período. Por ejemplo:
 
 ```text
-BCR_pizarra_soja_ultimos_3_meses.xlsx
-BCR_pizarra_maiz_ultimos_3_meses.xlsx
-BCR_pizarra_trigo_ultimos_3_meses.xlsx
-BCR_pizarra_girasol_ultimos_3_meses.xlsx
-BCR_pizarra_sorgo_ultimos_3_meses.xlsx
+BCR_pizarra_soja_2024_2026.xlsx
+BCR_pizarra_maiz_2024_2026.xlsx
+BCR_pizarra_trigo_2024_2026.xlsx
+BCR_pizarra_girasol_2024_2026.xlsx
+BCR_pizarra_sorgo_2024_2026.xlsx
 ```
 
-El nombre es orientativo: se conserva el archivo original y el integrador intenta leer también CSV o JSON estructurado.
+El integrador puede detectar el commodity desde el nombre si el archivo no trae una columna explícita de producto o grano.
 
-## Revisión antes de copiar
+## Conservación y procesamiento
 
-Confirmar que cada descarga indique, o permita documentar, fecha de mercado, commodity, tipo de precio, valor, moneda, unidad, mercado/condición y fuente original. No mezclar pizarra, FOB/FAS, futuros o índices en una misma serie.
+- No editar manualmente los archivos originales descargados.
+- Mantener los originales en `raw/` para trazabilidad.
+- Ejecutar `python .\integrar_commodities_bcr.py` para generar archivos limpios en `processed/`.
+- Ejecutar `python .\auditar_commodities_bcr.py` para producir los reportes en `reports/`.
 
-Si la descarga ofrece una conversión a dólares, conservar la moneda y regla de conversión informadas por BCR; no recalcular ni reemplazar el valor original sin trazabilidad.
+La unidad, moneda, tipo de precio y condición comercial deben conservarse. Las referencias de pizarra, disponible, FOB/FAS y futuros no deben mezclarse como si fueran la misma serie ni con precios o cantidades frutihortícolas.
 
-## Ejecución local
+## Automatización y fallback
 
-Sin API, el diagnóstico es seguro y no hace llamadas de red:
+La actualización ideal será automatizada si BCR ofrece una API o descarga estructurada estable y autorizada. Las credenciales deben configurarse mediante variables de entorno; nunca deben guardarse en archivos versionados ni exponerse al navegador. Consultar `API_BCR_PLAN.md` y probar primero `descargar_commodities_bcr.py --dry-run`.
 
-```powershell
-python .\descargar_commodities_bcr.py --dry-run --days-back 30
-python .\integrar_commodities_bcr.py
-python .\auditar_commodities_bcr.py
-```
-
-La automatización sólo se habilita con un endpoint y configuración autorizados en `.env`. Nunca colocar credenciales en `app.js`, HTML, CSS, el catálogo ni archivos versionados.
-
-El downloader no hace llamadas de red por defecto. El uso de API requiere además el argumento explícito `--allow-api`; para esta prueba se recomienda mantener la descarga manual.
-
-## Verificación rápida de un archivo real
-
-Después de colocar `BCR_pizarra_maiz_ultimos_30_dias.xlsx` o equivalente en `raw/`, ejecutar:
-
-```powershell
-python .\integrar_commodities_bcr.py
-python .\auditar_commodities_bcr.py
-python -c "import pandas as pd; df=pd.read_csv('data/commodities_bcr/processed/COMMODITIES_BCR_INTEGRADO.csv', sep=';'); print(df.head()); print(df['commodity'].value_counts(dropna=False)); print(df[['fecha','commodity','precio','moneda','unidad','tipo_precio','archivo_origen']].head(20).to_string())"
-```
-
-## Fuente y permisos
-
-Revisar las condiciones de uso de BCR/Cámara Arbitral antes de automatizar o redistribuir datos. Si no existe API estable o autorización suficiente, mantener el fallback de descarga manual y registrar fecha de descarga y procedencia.
+Si no hay credenciales o API estable, mantener esta descarga manual como fallback. El futuro módulo será analítico, pero no se implementa todavía en el dashboard.

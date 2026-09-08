@@ -1,43 +1,40 @@
 # Checklist de validación BCR
 
-## Fuente y alcance
+Completar este checklist con el jefe o el equipo antes de incorporar datos al dashboard.
 
-- [ ] La fuente es BCR / Cámara Arbitral.
-- [ ] El tipo de precio es Pizarra / Precio Cámara o está explícitamente separado.
-- [ ] La cobertura de soja, maíz, trigo, girasol, sorgo y cebada fue comprobada.
-- [ ] Los commodities nuevos se conservan aunque aún no estén en el catálogo.
-- [ ] No se inventaron `bcr_id_grano`.
+## Decisiones ya tomadas
 
-## Calidad de cada descarga
+- Fuente piloto: BCR / Cámara Arbitral de Cereales.
+- Tipo de precio prioritario: precios de pizarra / precios Cámara.
+- Cobertura: todos los commodities disponibles con cobertura útil, priorizando soja, maíz, trigo, girasol y sorgo.
+- Actualidad: usar lo más actual posible.
+- Uso futuro: módulo analítico separado.
+- Actualización: automatizar desde el inicio si existe una vía técnica y autorizada; conservar descarga manual como fallback.
 
-- [ ] Las fechas son fechas de mercado y no sólo fecha de descarga.
-- [ ] La unidad está documentada y es comparable dentro de cada serie.
-- [ ] La moneda está documentada y es comparable dentro de cada serie.
-- [ ] El mercado y la condición comercial se conservaron.
-- [ ] Se distinguieron datos faltantes, estimativos, conversiones y revisiones.
-- [ ] La fecha máxima y la frecuencia real fueron verificadas.
-- [ ] La procedencia y el nombre del archivo original quedaron registrados.
+1. ¿Qué commodities son prioritarios?
+2. ¿Qué fuente exacta de BCR se usará?
+3. ¿Se utilizará precio de pizarra, disponible, FOB/FAS u otro?
+4. ¿La unidad es siempre `$/Tn` o cambia según el archivo/producto?
+5. ¿La moneda es siempre ARS o hay referencias en USD?
+6. ¿Qué período histórico se requiere?
+7. ¿La descarga manual es suficiente o se requiere automatización?
+8. ¿Se permite el uso y la republicación interna de los datos?
+9. ¿Se necesita mostrar la fecha de descarga y la fecha de actualización de la fuente?
+10. ¿El módulo debe ser sólo informativo o también analítico?
 
-## Automatización y seguridad
+11. ¿La API BCR/GIX requiere autenticación y qué método de token utiliza?
+12. ¿Qué variables de entorno o gestor de secretos administrará las credenciales?
+13. ¿La API o descarga estructurada autoriza el uso y la republicación interna?
+14. ¿Qué mecanismo de fallback se utilizará si la API deja de estar disponible?
 
-- [ ] Existe un canal API o descarga estructurada autorizado.
-- [ ] El endpoint fue confirmado y no está hardcodeado sin autorización.
-- [ ] Las credenciales viven en variables de entorno o un gestor seguro.
-- [ ] No hay secretos en el repo ni en el frontend.
-- [ ] El fallback manual sigue funcionando.
-- [ ] La integración y la auditoría corren con `raw/` vacío.
+## Evidencia a conservar
 
-## Antes de crear el módulo visual
+- archivo original descargado;
+- URL o pantalla de origen;
+- fecha de descarga;
+- período consultado;
+- unidad, moneda y condición comercial;
+- confirmación de permisos de uso;
+- resultado de la auditoría y casos problemáticos.
 
-- [ ] ¿La fuente elegida es Precio de Pizarra / Precio Cámara?
-- [ ] ¿La unidad es homogénea?
-- [ ] ¿La moneda es homogénea?
-- [ ] ¿Qué commodities tienen datos suficientes?
-- [ ] ¿Cuál es la frecuencia real?
-- [ ] ¿Cuál es la fecha máxima disponible?
-- [ ] ¿La actualización puede automatizarse?
-- [ ] ¿Hay permiso para uso interno?
-- [ ] ¿Se debe mostrar fuente y fecha de descarga en el dashboard?
-- [ ] ¿Qué indicadores analíticos se quieren mostrar?
-
-No crear la pestaña de commodities ni cargar estos datos en el dashboard hasta completar esta sección.
+La validación debe mantener commodities agrícolas/granos como una familia separada de cantidades y precios mayoristas frutihortícolas.

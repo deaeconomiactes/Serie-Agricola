@@ -1,34 +1,58 @@
-# Plan prudente de API BCR
+# Plan de automatización API BCR
 
 ## Objetivo
 
-Preparar una futura descarga automatizada de Precios de Pizarra / Precios Cámara de BCR/Cámara Arbitral sin acoplarla al navegador ni asumir endpoints que no hayan sido confirmados por la institución.
+Preparar una ruta de automatización para las descargas de commodities BCR sin acoplarla al navegador ni introducir credenciales en el dashboard. La fuente piloto sigue siendo BCR / Cámara Arbitral de Cereales y la referencia prioritaria son los precios de pizarra o precios Cámara.
 
-## Estrategia
+## Estrategia propuesta
 
-1. Confirmar con BCR/Cámara Arbitral si existe una API o descarga estructurada autorizada. Si se dispone de acceso GIX, documentar la modalidad, alcance, límites y condiciones de uso.
-2. Configurar la URL base y el endpoint de precios mediante variables de entorno. El repositorio no contiene endpoints sensibles ni tokens por defecto.
-3. Autenticar con `Bearer` cuando la API entregue un token. Si el proveedor requiere usuario y contraseña, usarlos únicamente desde variables de entorno o un gestor seguro para obtener el token.
-4. Ejecutar la descarga desde `descargar_commodities_bcr.py`, un job local o un backend autorizado. `app.js` no realiza llamadas a BCR y nunca recibe credenciales.
-5. Guardar la respuesta original en `data/commodities_bcr/raw/`, integrar a CSV procesado y auditar fechas, unidades, moneda, tipo de precio y procedencia antes de publicar.
+1. Ejecutar un descargador local en Python o un backend controlado.
+2. Consultar una API BCR/GIX sólo si el equipo dispone de credenciales, autorización y documentación vigente.
+3. Enviar autenticación mediante token Bearer cuando el contrato de la API lo requiera.
+4. Guardar la descarga original en `data/commodities_bcr/raw/` y generar el CSV limpio en `processed/`.
+5. Ejecutar la integración y la auditoría antes de publicar cualquier dato.
+6. Mantener la descarga manual como fallback cuando no haya API, credenciales o un formato estable.
 
-## Variables esperadas
+El descargador incluido en esta etapa detecta configuración y arma el plan de consulta, pero no consume endpoints no confirmados ni realiza llamadas HTTP implícitas. La implementación del adaptador concreto debe esperar la confirmación oficial del endpoint, parámetros, formato, límites y permisos de uso.
 
-Ver [.env.example](../../.env.example): `BCR_API_BASE_URL`, `BCR_API_LOGIN_ENDPOINT`, `BCR_API_PRECIOS_CAMARA_ENDPOINT`, `BCR_API_KEY`, `BCR_API_SECRET`, `BCR_API_TOKEN`, `BCR_API_USE_AUTH` y `BCR_COMMODITIES_DEFAULT_DAYS_BACK`. Se conservan `BCR_API_PRICES_ENDPOINT`, `BCR_API_USER` y `BCR_API_PASSWORD` por compatibilidad, pero se prefieren `api_key`/`secret` o token si la documentación de BCR/GIX los utiliza.
+## Credenciales y seguridad
 
-El endpoint se deja vacío hasta confirmarlo. La ausencia de endpoint o de credenciales no es un error: el script informa que debe usarse la descarga manual.
+- Nunca guardar usuarios, contraseñas, tokens o secretos en el repositorio.
+- Usar variables de entorno o un gestor de secretos del entorno de ejecución.
+- El archivo `.env` es local y está ignorado; `.env.example` contiene únicamente nombres de variables vacíos.
+- Nunca imprimir credenciales completas. Los diagnósticos deben enmascarar usuario, contraseña y token.
+- Si se usa Bearer, construir `Authorization: Bearer <token>` sólo dentro del proceso de descarga y nunca incorporarlo a logs, CSV, reportes o frontend.
+- No exponer credenciales en `app.js`, `index.html`, `styles.css` ni en ningún recurso servido al navegador.
 
-El downloader opera en modo manual por defecto y no hace llamadas de red. Una consulta API requeriría `--source api --allow-api`, endpoint, token Bearer o credenciales API confirmadas, identificadores `bcr_id_grano` confirmados y autorización. Si el token dura 24 horas, debe renovarse fuera del repositorio y nunca guardarse en raw/ ni en Git.
+## Modos de operación
 
-## Seguridad y trazabilidad
+### API
 
-- Nunca guardar usuario, contraseña, api_key, secret, token o archivos `.env` en Git.
-- Nunca imprimir secretos; el modo `dry-run` sólo muestra presencia y valores enmascarados.
-- No inventar `bcr_id_grano`; los identificadores pendientes quedan vacíos en el catálogo.
-- No llamar a la API sin configuración explícita y suficiente.
-- Conservar fecha de descarga, URL no sensible, nombre del archivo original y respuesta sin alterar cuando las condiciones de uso lo permitan.
-- Auditar antes de utilizar el CSV en un dashboard, verificando que la fuente sea pizarra/Cámara y que la serie sea homogénea.
+El script `descargar_commodities_bcr.py` entra en modo API cuando detecta una URL base y una configuración de autenticación suficiente. El uso real queda condicionado a validar el contrato API BCR/GIX. La llamada deberá ejecutarse desde Python local o backend, con timeout, control de errores, registro de fecha de descarga y validación del archivo recibido.
 
-## Fallback manual
+### Manual
 
-Si no hay API estable o credenciales autorizadas, descargar desde la interfaz oficial de BCR/Cámara Arbitral y colocar los archivos en `data/commodities_bcr/raw/`. La automatización puede retomarse cuando exista un canal estructurado y autorizado.
+Si faltan credenciales o configuración, descargar manualmente desde BCR/Cámara Arbitral y colocar los archivos originales en `raw/`. Luego ejecutar:
+
+```powershell
+python .\integrar_commodities_bcr.py
+python .\auditar_commodities_bcr.py
+```
+
+## Controles antes de automatizar
+
+- confirmar que la API/GIX es la fuente autorizada para precios de pizarra o precios Cámara;
+- confirmar si el precio es local, disponible, FOB/FAS, cierre o futuro;
+- verificar productos, unidades, monedas, frecuencia, fechas y paginación;
+- revisar límites, licencia, redistribución interna y retención de datos;
+- probar primero en `--dry-run` y con una ventana corta;
+- conservar respuesta original, metadatos y fecha de descarga para auditoría;
+- detener la automatización ante cambios de esquema o respuestas incompletas.
+
+## Flujo de publicación
+
+La API o la descarga manual nunca deben alimentar directamente el navegador. El flujo previsto es:
+
+`fuente BCR → raw → integración → processed → auditoría → revisión → dashboard futuro`
+
+Commodities permanece como tercera familia separada de cantidades y precios mayoristas frutihortícolas.

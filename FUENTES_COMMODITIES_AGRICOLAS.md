@@ -1,6 +1,6 @@
 # Evaluación de fuentes para commodities agrícolas
 
-**Estado:** evaluación exploratoria. **No hay integración de commodities en el dashboard.**
+**Estado:** evaluación exploratoria de BCR/Cámara Arbitral. **No hay integración de precios BCR en el dashboard.** El módulo Commodities SIO es una línea independiente y no se mezcla con este piloto.
 
 Este documento evalúa fuentes potenciales para una incorporación futura. En esta etapa no se integran commodities al dashboard ni se realizan llamadas automáticas de red. Sí se deja preparada documentación, estructura técnica exploratoria y scripts de apoyo para futuras pruebas controladas.
 
@@ -14,6 +14,8 @@ El módulo sería conceptualmente separado de:
 
 - las cantidades frutihortícolas transadas;
 - los precios mayoristas frutihortícolas.
+
+La incorporación futura deberá mantener separados los precios de commodities, los precios frutihortícolas y las cantidades transadas. No se deben inferir causalidad, escasez ni relaciones precio-cantidad entre esas fuentes sin una metodología específica y una coincidencia validada de período, mercado, producto y unidad.
 
 La evaluación cubre fuentes, cobertura, unidades, monedas, frecuencia de actualización, factibilidad técnica, riesgos y una posible arquitectura futura. Las fuentes y CSV actualmente disponibles en el proyecto corresponden al dominio frutihortícola; ninguna de ellas se interpreta aquí como fuente de commodities.
 
@@ -258,7 +260,7 @@ BCR/Cámara Arbitral sigue siendo la fuente local preferida para precios de piza
 
 ### SIO Granos / Secretaría de Agricultura
 
-SIO-Granos es una plataforma argentina para informar operaciones de compraventa y publicar precios de referencia. La plataforma publica documentación de acceso y una documentación de API pública; debe verificarse qué datos están disponibles sin autenticación, qué límites aplican y si la licencia permite el uso previsto. Pasa a ser la primera alternativa local automatizable a explorar por su posible relación con operaciones, precios de referencia y un dashboard analítico argentino. Todavía no está integrada al dashboard ni se validó una respuesta real. Antes de incorporarla se deben confirmar endpoints, producto, frecuencia, condición comercial, unidad, moneda, cobertura histórica y permisos.
+SIO-Granos es una plataforma argentina para informar operaciones de compraventa y publicar precios de referencia. La plataforma publica documentación de acceso y una documentación de API pública; debe verificarse qué datos están disponibles sin autenticación, qué límites aplican y si la licencia permite el uso previsto. Pasa a ser la primera alternativa local automatizable a explorar por su posible relación con operaciones, precios de referencia y un dashboard analítico argentino. El módulo SIO existente se mantiene como línea independiente, con sus propios archivos procesados y reglas de validación; no representa precios de pizarra BCR. Antes de ampliar esa línea se deben confirmar endpoints, producto, frecuencia, condición comercial, unidad, moneda, cobertura histórica y permisos.
 
 ### World Bank Pink Sheet
 
@@ -278,8 +280,8 @@ granos.ar expone un monitor técnico con información JSON aparentemente accesib
 
 No debe usarse como fuente principal para reportes institucionales sin validación previa de procedencia, licencia y estabilidad.
 
-La comparación detallada y el catálogo de evaluación se encuentran en [data/commodities_bcr/FUENTES_API_COMMODITIES_COMPARATIVO.md](data/commodities_bcr/FUENTES_API_COMMODITIES_COMPARATIVO.md) y [data/commodities/catalogo_fuentes_commodities.csv](data/commodities/catalogo_fuentes_commodities.csv). Para SIO Granos existe únicamente un explorador técnico separado y no productivo. No se crean todavía descargadores específicos para World Bank, BCRA, FAO o granos.ar. El pipeline BCR existente se mantiene como prueba controlada separada.
+La comparación detallada y el catálogo de evaluación se encuentran en [data/commodities_bcr/FUENTES_API_COMMODITIES_COMPARATIVO.md](data/commodities_bcr/FUENTES_API_COMMODITIES_COMPARATIVO.md) y [data/commodities/catalogo_fuentes_commodities.csv](data/commodities/catalogo_fuentes_commodities.csv). El pipeline SIO y el pipeline BCR se mantienen separados. No se crean todavía descargadores específicos para World Bank, BCRA, FAO o granos.ar. El pipeline BCR existente se mantiene como prueba controlada separada.
 
 ## Estado de integración
 
-En esta etapa no se modifican `app.js`, `index.html` ni `styles.css`, no se crea una pestaña de commodities y no se cargan datos externos en el navegador. El pipeline exploratorio permanece separado de frutas y hortalizas; esta documentación y los scripts sólo preparan la validación para una decisión posterior.
+En esta etapa no se integra el piloto BCR al dashboard ni se realizan llamadas automáticas de red desde el navegador. El módulo Commodities SIO, sus CSV dashboard-ready y su lógica visual son una línea independiente; no se mezclan con el pipeline BCR ni con frutas y hortalizas. La automatización BCR permanece limitada a configuración, validaciones y pruebas controladas.

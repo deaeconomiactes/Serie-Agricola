@@ -1,92 +1,77 @@
 # Commodities agrícolas BCR
 
-Pipeline exploratorio separado de cantidades y precios mayoristas frutihortícolas. En esta etapa no existe integración visual: no se modifican `app.js`, `index.html` ni `styles.css` y no se cargan datos de commodities en el navegador.
-
-## Decisión operativa
-
-- Fuente piloto: BCR / Cámara Arbitral de Cereales.
-- Precio prioritario: Precios de Pizarra / Precios Cámara.
-- Productos: todos los commodities con cobertura útil; el catálogo inicial prioriza soja, maíz, trigo, girasol, sorgo y cebada.
-- Período: lo más actual posible.
-- Uso futuro: analítico.
-- Actualización: automatizada cuando sea técnicamente viable y autorizada; descarga manual como fallback.
+Esta carpeta corresponde al trabajo exploratorio de precios de commodities agrícolas de la **Bolsa de Comercio de Rosario / Cámara Arbitral de Cereales**.
 
 ## Estructura
 
-- `raw/`: archivos originales descargados manualmente o por un proceso autorizado.
-- `processed/`: CSV normalizado, reproducible y separado del dashboard.
-- `reports/`: auditorías de cobertura, calidad y actualidad.
-- `catalogo_commodities_bcr.csv`: nombres, alias, prioridad e identificadores BCR confirmados.
-- `API_BCR_PLAN.md`: estrategia de automatización segura.
+- `raw/`: archivos originales descargados manualmente desde BCR. No se editan; tampoco se realizan llamadas de red ni scraping automático.
+- `processed/`: archivos integrados y normalizados generados por Python, en particular `COMMODITIES_BCR_INTEGRADO.csv`.
+- `reports/`: reportes y resúmenes de auditoría generados por Python a partir del CSV integrado.
 
-## Flujo operativo
+## Uso
 
-1. Si se cuenta con acceso autorizado, copiar `.env.example` como `.env` y completar sólo localmente las variables necesarias.
-2. Ejecutar el diagnóstico sin descargar:
+Desde la raíz del repositorio:
+
+```powershell
+python .\integrar_commodities_bcr.py
+python .\auditar_commodities_bcr.py
+```
+
+Para integrar una carpeta externa de descargas manuales:
+
+```powershell
+python .\integrar_commodities_bcr.py "C:\ruta\a\descargas\bcr"
+```
+
+La plantilla que el integrador puede crear en `raw/` no se considera un dato real y se ignora automáticamente. Primero se deben colocar allí archivos completados descargados desde BCR.
+
+Estos datos corresponden a commodities agrícolas/granos y forman una tercera familia separada de:
+
+- cantidades frutihortícolas;
+- precios mayoristas frutihortícolas.
+
+No deben mezclarse directamente ni cruzarse con esas familias para inferir causalidad o relaciones precio-cantidad. La unidad, moneda, mercado, tipo de precio y condición comercial originales deben conservarse. Precio de pizarra, disponible, FOB/FAS y futuros son referencias distintas y no deben tratarse como una única serie.
+
+## Decisión operativa inicial
+
+- La fuente piloto es BCR / Cámara Arbitral de Cereales.
+- Se priorizan precios de pizarra / precios Cámara por su cercanía con precios locales de mercado.
+- Se incluirán todos los commodities disponibles con cobertura útil, empezando por soja, maíz, trigo, girasol y sorgo; cebada y otros granos se incorporarán si la cobertura es consistente.
+- El foco inicial es lo más actual posible.
+- El módulo futuro tendrá uso analítico, pero todavía no tiene interfaz visual.
+- La actualización ideal será automatizada, siempre respetando acceso, permisos y condiciones de uso.
+- Si la API requiere autenticación, las credenciales se manejarán mediante variables de entorno y nunca en el frontend.
+- Si no hay API estable o credenciales, se mantiene el fallback de descarga manual.
+
+## Flujo recomendado
+
+1. Configurar `.env` si se cuenta con API/credenciales.
+2. Ejecutar una simulación segura:
 
    ```powershell
    python .\descargar_commodities_bcr.py --dry-run --days-back 30
    ```
 
-   También puede limitar productos: `python .\descargar_commodities_bcr.py --dry-run --days-back 30 --products soja,maiz,trigo`.
-
-3. Generar URLs manuales, sin red:
+   Para productos específicos:
 
    ```powershell
-   python .\descargar_commodities_bcr.py --manual-urls --date-start 2026-08-01 --date-end 2026-09-01 --products soja,maiz,trigo,girasol,sorgo
+   python .\descargar_commodities_bcr.py --dry-run --date-start 2026-08-01 --date-end 2026-09-01 --products soja,maiz,trigo,girasol,sorgo
    ```
 
-4. Si no hay API, abrir las URLs, descargar manualmente desde BCR/Cámara Arbitral y colocar los archivos en `raw/`.
-5. Intentar descarga pública sólo de forma explícita y controlada:
+3. Si no hay API, descargar manualmente y colocar los archivos originales en `raw/`.
+4. Ejecutar `python .\integrar_commodities_bcr.py`.
+5. Ejecutar `python .\auditar_commodities_bcr.py`.
+6. Revisar los reportes de cobertura, actualidad y calidad.
+7. Recién después decidir la implementación visual.
 
-   ```powershell
-   python .\descargar_commodities_bcr.py --source public-web --allow-web --date-start 2026-08-01 --date-end 2026-09-01 --products maiz
-   ```
-
-6. Integrar:
-
-   ```powershell
-   python .\integrar_commodities_bcr.py
-   ```
-
-7. Auditar:
-
-   ```powershell
-   python .\auditar_commodities_bcr.py
-   ```
-
-8. Revisar los reportes y sólo después decidir si corresponde diseñar el módulo visual.
-
-Con `raw/` vacío, integración y auditoría terminan correctamente y explican el próximo paso; no se generan reportes vacíos que parezcan datos válidos.
-
-El downloader no hace llamadas de red por defecto. Aunque exista configuración API, sólo podría consultar con `--allow-api`, después de confirmar endpoint, autorización y credenciales.
-
-API, sólo con credenciales, endpoint e identificadores BCR confirmados:
+Si se dispone de API configurada y autorizada, el flujo previsto es:
 
 ```powershell
-python .\descargar_commodities_bcr.py --source api --allow-api --days-back 7 --products maiz
-```
-
-## Verificación rápida después de una descarga real
-
-Después de colocar `BCR_pizarra_maiz_ultimos_30_dias.xlsx` o equivalente en `raw/`:
-
-```powershell
+python .\descargar_commodities_bcr.py --days-back 7 --products soja,maiz,trigo
 python .\integrar_commodities_bcr.py
 python .\auditar_commodities_bcr.py
-python -c "import pandas as pd; df=pd.read_csv('data/commodities_bcr/processed/COMMODITIES_BCR_INTEGRADO.csv', sep=';'); print(df.head()); print(df['commodity'].value_counts(dropna=False)); print(df[['fecha','commodity','precio','moneda','unidad','tipo_precio','archivo_origen']].head(20).to_string())"
 ```
 
-## Primer ensayo manual recomendado
+El archivo `.env` no debe commitearse. Si faltan endpoint o IDs BCR confirmados, el descargador no realiza llamadas y se debe usar el fallback manual.
 
-La primera prueba operativa debe ser un archivo real de BCR/Cámara Arbitral para maíz, preferentemente de los últimos 30 días o los últimos 3 meses. Luego se puede ampliar a soja, trigo, girasol y sorgo. Guardarlo en `raw/` con nombres como:
-
-```text
-BCR_pizarra_soja_ultimos_3_meses.xlsx
-BCR_pizarra_maiz_ultimos_3_meses.xlsx
-BCR_pizarra_trigo_ultimos_3_meses.xlsx
-BCR_pizarra_girasol_ultimos_3_meses.xlsx
-BCR_pizarra_sorgo_ultimos_3_meses.xlsx
-```
-
-Antes de analizar, verificar fuente, tipo de precio, moneda, unidad, frecuencia, fecha máxima y condiciones de uso. Los archivos de plantilla o simulación sólo sirven para probar el pipeline.
+La configuración API y el flujo de seguridad están documentados en `API_BCR_PLAN.md`.
