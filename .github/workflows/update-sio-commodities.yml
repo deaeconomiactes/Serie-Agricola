@@ -26,7 +26,8 @@ jobs:
         run: python -m pip install -r requirements.txt
 
       - name: Registrar fecha de corrida
-        run: echo "Fecha de corrida UTC: $(date -u '+%Y-%m-%d %H:%M:%S')"
+        run: |
+          echo "Fecha de corrida UTC: $(date -u '+%Y-%m-%d %H:%M:%S')"
 
       - name: Capturar snapshot latest
         run: python explorar_sio_granos.py --update-latest --allow-web --save-response
