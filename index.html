@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=commodities-filters">
 </head>
 <body>
     <div class="app-shell">
@@ -439,7 +439,7 @@
             </div>
             <span id="commodityDataStatus" class="commodity-data-status" role="status" aria-live="polite">Cargando datos…</span>
         </div>
-        <p id="commodityMethodNote" class="method-note methodology-note commodity-method-note">Fuente: SIO Granos / Secretaría de Agricultura. Los datos corresponden a operaciones informadas y no equivalen a precios de pizarra BCR, futuros ni precios mayoristas frutihortícolas. Los precios cero se excluyen de los cálculos de series. Las monedas ARS y USD se analizan por separado. Cobertura SIO según exportación/procesamiento disponible. Para series históricas mensuales de años anteriores se incorporará una fuente separada, sin mezclarla con operaciones SIO.</p>
+        <p id="commodityMethodNote" class="method-note methodology-note commodity-method-note">Fuente: SIO Granos. Operaciones informadas. Los precios cero se excluyen de las series. ARS y USD se analizan por separado.</p>
         <p id="commodityPriceScope" class="commodity-price-scope">Precios en la moneda y unidad seleccionadas · mediana de operaciones con precio positivo</p>
 
         <div class="commodity-filters filters-card filters-grid" aria-label="Filtros de commodities agrícolas">
@@ -459,6 +459,10 @@
                     <div id="commodityFilterCommodityMenu" class="commodity-multi-dropdown" role="listbox" aria-multiselectable="true" aria-label="Seleccionar hasta tres commodities"></div>
                 </div>
                 <p id="commodityFilterCommodityHint" class="commodity-filter-hint">Todos los commodities · seleccioná hasta 3 para comparar</p>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="commodityFilterMarket">Mercado / plaza</label>
+                <select id="commodityFilterMarket" class="filter-select"><option value="TODOS">Todas</option></select>
             </div>
             <div class="filter-group">
                 <label class="filter-label" for="commodityFilterCurrency">Moneda</label>
@@ -482,22 +486,19 @@
         </div>
 
         <div class="commodity-kpi-grid">
-            <div class="kpi-card commodity-kpi-update"><div class="kpi-icon">◷</div><div class="kpi-content"><span class="kpi-label">Última actualización</span><span class="kpi-value" id="commodityKpiUpdate">–</span><span class="kpi-unit" id="commodityKpiRange">Rango sin datos</span></div></div>
-            <div class="kpi-card commodity-kpi-median"><div class="kpi-icon">$</div><div class="kpi-content"><span class="kpi-label">Precio mediano reciente</span><span class="kpi-value" id="commodityKpiMedian">–</span><span class="kpi-unit" id="commodityKpiMedianUnit">por unidad</span></div></div>
+            <div class="kpi-card commodity-kpi-update"><div class="kpi-icon">◷</div><div class="kpi-content"><span class="kpi-label">Último período disponible</span><span class="kpi-value" id="commodityKpiUpdate">–</span><span class="kpi-unit" id="commodityKpiRange">Rango sin datos</span></div></div>
+            <div class="kpi-card commodity-kpi-median"><div class="kpi-icon">$</div><div class="kpi-content"><span class="kpi-label">Mediana del último período</span><span class="kpi-value" id="commodityKpiMedian">–</span><span class="kpi-unit" id="commodityKpiMedianUnit">por unidad</span></div></div>
+            <div class="kpi-card commodity-kpi-monthly"><div class="kpi-icon">↕</div><div class="kpi-content"><span class="kpi-label">Variación mensual</span><span class="kpi-value" id="commodityKpiMonthlyVariation">–</span><span class="kpi-unit" id="commodityKpiMonthlyVariationDetail">última serie disponible</span></div></div>
+            <div class="kpi-card commodity-kpi-yoy"><div class="kpi-icon">↗</div><div class="kpi-content"><span class="kpi-label">Variación interanual</span><span class="kpi-value" id="commodityKpiYoYVariation">–</span><span class="kpi-unit" id="commodityKpiYoYVariationDetail">última serie disponible</span></div></div>
             <div class="kpi-card commodity-kpi-products"><div class="kpi-icon">✦</div><div class="kpi-content"><span class="kpi-label">Commodities disponibles</span><span class="kpi-value" id="commodityKpiProducts">–</span><span class="kpi-unit">dentro del filtro</span></div></div>
             <div class="kpi-card commodity-kpi-operations"><div class="kpi-icon">#</div><div class="kpi-content"><span class="kpi-label" id="commodityKpiOperationsLabel">Operaciones con precio</span><span class="kpi-value" id="commodityKpiOperations">–</span><span class="kpi-unit" id="commodityKpiOperationsUnit">precios positivos</span></div></div>
             <div class="kpi-card commodity-kpi-currency"><div class="kpi-icon">◉</div><div class="kpi-content"><span class="kpi-label">Moneda seleccionada</span><span class="kpi-value" id="commodityKpiCurrency">–</span><span class="kpi-unit">serie sin mezcla monetaria</span></div></div>
         </div>
 
-        <div class="chart-card commodity-latest-card commodity-latest-featured">
-            <div class="chart-header"><h2 class="chart-title" id="commodityLatestTitle">Últimos precios por serie</h2><p class="chart-desc" id="commodityLatestDesc">Precio mediano del último día disponible por commodity, moneda, unidad y tipo de precio</p></div>
-            <div class="commodity-table-wrap"><table class="commodity-latest-table"><thead><tr><th>Commodity</th><th>Moneda</th><th>Unidad</th><th>Tipo</th><th>Fecha</th><th>Precio mediano</th><th>Operaciones</th><th id="commodityLatestVariationShort">Var. 7 días</th><th id="commodityLatestVariationLong">Var. 30 días</th><th>Estado</th></tr></thead><tbody id="commodityLatestBody"></tbody></table><div id="commodityLatestStatus" class="commodity-inline-status is-visible">No hay últimos precios para mostrar.</div></div>
-        </div>
-
         <div class="commodity-charts-grid">
             <div class="chart-card commodity-chart-card commodity-chart-main">
-                <div class="chart-header"><h2 class="chart-title" id="commodityTrendTitle">Precios medianos por período</h2><p class="chart-desc" id="commodityTrendDesc">Valor del precio mediano, separado por moneda y serie homogénea</p></div>
-                <div class="chart-body commodity-chart-body"><canvas id="commodityPriceTrend"></canvas><div id="commodityPriceTrendStatus" class="commodity-inline-status">No hay datos para los filtros seleccionados.</div></div>
+                <div class="chart-header"><h2 class="chart-title" id="commodityTrendTitle">Precio mediano mensual</h2><p class="chart-desc" id="commodityTrendDesc">Una serie por commodity o plaza según los filtros seleccionados</p></div>
+                <div class="chart-body commodity-chart-body"><canvas id="commodityPriceTrend"></canvas><div id="commodityPriceTrendStatus" class="commodity-inline-status">No hay datos para los filtros seleccionados.</div></div><p id="commodityTrendNotice" class="commodity-inline-notice" aria-live="polite"></p>
             </div>
             <div class="chart-card commodity-chart-card">
                 <div class="chart-header"><h2 class="chart-title" id="commodityRankingTitle">Precios medianos recientes</h2><p class="chart-desc" id="commodityRankingDesc">Precio por commodity en el último dato disponible</p></div>
@@ -509,10 +510,15 @@
             </div>
         </div>
 
+        <div class="chart-card commodity-latest-card commodity-latest-featured">
+            <div class="chart-header"><h2 class="chart-title" id="commodityLatestTitle">Últimos precios por serie</h2><p class="chart-desc" id="commodityLatestDesc">Precio mediano del último período disponible, con plaza y fuente visibles</p></div>
+            <div class="commodity-table-wrap"><table class="commodity-latest-table"><thead><tr><th>Commodity</th><th>Fuente</th><th>Mercado / plaza</th><th>Moneda</th><th>Unidad</th><th>Tipo</th><th>Período</th><th>Precio mediano</th><th>Observaciones</th><th id="commodityLatestVariationShort">Var. mensual</th><th id="commodityLatestVariationLong">Var. interanual</th><th>Estado</th></tr></thead><tbody id="commodityLatestBody"></tbody></table><div id="commodityLatestStatus" class="commodity-inline-status commodity-table-status is-visible">No hay últimos precios para mostrar.</div></div>
+        </div>
+
         <div class="chart-card commodity-semaphore-card">
             <div class="chart-header"><h2 class="chart-title">Semáforo mensual de variaciones</h2><p class="chart-desc">Cambios de mediana respecto del mes anterior dentro de cada serie</p></div>
             <div class="commodity-semaphore-note">Los estados describen variaciones de precios. No representan escasez ni desabastecimiento.</div>
-            <div class="commodity-table-wrap"><table class="commodity-semaphore-table"><thead><tr><th>Commodity</th><th>Moneda</th><th>Unidad</th><th>Tipo</th><th>Período</th><th>Precio mediano</th><th>Var. mensual</th><th>Var. interanual</th><th>Estado</th></tr></thead><tbody id="commoditySemaphoreBody"></tbody></table><div id="commoditySemaphoreStatus" class="commodity-inline-status is-visible">No hay datos mensuales para mostrar.</div></div>
+            <div class="commodity-table-wrap"><table class="commodity-semaphore-table"><thead><tr><th id="commoditySemaphoreSeriesHeader">Commodity / plaza</th><th id="commoditySemaphoreMonth0">Mes 1</th><th id="commoditySemaphoreMonth1">Mes 2</th><th id="commoditySemaphoreMonth2">Mes 3</th><th id="commoditySemaphoreMonth3">Mes 4</th><th id="commoditySemaphoreMonth4">Mes 5</th><th id="commoditySemaphoreMonth5">Mes 6</th><th id="commoditySemaphoreMonth6">Mes 7</th><th id="commoditySemaphoreMonth7">Mes 8</th><th id="commoditySemaphoreMonth8">Mes 9</th><th id="commoditySemaphoreMonth9">Mes 10</th><th id="commoditySemaphoreMonth10">Mes 11</th><th id="commoditySemaphoreMonth11">Mes 12</th><th>Estado</th></tr></thead><tbody id="commoditySemaphoreBody"></tbody></table><div id="commoditySemaphoreStatus" class="commodity-inline-status commodity-table-status is-visible">No hay datos mensuales para mostrar.</div></div>
         </div>
     </section>
     </div>
@@ -524,6 +530,6 @@
     </footer>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=commodities-filters"></script>
 </body>
 </html>
