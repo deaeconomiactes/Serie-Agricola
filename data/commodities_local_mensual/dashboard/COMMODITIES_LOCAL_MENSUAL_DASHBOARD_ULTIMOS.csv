@@ -1,1 +1,18 @@
 ﻿commodity;fuente;mercado;tipo_precio;moneda;unidad;frecuencia;periodo_ultimo;precio_mediana_ultimo_periodo;precio_promedio_ultimo_periodo;operaciones_ultimo_periodo;variacion_mensual_pct;variacion_interanual_pct;estado
+Cebada forrajera;Secretaría de Agricultura - Precios Internos de los Principales Granos;Argentina / mercado interno — B.BLANCA;Precio interno mensual;ARS;TN;mensual;2025-04;220714.29;220714.29;1;4.008306;51.745816;Estable
+Cebada forrajera;Secretaría de Agricultura - Precios Internos de los Principales Granos;Argentina / mercado interno — QUEQUEN;Precio interno mensual;ARS;TN;mensual;2026-02;280000;280000;1;;36.652025;Sin dato
+Girasol;Secretaría de Agricultura - Precios Internos de los Principales Granos;Argentina / mercado interno — QUEQUEN;Precio interno mensual;ARS;TN;mensual;2025-04;330000;330000;1;;30.769231;Sin dato
+Girasol;Secretaría de Agricultura - Precios Internos de los Principales Granos;Argentina / mercado interno — ROSARIO;Precio interno mensual;ARS;TN;mensual;2026-08;743250;743250;1;9.360171;53.557704;Suba moderada
+Girasol;Secretaría de Agricultura - Precios Internos de los Principales Granos;Argentina / mercado interno — B.BLANCA;Precio interno mensual;ARS;TN;mensual;2024-06;300000;300000;1;12.523443;361.538462;Suba moderada
+Maíz;Secretaría de Agricultura - Precios Internos de los Principales Granos;Argentina / mercado interno — B.BLANCA;Precio interno mensual;ARS;TN;mensual;2025-10;251429;251429;1;4.762083;;Estable
+Maíz;Secretaría de Agricultura - Precios Internos de los Principales Granos;Argentina / mercado interno — ROSARIO;Precio interno mensual;ARS;TN;mensual;2026-08;271477.5;271477.5;1;-0.673562;17.294359;Estable
+Maíz;Secretaría de Agricultura - Precios Internos de los Principales Granos;Argentina / mercado interno — QUEQUEN;Precio interno mensual;ARS;TN;mensual;2025-08;231566.67;231566.67;1;6.271992;44.018079;Suba moderada
+Soja;Secretaría de Agricultura - Precios Internos de los Principales Granos;Argentina / mercado interno — ROSARIO;Precio interno mensual;ARS;TN;mensual;2026-08;518425;518425;1;4.76017;33.052305;Estable
+Soja;Secretaría de Agricultura - Precios Internos de los Principales Granos;Argentina / mercado interno — B.BLANCA;Precio interno mensual;ARS;TN;mensual;2025-12;520000;520000;1;6.303236;;Suba moderada
+Soja;Secretaría de Agricultura - Precios Internos de los Principales Granos;Argentina / mercado interno — QUEQUEN;Precio interno mensual;ARS;TN;mensual;2025-12;503742.86;503742.86;1;2.282814;;Estable
+Sorgo;Secretaría de Agricultura - Precios Internos de los Principales Granos;Argentina / mercado interno — ROSARIO;Precio interno mensual;ARS;TN;mensual;2026-08;275535.2;275535.2;1;2.393502;19.845299;Estable
+Trigo;Secretaría de Agricultura - Precios Internos de los Principales Granos;Argentina / mercado interno — B.BLANCA;Precio interno mensual;ARS;TN;mensual;2025-09;265000;265000;1;;37.662338;Sin dato
+Trigo;Secretaría de Agricultura - Precios Internos de los Principales Granos;Argentina / mercado interno — CORDOBA;Precio interno mensual;ARS;TN;mensual;2026-08;316385;316385;1;6.631054;18.658715;Suba moderada
+Trigo;Secretaría de Agricultura - Precios Internos de los Principales Granos;Argentina / mercado interno — ROSARIO;Precio interno mensual;ARS;TN;mensual;2026-08;330539.45;330539.45;1;11.232229;23.755484;Suba moderada
+Trigo;Secretaría de Agricultura - Precios Internos de los Principales Granos;Argentina / mercado interno — DARSENA;Precio interno mensual;ARS;TN;mensual;2024-05;250000;250000;1;;;Sin dato
+Trigo;Secretaría de Agricultura - Precios Internos de los Principales Granos;Argentina / mercado interno — QUEQUEN;Precio interno mensual;ARS;TN;mensual;2026-02;279800;279800;1;;28.193439;Sin dato

@@ -19,6 +19,9 @@ DASHBOARD_DIR = ROOT / "data" / "commodities_sio" / "dashboard"
 REPORT_DIR = ROOT / "data" / "commodities_sio" / "reports"
 ANALYTIC_PATH = PROCESSED_DIR / "COMMODITIES_SIO_ANALITICO_PRECIOS.csv"
 ANALYTIC_SAMPLE_PATH = PROCESSED_DIR / "COMMODITIES_SIO_ANALITICO_PRECIOS_SAMPLE.csv"
+SNAPSHOT_HISTORY_PATH = PROCESSED_DIR / "COMMODITIES_SIO_HISTORICO_SNAPSHOTS.csv"
+LATEST_SNAPSHOT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_LATEST_SNAPSHOT.csv"
+LIGHT_SNAPSHOT_HISTORY_PATH = DASHBOARD_DIR / "COMMODITIES_SIO_HISTORICO_SNAPSHOTS_LIVIANO.csv"
 REPORT_PATH = REPORT_DIR / "REPORTE_DASHBOARD_COMMODITIES_SIO.md"
 SOURCE_NAME = "SIO Granos / Secretaría de Agricultura"
 
@@ -79,13 +82,16 @@ def valid_analytic_row(row: dict[str, str]) -> tuple[bool, float | None, date | 
     parsed_date = parse_date(value(row, "fecha"))
     currency = value(row, "moneda")
     unit = value(row, "unidad")
+    currency_is_explicit = is_yes(value(row, "moneda_explicitamente_informada")) or (
+        "moneda_explicitamente_informada" not in row and currency not in {"", "Sin especificar"}
+    )
     eligible = all([
         is_yes(value(row, "precio_valido_para_serie")),
         price is not None and price > 0,
         not is_yes(value(row, "precio_cero_flag")),
         parsed_date is not None,
         bool(value(row, "commodity")) and value(row, "commodity") != "Sin especificar",
-        is_yes(value(row, "moneda_explicitamente_informada")),
+        currency_is_explicit,
         bool(currency) and currency != "Sin especificar",
         bool(unit) and unit != "Sin especificar",
         bool(value(row, "fuente")),
@@ -143,6 +149,17 @@ def write_csv(path: Path, fields: list[str], rows: list[dict[str, str]]) -> None
         writer.writerows(rows)
 
 
+def latest_snapshot_capture() -> str:
+    if not LATEST_SNAPSHOT_PATH.exists():
+        return ""
+    try:
+        with LATEST_SNAPSHOT_PATH.open("r", encoding="utf-8-sig", newline="") as handle:
+            captures = [value(row, "fecha_descarga_snapshot") for row in csv.DictReader(handle, delimiter=";")]
+    except OSError:
+        return ""
+    return max((item for item in captures if item), default="")
+
+
 def state_for_variation(variation: float | None) -> str:
     if variation is None:
         return "Sin dato"
@@ -176,11 +193,19 @@ def build_dashboard(source_path: Path) -> dict[str, object]:
     units: set[str] = set()
     commodities: set[str] = set()
     dates: list[date] = []
+    capture_timestamps: list[str] = []
+    dashboard_update_dates: list[str] = []
 
     with source_path.open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle, delimiter=";")
         for row in reader:
             total_rows += 1
+            capture = value(row, "fecha_descarga_snapshot")
+            if capture:
+                capture_timestamps.append(capture)
+            dashboard_update = value(row, "fecha_actualizacion_dashboard")
+            if dashboard_update:
+                dashboard_update_dates.append(dashboard_update)
             eligible, price, parsed_date = valid_analytic_row(row)
             if not eligible or price is None or parsed_date is None:
                 continue
@@ -271,18 +296,22 @@ def build_dashboard(source_path: Path) -> dict[str, object]:
         row["estado"] = state_for_variation(parse_number(row["variacion_mensual_pct"]))
     write_csv(OUTPUTS["semaforo"], semaphore_fields, semaphore_rows)
 
-    summary_fields = ["fecha_actualizacion", "fecha_min", "fecha_max", "filas_analiticas", "commodities", "monedas", "unidades", "operaciones", "fuente", "modo", "nota_metodologica_corta"]
+    latest_capture = max(capture_timestamps) if capture_timestamps else ""
+    latest_capture = max(filter(None, [latest_capture, latest_snapshot_capture()]), default="")
+    dashboard_update = max(dashboard_update_dates) if dashboard_update_dates else date.today().isoformat()
+    snapshot_history = source_path in {SNAPSHOT_HISTORY_PATH, LIGHT_SNAPSHOT_HISTORY_PATH}
+    summary_fields = ["fecha_actualizacion", "fecha_actualizacion_dashboard", "fecha_ultima_captura_sio", "fecha_ultima_operacion_sio", "fecha_min_operacion_sio", "fecha_max_operacion_sio", "fecha_min", "fecha_max", "filas_analiticas", "commodities", "monedas", "unidades", "operaciones", "fuente", "modo", "nota_metodologica_corta"]
     summary_row = {
-        "fecha_actualizacion": date.today().isoformat(), "fecha_min": min(dates).isoformat() if dates else "", "fecha_max": max(dates).isoformat() if dates else "", "filas_analiticas": str(valid_rows),
+        "fecha_actualizacion": date.today().isoformat(), "fecha_actualizacion_dashboard": dashboard_update, "fecha_ultima_captura_sio": latest_capture, "fecha_ultima_operacion_sio": max(dates).isoformat() if dates else "", "fecha_min_operacion_sio": min(dates).isoformat() if dates else "", "fecha_max_operacion_sio": max(dates).isoformat() if dates else "", "fecha_min": min(dates).isoformat() if dates else "", "fecha_max": max(dates).isoformat() if dates else "", "filas_analiticas": str(valid_rows),
         "commodities": "|".join(sorted(commodities)), "monedas": "|".join(sorted(currencies)), "unidades": "|".join(sorted(units)), "operaciones": str(valid_rows), "fuente": SOURCE_NAME,
-        "modo": "muestra" if source_path == ANALYTIC_SAMPLE_PATH else "base_analitica_completa",
-        "nota_metodologica_corta": "Sólo precios positivos, moneda/unidad explícitas y precio_valido_para_serie=sí; ARS y USD se mantienen separados. Fuente SIO Granos; no equivale a BCR.",
+        "modo": "histórico_snapshots" if snapshot_history else "muestra" if source_path == ANALYTIC_SAMPLE_PATH else "base_analitica_completa",
+        "nota_metodologica_corta": "Sólo precios positivos, moneda/unidad explícitas y precio_valido_para_serie=sí; ARS y USD se mantienen separados. Fuente SIO Granos; no equivale a BCR. Actualización por snapshots de últimas operaciones SIO. No equivale a histórico completo." if snapshot_history else "Sólo precios positivos, moneda/unidad explícitas y precio_valido_para_serie=sí; ARS y USD se mantienen separados. Fuente SIO Granos; no equivale a BCR.",
     }
     write_csv(OUTPUTS["resumen"], summary_fields, [summary_row])
 
     rows_by_output = {name: sum(1 for _ in path.open("r", encoding="utf-8-sig")) - 1 for name, path in OUTPUTS.items()}
     metrics = {
-        "source_path": source_path, "source_is_sample": source_path == ANALYTIC_SAMPLE_PATH, "source_rows": total_rows, "valid_rows": valid_rows,
+        "source_path": source_path, "source_is_sample": source_path == ANALYTIC_SAMPLE_PATH, "source_is_snapshot_history": snapshot_history, "latest_capture": latest_capture, "dashboard_update": dashboard_update, "latest_operation": max(dates).isoformat() if dates else "", "min_operation": min(dates).isoformat() if dates else "", "max_operation": max(dates).isoformat() if dates else "", "source_rows": total_rows, "valid_rows": valid_rows,
         "dates": dates, "commodities": sorted(commodities), "currencies": sorted(currencies), "units": sorted(units), "rows_by_output": rows_by_output,
     }
     write_dashboard_report(metrics)
@@ -291,11 +320,11 @@ def build_dashboard(source_path: Path) -> dict[str, object]:
 
 def write_dashboard_report(metrics: dict[str, object]) -> None:
     source_path = Path(metrics["source_path"])
-    source_note = "Se usó la muestra analítica; los resultados son sólo ilustrativos y no sustituyen la base completa." if metrics["source_is_sample"] else "Se usó la base analítica completa local; el dashboard sólo recibe agregados livianos."
+    source_note = "Se usó la muestra analítica; los resultados son sólo ilustrativos y no sustituyen la base completa." if metrics["source_is_sample"] else "Se usó el histórico acumulado de snapshots SIO; el dashboard sólo recibe agregados livianos." if metrics["source_is_snapshot_history"] else "Se usó la base analítica completa local; el dashboard sólo recibe agregados livianos."
     lines = [
         "# Reporte de dashboard de commodities SIO", "", "## Fuente y criterio", "",
         f"- Fuente de preparación: `{source_path.as_posix()}`.", f"- {source_note}", f"- Filas leídas: {metrics['source_rows']}; filas analíticas válidas utilizadas: {metrics['valid_rows']}.",
-        f"- Rango temporal: {min(metrics['dates']).isoformat() if metrics['dates'] else 'sin fecha'} a {max(metrics['dates']).isoformat() if metrics['dates'] else 'sin fecha'}.",
+        f"- Rango temporal: {min(metrics['dates']).isoformat() if metrics['dates'] else 'sin fecha'} a {max(metrics['dates']).isoformat() if metrics['dates'] else 'sin fecha'}.", f"- Actualización del dashboard: {metrics['dashboard_update'] or 'no disponible'}.", f"- Última captura SIO: {metrics['latest_capture'] or 'no disponible'}.", f"- Última operación informada: {metrics['latest_operation'] or 'no disponible'}.", f"- Rango de operaciones: {metrics['min_operation'] or 'sin fecha'} — {metrics['max_operation'] or 'sin fecha'}.",
         f"- Commodities: {', '.join(metrics['commodities']) or 'ninguno'}.", f"- Monedas: {', '.join(metrics['currencies']) or 'ninguna'}; unidades: {', '.join(metrics['units']) or 'ninguna'}.",
         "- Regla: sólo `precio_valido_para_serie=sí`, precio positivo, fecha válida, commodity, fuente, moneda explícita y unidad explícita. Los precios cero quedan fuera.",
         "- Las series se separan por commodity, moneda, unidad y tipo_precio; ARS y USD no se agregan conjuntamente.", "",
@@ -311,7 +340,7 @@ def write_dashboard_report(metrics: dict[str, object]) -> None:
         "- Gráficos: evolución de mediana, ranking reciente, volumen por commodity y semáforo mensual.",
         "- La mediana es la métrica principal de visualización; el promedio y el ponderado por volumen quedan como contexto.", "",
         "## Limitaciones y aptitud", "", "- La fuente corresponde a operaciones informadas SIO y no equivale a precio de pizarra BCR, futuros ni precios mayoristas frutihortícolas.",
-        "- Los agregados no corrigen la limitación de paginación de GetOperaciones ni garantizan actualización automática.",
+        "- Los agregados no corrigen la limitación de paginación de GetOperaciones ni garantizan actualización automática. Cuando la fuente es el histórico de snapshots, cada corrida incorpora sólo las últimas operaciones observadas y no equivale a histórico completo.",
         "- La aptitud es exploratoria y parcial para piloto; no productiva hasta validar actualización, frecuencia, procedencia, permisos e interpretación.",
         "- Los estados `Baja`, `Estable`, `Suba moderada`, `Suba fuerte`, `Revisar` y `Sin dato` describen variación de precios; no representan escasez ni desabastecimiento.",
         "- La base completa no se carga en el navegador ni se versiona cuando supera el tamaño razonable para Git.", "",
@@ -320,7 +349,11 @@ def write_dashboard_report(metrics: dict[str, object]) -> None:
 
 
 def main() -> int:
-    if ANALYTIC_PATH.exists():
+    if LIGHT_SNAPSHOT_HISTORY_PATH.exists():
+        source_path = LIGHT_SNAPSHOT_HISTORY_PATH
+    elif SNAPSHOT_HISTORY_PATH.exists():
+        source_path = SNAPSHOT_HISTORY_PATH
+    elif ANALYTIC_PATH.exists():
         source_path = ANALYTIC_PATH
     elif ANALYTIC_SAMPLE_PATH.exists():
         source_path = ANALYTIC_SAMPLE_PATH
