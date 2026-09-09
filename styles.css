@@ -234,6 +234,7 @@ button, select { font: inherit; }
 .commodities-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 0; }
 .commodities-title { margin: 5px 0 0; color: var(--text-primary); font-size: 1.4rem; letter-spacing: -.03em; }
 .commodities-subtitle { margin: 5px 0 0; color: var(--text-secondary); font-size: .78rem; }
+.commodity-data-freshness { margin: 6px 0 0; color: var(--accent-green); font-size: .7rem; font-weight: 700; }
 .commodity-data-status { flex: 0 0 auto; margin-top: 4px; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 99px; color: var(--text-muted); font-size: .68rem; font-weight: 700; }
 .commodity-data-status.is-ready { border-color: rgba(104,194,158,.4); background: var(--accent-green-soft); color: var(--accent-green); }
 .commodity-data-status.is-error { border-color: rgba(204,127,134,.45); background: rgba(204,127,134,.1); color: #e1a5aa; }

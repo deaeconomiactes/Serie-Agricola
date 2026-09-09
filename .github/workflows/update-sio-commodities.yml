@@ -1,0 +1,58 @@
+name: Actualizar commodities SIO
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_dashboard:
+        description: "Publicar los CSV livianos y el reporte de actualización"
+        required: false
+        default: false
+        type: boolean
+
+# Durante el piloto no se activa un schedule automático. Si se valida la
+# estabilidad del endpoint y la política de publicación, puede agregarse una
+# frecuencia aquí, manteniendo la revisión de límites y permisos.
+# on:
+#   schedule:
+#     - cron: "17 12 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update-sio:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Capturar snapshot latest
+        run: python explorar_sio_granos.py --update-latest --allow-web --save-response
+
+      - name: Integrar snapshot e histórico
+        run: python integrar_commodities_sio.py
+
+      - name: Auditar resultado
+        run: python auditar_commodities_sio.py
+
+      - name: Regenerar archivos dashboard-ready
+        run: python preparar_commodities_dashboard.py
+
+      - name: Publicar sólo salidas livianas
+        if: ${{ inputs.publish_dashboard == true }}
+        shell: bash
+        run: |
+          git add data/commodities_sio/dashboard/*.csv data/commodities_sio/reports/REPORTE_ACTUALIZACION_DIARIA_SIO.md
+          if git diff --cached --quiet; then
+            echo "No hay cambios livianos para publicar."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: actualizar snapshot diario SIO"
+          git push

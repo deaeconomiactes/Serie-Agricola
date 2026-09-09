@@ -22,6 +22,8 @@ MAPPING_EXAMPLE_PATH = ROOT / "data" / "commodities_sio" / "mapeo_getoperaciones
 OUTPUT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_INTEGRADO.csv"
 PAGINATED_OUTPUT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_MUESTRA_PAGINADA.csv"
 MANUAL_EXPORT_OUTPUT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_EXPORTACION_MANUAL.csv"
+LATEST_SNAPSHOT_OUTPUT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_LATEST_SNAPSHOT.csv"
+HISTORIC_SNAPSHOTS_OUTPUT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_HISTORICO_SNAPSHOTS.csv"
 PAGINATED_REPORT_PATH = ROOT / "data" / "commodities_sio" / "reports" / "REPORTE_MUESTRA_PAGINADA_SIO.md"
 PAGINATION_REPORT_PATH = ROOT / "data" / "commodities_sio" / "reports" / "REPORTE_PAGINACION_SIO.md"
 OUTPUT_COLUMNS = [
@@ -32,9 +34,28 @@ OUTPUT_COLUMNS = [
     "fecha_integracion", "observaciones", "apto_piloto", "apto_dashboard", "pagina_origen", "id_operacion_sio", "muestra_tipo", "muestra_paginas", "estado_paginacion",
     "precio_cero_flag", "precio_cero_tipo", "precio_valido_para_serie",
 ]
+SNAPSHOT_COLUMNS = ["fecha_descarga_snapshot"] + OUTPUT_COLUMNS
+LATEST_SNAPSHOT_PATTERN = re.compile(r"^SIO_latest_GetOperaciones_\d{8}_\d{6}\.json$", flags=re.I)
 EXTENSIONS = {".json", ".csv", ".xlsx", ".xls", ".html", ".htm"}
 NON_REAL_MARKERS = ("plantilla", "simul", "prueba", "ejemplo", "sample")
 DEFAULT_SOURCE = "SIO Granos / Secretaría de Agricultura"
+
+# Mapeo respaldado por la estructura de la grilla documentada en
+# reports/REPORTE_MAPEO_GETOPERACIONES_SIO.md. Se aplica sólo al endpoint
+# GetOperaciones usado por --update-latest; no habilita paginación.
+LATEST_POSITIONAL_MAPPING = {
+    0: {"source_label": "ID", "target_field": "id_operacion_sio"},
+    1: {"source_label": "Fecha Concertación", "target_field": "fecha"},
+    3: {"source_label": "Operación", "target_field": "operacion"},
+    4: {"source_label": "Tipo", "target_field": "tipo_operacion"},
+    5: {"source_label": "Precio", "target_field": "tipo_precio"},
+    6: {"source_label": "Producto", "target_field": "commodity"},
+    7: {"source_label": "Cant. (TN)", "target_field": "volumen", "unit_field": "volumen_unidad", "unit_value_if_label_matches": "TN"},
+    9: {"source_label": "Procedencia Pcia./LOCALID.", "target_field": "procedencia"},
+    10: {"source_label": "Precio/TN Monto", "target_field": "precio", "unit_field": "unidad", "unit_value_if_label_matches": "TN"},
+    11: {"source_label": "Lugar Entrega", "target_field": "lugar_entrega"},
+    13: {"source_label": "Condición Pago", "target_field": "condicion_pago"},
+}
 HEADER_KEYS = {
     "fecha", "fechadeclaracion", "fechaconcertacion", "fechadeentrega", "producto",
     "grano", "commodity", "especie", "precio", "preciomonto", "preciotn", "monto",
@@ -354,7 +375,13 @@ def read_file(path: Path) -> tuple[Iterable[dict[str, Any]], list[str]]:
 
         return rows(), columns
     if suffix == ".json":
-        return extract_records(json.loads(path.read_text(encoding="utf-8-sig"))), []
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        if isinstance(payload, dict) and isinstance(payload.get("d"), str):
+            try:
+                payload["d"] = json.loads(payload["d"])
+            except json.JSONDecodeError:
+                pass
+        return extract_records(payload), []
     if suffix in {".html", ".htm"}:
         try:
             import pandas as pd
@@ -576,6 +603,104 @@ def real_files() -> list[Path]:
     return sorted(path for path in RAW_DIR.iterdir() if path.is_file() and path.suffix.lower() in EXTENSIONS and not any(marker in path.stem.lower() for marker in NON_REAL_MARKERS))
 
 
+def is_latest_snapshot_file(path: Path) -> bool:
+    return bool(LATEST_SNAPSHOT_PATTERN.fullmatch(path.name))
+
+
+def snapshot_capture_timestamp(path: Path) -> str:
+    match = re.search(r"_(\d{8})_(\d{6})\.json$", path.name, flags=re.I)
+    if match:
+        try:
+            return datetime.strptime(f"{match.group(1)}{match.group(2)}", "%Y%m%d%H%M%S").isoformat(timespec="seconds")
+        except ValueError:
+            pass
+    return datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds")
+
+
+def snapshot_identity(row: dict[str, str]) -> tuple[str, ...]:
+    operation_id = text(row.get("id_operacion_sio"))
+    if operation_id:
+        return ("id", operation_id)
+    return (
+        "fallback",
+        text(row.get("fecha")),
+        text(row.get("commodity")),
+        text(row.get("precio_original_texto")),
+        text(row.get("volumen")),
+        text(row.get("procedencia")),
+        text(row.get("lugar_entrega")),
+        text(row.get("condicion_comercial")),
+    )
+
+
+def deduplicate_snapshot_rows(rows: list[dict[str, str]]) -> tuple[list[dict[str, str]], int, int]:
+    """Deduplica snapshots por ID y, si falta, por la clave estable documentada."""
+
+    kept: list[dict[str, str]] = []
+    seen: dict[tuple[str, ...], dict[str, str]] = {}
+    duplicates = 0
+    conflicts = 0
+    for row in rows:
+        identity = snapshot_identity(row)
+        previous = seen.get(identity)
+        if previous is not None:
+            duplicates += 1
+            if raw_row_signature(previous) != raw_row_signature(row):
+                conflicts += 1
+            continue
+        seen[identity] = row
+        kept.append(row)
+    return kept, duplicates, conflicts
+
+
+def write_snapshot_output(path: Path, rows: list[dict[str, str]]) -> None:
+    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=SNAPSHOT_COLUMNS, delimiter=";", extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def read_snapshot_rows(path: Path) -> list[dict[str, str]]:
+    if not path.exists():
+        return []
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        return [dict(row) for row in csv.DictReader(handle, delimiter=";")]
+
+
+def integrate_latest_snapshot(path: Path, aliases: dict[str, str], positional_mapping: dict[int, dict[str, Any]] | None) -> dict[str, Any]:
+    """Integra sólo el último JSON latest y lo suma al histórico de snapshots."""
+
+    mapping = positional_mapping or LATEST_POSITIONAL_MAPPING
+    rows, diagnostics = process_file(path, aliases, mapping, 1, "no_aplica")
+    capture_timestamp = snapshot_capture_timestamp(path)
+    for row in rows:
+        row["fecha_descarga_snapshot"] = capture_timestamp
+        row["frecuencia"] = text(row.get("frecuencia")) or "diaria"
+        row["muestra_tipo"] = "snapshot_latest"
+        row["observaciones"] = "; ".join(dict.fromkeys(filter(None, [text(row.get("observaciones")), "snapshot de últimas operaciones; no es histórico completo"])))
+    latest_rows, latest_duplicates, latest_conflicts = deduplicate_snapshot_rows(rows)
+    if not latest_rows:
+        return {"rows": [], "diagnostics": diagnostics, "latest_duplicates": latest_duplicates, "latest_conflicts": latest_conflicts, "history_rows": len(read_snapshot_rows(HISTORIC_SNAPSHOTS_OUTPUT_PATH)), "new_rows": 0, "history_duplicates": 0, "capture_timestamp": capture_timestamp}
+
+    history_before = read_snapshot_rows(HISTORIC_SNAPSHOTS_OUTPUT_PATH)
+    combined_rows, history_duplicates, history_conflicts = deduplicate_snapshot_rows(history_before + latest_rows)
+    new_rows = max(len(combined_rows) - len(history_before), 0)
+    write_snapshot_output(LATEST_SNAPSHOT_OUTPUT_PATH, latest_rows)
+    write_snapshot_output(HISTORIC_SNAPSHOTS_OUTPUT_PATH, combined_rows)
+    return {
+        "rows": latest_rows,
+        "diagnostics": diagnostics,
+        "latest_duplicates": latest_duplicates,
+        "latest_conflicts": latest_conflicts,
+        "history_rows": len(combined_rows),
+        "new_rows": new_rows,
+        "history_duplicates": history_duplicates,
+        "history_conflicts": history_conflicts,
+        "capture_timestamp": capture_timestamp,
+    }
+
+
 def row_signature(row: dict[str, str]) -> tuple[str, ...]:
     excluded = {"archivo_origen", "fecha_integracion", "observaciones", "pagina_origen", "muestra_paginas", "muestra_tipo", "estado_paginacion"}
     return tuple(str(row.get(column, "")) for column in OUTPUT_COLUMNS if column not in excluded)
@@ -738,12 +863,30 @@ def main() -> int:
     positional_mapping, mapping_status = load_positional_mapping()
     print(f"Mapeo posicional: {mapping_status}")
     page_files = [path for path in files if is_paginated_file(path)]
-    manual_export_files = [path for path in files if is_manual_export_file(path)]
-    base_files = [path for path in files if not is_paginated_file(path) and not is_manual_export_file(path)]
+    latest_snapshot_files = [path for path in files if is_latest_snapshot_file(path)]
+    latest_snapshot_file = latest_snapshot_files[-1] if latest_snapshot_files else None
+    manual_export_files = [path for path in files if is_manual_export_file(path)] if not latest_snapshot_files else []
+    base_files = [path for path in files if not is_paginated_file(path) and not is_manual_export_file(path) and not is_latest_snapshot_file(path)]
     observed_page_files = [path for path in page_files if is_observed_pagination_file(path)]
     status_page_files = observed_page_files or page_files
     page_numbers = {int(page_number_from_path(path)) for path in status_page_files if page_number_from_path(path)}
     sample_pages = len(page_numbers) or 1
+    latest_error = 0
+    if latest_snapshot_file:
+        try:
+            latest_result = integrate_latest_snapshot(latest_snapshot_file, aliases, positional_mapping)
+            latest_rows = latest_result["rows"]
+            if latest_rows:
+                print(f"Snapshot latest integrado: {len(latest_rows)} operaciones válidas en {LATEST_SNAPSHOT_OUTPUT_PATH}")
+                print(f"Histórico de snapshots: {latest_result['history_rows']} filas acumuladas en {HISTORIC_SNAPSHOTS_OUTPUT_PATH}")
+                print(f"Operaciones nuevas acumuladas: {latest_result['new_rows']}; duplicados omitidos: {latest_result['history_duplicates']}; conflictos omitidos: {latest_result['history_conflicts']}")
+            else:
+                latest_error = 1
+                print("ERROR: el snapshot latest no produjo operaciones integrables; no se reemplazaron las salidas de snapshots.")
+                print(f"  Filas leídas: {latest_result['diagnostics']['read']}; filas omitidas por mapeo: {latest_result['diagnostics']['positional_skipped']}")
+        except Exception as exc:
+            latest_error = 1
+            print(f"ERROR integrando snapshot latest {latest_snapshot_file.name}: {exc}")
     technical_rows_unchecked, page_diagnostics, page_errors = process_group(page_files, aliases, positional_mapping, sample_pages, "no_probada")
     status_file_names = {path.name for path in status_page_files}
     status_diagnostics = [item for item in page_diagnostics if item.get("archivo_origen") in status_file_names]
@@ -778,8 +921,10 @@ def main() -> int:
         print(f"Exportación manual SIO: {manual_count} filas en {MANUAL_EXPORT_OUTPUT_PATH}")
     elif manual_export_files:
         print("No se integraron filas de exportación manual; se preserva COMMODITIES_SIO_EXPORTACION_MANUAL.csv existente.")
+    elif latest_snapshot_files and any(is_manual_export_file(path) for path in files):
+        print("La exportación manual permanece fuera de esta corrida diaria de snapshots y no se modifica.")
     update_paginated_report(page_files, page_diagnostics, technical_rows, duplicates, conflicts, sample_pages, pagination_status)
-    errors = page_errors + base_errors + manual_errors
+    errors = latest_error + page_errors + base_errors + manual_errors
     print(f"Piloto base: duplicados exactos={len(base_duplicates)}; conflictos={len(base_conflicts)}")
     print(f"Duplicados exactos eliminados: {len(duplicates)}; conflictos conservados: {len(conflicts)}")
     if manual_export_files:

@@ -1529,6 +1529,21 @@ function updateCommoditySourceStatus() {
     const sampleMode = summary.modo === 'muestra';
     const label = config.monthlyOnly ? 'registros mensuales' : 'operaciones';
     setCommodityDataStatus(count ? `${sampleMode ? 'Muestra de respaldo' : config.label} · ${formatNumber(count)} ${label}` : `${config.label} · Sin datos disponibles`, count ? (sampleMode ? 'sample' : 'ready') : '');
+    const freshness = document.getElementById('commodityDataFreshness');
+    if (freshness) {
+        const capture = String(summary.fecha_ultima_captura_sio || '').trim();
+        const visible = commoditySource === 'sio';
+        freshness.hidden = !visible;
+        freshness.textContent = visible ? `Actualizado al: ${formatCommodityCapture(capture)}` : '';
+    }
+}
+
+function formatCommodityCapture(value) {
+    const raw = String(value || '').trim();
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::\d{2})?)?/);
+    if (!match) return 'sin captura SIO registrada';
+    const dateLabel = `${match[3]}/${match[2]}/${match[1]}`;
+    return match[4] ? `${dateLabel} ${match[4]}:${match[5]}` : dateLabel;
 }
 
 function setCommoditySource(sourceKey) {

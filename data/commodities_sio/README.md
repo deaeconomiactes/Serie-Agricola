@@ -18,6 +18,25 @@ SIO no se presume equivalente a los precios de pizarra BCR. La información debe
 
 La exploración inicial usa los últimos 30 días. Las consultas se dividen en ventanas de hasta 180 días. No se realizan llamadas externas por defecto: sólo `--allow-web` habilita una exploración pública controlada con timeout, User-Agent explícito y límite de requests.
 
+## Actualización diaria automática
+
+El modo `--update-latest` consulta una sola vez por corrida el endpoint público `GetOperaciones` con el payload observado `{"pPageSize":"20","pCurrentPage":"1"}`. Es un snapshot de las últimas operaciones disponibles: no pagina, no representa un histórico completo y no reemplaza la exportación manual como evidencia histórica.
+
+Cuando se ejecuta con `--save-response`, la respuesta se guarda localmente en `raw/` como `SIO_latest_GetOperaciones_YYYYMMDD_HHMMSS.json`; los raw quedan ignorados por Git. `integrar_commodities_sio.py` genera `processed/COMMODITIES_SIO_LATEST_SNAPSHOT.csv` y acumula nuevas operaciones, deduplicando por `id_operacion_sio` o por la clave compuesta documentada. El histórico de snapshots queda local y fuera de Git.
+
+Luego, `auditar_commodities_sio.py` genera el reporte de actualización diaria y `preparar_commodities_dashboard.py` utiliza el histórico acumulado para regenerar sólo los CSV livianos que consume el navegador. Se excluyen precios cero y se mantienen ARS y USD separados. La cobertura histórica comienza en la fecha en que se inicia el monitoreo; para períodos anteriores se utiliza el histórico local mensual como fuente separada.
+
+La automatización no se ejecuta desde `app.js`, no expone credenciales y no hace commits ni pushes. Para una ejecución local programada, revisar [GUIA_ACTUALIZACION_DIARIA_SIO.md](GUIA_ACTUALIZACION_DIARIA_SIO.md) y usar `scripts/update_sio_daily.ps1`.
+
+Prueba manual controlada:
+
+```powershell
+python .\explorar_sio_granos.py --update-latest --allow-web --save-response
+python .\integrar_commodities_sio.py
+python .\auditar_commodities_sio.py
+python .\preparar_commodities_dashboard.py
+```
+
 ## Salidas procesadas
 
 - `COMMODITIES_SIO_INTEGRADO.csv`: integración piloto principal, generada sólo a partir de respuestas base no paginadas.
