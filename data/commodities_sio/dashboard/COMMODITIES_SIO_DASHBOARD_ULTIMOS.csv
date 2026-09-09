@@ -1,9 +1,10 @@
 ﻿commodity;moneda;unidad;tipo_precio;fecha_ultima;precio_mediana_ultimo_dia;precio_promedio_ultimo_dia;operaciones_ultimo_dia;volumen_ultimo_dia;variacion_7d_pct;variacion_30d_pct;estado
+ACEITE SOJA;USD;TN;Precio Hecho;2026-09-09;995;995;1;750;;;Sin dato
 CEBADA FORR.;USD;TN;Precio Hecho;2026-09-09;210;210;2;120;;;Sin dato
-Girasol;USD;TN;Precio Hecho;2026-09-09;425;440;4;625;;;Sin dato
-Maíz;ARS;TN;Precio Hecho;2026-09-09;282000;277731;8;576.29;;;Sin dato
-Maíz;USD;TN;Precio Hecho;2026-09-09;161.73;161.73;1;90;;;Sin dato
-Soja;ARS;TN;Precio Hecho;2026-09-09;556000;557166.666667;6;5641.54;;;Sin dato
-Soja;USD;TN;Precio Hecho;2026-09-09;365;365.666667;3;850;;;Sin dato
-TRIGO PAN;ARS;TN;Precio Hecho;2026-09-09;360000;378166.666667;6;448.79;;;Sin dato
+Girasol;USD;TN;Precio Hecho;2026-09-09;400;426.666667;6;1175;;;Sin dato
+Maíz;ARS;TN;Precio Hecho;2026-09-09;293000;281922.545455;11;723.63;;;Sin dato
+Maíz;USD;TN;Precio Hecho;2026-09-09;193.45;185.9075;4;802.83;;;Sin dato
+Soja;ARS;TN;Precio Hecho;2026-09-09;556000;552212.5;8;5730.29;;;Sin dato
+Soja;USD;TN;Precio Hecho;2026-09-09;365;363;4;1449;;;Sin dato
+TRIGO PAN;ARS;TN;Precio Hecho;2026-09-09;360000;368788.888889;9;668.79;;;Sin dato
 TRIGO PAN;USD;TN;Precio Hecho;2026-09-09;240;240;1;105;;;Sin dato

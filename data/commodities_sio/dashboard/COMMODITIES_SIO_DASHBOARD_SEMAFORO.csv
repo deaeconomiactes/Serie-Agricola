@@ -1,8 +1,9 @@
 ﻿commodity;moneda;unidad;tipo_precio;año;mes;periodo_ym;precio_mediana;variacion_mensual_pct;estado
+ACEITE SOJA;USD;TN;Precio Hecho;2026;9;2026-09;995;;Sin dato
 CEBADA FORR.;USD;TN;Precio Hecho;2026;9;2026-09;210;;Sin dato
-Girasol;USD;TN;Precio Hecho;2026;9;2026-09;425;;Sin dato
-Maíz;ARS;TN;Precio Hecho;2026;9;2026-09;282000;;Sin dato
-Maíz;USD;TN;Precio Hecho;2026;9;2026-09;161.73;;Sin dato
+Girasol;USD;TN;Precio Hecho;2026;9;2026-09;400;;Sin dato
+Maíz;ARS;TN;Precio Hecho;2026;9;2026-09;293000;;Sin dato
+Maíz;USD;TN;Precio Hecho;2026;9;2026-09;193.45;;Sin dato
 Soja;ARS;TN;Precio Hecho;2026;9;2026-09;556000;;Sin dato
 Soja;USD;TN;Precio Hecho;2026;9;2026-09;365;;Sin dato
 TRIGO PAN;ARS;TN;Precio Hecho;2026;9;2026-09;360000;;Sin dato
