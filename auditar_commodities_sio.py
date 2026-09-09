@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parent
 PROCESSED_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_INTEGRADO.csv"
 LATEST_SNAPSHOT_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_LATEST_SNAPSHOT.csv"
 HISTORIC_SNAPSHOTS_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_HISTORICO_SNAPSHOTS.csv"
+LIGHT_HISTORY_PATH = ROOT / "data" / "commodities_sio" / "dashboard" / "COMMODITIES_SIO_HISTORICO_SNAPSHOTS_LIVIANO.csv"
 PAGINATED_PROCESSED_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_MUESTRA_PAGINADA.csv"
 MANUAL_EXPORT_PROCESSED_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_EXPORTACION_MANUAL.csv"
 MANUAL_EXPORT_SAMPLE_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_EXPORTACION_MANUAL_SAMPLE.csv"
@@ -80,12 +81,17 @@ def snapshot_raw_files() -> list[Path]:
 
 def write_daily_update_report() -> None:
     latest_rows = read_rows(LATEST_SNAPSHOT_PATH)
-    history_rows = read_rows(HISTORIC_SNAPSHOTS_PATH)
+    history_path = HISTORIC_SNAPSHOTS_PATH if HISTORIC_SNAPSHOTS_PATH.exists() else LIGHT_HISTORY_PATH
+    history_rows = read_rows(history_path)
     raw_files = snapshot_raw_files()
     latest_capture = max((snapshot_capture_value(row) for row in latest_rows if snapshot_capture_value(row)), default="")
     if not latest_capture and raw_files:
-        latest_capture = raw_files[-1].stem.rsplit("_", 2)[-2:]
-        latest_capture = "_".join(latest_capture)
+        match = re.search(r"_(\d{8})_(\d{6})\.json$", raw_files[-1].name, flags=re.I)
+        if match:
+            try:
+                latest_capture = datetime.strptime(f"{match.group(1)}{match.group(2)}", "%Y%m%d%H%M%S").isoformat(timespec="seconds")
+            except ValueError:
+                latest_capture = ""
     previous_rows = [row for row in history_rows if snapshot_capture_value(row) and snapshot_capture_value(row) < latest_capture]
     latest_keys = {snapshot_identity(row) for row in latest_rows}
     previous_keys = {snapshot_identity(row) for row in previous_rows}
@@ -104,6 +110,8 @@ def write_daily_update_report() -> None:
         "## Última corrida", "",
         f"- Fecha/hora de captura: {latest_capture or 'sin captura registrada'}.",
         f"- Archivo raw usado: `{source_file or 'no disponible'}`.",
+        f"- Histórico persistente usado: `{history_path.relative_to(ROOT).as_posix()}`.",
+        f"- Histórico liviano versionable: `{LIGHT_HISTORY_PATH.relative_to(ROOT).as_posix()}`.",
         f"- Operaciones latest válidas: {len(latest_rows)}.",
         f"- Operaciones nuevas respecto de capturas anteriores: {new_count}.",
         f"- Duplicados omitidos respecto de capturas anteriores: {duplicate_count}.",
@@ -932,7 +940,7 @@ def update_paginated_audit_report(rows: list[dict[str, str]]) -> None:
 
 def main() -> int:
     rows = read_rows()
-    snapshot_rows = read_rows(HISTORIC_SNAPSHOTS_PATH)
+    snapshot_rows = read_rows(HISTORIC_SNAPSHOTS_PATH) or read_rows(LIGHT_HISTORY_PATH)
     technical_rows = read_rows(PAGINATED_PROCESSED_PATH)
     write_daily_update_report()
     manual_export_stats_value = manual_export_stats(MANUAL_EXPORT_PROCESSED_PATH) if MANUAL_EXPORT_PROCESSED_PATH.exists() else {"rows": 0, "columns": [], "dates": [], "currencies": [], "units": [], "commodities": []}

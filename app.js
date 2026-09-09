@@ -1530,18 +1530,32 @@ function updateCommoditySourceStatus() {
     const label = config.monthlyOnly ? 'registros mensuales' : 'operaciones';
     setCommodityDataStatus(count ? `${sampleMode ? 'Muestra de respaldo' : config.label} · ${formatNumber(count)} ${label}` : `${config.label} · Sin datos disponibles`, count ? (sampleMode ? 'sample' : 'ready') : '');
     const freshness = document.getElementById('commodityDataFreshness');
+    const lastOperation = document.getElementById('commodityDataLastOperation');
+    const operationRange = document.getElementById('commodityDataOperationRange');
     if (freshness) {
         const capture = String(summary.fecha_ultima_captura_sio || '').trim();
         const visible = commoditySource === 'sio';
         freshness.hidden = !visible;
-        freshness.textContent = visible ? `Actualizado al: ${formatCommodityCapture(capture)}` : '';
+        freshness.textContent = visible ? `Actualizado al: ${formatCommodityCapture(capture || summary.fecha_actualizacion_dashboard || summary.fecha_actualizacion)}` : '';
+    }
+    if (lastOperation) {
+        const visible = commoditySource === 'sio';
+        lastOperation.hidden = !visible;
+        lastOperation.textContent = visible ? `Última operación informada: ${formatCommodityCapture(summary.fecha_ultima_operacion_sio || summary.fecha_max_operacion_sio || summary.fecha_max)}` : '';
+    }
+    if (operationRange) {
+        const visible = commoditySource === 'sio';
+        operationRange.hidden = !visible;
+        const minDate = formatCommodityCapture(summary.fecha_min_operacion_sio || summary.fecha_min);
+        const maxDate = formatCommodityCapture(summary.fecha_max_operacion_sio || summary.fecha_max);
+        operationRange.textContent = visible ? `Rango de operaciones: ${minDate} — ${maxDate}` : '';
     }
 }
 
 function formatCommodityCapture(value) {
     const raw = String(value || '').trim();
     const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::\d{2})?)?/);
-    if (!match) return 'sin captura SIO registrada';
+    if (!match) return 'sin fecha registrada';
     const dateLabel = `${match[3]}/${match[2]}/${match[1]}`;
     return match[4] ? `${dateLabel} ${match[4]}:${match[5]}` : dateLabel;
 }

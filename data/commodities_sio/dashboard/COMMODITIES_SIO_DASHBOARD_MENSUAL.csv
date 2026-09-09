@@ -1,6 +1,9 @@
 ﻿año;mes;periodo_ym;commodity;moneda;unidad;tipo_precio;fuente;operaciones;precio_promedio;precio_mediana;precio_min;precio_max;volumen_total;precio_ponderado_volumen;dias_con_datos;variacion_mensual_pct;variacion_interanual_pct
-2026;9;2026-09;Girasol;USD;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;3;416.666667;400;400;450;570;402.631579;1;;
-2026;9;2026-09;Maíz;ARS;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;4;288000;287500;282000;295000;280.84;285952.428429;1;;
-2026;9;2026-09;Soja;ARS;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;2;557500;557500;555000;560000;5140;559863.81323;1;;
+2026;9;2026-09;CEBADA FORR.;USD;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;2;210;210;210;210;120;210;1;;
+2026;9;2026-09;Girasol;USD;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;4;440;425;400;510;625;412.08;1;;
+2026;9;2026-09;Maíz;ARS;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;8;277731;282000;251233;295000;576.29;276411.624182;1;;
+2026;9;2026-09;Maíz;USD;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;1;161.73;161.73;161.73;161.73;90;161.73;1;;
+2026;9;2026-09;Soja;ARS;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;6;557166.666667;556000;555000;560000;5641.54;559803.925878;1;;
 2026;9;2026-09;Soja;USD;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;3;365.666667;365;365;367;850;366.058824;1;;
-2026;9;2026-09;TRIGO PAN;ARS;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;4;395000;390000;360000;440000;390;403076.923077;1;;
+2026;9;2026-09;TRIGO PAN;ARS;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;6;378166.666667;360000;343000;440000;448.79;395399.496424;1;;
+2026;9;2026-09;TRIGO PAN;USD;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;1;240;240;240;240;105;240;1;;

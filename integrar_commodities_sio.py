@@ -16,6 +16,7 @@ from typing import Any, Iterable
 ROOT = Path(__file__).resolve().parent
 RAW_DIR = ROOT / "data" / "commodities_sio" / "raw"
 PROCESSED_DIR = ROOT / "data" / "commodities_sio" / "processed"
+DASHBOARD_DIR = ROOT / "data" / "commodities_sio" / "dashboard"
 CATALOG_PATH = ROOT / "data" / "commodities_sio" / "catalogo_productos_sio.csv"
 MAPPING_LOCAL_PATH = ROOT / "data" / "commodities_sio" / "mapeo_getoperaciones_sio.local.json"
 MAPPING_EXAMPLE_PATH = ROOT / "data" / "commodities_sio" / "mapeo_getoperaciones_sio.example.json"
@@ -24,6 +25,7 @@ PAGINATED_OUTPUT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_MUESTRA_PAGINADA.csv"
 MANUAL_EXPORT_OUTPUT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_EXPORTACION_MANUAL.csv"
 LATEST_SNAPSHOT_OUTPUT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_LATEST_SNAPSHOT.csv"
 HISTORIC_SNAPSHOTS_OUTPUT_PATH = PROCESSED_DIR / "COMMODITIES_SIO_HISTORICO_SNAPSHOTS.csv"
+LIGHT_HISTORY_OUTPUT_PATH = DASHBOARD_DIR / "COMMODITIES_SIO_HISTORICO_SNAPSHOTS_LIVIANO.csv"
 PAGINATED_REPORT_PATH = ROOT / "data" / "commodities_sio" / "reports" / "REPORTE_MUESTRA_PAGINADA_SIO.md"
 PAGINATION_REPORT_PATH = ROOT / "data" / "commodities_sio" / "reports" / "REPORTE_PAGINACION_SIO.md"
 OUTPUT_COLUMNS = [
@@ -35,6 +37,12 @@ OUTPUT_COLUMNS = [
     "precio_cero_flag", "precio_cero_tipo", "precio_valido_para_serie",
 ]
 SNAPSHOT_COLUMNS = ["fecha_descarga_snapshot"] + OUTPUT_COLUMNS
+LIGHT_HISTORY_COLUMNS = [
+    "id_operacion_sio", "fecha", "año", "mes", "commodity", "fuente", "mercado", "tipo_precio", "operacion",
+    "moneda", "unidad", "precio", "precio_original_texto", "volumen", "volumen_unidad", "procedencia",
+    "lugar_entrega", "condicion_comercial", "precio_cero_flag", "precio_valido_para_serie", "fecha_descarga_snapshot",
+    "fecha_actualizacion_dashboard", "observaciones",
+]
 LATEST_SNAPSHOT_PATTERN = re.compile(r"^SIO_latest_GetOperaciones_\d{8}_\d{6}\.json$", flags=re.I)
 EXTENSIONS = {".json", ".csv", ".xlsx", ".xls", ".html", ".htm"}
 NON_REAL_MARKERS = ("plantilla", "simul", "prueba", "ejemplo", "sample")
@@ -668,6 +676,22 @@ def read_snapshot_rows(path: Path) -> list[dict[str, str]]:
         return [dict(row) for row in csv.DictReader(handle, delimiter=";")]
 
 
+def light_history_row(row: dict[str, str], dashboard_date: str = "") -> dict[str, str]:
+    """Reduce una operación SIO a la memoria persistente que puede versionarse."""
+
+    result = {column: text(row.get(column)) for column in LIGHT_HISTORY_COLUMNS}
+    result["fecha_actualizacion_dashboard"] = result["fecha_actualizacion_dashboard"] or dashboard_date or date.today().isoformat()
+    return result
+
+
+def write_light_history(path: Path, rows: list[dict[str, str]]) -> None:
+    DASHBOARD_DIR.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=LIGHT_HISTORY_COLUMNS, delimiter=";", extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(light_history_row(row) for row in rows)
+
+
 def integrate_latest_snapshot(path: Path, aliases: dict[str, str], positional_mapping: dict[int, dict[str, Any]] | None) -> dict[str, Any]:
     """Integra sólo el último JSON latest y lo suma al histórico de snapshots."""
 
@@ -681,13 +705,28 @@ def integrate_latest_snapshot(path: Path, aliases: dict[str, str], positional_ma
         row["observaciones"] = "; ".join(dict.fromkeys(filter(None, [text(row.get("observaciones")), "snapshot de últimas operaciones; no es histórico completo"])))
     latest_rows, latest_duplicates, latest_conflicts = deduplicate_snapshot_rows(rows)
     if not latest_rows:
-        return {"rows": [], "diagnostics": diagnostics, "latest_duplicates": latest_duplicates, "latest_conflicts": latest_conflicts, "history_rows": len(read_snapshot_rows(HISTORIC_SNAPSHOTS_OUTPUT_PATH)), "new_rows": 0, "history_duplicates": 0, "capture_timestamp": capture_timestamp}
+        history_rows = read_snapshot_rows(HISTORIC_SNAPSHOTS_OUTPUT_PATH) or read_snapshot_rows(LIGHT_HISTORY_OUTPUT_PATH)
+        return {"rows": [], "diagnostics": diagnostics, "latest_duplicates": latest_duplicates, "latest_conflicts": latest_conflicts, "history_rows": len(history_rows), "new_rows": 0, "history_duplicates": 0, "capture_timestamp": capture_timestamp}
 
-    history_before = read_snapshot_rows(HISTORIC_SNAPSHOTS_OUTPUT_PATH)
+    processed_history = read_snapshot_rows(HISTORIC_SNAPSHOTS_OUTPUT_PATH)
+    versioned_history = read_snapshot_rows(LIGHT_HISTORY_OUTPUT_PATH)
+    history_before, _, _ = deduplicate_snapshot_rows(processed_history + versioned_history)
+    existing_ids = {snapshot_identity(row) for row in history_before}
+    new_rows = sum(1 for row in latest_rows if snapshot_identity(row) not in existing_ids)
     combined_rows, history_duplicates, history_conflicts = deduplicate_snapshot_rows(history_before + latest_rows)
-    new_rows = max(len(combined_rows) - len(history_before), 0)
+    latest_by_identity = {snapshot_identity(row): row for row in latest_rows}
+    for row in combined_rows:
+        latest_row = latest_by_identity.get(snapshot_identity(row))
+        if latest_row is not None:
+            # Se conserva la primera captura para poder distinguir operaciones
+            # nuevas de repetidas en el reporte diario. La captura más reciente
+            # se obtiene de LATEST_SNAPSHOT.csv al preparar el dashboard.
+            row["fecha_descarga_snapshot"] = text(row.get("fecha_descarga_snapshot")) or capture_timestamp
+            row["observaciones"] = "; ".join(dict.fromkeys(filter(None, [text(row.get("observaciones")), "observada en snapshot latest",])))
+            row["fecha_actualizacion_dashboard"] = date.today().isoformat()
     write_snapshot_output(LATEST_SNAPSHOT_OUTPUT_PATH, latest_rows)
     write_snapshot_output(HISTORIC_SNAPSHOTS_OUTPUT_PATH, combined_rows)
+    write_light_history(LIGHT_HISTORY_OUTPUT_PATH, combined_rows)
     return {
         "rows": latest_rows,
         "diagnostics": diagnostics,

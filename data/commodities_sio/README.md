@@ -8,6 +8,7 @@ SIO no se presume equivalente a los precios de pizarra BCR. La información debe
 
 - `raw/`: respuestas originales de exploración pública controlada o descargas manuales.
 - `processed/`: CSV integrado de SIO, separado de BCR y de las fuentes frutihortícolas.
+- `dashboard/COMMODITIES_SIO_HISTORICO_SNAPSHOTS_LIVIANO.csv`: memoria persistente liviana que GitHub Actions usa entre corridas.
 - `reports/`: auditorías de cobertura, calidad, actualidad y aptitud analítica.
 - `devtools/`: diagnósticos locales de HAR/cURL; sus archivos sensibles están ignorados por Git.
 - `GUIA_DEVTOOLS_SIO.md`: pasos para capturar y sanear el request real de la grilla.
@@ -22,11 +23,21 @@ La exploración inicial usa los últimos 30 días. Las consultas se dividen en v
 
 El modo `--update-latest` consulta una sola vez por corrida el endpoint público `GetOperaciones` con el payload observado `{"pPageSize":"20","pCurrentPage":"1"}`. Es un snapshot de las últimas operaciones disponibles: no pagina, no representa un histórico completo y no reemplaza la exportación manual como evidencia histórica.
 
-Cuando se ejecuta con `--save-response`, la respuesta se guarda localmente en `raw/` como `SIO_latest_GetOperaciones_YYYYMMDD_HHMMSS.json`; los raw quedan ignorados por Git. `integrar_commodities_sio.py` genera `processed/COMMODITIES_SIO_LATEST_SNAPSHOT.csv` y acumula nuevas operaciones, deduplicando por `id_operacion_sio` o por la clave compuesta documentada. El histórico de snapshots queda local y fuera de Git.
+Cuando se ejecuta con `--save-response`, la respuesta se guarda localmente en `raw/` como `SIO_latest_GetOperaciones_YYYYMMDD_HHMMSS.json`; los raw quedan ignorados por Git. `integrar_commodities_sio.py` genera `processed/COMMODITIES_SIO_LATEST_SNAPSHOT.csv`, mantiene el acumulado completo local y actualiza `dashboard/COMMODITIES_SIO_HISTORICO_SNAPSHOTS_LIVIANO.csv`, que funciona como memoria persistente versionable para GitHub Actions. Ambos históricos se deduplican por `id_operacion_sio` o por la clave compuesta documentada.
 
-Luego, `auditar_commodities_sio.py` genera el reporte de actualización diaria y `preparar_commodities_dashboard.py` utiliza el histórico acumulado para regenerar sólo los CSV livianos que consume el navegador. Se excluyen precios cero y se mantienen ARS y USD separados. La cobertura histórica comienza en la fecha en que se inicia el monitoreo; para períodos anteriores se utiliza el histórico local mensual como fuente separada.
+Luego, `auditar_commodities_sio.py` genera el reporte de actualización diaria y `preparar_commodities_dashboard.py` utiliza preferentemente el histórico liviano versionado para regenerar sólo los CSV que consume el navegador. Se excluyen precios cero y se mantienen ARS y USD separados. La cobertura histórica comienza en la fecha en que se inicia el monitoreo; para períodos anteriores se utiliza el histórico local mensual como fuente separada.
 
 La automatización no se ejecuta desde `app.js`, no expone credenciales y no hace commits ni pushes. Para una ejecución local programada, revisar [GUIA_ACTUALIZACION_DIARIA_SIO.md](GUIA_ACTUALIZACION_DIARIA_SIO.md) y usar `scripts/update_sio_daily.ps1`.
+
+## Actualización automática en GitHub Pages
+
+El flujo definitivo es:
+
+`GitHub Actions → SIO → snapshot → histórico liviano → dashboard CSV → GitHub Pages`.
+
+GitHub Pages sólo sirve archivos estáticos y no ejecuta Python ni consulta SIO. El workflow `.github/workflows/update-sio-commodities.yml` realiza una consulta diaria, integra la respuesta, actualiza el histórico liviano, regenera los CSV dashboard-ready y commitea sólo archivos pequeños necesarios para Pages. Los JSON raw, diagnósticos, configuraciones locales y bases completas permanecen fuera de Git.
+
+Para correrlo manualmente, abrir la pestaña **Actions**, seleccionar **Actualizar commodities SIO** y elegir **Run workflow**. Si SIO falla, el workflow se detiene antes de publicar y conserva en el repositorio el histórico liviano y los CSV de la corrida anterior. La guía completa está en [GUIA_GITHUB_ACTIONS_SIO.md](GUIA_GITHUB_ACTIONS_SIO.md).
 
 Prueba manual controlada:
 
@@ -128,7 +139,7 @@ Para regenerar las salidas dashboard-ready después de actualizar la base analí
 python .\preparar_commodities_dashboard.py
 ```
 
-La fuente completa es la opción normal. Si no está disponible, el script usa la muestra analítica sólo como fallback y lo advierte; ese resultado no debe interpretarse como una serie completa.
+El histórico liviano versionado es la fuente normal para el flujo diario. Si todavía no existe, el script usa el histórico completo local; si tampoco está disponible, usa la muestra analítica sólo como fallback y lo advierte. Ese resultado no debe interpretarse como una serie completa.
 
 Para analizar una captura local de DevTools sin hacer llamadas web, seguir [GUIA_DEVTOOLS_SIO.md](GUIA_DEVTOOLS_SIO.md):
 

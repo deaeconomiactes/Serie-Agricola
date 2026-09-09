@@ -73,6 +73,7 @@ data/commodities_bcr/raw/*
 !data/commodities_sio/*.csv
 !data/commodities_sio/dashboard/
 !data/commodities_sio/dashboard/*.csv
+!data/commodities_sio/dashboard/COMMODITIES_SIO_HISTORICO_SNAPSHOTS_LIVIANO.csv
 !data/commodities_sio/raw/.gitkeep
 !data/commodities_sio/processed/.gitkeep
 !data/commodities_sio/reports/.gitkeep

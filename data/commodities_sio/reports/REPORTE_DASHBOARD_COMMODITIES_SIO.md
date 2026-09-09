@@ -2,12 +2,15 @@
 
 ## Fuente y criterio
 
-- Fuente de preparación: `C:/Users/acer/Oficina/Serie-Agricola/data/commodities_sio/processed/COMMODITIES_SIO_HISTORICO_SNAPSHOTS.csv`.
+- Fuente de preparación: `C:/Users/acer/Oficina/Serie-Agricola/data/commodities_sio/dashboard/COMMODITIES_SIO_HISTORICO_SNAPSHOTS_LIVIANO.csv`.
 - Se usó el histórico acumulado de snapshots SIO; el dashboard sólo recibe agregados livianos.
-- Filas leídas: 16; filas analíticas válidas utilizadas: 16.
+- Filas leídas: 31; filas analíticas válidas utilizadas: 31.
 - Rango temporal: 2026-09-09 a 2026-09-09.
-- Última captura SIO: 2026-09-09T10:22:32.
-- Commodities: Girasol, Maíz, Soja, TRIGO PAN.
+- Actualización del dashboard: 2026-09-09.
+- Última captura SIO: 2026-09-09T11:20:00.
+- Última operación informada: 2026-09-09.
+- Rango de operaciones: 2026-09-09 — 2026-09-09.
+- Commodities: CEBADA FORR., Girasol, Maíz, Soja, TRIGO PAN.
 - Monedas: ARS, USD; unidades: TN.
 - Regla: sólo `precio_valido_para_serie=sí`, precio positivo, fecha válida, commodity, fuente, moneda explícita y unidad explícita. Los precios cero quedan fuera.
 - Las series se separan por commodity, moneda, unidad y tipo_precio; ARS y USD no se agregan conjuntamente.
@@ -16,11 +19,11 @@
 
 | Archivo | Filas | Tamaño (MB) | Uso |
 | --- | ---: | ---: | --- |
-| `C:/Users/acer/Oficina/Serie-Agricola/data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_DIARIO.csv` | 5 | 0.001 | evolución diaria y volumen |
-| `C:/Users/acer/Oficina/Serie-Agricola/data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_MENSUAL.csv` | 5 | 0.001 | series mensuales y variaciones |
-| `C:/Users/acer/Oficina/Serie-Agricola/data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_ULTIMOS.csv` | 5 | 0.001 | último dato por serie |
+| `C:/Users/acer/Oficina/Serie-Agricola/data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_DIARIO.csv` | 8 | 0.002 | evolución diaria y volumen |
+| `C:/Users/acer/Oficina/Serie-Agricola/data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_MENSUAL.csv` | 8 | 0.001 | series mensuales y variaciones |
+| `C:/Users/acer/Oficina/Serie-Agricola/data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_ULTIMOS.csv` | 8 | 0.001 | último dato por serie |
 | `C:/Users/acer/Oficina/Serie-Agricola/data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_RESUMEN.csv` | 1 | 0.001 | indicadores de fuente y cobertura |
-| `C:/Users/acer/Oficina/Serie-Agricola/data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_SEMAFORO.csv` | 5 | 0.000 | variaciones mensuales por serie |
+| `C:/Users/acer/Oficina/Serie-Agricola/data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_SEMAFORO.csv` | 8 | 0.001 | variaciones mensuales por serie |
 
 ## Filtros y visualizaciones
 
