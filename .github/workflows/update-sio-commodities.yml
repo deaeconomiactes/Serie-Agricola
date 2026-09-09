@@ -1,0 +1,68 @@
+name: Actualizar commodities SIO
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 10:30 aproximadas de Argentina (UTC-3). GitHub puede iniciar con demora.
+    - cron: "30 13 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update-sio:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias del repositorio
+        if: ${{ hashFiles('requirements.txt') != '' }}
+        run: python -m pip install -r requirements.txt
+
+      - name: Registrar fecha de corrida
+        run: |
+          echo "Fecha de corrida UTC: $(date -u '+%Y-%m-%d %H:%M:%S')"
+
+      - name: Capturar snapshot latest
+        run: python explorar_sio_granos.py --update-latest --allow-web --save-response
+
+      - name: Integrar snapshot e histórico liviano
+        run: python integrar_commodities_sio.py
+
+      - name: Auditar resultado
+        run: python auditar_commodities_sio.py
+
+      - name: Validar actualización dashboard si existe
+        shell: bash
+        run: |
+          if [ -f validar_actualizacion_sio_dashboard.py ]; then
+            python validar_actualizacion_sio_dashboard.py
+          else
+            echo "No existe validar_actualizacion_sio_dashboard.py; se continúa con las validaciones del pipeline."
+          fi
+
+      - name: Regenerar archivos dashboard-ready
+        run: python preparar_commodities_dashboard.py
+
+      - name: Publicar sólo salidas livianas
+        shell: bash
+        run: |
+          git add data/commodities_sio/dashboard/*.csv \
+            data/commodities_sio/reports/REPORTE_ACTUALIZACION_DIARIA_SIO.md \
+            data/commodities_sio/reports/RESUMEN_ACTUALIDAD_COMMODITIES_SIO.csv
+          echo "Archivos candidatos a publicar:"
+          git diff --cached --name-only
+          if git diff --cached --quiet; then
+            echo "No hay cambios livianos para publicar."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: actualizar snapshot diario SIO"
+          git push
