@@ -120,6 +120,8 @@ data/commodities_worldbank/reports/*
 !data/commodities_local_mensual/
 !data/commodities_local_mensual/**/
 !data/commodities_local_mensual/*.md
+!data/commodities_local_mensual/fuentes_local_mensual_config.example.json
+data/commodities_local_mensual/fuentes_local_mensual_config.json
 data/commodities_local_mensual/raw/*
 data/commodities_local_mensual/processed/*
 data/commodities_local_mensual/dashboard/*

@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import csv
 import json
+from html import unescape
+from html.parser import HTMLParser
 import re
 import unicodedata
 import zipfile
@@ -21,6 +23,8 @@ DEFAULT_RAW_DIR = ROOT / "data" / "commodities_local_mensual" / "raw"
 DEFAULT_PROCESSED_DIR = ROOT / "data" / "commodities_local_mensual" / "processed"
 DEFAULT_DASHBOARD_DIR = ROOT / "data" / "commodities_local_mensual" / "dashboard"
 DEFAULT_REPORT_DIR = ROOT / "data" / "commodities_local_mensual" / "reports"
+DEFAULT_CONFIG_PATH = ROOT / "data" / "commodities_local_mensual" / "fuentes_local_mensual_config.json"
+DEFAULT_CONFIG_EXAMPLE_PATH = ROOT / "data" / "commodities_local_mensual" / "fuentes_local_mensual_config.example.json"
 
 INTEGRATED_FIELDS = [
     "fecha", "año", "mes", "periodo_ym", "commodity", "fuente", "mercado",
@@ -59,6 +63,124 @@ MONTH_NAMES = {
     "noviembre": 11, "nov": 11, "november": 11,
     "diciembre": 12, "dic": 12, "december": 12, "dec": 12,
 }
+
+
+class _HTMLTableParser(HTMLParser):
+    """Parser pequeño y tolerante para las tablas HTML publicadas por la fuente."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.tables: list[list[list[dict[str, Any]]]] = []
+        self._table_depth = 0
+        self._current_table: list[list[dict[str, Any]]] | None = None
+        self._current_row: list[dict[str, Any]] | None = None
+        self._current_cell: dict[str, Any] | None = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        tag = tag.lower()
+        attributes = {key.lower(): value for key, value in attrs}
+        if tag == "table":
+            if self._table_depth == 0:
+                self._current_table = []
+            self._table_depth += 1
+            return
+        if self._table_depth != 1 or self._current_table is None:
+            return
+        if tag == "tr":
+            self._current_row = []
+        elif tag in {"td", "th"} and self._current_row is not None:
+            self._current_cell = {
+                "parts": [],
+                "colspan": max(1, int(attributes.get("colspan") or "1")) if str(attributes.get("colspan") or "1").isdigit() else 1,
+                "rowspan": max(1, int(attributes.get("rowspan") or "1")) if str(attributes.get("rowspan") or "1").isdigit() else 1,
+            }
+        elif tag == "br" and self._current_cell is not None:
+            self._current_cell["parts"].append(" ")
+
+    def handle_data(self, data: str) -> None:
+        if self._current_cell is not None:
+            self._current_cell["parts"].append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        tag = tag.lower()
+        if self._table_depth == 1 and tag in {"td", "th"} and self._current_cell is not None and self._current_row is not None:
+            value = unescape(" ".join(self._current_cell.pop("parts"))).strip()
+            self._current_cell["value"] = re.sub(r"\s+", " ", value)
+            self._current_row.append(self._current_cell)
+            self._current_cell = None
+        elif self._table_depth == 1 and tag == "tr" and self._current_table is not None:
+            if self._current_row:
+                self._current_table.append(self._current_row)
+            self._current_row = None
+        elif tag == "table" and self._table_depth:
+            self._table_depth -= 1
+            if self._table_depth == 0 and self._current_table is not None:
+                if self._current_table:
+                    self.tables.append(self._current_table)
+                self._current_table = None
+
+
+def _expand_html_table(table: list[list[dict[str, Any]]]) -> list[list[str]]:
+    """Expande colspan/rowspan para convertir una tabla visual en una matriz."""
+    expanded: list[list[str]] = []
+    active: dict[int, tuple[str, int]] = {}
+    for raw_row in table:
+        row: list[str] = []
+        column = 0
+
+        def fill_active() -> None:
+            nonlocal column
+            while column in active:
+                value, remaining = active[column]
+                row.append(value)
+                if remaining <= 1:
+                    del active[column]
+                else:
+                    active[column] = (value, remaining - 1)
+                column += 1
+
+        for cell in raw_row:
+            fill_active()
+            value = text(cell.get("value", ""))
+            colspan = max(1, int(cell.get("colspan", 1)))
+            rowspan = max(1, int(cell.get("rowspan", 1)))
+            for offset in range(colspan):
+                row.append(value)
+                if rowspan > 1:
+                    active[column + offset] = (value, rowspan - 1)
+            column += colspan
+        fill_active()
+        if row:
+            expanded.append(row)
+    width = max((len(row) for row in expanded), default=0)
+    return [row + [""] * (width - len(row)) for row in expanded]
+
+
+def read_html_tables(path: Path) -> list[list[list[str]]]:
+    parser = _HTMLTableParser()
+    parser.feed(_read_text(path))
+    return [_expand_html_table(table) for table in parser.tables]
+
+
+def read_html_text(path: Path) -> str:
+    parser = HTMLParser(convert_charrefs=True)
+    parts: list[str] = []
+    parser.handle_data = lambda data: parts.append(data)  # type: ignore[method-assign]
+    parser.feed(_read_text(path))
+    return re.sub(r"\s+", " ", " ".join(parts)).strip()
+
+
+def load_source_config(path: Path | None = None) -> tuple[dict[str, Any], Path | None]:
+    candidates = [path] if path else [DEFAULT_CONFIG_PATH, DEFAULT_CONFIG_EXAMPLE_PATH]
+    for candidate in candidates:
+        if candidate and candidate.exists():
+            try:
+                payload = json.loads(candidate.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if isinstance(payload, dict):
+                return payload, candidate
+    return {}, None
 
 
 def text(value: Any) -> str:
@@ -114,7 +236,8 @@ def matrix_to_rows(matrix: list[list[Any]]) -> tuple[list[str], list[dict[str, s
 
 def _read_text(path: Path) -> str:
     content = path.read_bytes()
-    for encoding in ("utf-8-sig", "utf-16", "cp1252", "latin-1"):
+    encodings = ("utf-16", "utf-8-sig", "cp1252", "latin-1") if content.startswith((b"\xff\xfe", b"\xfe\xff")) else ("utf-8-sig", "cp1252", "latin-1")
+    for encoding in encodings:
         try:
             return content.decode(encoding)
         except UnicodeDecodeError:
@@ -211,6 +334,9 @@ def read_tabular_file(path: Path) -> tuple[list[str], list[dict[str, str]]]:
     suffix = path.suffix.lower()
     if suffix in {".csv", ".txt", ".tsv"}:
         matrix = read_csv_matrix(path)
+    elif suffix in {".html", ".htm"}:
+        tables = read_html_tables(path)
+        matrix = tables[0] if tables else []
     elif suffix == ".xlsx":
         matrix = read_xlsx_matrix(path)
     elif suffix == ".json":

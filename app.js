@@ -16,16 +16,18 @@ const COMMODITY_SOURCE_CONFIG = {
         files: { diario: 'COMMODITIES_SIO_DASHBOARD_DIARIO.csv', mensual: 'COMMODITIES_SIO_DASHBOARD_MENSUAL.csv', ultimos: 'COMMODITIES_SIO_DASHBOARD_ULTIMOS.csv', resumen: 'COMMODITIES_SIO_DASHBOARD_RESUMEN.csv', semaforo: 'COMMODITIES_SIO_DASHBOARD_SEMAFORO.csv' },
         monthlyOnly: false,
         operationsLabel: 'Operaciones con precio',
+        operationsUnit: 'precios positivos',
         note: 'Fuente: SIO Granos / Secretaría de Agricultura. Los datos corresponden a operaciones informadas y no equivalen a precios de pizarra BCR, futuros ni precios mayoristas frutihortícolas. Los precios cero se excluyen de los cálculos de series. Las monedas ARS y USD se analizan por separado. Cobertura SIO según exportación/procesamiento disponible. Para series históricas mensuales de años anteriores se incorporará una fuente separada, sin mezclarla con operaciones SIO.'
     },
     local_mensual: {
-        label: 'Histórico local mensual — precios internos/FAS/FOB según disponibilidad',
-        subtitle: 'Histórico local mensual — precios internos/FAS/FOB según disponibilidad',
+        label: 'Histórico local mensual — precios internos',
+        subtitle: 'Histórico local mensual — precios internos',
         path: 'data/commodities_local_mensual/dashboard/',
         files: { diario: null, mensual: 'COMMODITIES_LOCAL_MENSUAL_DASHBOARD_MENSUAL.csv', ultimos: 'COMMODITIES_LOCAL_MENSUAL_DASHBOARD_ULTIMOS.csv', resumen: 'COMMODITIES_LOCAL_MENSUAL_DASHBOARD_RESUMEN.csv', semaforo: 'COMMODITIES_LOCAL_MENSUAL_DASHBOARD_SEMAFORO.csv' },
         monthlyOnly: true,
         operationsLabel: 'Observaciones con precio',
-        note: 'Las series históricas locales mensuales pueden corresponder a precios internos, FAS teórico o FOB oficiales, según fuente. No son equivalentes a operaciones SIO ni a precios de pizarra BCR.'
+        operationsUnit: 'precios positivos por plaza',
+        note: 'Fuente: Secretaría de Agricultura / Mercados Agropecuarios. Serie mensual de precios internos de principales granos en pesos por tonelada, según disponibilidad de la fuente. No equivale a operaciones SIO, precios FOB/FAS ni precios de pizarra BCR.'
     }
 };
 
@@ -1504,6 +1506,8 @@ function updateCommoditySourcePresentation() {
     if (note) note.textContent = config.note;
     const operationsLabel = document.getElementById('commodityKpiOperationsLabel');
     if (operationsLabel) operationsLabel.textContent = config.operationsLabel;
+    const operationsUnit = document.getElementById('commodityKpiOperationsUnit');
+    if (operationsUnit) operationsUnit.textContent = config.operationsUnit;
     const latestVariationShort = document.getElementById('commodityLatestVariationShort');
     const latestVariationLong = document.getElementById('commodityLatestVariationLong');
     if (latestVariationShort) latestVariationShort.textContent = config.monthlyOnly ? 'Var. mensual' : 'Var. 7 días';
@@ -1853,6 +1857,7 @@ function updateCommodityKpis(rows, latestRows) {
     const currencyLabel = currencies.size === 1 ? [...currencies][0] : currencies.size ? `${[...currencies].sort().join(' / ')} (separadas)` : 'moneda seleccionada';
     const unitLabel = units.size === 1 ? [...units][0] : units.size ? 'unidades separadas' : 'unidad seleccionada';
     const typeLabel = priceTypes.size === 1 ? ` · ${[...priceTypes][0]}` : ' · tipos de precio separados';
+    const sourceConfig = COMMODITY_SOURCE_CONFIG[commoditySource] || COMMODITY_SOURCE_CONFIG.sio;
     document.getElementById('commodityKpiUpdate').textContent = commodityPeriodLabel(summary.fecha_actualizacion);
     document.getElementById('commodityKpiRange').textContent = dates.length ? `${commodityPeriodLabel(dates[0])} — ${commodityPeriodLabel(dates.at(-1))}` : 'Rango sin datos';
     document.getElementById('commodityKpiProducts').textContent = products.size || '–';
@@ -1860,7 +1865,8 @@ function updateCommodityKpis(rows, latestRows) {
     document.getElementById('commodityKpiCurrency').textContent = currencies.size === 1 ? [...currencies][0] : currencies.size ? 'Separadas' : '–';
     document.getElementById('commodityKpiMedian').textContent = Number.isFinite(latestPrice) ? formatNumber(latestPrice) : series.size ? 'Varias series' : '–';
     document.getElementById('commodityKpiMedianUnit').textContent = latestRows.length === 1 ? `${latestRows[0].moneda} / ${latestRows[0].unidad}` : latestRows.length ? 'seleccioná commodity y tipo' : 'sin último precio';
-    document.getElementById('commodityPriceScope').textContent = `Precios en ${currencyLabel} / ${unitLabel}${typeLabel} · mediana de operaciones con precio positivo`;
+    const aggregationLabel = sourceConfig.monthlyOnly ? 'mediana de precios mensuales positivos' : 'mediana de operaciones con precio positivo';
+    document.getElementById('commodityPriceScope').textContent = `Precios en ${currencyLabel} / ${unitLabel}${typeLabel} · ${aggregationLabel}`;
 }
 
 function renderCommoditySemaphore(rows) {
@@ -1900,10 +1906,11 @@ function updateCommodityChartHeadings() {
     const latestDesc = document.getElementById('commodityLatestDesc');
     const periodLabel = commodityFrequency === 'diaria' ? 'diario' : 'mensual';
     const gapLabel = commodityFrequency === 'diaria' ? 'Los días sin operaciones quedan como huecos.' : 'Cada punto resume el mes seleccionado.';
+    const seriesTypeLabel = sourceConfig.monthlyOnly ? 'tipo de precio' : 'tipo de operación';
     if (trendTitle) trendTitle.textContent = `Precio mediano ${periodLabel}`;
-    if (trendDesc) trendDesc.textContent = `Una serie por commodity, moneda, unidad y tipo de operación. ${gapLabel}`;
+    if (trendDesc) trendDesc.textContent = `Una serie por commodity, moneda, unidad y ${seriesTypeLabel}. ${gapLabel}`;
     if (rankingTitle) rankingTitle.textContent = selectedCount >= 2 ? 'Comparación de precios medianos recientes' : selectedCount === 1 ? 'Precio mediano reciente por tipo' : 'Precios medianos recientes';
-    if (rankingDesc) rankingDesc.textContent = selectedCount >= 2 ? 'Último precio por commodity, moneda y tipo de operación' : selectedCount === 1 ? 'Comparación entre Canje y Compraventa cuando existen' : 'Precio por commodity en el último dato disponible';
+    if (rankingDesc) rankingDesc.textContent = selectedCount >= 2 ? `Último precio por commodity, moneda y ${seriesTypeLabel}` : selectedCount === 1 && !sourceConfig.monthlyOnly ? 'Comparación entre Canje y Compraventa cuando existen' : 'Precio por commodity en el último dato disponible';
     if (volumeTitle) volumeTitle.textContent = selectedCount >= 2 ? 'Volumen acumulado por commodity' : 'Volumen acumulado del período (TN)';
     if (volumeDesc) volumeDesc.textContent = selectedCount >= 2 ? 'Suma de toneladas del período visible para cada commodity' : 'Suma de toneladas informadas en el período visible';
     if (sourceConfig.monthlyOnly) {
