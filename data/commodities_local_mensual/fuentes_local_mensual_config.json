@@ -1,0 +1,20 @@
+{
+  "fuente_id": "precios_internos_granos_magyp",
+  "nombre_fuente": "Secretaría de Agricultura - Precios Internos de los Principales Granos",
+  "moneda": "ARS",
+  "unidad": "TN",
+  "frecuencia": "Mensual",
+  "tipo_precio": "Precio interno mensual",
+  "mercado": "Argentina / mercado interno",
+  "raw_filename_template": "precios_internos_granos_{year}.html",
+  "productos": ["Trigo", "Maíz", "Sorgo", "Soja", "Girasol", "Cebada forrajera"],
+  "urls": [
+    {"year": 2020, "url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/granos/_archivos/000056_Precios%20Locales/000010_Precios%20Internos%20de%20los%20Principales%20Granos/100000_2020.php"},
+    {"year": 2021, "url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/granos/_archivos/000056_Precios%20Locales/000010_Precios%20Internos%20de%20los%20Principales%20Granos/099999_2021.php"},
+    {"year": 2022, "url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/granos/_archivos/000056_Precios%20Locales/000010_Precios%20Internos%20de%20los%20Principales%20Granos/099998_2022.php"},
+    {"year": 2023, "url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/granos/_archivos/000056_Precios%20Locales/000010_Precios%20Internos%20de%20los%20Principales%20Granos/099997_2023.php"},
+    {"year": 2024, "url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/granos/_archivos/000056_Precios%20Locales/000010_Precios%20Internos%20de%20los%20Principales%20Granos/099996_2024.php"},
+    {"year": 2025, "url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/granos/_archivos/000056_Precios%20Locales/000010_Precios%20Internos%20de%20los%20Principales%20Granos/099995_2025.php"},
+    {"year": 2026, "url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/granos/_archivos/000056_Precios%20Locales/000010_Precios%20Internos%20de%20los%20Principales%20Granos/000001_Informe%20Actual%20de%20la%20Evolucion%20Precios%20Internos%20de%20Granos.php", "descripcion": "Informe actual; puede contener el año en curso incompleto"}
+  ]
+}

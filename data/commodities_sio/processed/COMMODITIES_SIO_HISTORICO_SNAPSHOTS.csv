@@ -1,0 +1,156 @@
+﻿fecha_descarga_snapshot;fecha;año;mes;commodity;fuente;mercado;tipo_precio;precio_tipo_original;precio_unidad;precio_total;campo_precio_original;valor_precio_original;precio_original_texto;moneda;moneda_explicitamente_informada;moneda_inferida;campo_moneda_original;valor_moneda_original;unidad;precio;volumen;volumen_unidad;campo_volumen_original;procedencia;provincia;localidad;zona;lugar_entrega;precio_puesto_en;operacion;condicion_pago;condicion_comercial;frecuencia;archivo_origen;fecha_integracion;observaciones;apto_piloto;apto_dashboard;pagina_origen;id_operacion_sio;muestra_tipo;muestra_paginas;estado_paginacion;precio_cero_flag;precio_cero_tipo;precio_valido_para_serie
+2026-09-09T10:22:32;2026-09-09;2026;9;TRIGO PAN;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"360000,00
+$";360000;;Precio/TN Monto;"360000,00
+$";"360000,00
+$";ARS;sí;no;Precio/TN Monto;"360000,00
+$";TN;360000;120,00;TN;Cant. (TN);SANTA FECASILDA;;;Zona 8En destino;Zona 8En destino;;Contrato;A plazo;;diaria;SIO_latest_GetOperaciones_20260909_102008.json;2026-09-09;"commodity no catalogado; se conserva para revisión; integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest";sí;parcial_piloto;;8470154;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T10:22:32;2026-09-09;2026;9;Soja;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"555000,00
+$";555000;;Precio/TN Monto;"555000,00
+$";"555000,00
+$";ARS;sí;no;Precio/TN Monto;"555000,00
+$";TN;555000;140,00;TN;Cant. (TN);SANTA FETEODELINA;;;Rosario SEn destino;Rosario SEn destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_102008.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest";sí;parcial_piloto;;8470139;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T10:22:32;2026-09-09;2026;9;Maíz;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"293000,00
+$";293000;;Precio/TN Monto;"293000,00
+$";"293000,00
+$";ARS;sí;no;Precio/TN Monto;"293000,00
+$";TN;293000;30,00;TN;Cant. (TN);BUENOS AIRESPIGUE;;;B.BlancaEn destino;B.BlancaEn destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_102008.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest";sí;parcial_piloto;;8470126;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T10:22:32;2026-09-09;2026;9;Girasol;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"400,00
+U$S";400;;Precio/TN Monto;"400,00
+U$S";"400,00
+U$S";USD;sí;no;Precio/TN Monto;"400,00
+U$S";TN;400;90,00;TN;Cant. (TN);BUENOS AIRESSAN MANUEL;;;QuequenEn destino;QuequenEn destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_102008.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: USD; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest";sí;parcial_piloto;;8470121;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T10:22:32;2026-09-09;2026;9;Girasol;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"400,00
+U$S";400;;Precio/TN Monto;"400,00
+U$S";"400,00
+U$S";USD;sí;no;Precio/TN Monto;"400,00
+U$S";TN;400;450,00;TN;Cant. (TN);BUENOS AIRESBARRIO BATAN;;;QuequenEn destino;QuequenEn destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_102008.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: USD; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest";sí;parcial_piloto;;8470118;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T10:22:32;2026-09-09;2026;9;Girasol;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"450,00
+U$S";450;;Precio/TN Monto;"450,00
+U$S";"450,00
+U$S";USD;sí;no;Precio/TN Monto;"450,00
+U$S";TN;450;30,00;TN;Cant. (TN);BUENOS AIRESNECOCHEA;;;QuequenEn destino;QuequenEn destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_102008.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: USD; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest";sí;parcial_piloto;;8470115;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T10:22:32;2026-09-09;2026;9;Maíz;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"282000,00
+$";282000;;Precio/TN Monto;"282000,00
+$";"282000,00
+$";ARS;sí;no;Precio/TN Monto;"282000,00
+$";TN;282000;95,42;TN;Cant. (TN);TUCUMÁNLEALES;;;Rosario NEn destino;Rosario NEn destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_102008.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest";sí;parcial_piloto;;8470101;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T10:22:32;2026-09-09;2026;9;Maíz;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"282000,00
+$";282000;;Precio/TN Monto;"282000,00
+$";"282000,00
+$";ARS;sí;no;Precio/TN Monto;"282000,00
+$";TN;282000;95,42;TN;Cant. (TN);TUCUMÁNLEALES;;;Rosario NEn destino;Rosario NEn destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_102008.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest";sí;parcial_piloto;;8470099;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T10:22:32;2026-09-09;2026;9;Soja;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"560000,00
+$";560000;;Precio/TN Monto;"560000,00
+$";"560000,00
+$";ARS;sí;no;Precio/TN Monto;"560000,00
+$";TN;560000;5000,00;TN;Cant. (TN);BUENOS AIRESVILLA MOQUEHUA;;;Rosario NEn destino;Rosario NEn destino;;Contrato;Anticipado a la entrega;;diaria;SIO_latest_GetOperaciones_20260909_102008.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest";sí;parcial_piloto;;8470090;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T10:22:32;2026-09-09;2026;9;Soja;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"367,00
+U$S";367;;Precio/TN Monto;"367,00
+U$S";"367,00
+U$S";USD;sí;no;Precio/TN Monto;"367,00
+U$S";TN;367;450,00;TN;Cant. (TN);SANTA FESAN LORENZO;;;QuequenEn destino;QuequenEn destino;;Contrato;Anticipado a la entrega;;diaria;SIO_latest_GetOperaciones_20260909_102008.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: USD; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest";sí;parcial_piloto;;8470082;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T10:22:32;2026-09-09;2026;9;Maíz;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"295000,00
+$";295000;;Precio/TN Monto;"295000,00
+$";"295000,00
+$";ARS;sí;no;Precio/TN Monto;"295000,00
+$";TN;295000;60,00;TN;Cant. (TN);BUENOS AIRESSALADILLO;;;Zona 5En destino;Zona 5En destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_102008.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest";sí;parcial_piloto;;8470080;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T10:22:32;2026-09-09;2026;9;TRIGO PAN;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"440000,00
+$";440000;;Precio/TN Monto;"440000,00
+$";"440000,00
+$";ARS;sí;no;Precio/TN Monto;"440000,00
+$";TN;440000;120,00;TN;Cant. (TN);SANTA FETIMBUES;;;Zona 5En destino;Zona 5En destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_102008.json;2026-09-09;"commodity no catalogado; se conserva para revisión; integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest";sí;parcial_piloto;;8470074;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T10:22:32;2026-09-09;2026;9;TRIGO PAN;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"420000,00
+$";420000;;Precio/TN Monto;"420000,00
+$";"420000,00
+$";ARS;sí;no;Precio/TN Monto;"420000,00
+$";TN;420000;120,00;TN;Cant. (TN);CÓRDOBAADELIA MARIA;;;Bs AsEn destino;Bs AsEn destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_102008.json;2026-09-09;"commodity no catalogado; se conserva para revisión; integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest";sí;parcial_piloto;;8470053;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T10:22:32;2026-09-09;2026;9;Soja;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"365,00
+U$S";365;;Precio/TN Monto;"365,00
+U$S";"365,00
+U$S";USD;sí;no;Precio/TN Monto;"365,00
+U$S";TN;365;200,00;TN;Cant. (TN);BUENOS AIRESNECOCHEA;;;QuequenEn destino;QuequenEn destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_102008.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: USD; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest";sí;parcial_piloto;;8470019;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T10:20:08;2026-09-09;2026;9;Soja;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"365,00
+U$S";365;;Precio/TN Monto;"365,00
+U$S";"365,00
+U$S";USD;sí;no;Precio/TN Monto;"365,00
+U$S";TN;365;200,00;TN;Cant. (TN);BUENOS AIRESNECOCHEA;;;QuequenEn destino;QuequenEn destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_102008.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: USD; snapshot de últimas operaciones; no es histórico completo";sí;parcial_piloto;;8470014;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T10:22:32;2026-09-09;2026;9;TRIGO PAN;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"360000,00
+$";360000;;Precio/TN Monto;"360000,00
+$";"360000,00
+$";ARS;sí;no;Precio/TN Monto;"360000,00
+$";TN;360000;30,00;TN;Cant. (TN);SANTA FECASILDA;;;Zona 8En destino;Zona 8En destino;;Contrato;A plazo;;diaria;SIO_latest_GetOperaciones_20260909_102232.json;2026-09-09;"commodity no catalogado; se conserva para revisión; integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest";sí;parcial_piloto;;8470157;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T11:17:15;2026-09-09;2026;9;TRIGO PAN;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"240,00
+U$S";240;;Precio/TN Monto;"240,00
+U$S";"240,00
+U$S";USD;sí;no;Precio/TN Monto;"240,00
+U$S";TN;240;105,00;TN;Cant. (TN);BUENOS AIRESMAIPU;;;QuequenEn destino;QuequenEn destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_111550.json;2026-09-09;"commodity no catalogado; se conserva para revisión; integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: USD; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest; observada en snapshot latest; observada en snapshot latest";sí;parcial_piloto;;8470380;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T11:17:15;2026-09-09;2026;9;Maíz;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"293100,00
+$";293100;;Precio/TN Monto;"293100,00
+$";"293100,00
+$";ARS;sí;no;Precio/TN Monto;"293100,00
+$";TN;293100;60,00;TN;Cant. (TN);ENTRE RÍOSALDEA VALLE MARIA;;;Zona 18En destino;Zona 18En destino;;Contrato;A plazo;;diaria;SIO_latest_GetOperaciones_20260909_111550.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest; observada en snapshot latest; observada en snapshot latest";sí;parcial_piloto;;8470379;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T11:17:15;2026-09-09;2026;9;CEBADA FORR.;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"210,00
+U$S";210;;Precio/TN Monto;"210,00
+U$S";"210,00
+U$S";USD;sí;no;Precio/TN Monto;"210,00
+U$S";TN;210;60,00;TN;Cant. (TN);BUENOS AIRESORENSE;;;QuequenEn destino;QuequenEn destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_111550.json;2026-09-09;"commodity no catalogado; se conserva para revisión; integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: USD; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest; observada en snapshot latest; observada en snapshot latest";sí;parcial_piloto;;8470376;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T11:17:15;2026-09-09;2026;9;Girasol;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"510,00
+U$S";510;;Precio/TN Monto;"510,00
+U$S";"510,00
+U$S";USD;sí;no;Precio/TN Monto;"510,00
+U$S";TN;510;55,00;TN;Cant. (TN);SAN LUISBAGUAL;;;Zona 25En destino;Zona 25En destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_111550.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: USD; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest; observada en snapshot latest; observada en snapshot latest";sí;parcial_piloto;;8470374;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T11:17:15;2026-09-09;2026;9;CEBADA FORR.;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"210,00
+U$S";210;;Precio/TN Monto;"210,00
+U$S";"210,00
+U$S";USD;sí;no;Precio/TN Monto;"210,00
+U$S";TN;210;60,00;TN;Cant. (TN);BUENOS AIRESORENSE;;;QuequenEn destino;QuequenEn destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_111550.json;2026-09-09;"commodity no catalogado; se conserva para revisión; integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: USD; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest; observada en snapshot latest; observada en snapshot latest";sí;parcial_piloto;;8470370;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T11:17:15;2026-09-09;2026;9;Soja;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"556000,00
+$";556000;;Precio/TN Monto;"556000,00
+$";"556000,00
+$";ARS;sí;no;Precio/TN Monto;"556000,00
+$";TN;556000;30,00;TN;Cant. (TN);SANTA FECARMEN;;;Zona 8En destino;Zona 8En destino;;Contrato;A plazo;;diaria;SIO_latest_GetOperaciones_20260909_111550.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest; observada en snapshot latest; observada en snapshot latest";sí;parcial_piloto;;8470371;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T11:17:15;2026-09-09;2026;9;Maíz;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"266893,20
+$";266893;;Precio/TN Monto;"266893,20
+$";"266893,20
+$";ARS;sí;no;Precio/TN Monto;"266893,20
+$";TN;266893;115,00;TN;Cant. (TN);CÓRDOBASANTA EUFEMIA;;;Rosario NEn destino;Rosario NEn destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_111550.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest; observada en snapshot latest; observada en snapshot latest";sí;parcial_piloto;;8470369;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T11:17:15;2026-09-09;2026;9;TRIGO PAN;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"343000,00
+$";343000;;Precio/TN Monto;"343000,00
+$";"343000,00
+$";ARS;sí;no;Precio/TN Monto;"343000,00
+$";TN;343000;30,00;TN;Cant. (TN);BUENOS AIRES12 DE OCTUBRE;;;Zona 7En destino;Zona 7En destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_111550.json;2026-09-09;"commodity no catalogado; se conserva para revisión; integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest; observada en snapshot latest; observada en snapshot latest";sí;parcial_piloto;;8470368;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T11:17:15;2026-09-09;2026;9;Soja;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"556000,00
+$";556000;;Precio/TN Monto;"556000,00
+$";"556000,00
+$";ARS;sí;no;Precio/TN Monto;"556000,00
+$";TN;556000;30,00;TN;Cant. (TN);ENTRE RÍOSALDEA VALLE MARIA;;;Zona 18En destino;Zona 18En destino;;Contrato;A plazo;;diaria;SIO_latest_GetOperaciones_20260909_111550.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest; observada en snapshot latest; observada en snapshot latest";sí;parcial_piloto;;8470365;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T11:17:15;2026-09-09;2026;9;Maíz;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"251232,80
+$";251233;;Precio/TN Monto;"251232,80
+$";"251232,80
+$";ARS;sí;no;Precio/TN Monto;"251232,80
+$";TN;251233;60,00;TN;Cant. (TN);CÓRDOBAETRURIA;;;Rosario NEn destino;Rosario NEn destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_111550.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest; observada en snapshot latest; observada en snapshot latest";sí;parcial_piloto;;8470364;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T11:17:15;2026-09-09;2026;9;TRIGO PAN;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"346000,00
+$";346000;;Precio/TN Monto;"346000,00
+$";"346000,00
+$";ARS;sí;no;Precio/TN Monto;"346000,00
+$";TN;346000;28,79;TN;Cant. (TN);CÓRDOBAPASCANAS;;;Zona 8En destino;Zona 8En destino;;Contrato;A plazo;;diaria;SIO_latest_GetOperaciones_20260909_111550.json;2026-09-09;"commodity no catalogado; se conserva para revisión; integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest; observada en snapshot latest; observada en snapshot latest";sí;parcial_piloto;;8470363;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T11:17:15;2026-09-09;2026;9;Soja;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"556000,00
+$";556000;;Precio/TN Monto;"556000,00
+$";"556000,00
+$";ARS;sí;no;Precio/TN Monto;"556000,00
+$";TN;556000;41,54;TN;Cant. (TN);BUENOS AIRESCARLOS CASARES;;;Rosario SEn destino;Rosario SEn destino;;Contrato;A plazo;;diaria;SIO_latest_GetOperaciones_20260909_111550.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest; observada en snapshot latest; observada en snapshot latest";sí;parcial_piloto;;8470362;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T11:17:15;2026-09-09;2026;9;Soja;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"560000,00
+$";560000;;Precio/TN Monto;"560000,00
+$";"560000,00
+$";ARS;sí;no;Precio/TN Monto;"560000,00
+$";TN;560000;400,00;TN;Cant. (TN);BUENOS AIRES25 DE MAYO;;;Zona 6En destino;Zona 6En destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_111550.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest; observada en snapshot latest; observada en snapshot latest";sí;parcial_piloto;;8470339;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T11:17:15;2026-09-09;2026;9;Maíz;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"258622,00
+$";258622;;Precio/TN Monto;"258622,00
+$";"258622,00
+$";ARS;sí;no;Precio/TN Monto;"258622,00
+$";TN;258622;60,45;TN;Cant. (TN);CÓRDOBAETRURIA;;;Rosario NEn destino;Rosario NEn destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_111550.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: ARS; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest; observada en snapshot latest; observada en snapshot latest";sí;parcial_piloto;;8470319;snapshot_latest;1;no_aplica;no;no_aplica;sí
+2026-09-09T11:17:15;2026-09-09;2026;9;Maíz;SIO Granos / Secretaría de Agricultura;;Precio Hecho;"161,73
+U$S";161.73;;Precio/TN Monto;"161,73
+U$S";"161,73
+U$S";USD;sí;no;Precio/TN Monto;"161,73
+U$S";TN;161.73;90,00;TN;Cant. (TN);BUENOS AIRESGENERAL VILLEGAS;;;Zona 7En destino;Zona 7En destino;;Contrato;Contra entrega;;diaria;SIO_latest_GetOperaciones_20260909_111550.json;2026-09-09;"integración piloto una página GetOperaciones; moneda extraída explícitamente del campo precio original: USD; snapshot de últimas operaciones; no es histórico completo; observada en snapshot latest; observada en snapshot latest; observada en snapshot latest";sí;parcial_piloto;;8470318;snapshot_latest;1;no_aplica;no;no_aplica;sí
