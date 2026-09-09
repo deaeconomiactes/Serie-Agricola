@@ -18,6 +18,9 @@ csv.field_size_limit(2**31 - 1)
 
 ROOT = Path(__file__).resolve().parent
 PROCESSED_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_INTEGRADO.csv"
+LATEST_SNAPSHOT_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_LATEST_SNAPSHOT.csv"
+HISTORIC_SNAPSHOTS_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_HISTORICO_SNAPSHOTS.csv"
+LIGHT_HISTORY_PATH = ROOT / "data" / "commodities_sio" / "dashboard" / "COMMODITIES_SIO_HISTORICO_SNAPSHOTS_LIVIANO.csv"
 PAGINATED_PROCESSED_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_MUESTRA_PAGINADA.csv"
 MANUAL_EXPORT_PROCESSED_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_EXPORTACION_MANUAL.csv"
 MANUAL_EXPORT_SAMPLE_PATH = ROOT / "data" / "commodities_sio" / "processed" / "COMMODITIES_SIO_EXPORTACION_MANUAL_SAMPLE.csv"
@@ -39,6 +42,7 @@ ANALYTIC_DELIVERY_PATH = REPORT_DIR / "RESUMEN_ANALITICO_LUGAR_ENTREGA_SIO.csv"
 ANALYTIC_REPORT_PATH = REPORT_DIR / "REPORTE_BASE_ANALITICA_PRECIOS_SIO.md"
 PAGINATED_REPORT_PATH = REPORT_DIR / "REPORTE_MUESTRA_PAGINADA_SIO.md"
 PAGINATION_REPORT_PATH = REPORT_DIR / "REPORTE_PAGINACION_SIO.md"
+DAILY_UPDATE_REPORT_PATH = REPORT_DIR / "REPORTE_ACTUALIZACION_DIARIA_SIO.md"
 REPORTS = {
     "report": REPORT_DIR / "REPORTE_AUDITORIA_COMMODITIES_SIO.md",
     "coverage": REPORT_DIR / "RESUMEN_COBERTURA_COMMODITIES_SIO.csv",
@@ -47,6 +51,94 @@ REPORTS = {
     "problems": REPORT_DIR / "CASOS_PROBLEMATICOS_COMMODITIES_SIO.csv",
     "actuality": REPORT_DIR / "RESUMEN_ACTUALIDAD_COMMODITIES_SIO.csv",
 }
+
+
+def snapshot_identity(row: dict[str, str]) -> tuple[str, ...]:
+    operation_id = value(row, "id_operacion_sio")
+    if operation_id:
+        return ("id", operation_id)
+    return (
+        "fallback",
+        value(row, "fecha"),
+        value(row, "commodity"),
+        value(row, "precio_original_texto"),
+        value(row, "volumen"),
+        value(row, "procedencia"),
+        value(row, "lugar_entrega"),
+        value(row, "condicion_comercial"),
+    )
+
+
+def snapshot_capture_value(row: dict[str, str]) -> str:
+    return value(row, "fecha_descarga_snapshot")
+
+
+def snapshot_raw_files() -> list[Path]:
+    if not RAW_DIR.exists():
+        return []
+    return sorted(RAW_DIR.glob("SIO_latest_GetOperaciones_*.json"))
+
+
+def write_daily_update_report() -> None:
+    latest_rows = read_rows(LATEST_SNAPSHOT_PATH)
+    history_path = HISTORIC_SNAPSHOTS_PATH if HISTORIC_SNAPSHOTS_PATH.exists() else LIGHT_HISTORY_PATH
+    history_rows = read_rows(history_path)
+    raw_files = snapshot_raw_files()
+    latest_capture = max((snapshot_capture_value(row) for row in latest_rows if snapshot_capture_value(row)), default="")
+    if not latest_capture and raw_files:
+        match = re.search(r"_(\d{8})_(\d{6})\.json$", raw_files[-1].name, flags=re.I)
+        if match:
+            try:
+                latest_capture = datetime.strptime(f"{match.group(1)}{match.group(2)}", "%Y%m%d%H%M%S").isoformat(timespec="seconds")
+            except ValueError:
+                latest_capture = ""
+    previous_rows = [row for row in history_rows if snapshot_capture_value(row) and snapshot_capture_value(row) < latest_capture]
+    latest_keys = {snapshot_identity(row) for row in latest_rows}
+    previous_keys = {snapshot_identity(row) for row in previous_rows}
+    new_count = len(latest_keys - previous_keys) if previous_rows else len(latest_keys)
+    duplicate_count = len(latest_keys & previous_keys) if previous_rows else 0
+    dates = [parsed for parsed in (parse_date(value(row, "fecha")) for row in history_rows) if parsed]
+    currencies = sorted({value(row, "moneda") for row in latest_rows if value(row, "moneda") and value(row, "moneda") != "Sin especificar"})
+    commodities = sorted({value(row, "commodity") for row in latest_rows if value(row, "commodity") and value(row, "commodity") != "Sin especificar"})
+    positive_prices = sum(1 for row in latest_rows if (parse_price(value(row, "precio")) or 0) > 0)
+    zero_prices = sum(1 for row in latest_rows if parse_price(value(row, "precio")) == 0)
+    dashboard_ready = sum(1 for row in latest_rows if parse_price(value(row, "precio")) is not None and parse_price(value(row, "precio")) > 0 and parse_date(value(row, "fecha")) and value(row, "commodity") not in {"", "Sin especificar"} and value(row, "moneda") not in {"", "Sin especificar"} and value(row, "unidad") not in {"", "Sin especificar"})
+    source_file = latest_rows[0].get("archivo_origen", "") if latest_rows else (raw_files[-1].name if raw_files else "")
+    lines = [
+        "# Reporte de actualización diaria SIO", "", "## Objetivo", "",
+        "Controlar la captura incremental de snapshots de últimas operaciones SIO. Esta actualización no representa un histórico completo.", "",
+        "## Última corrida", "",
+        f"- Fecha/hora de captura: {latest_capture or 'sin captura registrada'}.",
+        f"- Archivo raw usado: `{source_file or 'no disponible'}`.",
+        f"- Histórico persistente usado: `{history_path.relative_to(ROOT).as_posix()}`.",
+        f"- Histórico liviano versionable: `{LIGHT_HISTORY_PATH.relative_to(ROOT).as_posix()}`.",
+        f"- Operaciones latest válidas: {len(latest_rows)}.",
+        f"- Operaciones nuevas respecto de capturas anteriores: {new_count}.",
+        f"- Duplicados omitidos respecto de capturas anteriores: {duplicate_count}.",
+        f"- Filas acumuladas: {len(history_rows)}.",
+        f"- Fecha mínima de operaciones acumuladas: {min(dates).isoformat() if dates else 'sin fecha válida'}.",
+        f"- Fecha máxima de operaciones acumuladas: {max(dates).isoformat() if dates else 'sin fecha válida'}.",
+        f"- Monedas latest: {', '.join(currencies) or 'sin especificar'}.",
+        f"- Commodities latest: {', '.join(commodities) or 'sin especificar'}.",
+        f"- Precios válidos positivos latest: {positive_prices}.",
+        f"- Precios cero latest: {zero_prices}.",
+        f"- Filas aptas para dashboard por fecha, commodity, moneda, unidad y precio positivo: {dashboard_ready}/{len(latest_rows)}.",
+        "- Estado: apto para regenerar agregados livianos sólo dentro de las series con metadatos homogéneos.", "",
+        "## Limitaciones", "",
+        "- El snapshot contiene sólo las últimas operaciones devueltas por `GetOperaciones`; no es histórico completo.",
+        "- La cobertura depende de la frecuencia de ejecución.",
+        "- Si el proceso no corre un día, puede perder operaciones que ya no estén presentes en el snapshot siguiente.",
+        "- No se pagina ni se prueban variantes del endpoint.",
+        "- SIO no reemplaza BCR ni el histórico local mensual de precios internos.",
+        "- Los precios cero se conservan para trazabilidad, pero no son válidos para series, promedios, rankings ni semáforos.", "",
+        "## Recomendación", "",
+        "- Ejecutar como mínimo una vez por día durante el piloto.",
+        "- Si se busca mayor cobertura intradiaria, ejecutar cada 3 o 6 horas.",
+        "- Mantener monitoreo de duplicados, cambios de estructura, moneda, unidad y fecha.",
+        "- Conservar los raw localmente y versionar sólo scripts, reportes y agregados livianos.", "",
+    ]
+    DAILY_UPDATE_REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    DAILY_UPDATE_REPORT_PATH.write_text("\n".join(lines), encoding="utf-8")
 
 
 def parse_date(value: str) -> date | None:
@@ -848,7 +940,9 @@ def update_paginated_audit_report(rows: list[dict[str, str]]) -> None:
 
 def main() -> int:
     rows = read_rows()
+    snapshot_rows = read_rows(HISTORIC_SNAPSHOTS_PATH) or read_rows(LIGHT_HISTORY_PATH)
     technical_rows = read_rows(PAGINATED_PROCESSED_PATH)
+    write_daily_update_report()
     manual_export_stats_value = manual_export_stats(MANUAL_EXPORT_PROCESSED_PATH) if MANUAL_EXPORT_PROCESSED_PATH.exists() else {"rows": 0, "columns": [], "dates": [], "currencies": [], "units": [], "commodities": []}
     if manual_export_stats_value.get("rows"):
         write_manual_lightweight_outputs(MANUAL_EXPORT_PROCESSED_PATH)
@@ -863,11 +957,15 @@ def main() -> int:
     else:
         zero_metrics = {"total": 0, "positive": 0, "zero": 0, "missing": 0, "zero_pct": 0.0, "types": Counter(), "dimensions": {}, "originals": Counter()}
         analytic_metrics = {"available": False}
-    if not rows and not technical_rows and not manual_export_stats_value.get("rows") and not analytic_metrics.get("available"):
+    if not rows and not technical_rows and not snapshot_rows and not manual_export_stats_value.get("rows") and not analytic_metrics.get("available"):
         return no_data()
     if not rows:
-        print("No hay integración piloto principal; se auditará la salida técnica o manual disponible.")
-        rows = technical_rows
+        if snapshot_rows:
+            print("No hay integración piloto principal; se auditará el histórico de snapshots disponible.")
+            rows = snapshot_rows
+        else:
+            print("No hay integración piloto principal; se auditará la salida técnica o manual disponible.")
+            rows = technical_rows
     today = date.today()
     dates_by: dict[str, list[date]] = defaultdict(list)
     prices_by: dict[str, list[float]] = defaultdict(list)
@@ -1082,12 +1180,14 @@ def main() -> int:
     report_text = report_text.replace("## Moneda y comparabilidad", embedded_section + "\n\n## Moneda y comparabilidad", 1)
     REPORTS["report"].write_text(report_text, encoding="utf-8")
     write_manual_export_report(manual_export_stats_value)
+    write_daily_update_report()
     if technical_rows:
         update_paginated_audit_report(technical_rows)
     print(f"Auditoría SIO finalizada: {len(rows)} filas, {len(commodities)} commodity(s).")
     print(f"Fecha máxima: {max_date.isoformat() if max_date else 'sin fecha válida'}; precios válidos: {len(all_prices)}; faltantes: {missing_price}.")
     for path in REPORTS.values():
         print(f"Reporte: {path}")
+    print(f"Reporte de actualización diaria: {DAILY_UPDATE_REPORT_PATH}")
     return 0
 
 

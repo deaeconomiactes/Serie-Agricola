@@ -28,6 +28,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data" / "commodities_sio"
 CONFIG_PATH = DATA_DIR / "sio_config.json"
+CONFIG_EXAMPLE_PATH = DATA_DIR / "sio_config.example.json"
 CATALOG_PATH = DATA_DIR / "catalogo_productos_sio.csv"
 DEFAULT_OUTPUT = DATA_DIR / "raw"
 REPORT_DIR = DATA_DIR / "reports"
@@ -128,13 +129,13 @@ def split_date_range(start: date, end: date, max_days: int = MAX_DAYS_HARD_LIMIT
     return windows
 
 
-def load_config() -> dict[str, Any]:
-    if not CONFIG_PATH.exists():
+def load_config(path: Path = CONFIG_PATH) -> dict[str, Any]:
+    if not path.exists():
         return {"base_url": "", "endpoints": {}, "max_days_per_request": MAX_DAYS_HARD_LIMIT, "configured": False}
     try:
-        raw = json.loads(CONFIG_PATH.read_text(encoding="utf-8-sig"))
+        raw = json.loads(path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError) as exc:
-        print(f"ERROR leyendo {CONFIG_PATH}: {exc}")
+        print(f"ERROR leyendo {path}: {exc}")
         return {"base_url": "", "endpoints": {}, "max_days_per_request": MAX_DAYS_HARD_LIMIT, "configured": False}
     if not isinstance(raw, dict):
         return {"base_url": "", "endpoints": {}, "max_days_per_request": MAX_DAYS_HARD_LIMIT, "configured": False}
@@ -436,6 +437,88 @@ def decode_json_response(content: bytes) -> tuple[Any, str]:
         except json.JSONDecodeError:
             pass
     return payload, ""
+
+
+def response_operation_items(payload: Any) -> list[Any]:
+    """Obtiene operaciones de la respuesta sin asumir un único envoltorio JSON."""
+
+    if isinstance(payload, list):
+        return payload
+    if not isinstance(payload, dict):
+        return []
+    containers = {"items", "rows", "records", "operaciones", "results", "data"}
+    for name, value in payload.items():
+        if str(name).lower() in containers and isinstance(value, list):
+            return value
+    nested = payload.get("d")
+    if isinstance(nested, dict):
+        return response_operation_items(nested)
+    if isinstance(payload.get("ID"), (str, int)) or isinstance(payload.get("Row"), list):
+        return [payload]
+    return []
+
+
+def run_update_latest(args: argparse.Namespace, config: dict[str, Any]) -> int:
+    """Consulta una sola vez las últimas operaciones de GetOperaciones."""
+
+    if not config.get("configured"):
+        example_config = load_config(CONFIG_EXAMPLE_PATH)
+        if example_config.get("configured"):
+            config = example_config
+            print("Se usa la configuración pública de ejemplo; no contiene credenciales.")
+    payload = {"pPageSize": "20", "pCurrentPage": "1"}
+    endpoint = endpoint_url(config.get("base_url", ""), TEST_ENDPOINT_PATH) if config.get("base_url") else "no configurado"
+    output_dir = Path(args.output_dir)
+    print("Modo actualización diaria SIO: snapshot de últimas operaciones; no es histórico completo.")
+    print(f"Endpoint GetOperaciones: {endpoint}")
+    print(f"Payload: {json.dumps(payload, ensure_ascii=False)}")
+    print("Requests máximos de este modo: 1")
+    if args.dry_run:
+        print("Dry-run: no se realizará ninguna llamada ni se guardará raw.")
+        return 0
+    if not args.allow_web:
+        print("El modo --update-latest requiere --allow-web para habilitar la única llamada externa.")
+        return 2
+    if not config.get("base_url"):
+        print("No hay base_url SIO configurada en data/commodities_sio/sio_config.json.")
+        return 2
+
+    request = urllib.request.Request(
+        endpoint,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "User-Agent": USER_AGENT,
+            "Accept": "application/json",
+            "Content-Type": "application/json; charset=utf-8",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:  # nosec B310: endpoint público explícito y --allow-web requerido
+            content = response.read()
+            status = response.status
+            content_type = response.headers.get_content_type()
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError) as exc:
+        print(f"No se pudo actualizar SIO: {exc.__class__.__name__}")
+        print("No se reintenta automáticamente; el próximo ciclo podrá volver a intentarlo.")
+        return 1
+
+    parsed, error = decode_json_response(content)
+    if error or parsed is None:
+        print(f"Respuesta SIO no válida como JSON: {error or 'sin contenido JSON'}")
+        return 1
+    operations = response_operation_items(parsed)
+    print(f"Respuesta recibida: HTTP {status}; content-type={content_type}; operaciones detectadas={len(operations)}.")
+    print("La respuesta corresponde a un snapshot de últimas operaciones y no reemplaza un histórico completo.")
+    if args.save_response:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        path = output_dir / f"SIO_latest_GetOperaciones_{timestamp}.json"
+        path.write_bytes(content)
+        print(f"Snapshot raw guardado localmente: {path}")
+    else:
+        print("No se guardó raw porque no se indicó --save-response.")
+    return 0
 
 
 def compact(value: Any) -> str:
@@ -1469,6 +1552,7 @@ def main() -> int:
     parser.add_argument("--test-pagination", action="store_true", help="probar de forma controlada la paginación respaldada por evidencia local")
     parser.add_argument("--test-observed-pagination", action="store_true", help="probar pCurrentPage 0/1/2 con el payload observado en DevTools")
     parser.add_argument("--test-endpoint", choices=["get-operaciones"], help="probar un único endpoint candidato documentado")
+    parser.add_argument("--update-latest", action="store_true", help="consultar una sola vez el snapshot de últimas operaciones SIO")
     parser.add_argument("--manual-urls", action="store_true", help="mostrar URLs para consulta manual sin llamar a la red")
     parser.add_argument("--days-back", default="30")
     parser.add_argument("--date-start")
@@ -1485,8 +1569,10 @@ def main() -> int:
     local_modes = [args.analyze_currency, bool(args.analyze_har), bool(args.analyze_curl)]
     if sum(bool(item) for item in local_modes) > 1:
         raise SystemExit("Use sólo un modo de análisis local por ejecución")
-    if any(local_modes) and any((args.allow_web, args.dry_run, args.discover_web, args.test_endpoint, args.manual_urls, args.sample_pages, args.test_pagination, args.test_observed_pagination)):
+    if any(local_modes) and any((args.allow_web, args.dry_run, args.discover_web, args.test_endpoint, args.update_latest, args.manual_urls, args.sample_pages, args.test_pagination, args.test_observed_pagination)):
         raise SystemExit("Los modos de análisis local deben ejecutarse solos y no realizan requests web")
+    if args.update_latest and any((args.discover_web, args.test_endpoint, args.manual_urls, args.sample_pages, args.test_pagination, args.test_observed_pagination, args.analyze_currency, args.analyze_har, args.analyze_curl)):
+        raise SystemExit("Use --update-latest como modo independiente")
     if args.sample_pages and not args.allow_web:
         raise SystemExit("--sample-pages requiere --allow-web")
     if args.sample_pages and any((args.dry_run, args.discover_web, args.test_endpoint, args.manual_urls, args.analyze_currency)):
@@ -1515,10 +1601,12 @@ def main() -> int:
         return run_devtools_analysis("HAR", args.analyze_har)
     if args.analyze_curl:
         return run_devtools_analysis("cURL", args.analyze_curl)
+    config = load_config()
+    if args.update_latest:
+        return run_update_latest(args, config)
     catalog = read_catalog()
     products = parse_products(args.products, catalog)
     start, end = date_range(args)
-    config = load_config()
     max_days = config["max_days_per_request"]
     windows = split_date_range(start, end, max_days)
     endpoints = candidate_endpoints(config)

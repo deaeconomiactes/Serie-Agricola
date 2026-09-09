@@ -1,0 +1,16 @@
+﻿metrica;valor;detalle
+filas;668;filas leídas del integrado
+commodities;6;commodities con valor informado
+fecha_min;2020-01-01;fecha mínima válida
+fecha_max;2026-08-01;fecha máxima válida
+años;2020|2021|2022|2023|2024|2025|2026;años presentes
+meses;80;períodos mensuales distintos
+precios_validos;668;valores numéricos, incluidos cero/negativos
+precios_faltantes;0;"filas integradas sin precio; celdas S/C o vacías del HTML se excluyen antes"
+precios_cero;0;no alimentan dashboard-ready
+precios_negativos;0;no alimentan dashboard-ready
+fuentes;Secretaría de Agricultura - Precios Internos de los Principales Granos;fuentes sin mezclar
+monedas;ARS;monedas conservadas por separado
+unidades;TN;unidades conservadas por separado
+continuidad_mensual;440;meses faltantes dentro del rango por serie
+aptitud_dashboard;apta con brechas;resultado por serie

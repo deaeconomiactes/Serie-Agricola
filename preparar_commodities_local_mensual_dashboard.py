@@ -47,6 +47,13 @@ def variation(current: float | None, previous: float | None) -> float | None:
     return (current / previous - 1) * 100
 
 
+def shift_period(period: str, months: int) -> str:
+    year, month = (int(value) for value in period.split("-"))
+    absolute = year * 12 + month - 1 + months
+    shifted_year, shifted_month = divmod(absolute, 12)
+    return f"{shifted_year:04d}-{shifted_month + 1:02d}"
+
+
 def state_for(value: float | None) -> str:
     if value is None:
         return "Sin dato"
@@ -101,11 +108,11 @@ def main() -> int:
     for series in series_rows.values():
         series.sort(key=lambda row: row["periodo_ym"])
         by_period = {row["periodo_ym"]: row for row in series}
-        for index, row in enumerate(series):
+        for row in series:
             current = parse_number(row["precio_mediana"])
-            previous = parse_number(series[index - 1]["precio_mediana"]) if index else None
+            previous = by_period.get(shift_period(row["periodo_ym"], -1))
             previous_year = by_period.get(f"{int(row['año']) - 1:04d}-{int(row['mes']):02d}")
-            row["variacion_mensual_pct"] = format_number(variation(current, previous))
+            row["variacion_mensual_pct"] = format_number(variation(current, parse_number(previous["precio_mediana"]) if previous else None))
             row["variacion_interanual_pct"] = format_number(variation(current, parse_number(previous_year["precio_mediana"]) if previous_year else None))
     monthly_rows.sort(key=lambda row: (row["periodo_ym"], row["commodity"], row["fuente"], row["moneda"], row["tipo_precio"]))
 

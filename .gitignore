@@ -73,6 +73,7 @@ data/commodities_bcr/raw/*
 !data/commodities_sio/*.csv
 !data/commodities_sio/dashboard/
 !data/commodities_sio/dashboard/*.csv
+!data/commodities_sio/dashboard/COMMODITIES_SIO_HISTORICO_SNAPSHOTS_LIVIANO.csv
 !data/commodities_sio/raw/.gitkeep
 !data/commodities_sio/processed/.gitkeep
 !data/commodities_sio/reports/.gitkeep
@@ -84,6 +85,8 @@ data/commodities_sio/processed/COMMODITIES_SIO_EXPORTACION_MANUAL_*.csv
 data/commodities_sio/processed/COMMODITIES_SIO_ANALITICO_PRECIOS.csv
 data/commodities_sio/processed/COMMODITIES_SIO_ANALITICO_PRECIOS_*.csv
 !data/commodities_sio/processed/COMMODITIES_SIO_ANALITICO_PRECIOS_SAMPLE.csv
+data/commodities_sio/processed/COMMODITIES_SIO_LATEST_SNAPSHOT.csv
+data/commodities_sio/processed/COMMODITIES_SIO_HISTORICO_SNAPSHOTS.csv
 data/commodities_sio/sio_config.json
 data/commodities_sio/raw/*.html
 data/commodities_sio/raw/*.js
@@ -120,6 +123,8 @@ data/commodities_worldbank/reports/*
 !data/commodities_local_mensual/
 !data/commodities_local_mensual/**/
 !data/commodities_local_mensual/*.md
+!data/commodities_local_mensual/fuentes_local_mensual_config.example.json
+data/commodities_local_mensual/fuentes_local_mensual_config.json
 data/commodities_local_mensual/raw/*
 data/commodities_local_mensual/processed/*
 data/commodities_local_mensual/dashboard/*
