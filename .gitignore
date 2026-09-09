@@ -111,6 +111,28 @@ data/commodities_worldbank/reports/*
 !data/commodities_worldbank/README.md
 !data/commodities_worldbank/WORLDBANK_PINKSHEET_PLAN.md
 
+# Fuente local mensual: raw y el integrado completo se regeneran localmente.
+!local_mensual_common.py
+!descargar_commodities_local_mensual.py
+!integrar_commodities_local_mensual.py
+!auditar_commodities_local_mensual.py
+!preparar_commodities_local_mensual_dashboard.py
+!data/commodities_local_mensual/
+!data/commodities_local_mensual/**/
+!data/commodities_local_mensual/*.md
+data/commodities_local_mensual/raw/*
+data/commodities_local_mensual/processed/*
+data/commodities_local_mensual/dashboard/*
+data/commodities_local_mensual/reports/*
+!data/commodities_local_mensual/raw/.gitkeep
+!data/commodities_local_mensual/processed/.gitkeep
+!data/commodities_local_mensual/dashboard/COMMODITIES_LOCAL_MENSUAL_DASHBOARD_MENSUAL.csv
+!data/commodities_local_mensual/dashboard/COMMODITIES_LOCAL_MENSUAL_DASHBOARD_ULTIMOS.csv
+!data/commodities_local_mensual/dashboard/COMMODITIES_LOCAL_MENSUAL_DASHBOARD_RESUMEN.csv
+!data/commodities_local_mensual/dashboard/COMMODITIES_LOCAL_MENSUAL_DASHBOARD_SEMAFORO.csv
+!data/commodities_local_mensual/reports/*.md
+!data/commodities_local_mensual/reports/*.csv
+
 # OS
 .DS_Store
 Thumbs.db

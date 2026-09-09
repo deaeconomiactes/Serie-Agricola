@@ -8,7 +8,26 @@ const MONTHS_FULL = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Jul
 const CSV_PATH = 'REGISTRO 2025 INTEGRADO.csv';
 const PRICE_CSV_PATH = 'PRECIOS_MAYORISTAS_INTEGRADO.csv';
 const PRICE_CSV_FALLBACK_PATH = 'PRECIOS_MAYORISTAS_2026_INTEGRADO.csv';
-const COMMODITY_DASHBOARD_PATH = 'data/commodities_sio/dashboard/';
+const COMMODITY_SOURCE_CONFIG = {
+    sio: {
+        label: 'SIO Granos — operaciones informadas',
+        subtitle: 'Fuente SIO Granos — operaciones informadas',
+        path: 'data/commodities_sio/dashboard/',
+        files: { diario: 'COMMODITIES_SIO_DASHBOARD_DIARIO.csv', mensual: 'COMMODITIES_SIO_DASHBOARD_MENSUAL.csv', ultimos: 'COMMODITIES_SIO_DASHBOARD_ULTIMOS.csv', resumen: 'COMMODITIES_SIO_DASHBOARD_RESUMEN.csv', semaforo: 'COMMODITIES_SIO_DASHBOARD_SEMAFORO.csv' },
+        monthlyOnly: false,
+        operationsLabel: 'Operaciones con precio',
+        note: 'Fuente: SIO Granos / Secretaría de Agricultura. Los datos corresponden a operaciones informadas y no equivalen a precios de pizarra BCR, futuros ni precios mayoristas frutihortícolas. Los precios cero se excluyen de los cálculos de series. Las monedas ARS y USD se analizan por separado. Cobertura SIO según exportación/procesamiento disponible. Para series históricas mensuales de años anteriores se incorporará una fuente separada, sin mezclarla con operaciones SIO.'
+    },
+    local_mensual: {
+        label: 'Histórico local mensual — precios internos/FAS/FOB según disponibilidad',
+        subtitle: 'Histórico local mensual — precios internos/FAS/FOB según disponibilidad',
+        path: 'data/commodities_local_mensual/dashboard/',
+        files: { diario: null, mensual: 'COMMODITIES_LOCAL_MENSUAL_DASHBOARD_MENSUAL.csv', ultimos: 'COMMODITIES_LOCAL_MENSUAL_DASHBOARD_ULTIMOS.csv', resumen: 'COMMODITIES_LOCAL_MENSUAL_DASHBOARD_RESUMEN.csv', semaforo: 'COMMODITIES_LOCAL_MENSUAL_DASHBOARD_SEMAFORO.csv' },
+        monthlyOnly: true,
+        operationsLabel: 'Observaciones con precio',
+        note: 'Las series históricas locales mensuales pueden corresponder a precios internos, FAS teórico o FOB oficiales, según fuente. No son equivalentes a operaciones SIO ni a precios de pizarra BCR.'
+    }
+};
 
 // Canonical names used by filters, aggregations and chart data. The keys are
 // compact location keys so accents, punctuation and spacing cannot create
@@ -308,6 +327,8 @@ const selectedUnit = 'TN';
 let quantityFrequency = 'mensual';
 let priceFrequency = 'mensual';
 let commodityFrequency = 'mensual';
+let commoditySource = 'sio';
+const commodityDataBySource = {};
 let commodityData = { diario: [], mensual: [], ultimos: [], resumen: [], semaforo: [] };
 let commoditySelectedValues = [];
 const commodityCharts = { trend: null, ranking: null, volume: null };
@@ -1448,19 +1469,92 @@ function priceChartOptions(axisLabel, horizontal = false) {
 }
 
 // ─── Independent agricultural commodities module ───────────────────────
-async function loadCommodityData() {
-    const files = { diario: 'COMMODITIES_SIO_DASHBOARD_DIARIO.csv', mensual: 'COMMODITIES_SIO_DASHBOARD_MENSUAL.csv', ultimos: 'COMMODITIES_SIO_DASHBOARD_ULTIMOS.csv', resumen: 'COMMODITIES_SIO_DASHBOARD_RESUMEN.csv', semaforo: 'COMMODITIES_SIO_DASHBOARD_SEMAFORO.csv' };
-    const entries = await Promise.all(Object.entries(files).map(async ([key, file]) => {
-        const response = await fetch(`${COMMODITY_DASHBOARD_PATH}${file}`);
-        if (!response.ok) throw new Error(`${file}: HTTP ${response.status}`);
+function emptyCommodityData() {
+    return { diario: [], mensual: [], ultimos: [], resumen: [], semaforo: [] };
+}
+
+async function loadCommoditySource(sourceKey) {
+    const config = COMMODITY_SOURCE_CONFIG[sourceKey];
+    const entries = await Promise.all(Object.entries(config.files).map(async ([key, file]) => {
+        if (!file) return [key, []];
+        const response = await fetch(`${config.path}${file}`);
+        if (!response.ok) throw new Error(`${sourceKey}/${file}: HTTP ${response.status}`);
         return [key, parseCommodityCSV(await response.text())];
     }));
-    commodityData = Object.fromEntries(entries);
-    initCommodityFilters();
-    updateCommodityDashboard();
+    return Object.fromEntries(entries);
+}
+
+function initCommoditySourceFilter() {
+    const select = document.getElementById('commodityFilterSource');
+    if (!select) return;
+    select.innerHTML = Object.entries(COMMODITY_SOURCE_CONFIG).map(([value, config]) => `<option value="${value}">${escapeHtml(config.label)}</option>`).join('');
+    select.value = commoditySource;
+    if (!select.dataset.commodityBound) {
+        select.addEventListener('change', () => setCommoditySource(select.value));
+        select.dataset.commodityBound = 'true';
+    }
+}
+
+function updateCommoditySourcePresentation() {
+    const config = COMMODITY_SOURCE_CONFIG[commoditySource] || COMMODITY_SOURCE_CONFIG.sio;
+    const subtitle = document.getElementById('commoditySourceSubtitle');
+    const note = document.getElementById('commodityMethodNote');
+    const frequency = document.getElementById('commodityFilterFrequency');
+    if (subtitle) subtitle.textContent = config.subtitle;
+    if (note) note.textContent = config.note;
+    const operationsLabel = document.getElementById('commodityKpiOperationsLabel');
+    if (operationsLabel) operationsLabel.textContent = config.operationsLabel;
+    const latestVariationShort = document.getElementById('commodityLatestVariationShort');
+    const latestVariationLong = document.getElementById('commodityLatestVariationLong');
+    if (latestVariationShort) latestVariationShort.textContent = config.monthlyOnly ? 'Var. mensual' : 'Var. 7 días';
+    if (latestVariationLong) latestVariationLong.textContent = config.monthlyOnly ? 'Var. interanual' : 'Var. 30 días';
+    if (frequency) {
+        const dailyOption = frequency.querySelector('option[value="diaria"]');
+        if (dailyOption) dailyOption.disabled = Boolean(config.monthlyOnly);
+        if (config.monthlyOnly && frequency.value === 'diaria') {
+            frequency.value = 'mensual';
+            commodityFrequency = 'mensual';
+        }
+    }
+}
+
+function updateCommoditySourceStatus() {
+    const config = COMMODITY_SOURCE_CONFIG[commoditySource] || COMMODITY_SOURCE_CONFIG.sio;
     const summary = commodityData.resumen[0] || {};
+    const count = Number(summary.filas_dashboard ?? summary.filas_analiticas ?? summary.filas_integradas) || 0;
     const sampleMode = summary.modo === 'muestra';
-    setCommodityDataStatus(`${sampleMode ? 'Muestra de respaldo' : 'Base analítica'} · ${formatNumber(Number(summary.filas_analiticas) || 0)} operaciones`, sampleMode ? 'sample' : 'ready');
+    const label = config.monthlyOnly ? 'registros mensuales' : 'operaciones';
+    setCommodityDataStatus(count ? `${sampleMode ? 'Muestra de respaldo' : config.label} · ${formatNumber(count)} ${label}` : `${config.label} · Sin datos disponibles`, count ? (sampleMode ? 'sample' : 'ready') : '');
+}
+
+function setCommoditySource(sourceKey) {
+    commoditySource = COMMODITY_SOURCE_CONFIG[sourceKey] ? sourceKey : 'sio';
+    commodityData = commodityDataBySource[commoditySource] || emptyCommodityData();
+    commoditySelectedValues = [];
+    commodityFrequency = 'mensual';
+    ['commodityFilterCommodity', 'commodityFilterCurrency', 'commodityFilterUnit', 'commodityFilterType'].forEach(id => {
+        const control = document.getElementById(id);
+        if (control) control.dataset.initialized = 'false';
+    });
+    const select = document.getElementById('commodityFilterSource');
+    if (select) select.value = commoditySource;
+    updateCommoditySourcePresentation();
+    initCommodityFilters();
+    updateCommoditySourceStatus();
+    updateCommodityDashboard();
+}
+
+async function loadCommodityData() {
+    await Promise.all(Object.keys(COMMODITY_SOURCE_CONFIG).map(async sourceKey => {
+        try {
+            commodityDataBySource[sourceKey] = await loadCommoditySource(sourceKey);
+        } catch (error) {
+            console.error(`Error loading ${sourceKey} commodity dashboard CSV:`, error);
+            commodityDataBySource[sourceKey] = emptyCommodityData();
+        }
+    }));
+    initCommoditySourceFilter();
+    setCommoditySource(commoditySource);
 }
 
 function parseCommodityCSV(text) {
@@ -1631,9 +1725,17 @@ function getCommodityFilteredRows() {
 
 function getCommodityLatestRows() {
     return commodityData.ultimos.filter(commodityRowMatches).filter(row => {
-        const price = commodityNumber(row.precio_mediana_ultimo_dia);
+        const price = commodityLatestPrice(row);
         return Number.isFinite(price) && price > 0;
     });
+}
+
+function commodityLatestPrice(row) {
+    return commodityNumber(row.precio_mediana_ultimo_periodo ?? row.precio_mediana_ultimo_dia);
+}
+
+function commodityLatestDate(row) {
+    return row.periodo_ultimo || row.fecha_ultima;
 }
 
 function setCommodityDataStatus(message, state = '') {
@@ -1662,11 +1764,13 @@ function commodityStateClass(state) {
 }
 
 function commoditySeriesKey(row, includeCondition = false) {
-    return [row.commodity, row.moneda, row.unidad, row.tipo_precio, includeCondition ? row.condicion_comercial : ''].join('|');
+    return [row.commodity, row.fuente, row.mercado, row.moneda, row.unidad, row.tipo_precio, includeCondition ? row.condicion_comercial : ''].join('|');
 }
 
 function commoditySeriesLabel(row, includeCondition = false) {
     const parts = [row.commodity, row.moneda, row.unidad, row.tipo_precio];
+    if (row.fuente && (commoditySource === 'local_mensual' || row.fuente !== 'SIO Granos / Secretaría de Agricultura')) parts.push(row.fuente);
+    if (row.mercado) parts.push(row.mercado);
     if (includeCondition && row.condicion_comercial && row.condicion_comercial !== 'Sin especificar') parts.push(row.condicion_comercial);
     return parts.filter(Boolean).join(' · ');
 }
@@ -1715,9 +1819,9 @@ function renderCommodityTrend(rows) {
 }
 
 function renderCommodityRanking(latestRows) {
-    const rows = [...latestRows].sort((a, b) => commodityNumber(b.precio_mediana_ultimo_dia) - commodityNumber(a.precio_mediana_ultimo_dia)).slice(0, 15);
+    const rows = [...latestRows].sort((a, b) => commodityLatestPrice(b) - commodityLatestPrice(a)).slice(0, 15);
     const labels = rows.map(row => commoditySeriesLabel(row));
-    const config = rows.length ? { type: 'bar', data: { labels, datasets: [{ label: 'Precio mediano último dato', data: rows.map(row => commodityNumber(row.precio_mediana_ultimo_dia)), backgroundColor: rows.map((_, index) => PALETTE[index % PALETTE.length]), borderRadius: 4, borderSkipped: false }] }, options: { ...commodityChartOptions('bar'), indexAxis: 'y', scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8', callback: value => formatNumber(value) } }, y: { grid: { display: false }, ticks: { color: '#b2c0cd', font: { family: "'Inter'", size: 10 } } } } } } : null;
+    const config = rows.length ? { type: 'bar', data: { labels, datasets: [{ label: 'Precio mediano último período', data: rows.map(commodityLatestPrice), backgroundColor: rows.map((_, index) => PALETTE[index % PALETTE.length]), borderRadius: 4, borderSkipped: false }] }, options: { ...commodityChartOptions('bar'), indexAxis: 'y', scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8', callback: value => formatNumber(value) } }, y: { grid: { display: false }, ticks: { color: '#b2c0cd', font: { family: "'Inter'", size: 10 } } } } } } : null;
     setCommodityChart('ranking', 'commodityRanking', 'commodityRankingStatus', config, 'No hay últimos precios para los filtros seleccionados.');
 }
 
@@ -1745,7 +1849,7 @@ function updateCommodityKpis(rows, latestRows) {
     const priceTypes = new Set(rows.map(row => row.tipo_precio).filter(Boolean));
     const dates = rows.map(row => commodityFrequency === 'diaria' ? row.fecha : row.periodo_ym).filter(Boolean).sort();
     const series = new Set(latestRows.map(row => commoditySeriesKey(row)));
-    const latestPrice = latestRows.length === 1 ? commodityNumber(latestRows[0].precio_mediana_ultimo_dia) : null;
+    const latestPrice = latestRows.length === 1 ? commodityLatestPrice(latestRows[0]) : null;
     const currencyLabel = currencies.size === 1 ? [...currencies][0] : currencies.size ? `${[...currencies].sort().join(' / ')} (separadas)` : 'moneda seleccionada';
     const unitLabel = units.size === 1 ? [...units][0] : units.size ? 'unidades separadas' : 'unidad seleccionada';
     const typeLabel = priceTypes.size === 1 ? ` · ${[...priceTypes][0]}` : ' · tipos de precio separados';
@@ -1767,7 +1871,7 @@ function renderCommoditySemaphore(rows) {
     status.classList.remove('is-visible');
     body.innerHTML = [...rows].sort((a, b) => `${b.periodo_ym}|${a.commodity}`.localeCompare(`${a.periodo_ym}|${b.commodity}`)).map(row => {
         const state = row.estado || 'Sin dato';
-        return `<tr><td>${escapeHtml(row.commodity)}</td><td>${escapeHtml(row.moneda)}</td><td>${escapeHtml(row.unidad)}</td><td>${escapeHtml(row.tipo_precio)}</td><td>${escapeHtml(commodityPeriodLabel(row.periodo_ym))}</td><td>${formatNumber(commodityNumber(row.precio_mediana))}</td><td>${commodityPercent(row.variacion_mensual_pct)}</td><td><span class="commodity-state ${commodityStateClass(state)}">${escapeHtml(state)}</span></td></tr>`;
+        return `<tr><td>${escapeHtml(row.commodity)}</td><td>${escapeHtml(row.moneda)}</td><td>${escapeHtml(row.unidad)}</td><td>${escapeHtml(row.tipo_precio)}</td><td>${escapeHtml(commodityPeriodLabel(row.periodo_ym))}</td><td>${formatNumber(commodityNumber(row.precio_mediana))}</td><td>${commodityPercent(row.variacion_mensual_pct)}</td><td>${commodityPercent(row.variacion_interanual_pct)}</td><td><span class="commodity-state ${commodityStateClass(state)}">${escapeHtml(state)}</span></td></tr>`;
     }).join('');
 }
 
@@ -1779,11 +1883,12 @@ function renderCommodityLatest(latestRows) {
     status.classList.remove('is-visible');
     body.innerHTML = [...latestRows].sort((a, b) => `${a.commodity}|${a.moneda}|${a.tipo_precio}`.localeCompare(`${b.commodity}|${b.moneda}|${b.tipo_precio}`)).map(row => {
         const state = row.estado || 'Sin dato';
-        return `<tr><td>${escapeHtml(row.commodity)}</td><td>${escapeHtml(row.moneda)}</td><td>${escapeHtml(row.unidad)}</td><td>${escapeHtml(row.tipo_precio)}</td><td>${escapeHtml(commodityPeriodLabel(row.fecha_ultima))}</td><td>${formatNumber(commodityNumber(row.precio_mediana_ultimo_dia))}</td><td>${formatNumber(commodityNumber(row.operaciones_ultimo_dia))}</td><td>${commodityPercent(row.variacion_7d_pct)}</td><td>${commodityPercent(row.variacion_30d_pct)}</td><td><span class="commodity-state ${commodityStateClass(state)}">${escapeHtml(state)}</span></td></tr>`;
+        return `<tr><td>${escapeHtml(row.commodity)}</td><td>${escapeHtml(row.moneda)}</td><td>${escapeHtml(row.unidad)}</td><td>${escapeHtml(row.tipo_precio)}</td><td>${escapeHtml(commodityPeriodLabel(commodityLatestDate(row)))}</td><td>${formatNumber(commodityLatestPrice(row))}</td><td>${formatNumber(commodityNumber(row.operaciones_ultimo_periodo ?? row.operaciones_ultimo_dia))}</td><td>${commodityPercent(row.variacion_mensual_pct ?? row.variacion_7d_pct)}</td><td>${commodityPercent(row.variacion_interanual_pct ?? row.variacion_30d_pct)}</td><td><span class="commodity-state ${commodityStateClass(state)}">${escapeHtml(state)}</span></td></tr>`;
     }).join('');
 }
 
 function updateCommodityChartHeadings() {
+    const sourceConfig = COMMODITY_SOURCE_CONFIG[commoditySource] || COMMODITY_SOURCE_CONFIG.sio;
     const selectedCount = commoditySelectedValues.length;
     const trendTitle = document.getElementById('commodityTrendTitle');
     const trendDesc = document.getElementById('commodityTrendDesc');
@@ -1791,6 +1896,8 @@ function updateCommodityChartHeadings() {
     const rankingDesc = document.getElementById('commodityRankingDesc');
     const volumeTitle = document.getElementById('commodityVolumeTitle');
     const volumeDesc = document.getElementById('commodityVolumeDesc');
+    const latestTitle = document.getElementById('commodityLatestTitle');
+    const latestDesc = document.getElementById('commodityLatestDesc');
     const periodLabel = commodityFrequency === 'diaria' ? 'diario' : 'mensual';
     const gapLabel = commodityFrequency === 'diaria' ? 'Los días sin operaciones quedan como huecos.' : 'Cada punto resume el mes seleccionado.';
     if (trendTitle) trendTitle.textContent = `Precio mediano ${periodLabel}`;
@@ -1799,6 +1906,15 @@ function updateCommodityChartHeadings() {
     if (rankingDesc) rankingDesc.textContent = selectedCount >= 2 ? 'Último precio por commodity, moneda y tipo de operación' : selectedCount === 1 ? 'Comparación entre Canje y Compraventa cuando existen' : 'Precio por commodity en el último dato disponible';
     if (volumeTitle) volumeTitle.textContent = selectedCount >= 2 ? 'Volumen acumulado por commodity' : 'Volumen acumulado del período (TN)';
     if (volumeDesc) volumeDesc.textContent = selectedCount >= 2 ? 'Suma de toneladas del período visible para cada commodity' : 'Suma de toneladas informadas en el período visible';
+    if (sourceConfig.monthlyOnly) {
+        if (latestTitle) latestTitle.textContent = 'Últimos precios mensuales por serie';
+        if (latestDesc) latestDesc.textContent = 'Precio mediano del último mes disponible por commodity, fuente, moneda, unidad y tipo de precio';
+        if (volumeTitle) volumeTitle.textContent = 'Volumen no disponible para esta fuente';
+        if (volumeDesc) volumeDesc.textContent = 'La fuente local mensual se publica como serie de precios y no incluye volumen operativo.';
+    } else {
+        if (latestTitle) latestTitle.textContent = 'Últimos precios por serie';
+        if (latestDesc) latestDesc.textContent = 'Precio mediano del último día disponible por commodity, moneda, unidad y tipo de precio';
+    }
 }
 
 function renderCommodityEmptyState() {
