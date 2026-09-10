@@ -12,6 +12,7 @@ const COMMODITY_SOURCE_CONFIG = {
     sio: {
         label: 'SIO Granos — operaciones informadas',
         subtitle: 'Fuente SIO Granos — operaciones informadas',
+        filterTypeLabel: 'Tipo de operación',
         path: 'data/commodities_sio/dashboard/',
         files: { diario: 'COMMODITIES_SIO_DASHBOARD_DIARIO.csv', mensual: 'COMMODITIES_SIO_DASHBOARD_MENSUAL.csv', ultimos: 'COMMODITIES_SIO_DASHBOARD_ULTIMOS.csv', resumen: 'COMMODITIES_SIO_DASHBOARD_RESUMEN.csv', semaforo: 'COMMODITIES_SIO_DASHBOARD_SEMAFORO.csv' },
         monthlyOnly: false,
@@ -22,6 +23,7 @@ const COMMODITY_SOURCE_CONFIG = {
     local_mensual: {
         label: 'Histórico local mensual — precios internos',
         subtitle: 'Histórico local mensual — precios internos',
+        filterTypeLabel: 'Tipo de precio',
         path: 'data/commodities_local_mensual/dashboard/',
         files: { diario: null, mensual: 'COMMODITIES_LOCAL_MENSUAL_DASHBOARD_MENSUAL.csv', ultimos: 'COMMODITIES_LOCAL_MENSUAL_DASHBOARD_ULTIMOS.csv', resumen: 'COMMODITIES_LOCAL_MENSUAL_DASHBOARD_RESUMEN.csv', semaforo: 'COMMODITIES_LOCAL_MENSUAL_DASHBOARD_SEMAFORO.csv' },
         monthlyOnly: true,
@@ -1508,6 +1510,8 @@ function updateCommoditySourcePresentation() {
     if (operationsLabel) operationsLabel.textContent = config.operationsLabel;
     const operationsUnit = document.getElementById('commodityKpiOperationsUnit');
     if (operationsUnit) operationsUnit.textContent = config.operationsUnit;
+    const typeLabel = document.querySelector('label[for="commodityFilterType"]');
+    if (typeLabel) typeLabel.textContent = config.filterTypeLabel || 'Tipo de precio';
     const latestVariationShort = document.getElementById('commodityLatestVariationShort');
     const latestVariationLong = document.getElementById('commodityLatestVariationLong');
     if (latestVariationShort) latestVariationShort.textContent = config.monthlyOnly ? 'Var. mensual' : 'Var. 7 días';
@@ -1756,8 +1760,22 @@ function populateCommodityMultiSelect(values) {
         ...unique.map(value => ({ value, label: value })),
     ].map(option => `<label class="commodity-multi-option"><input type="checkbox" data-commodity-value="${escapeHtml(option.value)}"><span class="commodity-multi-checkbox" aria-hidden="true"></span><span class="commodity-multi-option-label">${escapeHtml(option.label)}</span></label>`).join('');
     if (!control.dataset.commodityBound) {
+        const filterGroup = control.closest('.filter-group');
+        const closeDropdown = () => {
+            control.classList.remove('is-open');
+            filterGroup?.classList.remove('is-open');
+            trigger.setAttribute('aria-expanded', 'false');
+        };
         trigger.addEventListener('click', () => {
             const isOpen = control.classList.toggle('is-open');
+            document.querySelectorAll('.commodity-multi-select.is-open').forEach(other => {
+                if (other !== control) {
+                    other.classList.remove('is-open');
+                    other.closest('.filter-group')?.classList.remove('is-open');
+                    other.querySelector('.commodity-multi-trigger')?.setAttribute('aria-expanded', 'false');
+                }
+            });
+            filterGroup?.classList.toggle('is-open', isOpen);
             trigger.setAttribute('aria-expanded', String(isOpen));
         });
         menu.addEventListener('change', event => {
@@ -1786,8 +1804,7 @@ function populateCommodityMultiSelect(values) {
         });
         document.addEventListener('click', event => {
             if (!control.contains(event.target)) {
-                control.classList.remove('is-open');
-                trigger.setAttribute('aria-expanded', 'false');
+                closeDropdown();
             }
         });
         control.dataset.commodityBound = 'true';
@@ -1949,13 +1966,14 @@ function commodityUniqueSeriesLabels(items, options = {}) {
 
 function commodityTooltipLines(row, value, period, metricLabel = 'Precio mediano') {
     const source = row?.fuente || (COMMODITY_SOURCE_CONFIG[commoditySource]?.subtitle || 'Sin fuente');
+    const typeLabel = COMMODITY_SOURCE_CONFIG[commoditySource]?.monthlyOnly ? 'Tipo de precio' : 'Tipo de operación';
     return [
         `Commodity: ${row?.commodity || 'Sin dato'}`,
         `Mercado/plaza: ${commodityMarketLabel(row?.mercado)}`,
         `Fuente: ${source}`,
         `Moneda: ${row?.moneda || 'Sin dato'}`,
         `Unidad: ${row?.unidad || 'Sin dato'}`,
-        `Tipo de precio: ${row?.tipo_precio || 'Sin dato'}`,
+        `${typeLabel}: ${row?.tipo_precio || 'Sin dato'}`,
         `Período: ${commodityPeriodLabel(period || commodityLatestDate(row))}`,
         `${metricLabel}: ${formatNumber(value)}`,
         `Var. mensual: ${commodityPercent(row?.variacion_mensual_pct ?? row?.variacion_7d_pct)}`,

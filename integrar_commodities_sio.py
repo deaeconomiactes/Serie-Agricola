@@ -509,7 +509,13 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
         precio_unidad = price if explicit_price_unit and price is not None else None
         raw_total, detected_total_field = value_with_field(source, "Precio total", "Monto total", "Total")
         precio_total = parse_number(raw_total)
-        tipo = first_text(source, "tipo_precio", "Tipo de precio", "Tipo Precio", "Price Type", "Tipo") or price_type_original
+        # En GetOperaciones la columna "Tipo" describe la operación comercial
+        # (Compraventa/Canje), mientras que la columna siguiente contiene el
+        # tipo técnico de precio (por ejemplo, "Precio Hecho"). Para el
+        # dashboard, la primera es la dimensión operativa visible y la segunda
+        # se conserva en precio_tipo_original como metadata.
+        operation_type = first_text(source, "tipo_operacion", "Tipo de operación", "Tipo de Operacion")
+        tipo = operation_type or first_text(source, "tipo_precio", "Tipo de precio", "Tipo Precio", "Price Type", "Tipo") or price_type_original
         volumen, detected_volume_field = value_with_field(source, "Cant. (TN)", "Cant TN", "Cantidad (TN)", "Cantidad TN", "Volumen TN", "Toneladas", "Volumen", "Cantidad", "TN")
         volume_label = text(source.get("__source_label_volumen")) or detected_volume_field
         volumen_unidad = first_text(source, "volumen_unidad", "Unidad de volumen", "Unidad volumen", "Volume Unit") or text(source.get("__unit_value_volumen_unidad"))
@@ -664,7 +670,7 @@ def deduplicate_snapshot_rows(rows: list[dict[str, str]]) -> tuple[list[dict[str
 def write_snapshot_output(path: Path, rows: list[dict[str, str]]) -> None:
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8-sig", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=SNAPSHOT_COLUMNS, delimiter=";", extrasaction="ignore")
+        writer = csv.DictWriter(handle, fieldnames=SNAPSHOT_COLUMNS, delimiter=";", extrasaction="ignore", lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -680,14 +686,52 @@ def light_history_row(row: dict[str, str], dashboard_date: str = "") -> dict[str
     """Reduce una operación SIO a la memoria persistente que puede versionarse."""
 
     result = {column: text(row.get(column)) for column in LIGHT_HISTORY_COLUMNS}
+    operation_type = text(row.get("tipo_operacion"))
+    if operation_type in {"Compraventa", "Canje"}:
+        result["tipo_precio"] = operation_type
     result["fecha_actualizacion_dashboard"] = result["fecha_actualizacion_dashboard"] or dashboard_date or date.today().isoformat()
     return result
+
+
+def raw_operation_type_map() -> dict[str, str]:
+    """Lee el tipo comercial de snapshots raw locales sin publicar esos archivos."""
+
+    operation_types: dict[str, str] = {}
+    for path in sorted(RAW_DIR.glob("SIO_latest_GetOperaciones_*.json")):
+        try:
+            document = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        items = document.get("d", {}).get("Items", []) if isinstance(document, dict) else []
+        for item in items if isinstance(items, list) else []:
+            if not isinstance(item, dict):
+                continue
+            raw_row = item.get("Row", [])
+            if not isinstance(raw_row, list) or len(raw_row) <= 4:
+                continue
+            operation_id = text(item.get("ID") or raw_row[0])
+            operation_type = text(raw_row[4])
+            if operation_id and operation_type in {"Compraventa", "Canje"}:
+                operation_types[operation_id] = operation_type
+    return operation_types
+
+
+def apply_raw_operation_types(rows: list[dict[str, str]]) -> None:
+    """Completa snapshots antiguos cuando el campo operativo quedó fuera del CSV liviano."""
+
+    operation_types = raw_operation_type_map()
+    if not operation_types:
+        return
+    for row in rows:
+        operation_type = text(row.get("tipo_operacion")) or operation_types.get(text(row.get("id_operacion_sio")), "")
+        if operation_type in {"Compraventa", "Canje"}:
+            row["tipo_precio"] = operation_type
 
 
 def write_light_history(path: Path, rows: list[dict[str, str]]) -> None:
     DASHBOARD_DIR.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8-sig", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=LIGHT_HISTORY_COLUMNS, delimiter=";", extrasaction="ignore")
+        writer = csv.DictWriter(handle, fieldnames=LIGHT_HISTORY_COLUMNS, delimiter=";", extrasaction="ignore", lineterminator="\n")
         writer.writeheader()
         writer.writerows(light_history_row(row) for row in rows)
 
@@ -714,6 +758,7 @@ def integrate_latest_snapshot(path: Path, aliases: dict[str, str], positional_ma
     existing_ids = {snapshot_identity(row) for row in history_before}
     new_rows = sum(1 for row in latest_rows if snapshot_identity(row) not in existing_ids)
     combined_rows, history_duplicates, history_conflicts = deduplicate_snapshot_rows(history_before + latest_rows)
+    apply_raw_operation_types(combined_rows)
     latest_by_identity = {snapshot_identity(row): row for row in latest_rows}
     for row in combined_rows:
         latest_row = latest_by_identity.get(snapshot_identity(row))
@@ -797,7 +842,7 @@ def update_paginated_report(files: list[Path], diagnostics: list[dict[str, Any]]
 def write_output(path: Path, rows: list[dict[str, str]]) -> None:
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8-sig", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=OUTPUT_COLUMNS, delimiter=";", extrasaction="ignore")
+        writer = csv.DictWriter(handle, fieldnames=OUTPUT_COLUMNS, delimiter=";", extrasaction="ignore", lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -873,7 +918,7 @@ def process_manual_exports_streaming(files: list[Path], aliases: dict[str, str],
 
     try:
         with temporary_path.open("w", encoding="utf-8-sig", newline="") as handle:
-            writer = csv.DictWriter(handle, fieldnames=OUTPUT_COLUMNS, delimiter=";", extrasaction="ignore")
+            writer = csv.DictWriter(handle, fieldnames=OUTPUT_COLUMNS, delimiter=";", extrasaction="ignore", lineterminator="\n")
             writer.writeheader()
             for path in files:
                 try:
