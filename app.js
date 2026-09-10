@@ -1597,12 +1597,43 @@ function parseCommodityCSV(text) {
     const headers = parseDelimitedLine(lines[0], ';').map(normalizeCommodityHeader);
     return lines.slice(1).filter(line => line.trim()).map(line => {
         const values = parseDelimitedLine(line, ';');
-        return headers.reduce((row, header, index) => { row[header] = values[index] ?? ''; return row; }, {});
+        const row = headers.reduce((result, header, index) => { result[header] = values[index] ?? ''; return result; }, {});
+        return normalizeCommodityRecord(row);
     });
 }
 
 function normalizeCommodityHeader(value) {
     return String(value || '').trim().toLocaleLowerCase('es-AR').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+}
+
+function commodityNormalizedKey(value) {
+    return String(value || '').trim().toLocaleLowerCase('es-AR').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
+}
+
+function commodityMarketValue(row) {
+    const marketFields = ['mercado', 'plaza', 'mercado_plaza', 'fuente_plaza'];
+    for (const field of marketFields) {
+        const value = String(row?.[field] || '').trim();
+        if (value) return value;
+    }
+    return '';
+}
+
+function normalizeCommodityRecord(row) {
+    const normalized = { ...row };
+    const market = commodityMarketValue(normalized);
+    if (market) normalized.mercado = market;
+
+    const rawUnit = String(normalized.unidad || '').trim();
+    const unitKey = commodityNormalizedKey(rawUnit);
+    const explicitArgentinePriceUnit = /(?:ARS|U\$S|US\$|\$)\s*\/\s*(?:TN|T|TON|TONELADA)/i.test(rawUnit);
+    if (['tn', 't', 'ton', 'tons', 'tonelada', 'toneladas', 'arston', 'pesoston'].includes(unitKey) || explicitArgentinePriceUnit) {
+        normalized.unidad = 'TN';
+    }
+    if (!String(normalized.moneda || '').trim() && explicitArgentinePriceUnit) {
+        normalized.moneda = /(?:U\$S|US\$)/i.test(rawUnit) ? 'USD' : 'ARS';
+    }
+    return normalized;
 }
 
 function commodityNumber(value) {
@@ -1628,6 +1659,10 @@ function commodityFilterValues(id) {
     return [value];
 }
 
+function commodityIsAll(value) {
+    return !String(value || '').trim() || String(value).trim() === 'TODOS';
+}
+
 function commodityMarketLabel(value) {
     const raw = String(value || '').trim();
     if (!raw) return 'Sin plaza';
@@ -1645,7 +1680,7 @@ function commodityMarketLabel(value) {
 }
 
 function commodityMarketIsAll() {
-    return (document.getElementById('commodityFilterMarket')?.value || 'TODOS') === 'TODOS';
+    return commodityIsAll(document.getElementById('commodityFilterMarket')?.value);
 }
 
 function commoditySelectedMarket() {
@@ -1770,14 +1805,15 @@ function populateCommoditySelect(id, values, allLabel, defaultValue) {
         return;
     }
     const initialized = select.dataset.initialized === 'true';
-    const previous = initialized ? select.value : defaultValue;
+    const previous = initialized ? select.value : '';
     select.innerHTML = `<option value="TODOS">${allLabel}</option>`;
     unique.forEach(value => {
         const option = new Option(id === 'commodityFilterMarket' ? commodityMarketLabel(value) : value, value);
         select.appendChild(option);
     });
-    select.value = previous === 'TODOS' || unique.includes(previous) ? previous : defaultValue;
-    if (select.value !== 'TODOS' && !unique.includes(select.value)) select.value = unique[0] || 'TODOS';
+    const preferred = initialized && (commodityIsAll(previous) || unique.includes(previous)) ? previous : defaultValue;
+    select.value = preferred || 'TODOS';
+    if (!commodityIsAll(select.value) && !unique.includes(select.value)) select.value = unique[0] || 'TODOS';
     select.dataset.initialized = 'true';
     if (!select.dataset.commodityBound) {
         select.addEventListener('change', updateCommodityDashboard);
@@ -1786,35 +1822,45 @@ function populateCommoditySelect(id, values, allLabel, defaultValue) {
 }
 
 function initCommodityFilters() {
-    const optionRows = [...commodityData.mensual, ...commodityData.diario, ...commodityData.ultimos];
+    const primaryRows = commodityFrequency === 'diaria' ? commodityData.diario : commodityData.mensual;
+    const optionRows = [...primaryRows, ...commodityData.ultimos];
     const currencies = [...new Set(optionRows.map(row => row.moneda).filter(Boolean))];
     const units = [...new Set(optionRows.map(row => row.unidad).filter(Boolean))];
-    const markets = [...new Set(optionRows.map(row => row.mercado).filter(Boolean))];
+    const markets = [...new Set(optionRows.map(commodityMarketValue).filter(Boolean))];
     const sourceConfig = COMMODITY_SOURCE_CONFIG[commoditySource] || COMMODITY_SOURCE_CONFIG.sio;
-    const currencyDefault = sourceConfig.monthlyOnly && currencies.includes('ARS') ? 'ARS' : (currencies.includes('ARS') ? 'ARS' : (currencies[0] || 'TODOS'));
-    const unitDefault = sourceConfig.monthlyOnly && units.includes('TN') ? 'TN' : (units[0] || 'TODOS');
-    const localType = 'Precio interno mensual';
-    const typeValues = optionRows.map(row => row.tipo_precio);
-    const typeDefault = sourceConfig.monthlyOnly && typeValues.includes(localType) ? localType : 'TODOS';
-    const rosario = markets.find(value => commodityMarketLabel(value) === 'Rosario');
-    const marketDefault = sourceConfig.monthlyOnly ? (rosario || 'TODOS') : 'TODOS';
+    const typeValues = [...new Set(optionRows.map(row => row.tipo_precio).filter(Boolean))];
+    const findByKey = (values, expected) => values.find(value => commodityNormalizedKey(value) === commodityNormalizedKey(expected));
+    const currencyDefault = findByKey(currencies, 'ARS') || currencies[0] || 'TODOS';
+    const unitDefault = findByKey(units, 'TN') || units[0] || 'TODOS';
+    const typeDefault = findByKey(typeValues, 'Precio interno mensual') || typeValues[0] || 'TODOS';
+    const rosario = markets.find(value => commodityNormalizedKey(commodityMarketLabel(value)) === 'rosario');
+    const marketDefault = sourceConfig.monthlyOnly ? (rosario || markets[0] || 'TODOS') : 'TODOS';
     populateCommoditySelect('commodityFilterCommodity', optionRows.map(row => row.commodity), 'Todos', 'TODOS');
     populateCommoditySelect('commodityFilterMarket', markets, 'Todas', marketDefault);
     populateCommoditySelect('commodityFilterCurrency', currencies, 'Todas', currencyDefault);
     populateCommoditySelect('commodityFilterUnit', units, 'Todas', unitDefault);
     populateCommoditySelect('commodityFilterType', typeValues, 'Todos', typeDefault);
     const frequency = document.getElementById('commodityFilterFrequency');
-    if (frequency && !frequency.dataset.commodityBound) {
-        frequency.value = commodityFrequency;
-        frequency.addEventListener('change', () => { commodityFrequency = frequency.value; updateCommodityDashboard(); });
-        frequency.dataset.commodityBound = 'true';
+    if (frequency) {
+        const frequencyDefault = sourceConfig.monthlyOnly ? 'mensual' : (['diaria', 'mensual'].includes(commodityFrequency) ? commodityFrequency : 'mensual');
+        commodityFrequency = frequencyDefault;
+        frequency.value = frequencyDefault;
+        if (!frequency.dataset.commodityBound) {
+            frequency.addEventListener('change', () => {
+                commodityFrequency = frequency.value;
+                initCommodityFilters();
+                updateCommodityDashboard();
+            });
+            frequency.dataset.commodityBound = 'true';
+        }
     }
 }
 
 function commodityRowMatches(row) {
     return [['commodityFilterCommodity', 'commodity'], ['commodityFilterMarket', 'mercado'], ['commodityFilterCurrency', 'moneda'], ['commodityFilterUnit', 'unidad'], ['commodityFilterType', 'tipo_precio']].every(([filterId, field]) => {
         const selected = commodityFilterValues(filterId);
-        return selected.includes('TODOS') || selected.includes(String(row[field] || ''));
+        const rowValue = field === 'mercado' ? commodityMarketValue(row) : String(row[field] || '');
+        return selected.some(value => commodityIsAll(value) || String(value) === rowValue);
     });
 }
 
@@ -1950,7 +1996,7 @@ function setCommodityChart(chartKey, canvasId, statusId, config, emptyMessage) {
 function renderCommodityTrend(rows) {
     const context = commoditySeriesContext();
     const notice = document.getElementById('commodityTrendNotice');
-    if (commoditySource === 'local_mensual' && context.marketAll && commoditySelectedValues.length !== 1) {
+    if (commoditySource === 'local_mensual' && rows.length && context.marketAll && commoditySelectedValues.length !== 1) {
         setCommodityChart('trend', 'commodityPriceTrend', 'commodityPriceTrendStatus', null, 'Seleccione una plaza/mercado para visualizar la evolución sin mezclar referencias.');
         if (notice) notice.textContent = '';
         return;
@@ -2044,7 +2090,7 @@ function renderCommoditySemaphore(rows) {
     const status = document.getElementById('commoditySemaphoreStatus');
     if (!body || !status) return;
     const context = commoditySeriesContext();
-    if (commoditySource === 'local_mensual' && context.marketAll && commoditySelectedValues.length !== 1) {
+    if (commoditySource === 'local_mensual' && rows.length && context.marketAll && commoditySelectedValues.length !== 1) {
         body.innerHTML = '';
         status.textContent = 'Seleccione una plaza/mercado para leer el semáforo sin mezclar referencias.';
         status.classList.add('is-visible');
