@@ -1,11 +1,11 @@
 ﻿fuente_archivo;commodity;fecha_max;dias_desde_ultimo_dato;registros_ultimos_7_dias;registros_ultimos_30_dias;estado_actualidad
-integrado_principal;CEBADA FORR.;2026-09-04;6;1;1;Actualizado
-integrado_principal;Girasol;2026-09-04;6;1;1;Actualizado
-integrado_principal;Maíz;2026-09-04;6;4;4;Actualizado
-integrado_principal;Soja;2026-09-04;6;7;7;Actualizado
-integrado_principal;TRIGO PAN;2026-09-04;6;2;2;Actualizado
-muestra_paginada;Girasol;2026-09-07;3;3;3;Actualizado
-muestra_paginada;Maíz;2026-09-07;3;21;21;Actualizado
-muestra_paginada;Soja;2026-09-07;3;11;11;Actualizado
-muestra_paginada;TRIGO CAND.;2026-09-04;6;1;1;Actualizado
-muestra_paginada;TRIGO PAN;2026-09-07;3;8;8;Actualizado
+integrado_principal;CEBADA FORR.;2026-09-04;7;0;1;Actualizado
+integrado_principal;Girasol;2026-09-04;7;0;1;Actualizado
+integrado_principal;Maíz;2026-09-04;7;0;4;Actualizado
+integrado_principal;Soja;2026-09-04;7;0;7;Actualizado
+integrado_principal;TRIGO PAN;2026-09-04;7;0;2;Actualizado
+muestra_paginada;Girasol;2026-09-07;4;1;3;Actualizado
+muestra_paginada;Maíz;2026-09-07;4;7;21;Actualizado
+muestra_paginada;Soja;2026-09-07;4;2;11;Actualizado
+muestra_paginada;TRIGO CAND.;2026-09-04;7;0;1;Actualizado
+muestra_paginada;TRIGO PAN;2026-09-07;4;5;8;Actualizado
