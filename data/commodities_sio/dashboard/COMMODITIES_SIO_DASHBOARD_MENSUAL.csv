@@ -1,10 +1,10 @@
 ﻿año;mes;periodo_ym;commodity;moneda;unidad;tipo_precio;fuente;operaciones;precio_promedio;precio_mediana;precio_min;precio_max;volumen_total;precio_ponderado_volumen;dias_con_datos;variacion_mensual_pct;variacion_interanual_pct
 2026;9;2026-09;ACEITE SOJA;USD;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;1;995;995;995;995;750;995;1;;
-2026;9;2026-09;CEBADA FORR.;USD;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;3;210;210;210;210;210;210;2;;
-2026;9;2026-09;Girasol;USD;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;6;426.666667;400;400;510;1175;406.425532;1;;
+2026;9;2026-09;CEBADA FORR.;USD;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;4;212.5;210;210;220;710;217.042254;3;;
+2026;9;2026-09;Girasol;USD;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;7;430;400;400;510;1395;413.297491;2;;
 2026;9;2026-09;Maíz;ARS;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;25;276030.12;293000;162490;299000;2462.73;270508.560419;4;;
-2026;9;2026-09;Maíz;USD;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;13;197.817692;198;161.73;210;4572.83;199.581452;3;;
-2026;9;2026-09;Soja;ARS;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;15;544353.333333;555000;515200;560000;6826.34;556409.049212;4;;
+2026;9;2026-09;Maíz;USD;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;17;198.687059;198;161.73;210;4989.81;199.445688;4;;
+2026;9;2026-09;Soja;ARS;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;19;544676.157895;555000;515200;560000;7191.45;555853.181257;5;;
 2026;9;2026-09;Soja;USD;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;5;362;365;355;367;4449;359.135761;2;;
-2026;9;2026-09;TRIGO PAN;ARS;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;12;359994.583333;351000;320000;440000;854.38;370988.131745;4;;
-2026;9;2026-09;TRIGO PAN;USD;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;3;231.666667;230;225;240;287.95;231.041848;3;;
+2026;9;2026-09;TRIGO PAN;ARS;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;16;361115;354000;299330;440000;1387.96;381139.165538;5;;
+2026;9;2026-09;TRIGO PAN;USD;TN;Precio Hecho;SIO Granos / Secretaría de Agricultura;4;230;227.5;225;240;320.03;230.436209;4;;

@@ -6,21 +6,21 @@ Controlar la captura incremental de snapshots de últimas operaciones SIO. Esta 
 
 ## Última corrida
 
-- Fecha/hora de captura: 2026-09-12T16:23:46.
-- Archivo raw usado: `SIO_latest_GetOperaciones_20260912_162346.json`.
+- Fecha/hora de captura: 2026-09-14T18:45:41.
+- Archivo raw usado: `SIO_latest_GetOperaciones_20260914_184541.json`.
 - Histórico persistente usado: `data/commodities_sio/processed/COMMODITIES_SIO_HISTORICO_SNAPSHOTS.csv`.
 - Histórico liviano versionable: `data/commodities_sio/dashboard/COMMODITIES_SIO_HISTORICO_SNAPSHOTS_LIVIANO.csv`.
-- Operaciones latest válidas: 7.
-- Operaciones nuevas respecto de capturas anteriores: 7.
+- Operaciones latest válidas: 15.
+- Operaciones nuevas respecto de capturas anteriores: 15.
 - Duplicados omitidos respecto de capturas anteriores: 0.
-- Filas acumuladas: 83.
+- Filas acumuladas: 98.
 - Fecha mínima de operaciones acumuladas: 2026-09-09.
-- Fecha máxima de operaciones acumuladas: 2026-09-12.
-- Monedas latest: ARS.
-- Commodities latest: Maíz, Soja, TRIGO PAN.
-- Precios válidos positivos latest: 7.
+- Fecha máxima de operaciones acumuladas: 2026-09-14.
+- Monedas latest: ARS, USD.
+- Commodities latest: CEBADA FORR., Girasol, Maíz, Soja, TRIGO PAN.
+- Precios válidos positivos latest: 15.
 - Precios cero latest: 0.
-- Filas aptas para dashboard por fecha, commodity, moneda, unidad y precio positivo: 7/7.
+- Filas aptas para dashboard por fecha, commodity, moneda, unidad y precio positivo: 15/15.
 - Estado: apto para regenerar agregados livianos sólo dentro de las series con metadatos homogéneos.
 
 ## Limitaciones
