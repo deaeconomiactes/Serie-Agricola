@@ -1,11 +1,12 @@
 ﻿commodity;moneda;unidad;tipo_precio;fecha_ultima;precio_mediana_ultimo_dia;precio_promedio_ultimo_dia;operaciones_ultimo_dia;volumen_ultimo_dia;variacion_7d_pct;variacion_30d_pct;estado
 ACEITE SOJA;ARS;TN;Precio Hecho;2026-09-15;1165400;1165400;1;35.96;;;Sin dato
 ACEITE SOJA;USD;TN;Precio Hecho;2026-09-09;995;995;1;750;;;Sin dato
-CEBADA FORR.;USD;TN;Precio Hecho;2026-09-14;220;220;1;500;;;Sin dato
-Girasol;USD;TN;Precio Hecho;2026-09-16;400;400;2;3500;0;;Estable
-Maíz;ARS;TN;Precio Hecho;2026-09-16;290515;286839;3;530.64;-0.848123;;Estable
-Maíz;USD;TN;Precio Hecho;2026-09-16;196;196;2;510;1.31817;;Estable
-Soja;ARS;TN;Precio Hecho;2026-09-16;535680;535680;1;100;-3.654676;;Estable
-Soja;USD;TN;Precio Hecho;2026-09-15;360.57;383.123333;3;2071.92;;;Sin dato
+CEBADA FORR.;USD;TN;Precio Hecho;2026-09-17;220;220;1;110;4.761905;;Estable
+Girasol;ARS;TN;Precio Hecho;2026-09-17;50000;50000;1;29.96;;;Sin dato
+Girasol;USD;TN;Precio Hecho;2026-09-17;450;437.5;4;570;12.5;;Suba moderada
+Maíz;ARS;TN;Precio Hecho;2026-09-17;290000;287666.666667;3;412.29;-1.158828;;Estable
+Maíz;USD;TN;Precio Hecho;2026-09-17;162.5;162.5;2;213.5;-16.666667;;Baja
+Soja;ARS;TN;Precio Hecho;2026-09-17;565000;565000;1;300;1.801802;;Estable
+Soja;USD;TN;Precio Hecho;2026-09-17;363.6;363.6;1;30;1.564246;;Estable
 TRIGO PAN;ARS;TN;Precio Hecho;2026-09-16;360000;368466.666667;3;360;0;;Estable
-TRIGO PAN;USD;TN;Precio Hecho;2026-09-16;230;230;4;1390;-4.166667;;Estable
+TRIGO PAN;USD;TN;Precio Hecho;2026-09-17;230;230;2;650;2.222222;;Estable
