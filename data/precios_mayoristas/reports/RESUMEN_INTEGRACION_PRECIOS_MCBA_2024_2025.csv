@@ -1,0 +1,5 @@
+﻿archivo;rubro;año;filas_fuente;filas_utiles;filas_integradas;filas_excluidas;motivo_exclusion_principal;periodo_min;periodo_max;duplicados_potenciales;duplicados_omitidos
+PHOR24_K.xlsx;Hortalizas;2024;587;524;2211;63;resumen C=0 (63);2024-01;2024-12;0;0
+PFRU24_K.xlsx;Frutas;2024;748;707;1956;41;resumen C=0 (41);2024-01;2024-12;12;0
+PHOR25_K.xlsx;Hortalizas;2025;580;520;2451;60;resumen C=0 (60);2025-01;2025-12;3;0
+PFRU25_K.xlsx;Frutas;2025;788;743;2090;45;resumen C=0 (45);2025-01;2025-12;13;0
