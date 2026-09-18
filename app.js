@@ -434,7 +434,10 @@ function updatePriceFrequencyOptions() {
     const select = document.getElementById('priceFilterFrequency');
     if (!select) return;
     const hasSpecificSpecies = document.getElementById('priceFilterEspecie')?.value !== 'TODOS';
-    const allowed = new Set(availableFrequencies(detectFrequency(priceData)));
+    const scopedRows = getFilteredPriceData({ applyFrequencyPrecision: false });
+    const frequencySource = scopedRows.length ? scopedRows : priceData;
+    const allowed = new Set(availableFrequencies(detectFrequency(frequencySource)));
+    if (!scopedRows.some(row => row.fechaPrecision !== 'mensual')) allowed.delete('diaria');
     if (!hasSpecificSpecies) allowed.delete('diaria');
     [...select.options].forEach(option => { option.disabled = !allowed.has(option.value); });
     priceFrequency = allowed.has(priceFrequency) ? priceFrequency : (allowed.has('mensual') ? 'mensual' : [...allowed][0]);
@@ -690,6 +693,7 @@ function processPriceData(rows, sourcePath = PRICE_CSV_PATH) {
         const rubro = rubroKey.includes('HORTAL') ? 'Hortalizas' : rubroKey.includes('FRUT') ? 'Frutas' : rubroKey.includes('SUBPRODUCT') ? 'Subproductos' : rubroRaw || (sourceText.includes('HORTAL') ? 'Hortalizas' : sourceText.includes('FRUT') ? 'Frutas' : 'Sin clasificar');
         return {
             fecha: date, year: date ? Number(date.slice(0, 4)) : Number(row.año || row.ano) || null, month: monthNumber,
+            fechaPrecision: normalizeCategoryValue(row.fecha_precision) || (date ? 'diaria' : ''),
             mes: monthNumber >= 1 && monthNumber <= 12 ? MONTHS_FULL[monthNumber - 1] : normalizeCategoryValue(row.mes),
             rubro, especie: normalizeCategoryValue(row.especie) || 'Sin especificar', variedad: normalizeCategoryValue(row.variedad),
             mercado: normalizeCategoryValue(row.mercado), procedencia: normalizeCategoryValue(row.procedencia), unidad: normalizeCategoryValue(row.unidad) || 'Sin especificar', precio: observed,
@@ -878,7 +882,8 @@ function populatePriceFilters() {
             if (!kept.length) select.options[0].selected = true;
         } else if (unique.includes(current)) select.value = current;
         select.onchange = () => {
-            if (id === 'priceFilterEspecie') { updatePriceVarietyFilter(); updatePriceFrequencyOptions(); }
+            if (id === 'priceFilterEspecie') updatePriceVarietyFilter();
+            updatePriceFrequencyOptions();
             if (select.multiple) updateMultiSelectSummary(id);
             updatePriceDashboard();
         };
@@ -891,7 +896,23 @@ function populatePriceFilters() {
     };
 }
 
-function updatePriceVarietyFilter() { populatePriceFilters(); }
+function updatePriceVarietyFilter() {
+    const select = document.getElementById('priceFilterVariedad');
+    if (!select) return;
+    const selectedVarieties = getSelectedValues('priceFilterVariedad');
+    const selectedSpecies = getSelectedValues('priceFilterEspecie');
+    const unique = [...new Set(validPriceData
+        .filter(row => isAllSelected(selectedSpecies) || selectedSpecies.includes(row.especie))
+        .map(row => row.variedad || 'Sin especificar')
+        .filter(value => String(value || '').trim()))]
+        .sort((a, b) => String(a).localeCompare(String(b), 'es'));
+    populateSelect(select, unique, 'Todas las variedades', value => value);
+    const kept = selectedVarieties.filter(value => value === 'TODOS' || unique.includes(value));
+    [...select.options].forEach(option => { option.selected = kept.includes(option.value); });
+    if (!kept.length) select.options[0].selected = true;
+    select.onchange = () => { updateMultiSelectSummary('priceFilterVariedad'); updatePriceDashboard(); };
+    updateMultiSelectSummary('priceFilterVariedad');
+}
 
 function priceSeriesKey(row) {
     return [row.rubro, row.mercado, row.procedencia, row.especie, row.variedad, row.unidad]
@@ -918,7 +939,7 @@ function getPriceFilters() {
     };
 }
 
-function getFilteredPriceData() {
+function getFilteredPriceData({ applyFrequencyPrecision = true } = {}) {
     const filters = getPriceFilters();
     priceUnitMode = filters.unidadComparable === 'comparables' ? 'comparable' : filters.unidadComparable === 'no-comparables' ? 'nonComparable' : 'all';
     const selectedYear = isAllSelected(filters.year) ? null : Number(filters.year[0]);
@@ -926,6 +947,7 @@ function getFilteredPriceData() {
         (filters.unidadComparable === 'comparables' ? isComparablePriceRow(row) : filters.unidadComparable === 'no-comparables' ? !isComparablePriceRow(row) && isValidPrice(row.precioObservado) : isValidPrice(row.precioObservado))
         &&
         (selectedYear === null || Number(row.year) === selectedYear)
+        && (!applyFrequencyPrecision || priceFrequency !== 'diaria' || row.fechaPrecision !== 'mensual')
         && Object.entries(filters).every(([key, value]) => key === 'year' || key === 'unidadComparable' || matchesPriceFilter(row, key, value))
     );
 }

@@ -1,0 +1,13 @@
+﻿metrica;dimension;valor;cantidad
+archivo_base;ruta;PRECIOS_MAYORISTAS_2026_INTEGRADO.csv;
+filas_base_sin_fuentes_objetivo;total;;108331
+cobertura_previa;año;2024;208
+cobertura_previa;año;2025;29608
+cobertura_previa;año;2026;78515
+cobertura_previa;mercado;Mercado Central de Buenos Aires;61744
+cobertura_previa;mercado;Mercado de Corrientes;46587
+cobertura_previa;rubro;(sin informar);2
+cobertura_previa;rubro;Frutas;33171
+cobertura_previa;rubro;Hortalizas;74881
+cobertura_previa;rubro;Subproductos;277
+cobertura_previa_mcba;año;2026;61744
