@@ -1,0 +1,29 @@
+control;resultado;detalle;severidad;requiere_accion
+Rama y base;OK;Rama creada desde main actualizado en 59ab62a;informativa;no
+Archivo dashboard;OK;app.js consume PRECIOS_MAYORISTAS_INTEGRADO.csv y usa PRECIOS_MAYORISTAS_2026_INTEGRADO.csv como fallback idéntico;informativa;no
+Filas y esquema;OK;117039 filas y 36 columnas en ambos integrados;informativa;no
+Cobertura MCBA 2024 Frutas;OK;1956 filas mensuales visibles en localhost y Pages;informativa;no
+Cobertura MCBA 2024 Hortalizas;OK;2211 filas mensuales visibles en localhost y Pages;informativa;no
+Cobertura MCBA 2025 Frutas;OK;2090 filas mensuales visibles en localhost y Pages;informativa;no
+Cobertura MCBA 2025 Hortalizas;OK;2451 filas mensuales visibles en localhost y Pages;informativa;no
+Cobertura MCBA 2026;OK;61744 filas con cobertura hasta 24/08/2026;informativa;no
+Cobertura Mercado de Corrientes;OK;46587 filas totales y 46412 válidas para KPI;informativa;no
+Anclas mensuales MCBA 2024-2025;OK;8708 filas con fecha día 01 fecha_precision mensual y periodo YYYY-MM;baja;no
+Vista diaria MCBA 2024-2025;OK;La opción diaria queda deshabilitada y las anclas mensuales se excluyen;baja;no
+Vista diaria Corrientes;OK;Tomate Perita 2026 habilitó vista diaria con 688 observaciones;informativa;no
+Precios inválidos;observación;54 ceros y 2 faltantes sin negativos ni no numéricos;media;sí
+Precios extremos;observación;14 valores superan 100000 y requieren contraste con fuente;media;sí
+Moneda histórica;observación;108331 filas históricas no declaran moneda aunque la unidad contiene signo peso;media;sí
+Precisión histórica;observación;108331 filas históricas no declaran fecha_precision;media;sí
+Duplicados exactos;observación;3638 filas excedentes en 2873 grupos exactos concentrados en Corrientes 2025-2026;alta;sí
+Duplicados aproximados;observación;23171 excedentes por clave aproximada pueden incluir repeticiones metodológicamente aceptables;media;sí
+Semáforo con varios años;observación;Agrupa sólo por mes y mezcla años cuando Año está en Todos;alta;sí
+Filtros de precios;OK;Año mes rubro especie variedad mercado procedencia unidad comparabilidad y frecuencia funcionan;informativa;no
+KPIs y visualizaciones;OK;KPIs evolución rankings y semáforo visibles en los casos requeridos;informativa;no
+Consola navegador;OK con advertencias;Sin errores críticos y con advertencias esperadas por calidad de datos;baja;no
+GitHub Pages;OK;Deploy exitoso 8a29463 y resultados idénticos a localhost para los seis casos;informativa;no
+Reportes legacy;observación;Tres reportes anteriores siguen informando 108331 filas y ausencia de MCBA 2024-2025;media;sí
+No regresión Cantidades;OK;Carga filtros KPIs y siete gráficos visibles;informativa;no
+No regresión Commodities SIO;OK;SIO carga y mantiene su fuente separada;informativa;no
+No regresión histórico local;OK;Histórico mensual carga con cinco series y 343 observaciones sin mezcla con SIO;informativa;no
+Estado general;OK con observaciones;La integración funciona pero duplicados y semáforo multianual requieren revisión;alta;sí
