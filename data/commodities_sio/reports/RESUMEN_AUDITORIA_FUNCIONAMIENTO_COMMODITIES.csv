@@ -1,0 +1,59 @@
+﻿fuente;archivo;estado;bytes;filas;columnas;fecha_min;fecha_max;commodities;monedas;unidades;tipos_precio;tipos_operacion;plazas;celdas_precio_cero;nulos_criticos;detalle
+SIO Granos;data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_DIARIO.csv;OK;;120;18;2026-09-09;2026-10-01;ACEITE SOJA, ARROZ C.L.F, CEBADA FORR., Girasol, Maíz, Soja, Sorgo, TRIGO PAN;ARS, USD;TN;Precio Hecho;sin dato disponible;sin dato disponible;0;0;"bytes=27651; positivos=600"
+SIO Granos;data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_MENSUAL.csv;OK;;18;18;2026-09;2026-10;ACEITE SOJA, ARROZ C.L.F, CEBADA FORR., Girasol, Maíz, Soja, Sorgo, TRIGO PAN;ARS, USD;TN;Precio Hecho;sin dato disponible;sin dato disponible;0;0;"bytes=2691; positivos=90"
+SIO Granos;data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_ULTIMOS.csv;OK;;13;12;2026-09-25;2026-10-01;ACEITE SOJA, ARROZ C.L.F, CEBADA FORR., Girasol, Maíz, Soja, Sorgo, TRIGO PAN;ARS, USD;TN;Precio Hecho;sin dato disponible;sin dato disponible;0;0;"bytes=1179; positivos=26"
+SIO Granos;data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_RESUMEN.csv;OK;;1;16;2026-09-09;2026-10-01;sin dato disponible;sin dato disponible;sin dato disponible;sin dato disponible;sin dato disponible;sin dato disponible;0;0;"bytes=768; positivos=0"
+SIO Granos;data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_SEMAFORO.csv;OK;;18;10;2026-09;2026-10;ACEITE SOJA, ARROZ C.L.F, CEBADA FORR., Girasol, Maíz, Soja, Sorgo, TRIGO PAN;ARS, USD;TN;Precio Hecho;sin dato disponible;sin dato disponible;0;0;"bytes=1240; positivos=18"
+SIO Granos;data/commodities_sio/dashboard/COMMODITIES_SIO_HISTORICO_SNAPSHOTS_LIVIANO.csv;OK;;323;23;2026-09-09;2026-10-01;ACEITE SOJA, ARROZ C.L.F, CEBADA FORR., Girasol, Maíz, Soja, Sorgo, TRIGO PAN;ARS, USD;TN;Precio Hecho;Anulación, Contrato, Rectificación;sin dato disponible;0;0;"bytes=141550; positivos=323"
+Histórico local mensual;data/commodities_local_mensual/dashboard/COMMODITIES_LOCAL_MENSUAL_DASHBOARD_MENSUAL.csv;OK;;668;17;2020-01;2026-08;Cebada forrajera, Girasol, Maíz, Soja, Sorgo, Trigo;ARS;TN;Precio interno mensual;sin dato disponible;Argentina / mercado interno — B.BLANCA, Argentina / mercado interno — CORDOBA, Argentina / mercado interno — DARSENA, Argentina / mercado interno — QUEQUEN, Argentina / mercado interno — ROSARIO;0;0;"bytes=150030; positivos=2672"
+Histórico local mensual;data/commodities_local_mensual/dashboard/COMMODITIES_LOCAL_MENSUAL_DASHBOARD_RESUMEN.csv;OK;;1;14;2020-01-01;2026-08-01;sin dato disponible;sin dato disponible;sin dato disponible;Precio interno mensual;sin dato disponible;sin dato disponible;0;0;"bytes=729; positivos=0"
+Histórico local mensual;data/commodities_local_mensual/dashboard/COMMODITIES_LOCAL_MENSUAL_DASHBOARD_SEMAFORO.csv;OK;;668;18;2020-01;2026-08;Cebada forrajera, Girasol, Maíz, Soja, Sorgo, Trigo;ARS;TN;Precio interno mensual;sin dato disponible;Argentina / mercado interno — B.BLANCA, Argentina / mercado interno — CORDOBA, Argentina / mercado interno — DARSENA, Argentina / mercado interno — QUEQUEN, Argentina / mercado interno — ROSARIO;0;0;"bytes=156726; positivos=2672"
+Histórico local mensual;data/commodities_local_mensual/dashboard/COMMODITIES_LOCAL_MENSUAL_DASHBOARD_ULTIMOS.csv;OK;;17;14;2024-05;2026-08;Cebada forrajera, Girasol, Maíz, Soja, Sorgo, Trigo;ARS;TN;Precio interno mensual;sin dato disponible;Argentina / mercado interno — B.BLANCA, Argentina / mercado interno — CORDOBA, Argentina / mercado interno — DARSENA, Argentina / mercado interno — QUEQUEN, Argentina / mercado interno — ROSARIO;0;0;"bytes=3789; positivos=34"
+App.js;Rutas de fuentes separadas;OK;;;;;;;;;;;;;;SIO y local mensual usan directorios y listas de CSV distintas.
+App.js;Sentinela Todos;OK;;;;;;;;;;;;;;El filtro Todos se trata como comodín en commodityIsAll.
+App.js;Plaza Rosario por defecto;OK;;;;;;;;;;;;;;El histórico local prefiere Rosario si está disponible.
+App.js;Frecuencia mensual local;OK;;;;;;;;;;;;;;La fuente mensual fuerza la frecuencia mensual.
+App.js;Precios positivos;OK;;;;;;;;;;;;;;Las filas usadas por el filtro principal y últimos precios requieren precio mayor que cero.
+App.js;Estado metodológico plaza;OK;;;;;;;;;;;;;;La combinación local de todos los commodities y todas las plazas presenta un aviso.
+App.js;Destrucción y recreación Chart.js;OK;;;;;;;;;;;;;;Se destruye la instancia previa antes de crear el siguiente gráfico.
+App.js;Filtro SIO por tipo de operación;Requiere corrección;;;;;;;;;;;;;;SIO debe conservar el campo Tipo (tipo_operacion) y exponerlo como filtro, separado de tipo_precio.
+GitHub Actions;workflow_dispatch;OK;;;;;;;;;;;;;;Permite disparo manual.
+GitHub Actions;schedule diario;OK;;;;;;;;;;;;;;Expresión cron observada: 30.
+GitHub Actions;horario documentado;OK;;;;;;;;;;;;;;Comentario documenta 10:30 de Argentina (UTC-3).
+GitHub Actions;una consulta SIO;OK;;;;;;;;;;;;;;run_update_latest contiene una sola llamada HTTP y declara máximo 1 request.
+GitHub Actions;sin paginación ni exportación manual;OK;;;;;;;;;;;;;;El workflow usa el snapshot latest y no activa paginación ni exportación manual.
+GitHub Actions;sin publicar raw ni bases;OK;;;;;;;;;;;;;;El git add no incluye data/raw ni data/processed.
+GitHub Actions;sólo salidas livianas;OK;;;;;;;;;;;;;;Publica CSV de dashboard y reportes livianos indicados.
+GitHub Actions;permisos mínimos observables;OK;;;;;;;;;;;;;;contents: write es el único permiso declarado para permitir commit y push.
+GitHub Actions;falla preserva salidas;OK;;;;;;;;;;;;;;Una captura no integrable no reemplaza snapshots y el paso de publicación se omite ante fallo.
+GitHub Actions;sin cambios se omiten commits;OK;;;;;;;;;;;;;;Si no hay diff staged, el workflow termina sin crear commit.
+GitHub Actions;Publicación automática en Pages;Requiere corrección;;;;;;;;;;;;;;El workflow SIO hace git push con las credenciales predeterminadas de checkout y Pages sólo escucha push a main. GitHub documenta que los commits publicados con GITHUB_TOKEN no disparan otros workflows ni una compilación de Pages.
+GitHub Actions;Escritura atómica de snapshots;Observación;;;;;;;;;;;;;;"Los archivos de snapshot se escriben directamente y en secuencia; una interrupción durante la escritura puede dejar el conjunto parcial."
+GitHub Actions;Orden de validación dashboard;Observación;;;;;;;;;;;;;;"El validador opcional se ejecuta antes del generador; si existe, revisa los CSV previos y no las salidas de esta corrida."
+GitHub Actions;Reconciliación de IDs existentes;Observación;;;;;;;;;;;;;;"Al repetir un ID, la integración conserva la primera fila y descarta una posterior aunque haya cambiado; no hay IDs repetidos en la captura auditada."
+Consistencia dashboard;SIO snapshots → mensual;OK;;;;;;;;;;;;;;"Snapshot válido → mensual: 323 operaciones; faltantes=0, excedentes=0."
+Consistencia dashboard;Histórico local mensual → semáforo;OK;;;;;;;;;;;;;;Claves mensual/semaforo: mensual=668, semáforo=668, diferencias=0.
+Consistencia dashboard;Histórico local mensual → últimos;OK;;;;;;;;;;;;;;Último mensual por serie: esperado=17, publicado=17, diferencias=0.
+Consistencia dashboard;Precios cero fuera de series finales;OK;;;;;;;;;;;;;;"SIO=0 celdas cero; local mensual=0 celdas cero."
+Consistencia dashboard;CSV localhost/GitHub Pages vs checkout;OK;;;;;;;;;;;;;;"Local coincidente=10/10; Pages coincidente=10/10."
+Auditoría;Estado general;Requiere corrección;;;;;;;;;;;;;;Resultado consolidado de la auditoría.
+localhost;data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_DIARIO.csv;OK;;120;;;;;;;;;;;;"HTTP 200; filas iguales=True"
+localhost;data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_MENSUAL.csv;OK;;18;;;;;;;;;;;;"HTTP 200; filas iguales=True"
+localhost;data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_ULTIMOS.csv;OK;;13;;;;;;;;;;;;"HTTP 200; filas iguales=True"
+localhost;data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_RESUMEN.csv;OK;;1;;;;;;;;;;;;"HTTP 200; filas iguales=True"
+localhost;data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_SEMAFORO.csv;OK;;18;;;;;;;;;;;;"HTTP 200; filas iguales=True"
+localhost;data/commodities_sio/dashboard/COMMODITIES_SIO_HISTORICO_SNAPSHOTS_LIVIANO.csv;OK;;323;;;;;;;;;;;;"HTTP 200; filas iguales=True"
+localhost;data/commodities_local_mensual/dashboard/COMMODITIES_LOCAL_MENSUAL_DASHBOARD_MENSUAL.csv;OK;;668;;;;;;;;;;;;"HTTP 200; filas iguales=True"
+localhost;data/commodities_local_mensual/dashboard/COMMODITIES_LOCAL_MENSUAL_DASHBOARD_RESUMEN.csv;OK;;1;;;;;;;;;;;;"HTTP 200; filas iguales=True"
+localhost;data/commodities_local_mensual/dashboard/COMMODITIES_LOCAL_MENSUAL_DASHBOARD_SEMAFORO.csv;OK;;668;;;;;;;;;;;;"HTTP 200; filas iguales=True"
+localhost;data/commodities_local_mensual/dashboard/COMMODITIES_LOCAL_MENSUAL_DASHBOARD_ULTIMOS.csv;OK;;17;;;;;;;;;;;;"HTTP 200; filas iguales=True"
+GitHub Pages;data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_DIARIO.csv;OK;;120;;;;;;;;;;;;"HTTP 200; filas iguales=True"
+GitHub Pages;data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_MENSUAL.csv;OK;;18;;;;;;;;;;;;"HTTP 200; filas iguales=True"
+GitHub Pages;data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_ULTIMOS.csv;OK;;13;;;;;;;;;;;;"HTTP 200; filas iguales=True"
+GitHub Pages;data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_RESUMEN.csv;OK;;1;;;;;;;;;;;;"HTTP 200; filas iguales=True"
+GitHub Pages;data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_SEMAFORO.csv;OK;;18;;;;;;;;;;;;"HTTP 200; filas iguales=True"
+GitHub Pages;data/commodities_sio/dashboard/COMMODITIES_SIO_HISTORICO_SNAPSHOTS_LIVIANO.csv;OK;;323;;;;;;;;;;;;"HTTP 200; filas iguales=True"
+GitHub Pages;data/commodities_local_mensual/dashboard/COMMODITIES_LOCAL_MENSUAL_DASHBOARD_MENSUAL.csv;OK;;668;;;;;;;;;;;;"HTTP 200; filas iguales=True"
+GitHub Pages;data/commodities_local_mensual/dashboard/COMMODITIES_LOCAL_MENSUAL_DASHBOARD_RESUMEN.csv;OK;;1;;;;;;;;;;;;"HTTP 200; filas iguales=True"
+GitHub Pages;data/commodities_local_mensual/dashboard/COMMODITIES_LOCAL_MENSUAL_DASHBOARD_SEMAFORO.csv;OK;;668;;;;;;;;;;;;"HTTP 200; filas iguales=True"
+GitHub Pages;data/commodities_local_mensual/dashboard/COMMODITIES_LOCAL_MENSUAL_DASHBOARD_ULTIMOS.csv;OK;;17;;;;;;;;;;;;"HTTP 200; filas iguales=True"

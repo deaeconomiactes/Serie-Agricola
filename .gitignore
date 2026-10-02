@@ -20,6 +20,7 @@ __pycache__/
 !auditar_precios_2026.py
 !integrar_commodities_bcr.py
 !auditar_commodities_bcr.py
+!auditar_funcionamiento_commodities.py
 !descargar_commodities_bcr.py
 
 # Commodity BCR work area: raw files remain local; generated outputs are tracked.
