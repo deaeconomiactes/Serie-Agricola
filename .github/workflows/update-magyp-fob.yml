@@ -1,0 +1,49 @@
+name: Validar piloto MAGyP FOB (manual, sin publicación)
+
+on:
+  workflow_dispatch:
+    inputs:
+      requested_date:
+        description: "Fecha FOB YYYY-MM-DD (una fecha; sin backfill)"
+        required: true
+        type: string
+
+# Preparado para revisión. Sin cron, commits, push ni deploy.
+permissions:
+  contents: read
+
+concurrency:
+  group: magyp-fob-manual-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate-fob:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      MAGYP_RAW_ROOT: ${{ runner.temp }}/magyp-raw
+      FOB_REQUESTED_DATE: ${{ inputs.requested_date }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch y validar una fecha
+        run: python scripts/magyp/fetch_fob.py --date "$FOB_REQUESTED_DATE"
+      - name: Normalizar sin pérdida de grano
+        run: python scripts/magyp/normalize_fob.py
+      - name: Construir piloto FOB
+        run: python scripts/magyp/build_commodities.py
+      - name: Tests sintéticos offline
+        run: python -m unittest discover -s tests/magyp -v
+      - name: Entregar CSV para revisión (no publicar en Pages)
+        uses: actions/upload-artifact@v4
+        with:
+          name: magyp-fob-dashboard-review
+          path: data/dashboard/commodities/fob.csv
+          if-no-files-found: ignore
+          retention-days: 7
+
+# Una fase futura deberá definir almacenamiento RAW durable, recuperar capturas
+# previas y aprobar publicación. No basta habilitar git add/commit sobre un runner
+# vacío: debe preservar historia y validar cobertura antes de actualizar Pages.

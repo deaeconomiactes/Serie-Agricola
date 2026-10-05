@@ -1,0 +1,14 @@
+{
+  "posts": [
+    {
+      "fecha": "2026-10-02 00:00:00.000",
+      "circular": "SYNTHETIC-2072",
+      "posicion": "00100-SYNTHETIC",
+      "precio": 289.5,
+      "mesDesde": 10,
+      "añoDesde": 2026,
+      "mesHasta": 12,
+      "añoHasta": 2026
+    }
+  ]
+}

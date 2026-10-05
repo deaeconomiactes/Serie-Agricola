@@ -144,6 +144,19 @@ data/commodities_local_mensual/reports/*
 !data/magyp_exploracion/catalogo_fuentes_magyp.csv
 !data/magyp_exploracion/reports/COMPARACION_GRANULARIDAD_MAGYP.csv
 
+# Infraestructura MAGyP: RAW y normalizados permanecen fuera del historial Git.
+!scripts/magyp/*.py
+!tests/magyp/*.py
+data/raw/magyp/**
+!data/raw/magyp/**/
+!data/raw/magyp/**/.gitkeep
+data/normalized/magyp/**
+!data/normalized/magyp/**/
+!data/normalized/magyp/**/.gitkeep
+data/analytical/commodities/*
+!data/analytical/commodities/.gitkeep
+!data/dashboard/commodities/fob.csv
+
 # OS
 .DS_Store
 Thumbs.db
