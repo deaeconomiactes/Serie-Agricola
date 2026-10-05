@@ -139,6 +139,11 @@ data/commodities_local_mensual/reports/*
 !data/commodities_local_mensual/reports/*.md
 !data/commodities_local_mensual/reports/*.csv
 
+# Exploración MAGyP: sólo catálogo y comparación livianos; raw fuera del repositorio.
+!explorar_fuentes_magyp.py
+!data/magyp_exploracion/catalogo_fuentes_magyp.csv
+!data/magyp_exploracion/reports/COMPARACION_GRANULARIDAD_MAGYP.csv
+
 # OS
 .DS_Store
 Thumbs.db
