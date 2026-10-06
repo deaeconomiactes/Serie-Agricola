@@ -13,9 +13,9 @@
     {
       "official_url": "https://ssma.magyp.gob.ar/frutas.precios.aspx",
       "endpoint": "https://ssma.magyp.gob.ar/frutas.precios.aspx",
-      "method": "POST GeneXus → GET XLSX temporal",
+      "method": "Browser automated public GeneXus AJAX POST → GET XLSX",
       "format": "XLSX (11 columnas); grilla GeneXus",
-      "authentication": "Público; estado de sesión efímero sólo en memoria",
+      "authentication": "Public UI; cookies/anti-CSRF only in nonpersistent browser context",
       "granularity": "fecha/tipo/especie/variedad/procedencia/envase/calidad/tamaño/grado; Prom.Esp. separado",
       "production_candidate": false,
       "source_id": "mcba",
@@ -24,19 +24,29 @@
       "frequency": "daily",
       "status": "pilot",
       "notes": [
-        "Exportación desde UI verificada; generación HTTP autónoma pendiente (POST directo 403).",
-        "ARS/kg por contexto oficial; Kg sin definición validada, no volumen.",
-        "IDs de dimensiones en grilla no incluidos en export; registro oficial sin ID validado.",
-        "Cobertura diaria puntual, continuidad histórica y equivalencia mensual pendientes."
+        "Headless Python acquisition verified for 2024/2026 bounded windows; 2025 initial page timeouts on two attempts.",
+        "HTTP-only GeneXus contract not validated; no bypass, no scheduler.",
+        "Prom.Esp. species summary inferred from structure; formula not documented. Kg unknown; volume null.",
+        "Coverage/aliases/matching remain pilot. No productive replacement."
       ],
       "price_context": {
         "currency": "ARS",
         "price_unit": "ARS/kg",
-        "basis": "contextual_official_label",
+        "basis": "documented_pesos_per_kg_both_categories; ISO_ARS_mapping_local_Argentina_explicit",
         "evidence_url": "https://ssma.magyp.gob.ar/frutas.preciospromediof.aspx",
         "observed_label": "PRECIO PROMEDIO DE FRUTAS EN PESOS POR KILO EN MCBA",
-        "verified_at": "2026-10-06"
-      }
+        "verified_at": "2026-10-06",
+        "evidence_urls": [
+          "https://ssma.magyp.gob.ar/frutas.preciospromediof.aspx",
+          "https://ssma.magyp.gob.ar/frutas.preciospromedioh.aspx"
+        ],
+        "observed_labels": [
+          "PRECIO PROMEDIO DE FRUTAS EN PESOS POR KILO EN MCBA",
+          "PRECIO PROMEDIO DE HORTALIZAS EN PESOS POR KILO EN MCBA"
+        ],
+        "currency_evidence": "documented"
+      },
+      "acquisition_classification": "BROWSER_AUTOMATION_REQUIRED"
     },
     {
       "official_url": "https://www.magyp.gob.ar/mercadosagropecuarios/",

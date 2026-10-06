@@ -1,5 +1,31 @@
 # Diccionario de esquemas MAGyP — v1
 
+**Fase 2: contrato canónico vigente v2.** La tabla original se conserva como referencia;
+los campos siguientes se añaden sin eliminar dimensiones ni modificar RAW legado.
+
+| name | layer | type | description | source mapping | nullable | economic meaning | warnings |
+|---|---|---|---|---|---|---|---|
+| observation_level | NORMALIZED/ANALYTICAL/DASHBOARD | enum detail/species_summary/unknown | Nivel de observación | Variedad Prom.Esp.; especie presente | no | Evita sumar resumen y detalle | Fórmula del resumen no documentada |
+| kg_semantics_status | NORMALIZED/ANALYTICAL/DASHBOARD | enum documented/inferred/unknown | Evidencia de Kg | unknown por defecto | no | No volumen identificado | volume sigue null incluso Kg=0 |
+| currency_evidence | NORMALIZED/ANALYTICAL/DASHBOARD | enum documented/contextual/unknown | Evidencia de denominación | Manifest y encabezados oficiales | no | Pesos locales → ARS explícito | ARS no viene como código ISO del XLSX |
+| product_raw | NORMALIZED/ANALYTICAL | string | Producto original | Especie | sí | Producto publicado | No corregir RAW |
+| variety_raw | NORMALIZED/ANALYTICAL | string | Variedad original | Variedad | sí | Variedad publicada | ¥ se preserva si regla no validada |
+| origin_raw | NORMALIZED/ANALYTICAL | string | Origen original | Procedencia | sí | Geografía publicada | No identificar provincia/localidad sin evidencia |
+| origin_normalized | NORMALIZED/ANALYTICAL/DASHBOARD | string | Origen textual + alias validated | Procedencia/diccionario | sí | Etiqueta controlada | observed/manual_review no se aplica |
+| package_raw | NORMALIZED/ANALYTICAL | string | Envase original | Envase | sí | Presentación publicada | Sin inferir Kg del bulto |
+| coverage_days | DASHBOARD MONTHLY | integer | Días distintos de esa combinación observados | ANALYTICAL | no | Cobertura muestral | No número de registros |
+| expected_days | DASHBOARD MONTHLY | integer | Días de publicación esperados | Calendario oficial futuro | sí | Denominador cobertura | null si no documentado |
+| coverage_ratio | DASHBOARD MONTHLY | number | coverage_days/expected_days | Calendario oficial futuro | sí | Completitud | null con denominador desconocido |
+| aggregation_status | DASHBOARD MONTHLY | enum | partial_period | Estado de piloto | no | Agregado parcial | No equivale a mensual oficial |
+| expected_days_basis | DASHBOARD MONTHLY | string | Motivo del denominador desconocido | official_publication_calendar_unverified | no | Calendario | No supone días hábiles oficiales |
+| acquisition_classification | RAW manifest | enum | HTTP_AUTONOMOUS/BROWSER_AUTOMATION_REQUIRED/MANUAL_ONLY | Adaptador | sí | Método de adquisición | None legado; no confundir automatización con HTTP puro |
+| request_count | RAW manifest | integer | Requests oficiales enviados en ejecución | Adaptador | sí | Control de carga | Incluye recursos UI; descargas validadas por límite |
+
+Manifest añade currency_evidence además de acquisition_classification/request_count.
+Contrato market_price_observation-v2, parser mcba-xlsx-2.0.0; RAW v1 se admite sin alterar
+versiones originales. Matching registra matching_rule/candidate_references y mantiene
+ambiguos sin asignación. Regla precio tolerancia 0.011; no ranking por cercanía.
+
 ## market_price_observation (MCBA)
 
 Cada campo NORMALIZED se conserva en ANALYTICAL. Null significa no informado o no parseable; nunca cero implícito.

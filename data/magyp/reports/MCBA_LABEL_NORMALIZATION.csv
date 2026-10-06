@@ -1,0 +1,251 @@
+field,raw_value,normalized_value,count,normalization_rule,confidence
+origin,BOLIVIA,BOLIVIA,9,explicit_alias:validated,high
+origin,BRASIL,BRASIL,180,explicit_alias:validated,high
+origin,BS. AS.,BS. AS.,518,unicode_nfkc_upper_trim,high
+origin,CATAMARC,CATAMARC,2,explicit_alias:validated,high
+origin,CHILE,CHILE,53,explicit_alias:validated,high
+origin,CHINA,CHINA,3,explicit_alias:validated,high
+origin,COLOMBIA,COLOMBIA,3,unicode_nfkc_upper_trim,high
+origin,CORDOBA,CORDOBA,23,unicode_nfkc_upper_trim,high
+origin,CTES.,CTES.,188,unicode_nfkc_upper_trim,high
+origin,E. RIOS,E. RIOS,130,unicode_nfkc_upper_trim,high
+origin,ECUADOR,ECUADOR,34,explicit_alias:validated,high
+origin,ESPA¥A,ESPA¥A,13,explicit_alias:manual_review,pending
+origin,FORMOSA,FORMOSA,11,explicit_alias:validated,high
+origin,JUJUY,JUJUY,48,explicit_alias:validated,high
+origin,M.D.PLAT,M.D.PLAT,5,unicode_nfkc_upper_trim,high
+origin,MENDOZA,MENDOZA,175,explicit_alias:validated,high
+origin,MISIONES,MISIONES,15,explicit_alias:validated,high
+origin,PARAGUAY,PARAGUAY,8,explicit_alias:validated,high
+origin,PERU,PERU,19,unicode_nfkc_upper_trim,high
+origin,R. NEGRO,R. NEGRO,217,unicode_nfkc_upper_trim,high
+origin,S. PEDRO,S. PEDRO,6,unicode_nfkc_upper_trim,high
+origin,S.BS.AS.,S.BS.AS.,35,explicit_alias:validated,high
+origin,SALTA,SALTA,323,explicit_alias:validated,high
+origin,SAN JUAN,SAN JUAN,38,explicit_alias:validated,high
+origin,SAN LUIS,SAN LUIS,10,unicode_nfkc_upper_trim,high
+origin,SANTA FE,SANTA FE,52,explicit_alias:validated,high
+origin,SE BS.AS,SE BS.AS,18,explicit_alias:validated,high
+origin,SGO.EST.,SGO.EST.,37,explicit_alias:validated,high
+origin,TUCUMAN,TUCUMAN,60,unicode_nfkc_upper_trim,high
+origin,V.DOLOR.,V.DOLOR.,7,explicit_alias:validated,high
+package,ATADO,ATADO,122,unicode_nfkc_upper_trim,high
+package,BANDEJA,BANDEJA,148,unicode_nfkc_upper_trim,high
+package,BOLSA,BOLSA,366,unicode_nfkc_upper_trim,high
+package,CAJA,CAJA,552,unicode_nfkc_upper_trim,high
+package,GRANEL,GRANEL,12,unicode_nfkc_upper_trim,high
+package,JAULA,JAULA,299,unicode_nfkc_upper_trim,high
+package,PERDIDO,PERDIDO,356,unicode_nfkc_upper_trim,high
+package,RISTRA 100,RISTRA 100,96,unicode_nfkc_upper_trim,high
+package,TORITO,TORITO,32,unicode_nfkc_upper_trim,high
+package,TORO,TORO,250,unicode_nfkc_upper_trim,high
+product,ACELGA,ACELGA,32,explicit_alias:validated,high
+product,ACHICORIA,ACHICORIA,16,explicit_alias:validated,high
+product,ACUSAY,ACUSAY,21,explicit_alias:validated,high
+product,AJO,AJO,121,explicit_alias:validated,high
+product,ALBAHACA,ALBAHACA,24,explicit_alias:validated,high
+product,ALCAUCIL,ALCAUCIL,21,explicit_alias:validated,high
+product,ANANA,ANANA,22,explicit_alias:validated,high
+product,APIO,APIO,21,explicit_alias:validated,high
+product,ARANDANO,ARANDANO,25,explicit_alias:validated,high
+product,ARVEJA,ARVEJA,14,explicit_alias:validated,high
+product,BANANA,BANANA,64,explicit_alias:validated,high
+product,BATATA,BATATA,34,explicit_alias:validated,high
+product,BERENJENA,BERENJENA,32,explicit_alias:validated,high
+product,BERRO,BERRO,16,explicit_alias:validated,high
+product,BROCOLI,BROCOLI,29,explicit_alias:validated,high
+product,BROTE ALFA,BROTE ALFA,12,explicit_alias:validated,high
+product,BROTE SOJA,BROTE SOJA,12,explicit_alias:validated,high
+product,CARDO,CARDO,16,explicit_alias:validated,high
+product,CEB.VERDEO,CEB.VERDEO,29,explicit_alias:validated,high
+product,CEBOLLA,CEBOLLA,58,explicit_alias:validated,high
+product,CHAUCHA,CHAUCHA,39,explicit_alias:validated,high
+product,CHOCLO,CHOCLO,21,explicit_alias:validated,high
+product,CIBOULLE,CIBOULLE,16,explicit_alias:validated,high
+product,CILANDRO,CILANDRO,12,explicit_alias:validated,high
+product,CIRUELA,CIRUELA,20,explicit_alias:validated,high
+product,COCO,COCO,14,explicit_alias:validated,high
+product,COLIFLOR,COLIFLOR,20,explicit_alias:validated,high
+product,CURCUMA,CURCUMA,17,explicit_alias:validated,high
+product,DURAZNO,DURAZNO,22,unicode_nfkc_upper_trim,high
+product,ECHALOTE,ECHALOTE,10,explicit_alias:validated,high
+product,ENDIBIA,ENDIBIA,16,explicit_alias:validated,high
+product,ESCAROLA,ESCAROLA,24,explicit_alias:validated,high
+product,ESPARRAGO,ESPARRAGO,32,explicit_alias:validated,high
+product,ESPINACA,ESPINACA,23,explicit_alias:validated,high
+product,FRUTILLA,FRUTILLA,54,explicit_alias:validated,high
+product,GUAYABA,GUAYABA,2,unicode_nfkc_upper_trim,high
+product,HABA,HABA,8,explicit_alias:validated,high
+product,HINOJO,HINOJO,18,explicit_alias:validated,high
+product,HONGOS,HONGOS,40,explicit_alias:validated,high
+product,JENGIBRE,JENGIBRE,21,explicit_alias:validated,high
+product,KALE,KALE,18,explicit_alias:validated,high
+product,KIWI,KIWI,44,explicit_alias:validated,high
+product,KUMQUAT,KUMQUAT,17,explicit_alias:validated,high
+product,LECHUGA,LECHUGA,81,explicit_alias:validated,high
+product,LIMA,LIMA,18,explicit_alias:validated,high
+product,LIMON,LIMON,58,explicit_alias:validated,high
+product,MAMON,MAMON,5,unicode_nfkc_upper_trim,high
+product,MANDARINA,MANDARINA,76,explicit_alias:validated,high
+product,MANDIOCA,MANDIOCA,16,explicit_alias:validated,high
+product,MANGO,MANGO,22,explicit_alias:validated,high
+product,MANI,MANI,4,unicode_nfkc_upper_trim,high
+product,MANZANA,MANZANA,187,explicit_alias:validated,high
+product,MBURUCUYA,MBURUCUYA,2,unicode_nfkc_upper_trim,high
+product,MELON,MELON,33,explicit_alias:validated,high
+product,MEMBRILLO,MEMBRILLO,8,explicit_alias:validated,high
+product,MENTA,MENTA,12,explicit_alias:validated,high
+product,NABIZA,NABIZA,4,unicode_nfkc_upper_trim,high
+product,NABO,NABO,14,explicit_alias:validated,high
+product,NARANJA,NARANJA,59,explicit_alias:validated,high
+product,NUEZ,NUEZ,16,explicit_alias:validated,high
+product,OREGANO,OREGANO,16,explicit_alias:validated,high
+product,PACK CHOY,PACK CHOY,16,explicit_alias:validated,high
+product,PALTA,PALTA,75,explicit_alias:validated,high
+product,PAPA,PAPA,69,explicit_alias:validated,high
+product,PELON,PELON,4,unicode_nfkc_upper_trim,high
+product,PEPINO,PEPINO,31,explicit_alias:validated,high
+product,PERA,PERA,51,explicit_alias:validated,high
+product,PEREJIL,PEREJIL,28,explicit_alias:validated,high
+product,PIMIENTO,PIMIENTO,105,explicit_alias:validated,high
+product,PITAHAYA,PITAHAYA,4,unicode_nfkc_upper_trim,high
+product,PLATANO,PLATANO,17,explicit_alias:validated,high
+product,POMELO,POMELO,35,explicit_alias:validated,high
+product,PUERRO,PUERRO,24,explicit_alias:validated,high
+product,RABANITO,RABANITO,16,explicit_alias:validated,high
+product,RADICCHIO,RADICCHIO,16,explicit_alias:validated,high
+product,RADICHETA,RADICHETA,24,explicit_alias:validated,high
+product,REMOLACHA,REMOLACHA,39,explicit_alias:validated,high
+product,REP.BRUSEL,REP.BRUSEL,10,explicit_alias:validated,high
+product,REPOLLO,REPOLLO,54,explicit_alias:validated,high
+product,ROMERO,ROMERO,16,explicit_alias:validated,high
+product,RUCULA,RUCULA,16,explicit_alias:validated,high
+product,SALVIA,SALVIA,16,explicit_alias:validated,high
+product,SANDIA,SANDIA,27,explicit_alias:validated,high
+product,TOMATE,TOMATE,178,explicit_alias:validated,high
+product,TOMILLO,TOMILLO,16,explicit_alias:validated,high
+product,UVA,UVA,53,explicit_alias:validated,high
+product,ZANAHORIA,ZANAHORIA,42,explicit_alias:validated,high
+product,ZAPALLITO,ZAPALLITO,68,explicit_alias:validated,high
+product,ZAPALLO,ZAPALLO,68,explicit_alias:validated,high
+variety,1ER.CORTE,1ER.CORTE,8,explicit_alias:validated,high
+variety,2DO.CORTE,2DO.CORTE,8,explicit_alias:validated,high
+variety,AFOURER,AFOURER,6,explicit_alias:validated,high
+variety,AGARICUS,AGARICUS,10,explicit_alias:validated,high
+variety,AGATA,AGATA,8,explicit_alias:validated,high
+variety,AMARILLO,AMARILLO,20,explicit_alias:validated,high
+variety,ANC.COKENA,ANC.COKENA,26,explicit_alias:validated,high
+variety,ANGELENO,ANGELENO,1,unicode_nfkc_upper_trim,high
+variety,ANQUITO,ANQUITO,3,unicode_nfkc_upper_trim,high
+variety,ARAPEY,ARAPEY,18,explicit_alias:validated,high
+variety,ARRA 15,ARRA 15,6,explicit_alias:validated,high
+variety,ASIATICA,ASIATICA,7,explicit_alias:validated,high
+variety,ASTERIX,ASTERIX,3,unicode_nfkc_upper_trim,high
+variety,AUTUMN CRI,AUTUMN CRI,6,explicit_alias:validated,high
+variety,BEAUREGARD,BEAUREGARD,8,explicit_alias:validated,high
+variety,BLACKSPLEN,BLACKSPLEN,1,unicode_nfkc_upper_trim,high
+variety,BLANCA,BLANCA,1,unicode_nfkc_upper_trim,high
+variety,BLANCO,BLANCO,35,explicit_alias:validated,high
+variety,CANTALOUP,CANTALOUP,1,unicode_nfkc_upper_trim,high
+variety,CAPUCHINA,CAPUCHINA,28,explicit_alias:validated,high
+variety,CAVENDISH,CAVENDISH,27,explicit_alias:validated,high
+variety,CHANTENAY,CHANTENAY,31,explicit_alias:validated,high
+variety,CHERRY,CHERRY,38,explicit_alias:validated,high
+variety,COLORADA,COLORADA,34,explicit_alias:validated,high
+variety,COLORADO,COLORADO,87,explicit_alias:validated,high
+variety,CRESPO,CRESPO,8,explicit_alias:validated,high
+variety,CRIOLLA,CRIOLLA,25,explicit_alias:validated,high
+variety,CRIPPS PIN,CRIPPS PIN,11,explicit_alias:validated,high
+variety,DAIFLA,DAIFLA,3,unicode_nfkc_upper_trim,high
+variety,DAISY,DAISY,2,unicode_nfkc_upper_trim,high
+variety,DANCY,DANCY,8,explicit_alias:validated,high
+variety,ELLENDALE,ELLENDALE,18,explicit_alias:validated,high
+variety,ENCORE,ENCORE,16,explicit_alias:validated,high
+variety,ESCRITO,ESCRITO,2,unicode_nfkc_upper_trim,high
+variety,ESMERALDA,ESMERALDA,10,explicit_alias:validated,high
+variety,ESPA¥OLA,ESPA¥OLA,1,unicode_nfkc_upper_trim,high
+variety,EUREKA,EUREKA,39,explicit_alias:validated,high
+variety,FLORDAKING,FLORDAKING,4,unicode_nfkc_upper_trim,high
+variety,FORTUNE,FORTUNE,5,unicode_nfkc_upper_trim,high
+variety,FRANCESA,FRANCESA,6,explicit_alias:validated,high
+variety,GALIA,GALIA,3,unicode_nfkc_upper_trim,high
+variety,GENOVA,GENOVA,11,explicit_alias:validated,high
+variety,GOLDEN DEL,GOLDEN DEL,1,unicode_nfkc_upper_trim,high
+variety,GOLDEN GLO,GOLDEN GLO,1,unicode_nfkc_upper_trim,high
+variety,GRANNY SMI,GRANNY SMI,59,explicit_alias:validated,high
+variety,HASS,HASS,61,explicit_alias:validated,high
+variety,HOJA ANCHA,HOJA ANCHA,8,explicit_alias:validated,high
+variety,HOJA FINA,HOJA FINA,8,explicit_alias:validated,high
+variety,ISIS,ISIS,2,unicode_nfkc_upper_trim,high
+variety,JALAPE¥O,JALAPE¥O,8,explicit_alias:manual_review,pending
+variety,JALAPEÑO,JALAPEÑO,11,explicit_alias:validated,high
+variety,JASPEADA,JASPEADA,1,unicode_nfkc_upper_trim,high
+variety,KRONOS,KRONOS,1,unicode_nfkc_upper_trim,high
+variety,LANE LATE,LANE LATE,1,unicode_nfkc_upper_trim,high
+variety,LARGO,LARGO,23,explicit_alias:validated,high
+variety,LARRY ANNE,LARRY ANNE,3,unicode_nfkc_upper_trim,high
+variety,LULA,LULA,2,unicode_nfkc_upper_trim,high
+variety,MANTECOSA,MANTECOSA,14,explicit_alias:validated,high
+variety,MARSH.SEED,MARSH.SEED,1,unicode_nfkc_upper_trim,high
+variety,MDO. CHINO,MDO. CHINO,49,explicit_alias:validated,high
+variety,MIDKNIGHT,MIDKNIGHT,1,unicode_nfkc_upper_trim,high
+variety,MORADO,MORADO,2,explicit_alias:validated,high
+variety,MORRON,MORRON,68,explicit_alias:validated,high
+variety,MURCOT,MURCOT,12,explicit_alias:validated,high
+variety,NANIKA,NANIKA,29,explicit_alias:validated,high
+variety,NANTESA,NANTESA,3,unicode_nfkc_upper_trim,high
+variety,NAVEL LATE,NAVEL LATE,1,unicode_nfkc_upper_trim,high
+variety,NEW HALL,NEW HALL,5,explicit_alias:validated,high
+variety,NOVA,NOVA,8,explicit_alias:validated,high
+variety,NUBIA,NUBIA,2,unicode_nfkc_upper_trim,high
+variety,OPEDEPE,OPEDEPE,9,unicode_nfkc_upper_trim,high
+variety,OPTIMA,OPTIMA,8,explicit_alias:validated,high
+variety,ORANGE,ORANGE,5,explicit_alias:validated,high
+variety,OYSTER,OYSTER,8,explicit_alias:validated,high
+variety,PACKHAM'S,PACKHAM'S,36,explicit_alias:validated,high
+variety,PERITA,PERITA,51,explicit_alias:validated,high
+variety,PI¥A,PI¥A,12,explicit_alias:manual_review,pending
+variety,PK.LAD/CRI,PK.LAD/CRI,4,unicode_nfkc_upper_trim,high
+variety,PORTOBELO,PORTOBELO,8,explicit_alias:validated,high
+variety,Prom.Esp.,PROM.ESP.,636,unicode_nfkc_upper_trim,high
+variety,RED CHAÑAR,RED CHAÑAR,1,unicode_nfkc_upper_trim,high
+variety,RED DELICI,RED DELICI,88,explicit_alias:validated,high
+variety,RED GLOBE,RED GLOBE,10,explicit_alias:validated,high
+variety,RED TOP,RED TOP,2,unicode_nfkc_upper_trim,high
+variety,REDONDA RA,REDONDA RA,1,unicode_nfkc_upper_trim,high
+variety,REDONDO,REDONDO,118,explicit_alias:validated,high
+variety,ROCIO MIEL,ROCIO MIEL,4,unicode_nfkc_upper_trim,high
+variety,ROJITO,ROJITO,3,unicode_nfkc_upper_trim,high
+variety,ROJO UNO,ROJO UNO,2,unicode_nfkc_upper_trim,high
+variety,ROLLIZA,ROLLIZA,19,explicit_alias:validated,high
+variety,ROME BEAUT,ROME BEAUT,13,explicit_alias:validated,high
+variety,RUBY,RUBY,2,unicode_nfkc_upper_trim,high
+variety,RUBY RED,RUBY RED,1,unicode_nfkc_upper_trim,high
+variety,SAGITTA,SAGITTA,4,unicode_nfkc_upper_trim,high
+variety,SALUSTIANA,SALUSTIANA,25,explicit_alias:validated,high
+variety,SCARLOTTA,SCARLOTTA,2,unicode_nfkc_upper_trim,high
+variety,SHIITAKE,SHIITAKE,6,explicit_alias:validated,high
+variety,SIN VARIED,SIN VARIED,8,explicit_alias:validated,high
+variety,SPUNTA,SPUNTA,39,explicit_alias:validated,high
+variety,STAR RUBY,STAR RUBY,19,explicit_alias:validated,high
+variety,SUGAR BABY,SUGAR BABY,1,unicode_nfkc_upper_trim,high
+variety,SUGAR CRIP,SUGAR CRIP,7,explicit_alias:validated,high
+variety,SUN DEW,SUN DEW,1,unicode_nfkc_upper_trim,high
+variety,SUNGOLD,SUNGOLD,1,unicode_nfkc_upper_trim,high
+variety,SWEET JUBI,SWEET JUBI,4,unicode_nfkc_upper_trim,high
+variety,T.SEEDLESS,T.SEEDLESS,1,unicode_nfkc_upper_trim,high
+variety,TAHITI,TAHITI,8,explicit_alias:validated,high
+variety,TETSUKAB.,TETSUKAB.,31,explicit_alias:validated,high
+variety,TORRES,TORRES,4,explicit_alias:validated,high
+variety,VAL.SEEDLE,VAL.SEEDLE,5,unicode_nfkc_upper_trim,high
+variety,VALEN.LATE,VALEN.LATE,2,unicode_nfkc_upper_trim,high
+variety,VALENCIANA,VALENCIANA,15,explicit_alias:validated,high
+variety,VALENCIANI,VALENCIANI,13,unicode_nfkc_upper_trim,high
+variety,VERDE,VERDE,24,explicit_alias:validated,high
+variety,VICTORIA,VICTORIA,5,explicit_alias:validated,high
+variety,VINAGRE,VINAGRE,10,explicit_alias:validated,high
+variety,VIOLETA,VIOLETA,7,explicit_alias:validated,high
+variety,VTA.MED.LA,VTA.MED.LA,23,explicit_alias:validated,high
+variety,W.NAVEL,W.NAVEL,11,explicit_alias:validated,high
+variety,YONA,YONA,2,unicode_nfkc_upper_trim,high
+variety,¥. FRANCES,¥. FRANCES,5,unicode_nfkc_upper_trim,high

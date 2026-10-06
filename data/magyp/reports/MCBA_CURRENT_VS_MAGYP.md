@@ -1,32 +1,29 @@
-# Comparación MCBA actual vs MAGyP
+# Comparación MCBA — fase 2
 
-Clasificación: **COMPLEMENT_ONLY**. La muestra oficial valida el procesamiento;
-no prueba adquisición autónoma, continuidad histórica ni equivalencia mensual.
+Clasificación **COMPLEMENT_ONLY**. Adquisición automatizada con navegador validada;
+no se valida reemplazo de promedio mensual, continuidad completa ni equivalencia de todas las dimensiones.
 
-## Método y límites
+## Reglas
 
-Se compara `PRECIOS_MAYORISTAS_INTEGRADO.csv` sin modificarlo. Mercado se selecciona
-por MCBA/Mercado Central de Buenos Aires. 2024–2025 `fecha_precision=mensual`
-se compara únicamente en cobertura mensual: el primer día es ancla, no observación diaria.
-Para 2026 se considera diario sólo archivo RF/RH con fecha ISO; otros casos quedan unknown.
-Un día de MAGyP no reproduce K_mes de PFRU/PHOR. No hay coincidencias día/mes declaradas.
+Sólo fechas diarias efectivamente presentes en ambas fuentes. Fechas MAGyP fuera del
+histórico actual se informan separadamente, no como pérdida current_only/magyp_only.
+Las filas mensuales se incluyen como diagnóstico not_comparable_precision; el ancla
+01 del mes no es un día observado. No se calculan diferencias día/mes.
 
-Join multiconjunto 1:1: fecha, tipo, especie, variedad, procedencia, envase,
-unidad y mercado; luego precio con tolerancia 0.011 (centavos publicados).
-NFKC, mayúsculas y espacios son normalización textual; no se corrigen variedades.
-`$/kg` se interpreta ARS/kg por contexto local, sin cambiar el original del reporte.
-Exact_available_dimensions significa igualdad sólo de dimensiones disponibles;
-calidad/tamaño/grado no están estructurados en la base diaria actual y no se valida
-su equivalencia. Candidate_count >1 informa ambigüedad, no ID oficial validado.
+Exact: etiquetas literales y precio. Normalized_exact: NFKC/mayúsculas/espacios y
+reglas validated. Probable: sólo reglas observed explícitas en config/mcba_aliases.json.
+Manual_review nunca se aplica; no se eliminan diacríticos globalmente. $/kg→ARS/kg
+es equivalencia contextual exclusiva de MCBA, con originales reportados.
 
-Probable admite exclusivamente los alias exploratorios detallados abajo; requieren
-diccionario para pasar a una equivalencia validada. Además elimina diacríticos sólo
-para candidatos probables; los originales y las claves canónicas conservan acentos.
-Diferencia de precio conserva
-ambos importes. No se consideran precios iguales por cercanía entre productos.
-Unidades o moneda vacías se reportan; no se convierten ni rellenan series.
+Claves: mercado MCBA/fecha/tipo/producto/variedad/procedencia/envase/unidad; moneda
+explícita incompatible excluye candidato. Coincidencias de precio toleran 0.011.
+Sólo parejas MUTUAMENTE ÚNICAS. Múltiples candidatos en cualquiera de las dos fuentes
+producen ambiguous, con referencias a todos los candidatos; nunca se elige el primero
+ni el precio más cercano. La categoría probable con regla unique_dimensions_price_difference
+conserva discrepancias de precio. Quality/size/grade no estructurados en base diaria actual:
+no se afirma equivalencia de esas dimensiones. Matching_rule registra qué se usó.
 
-## Métricas reproducibles
+## Métricas
 
 ```json
 {
@@ -41,8 +38,8 @@ Unidades o moneda vacías se reportan; no se convierten ni rellenan series.
     "package_distinct": 12
   },
   "current_daily_overlap": {
-    "rows": 361,
-    "date_min": "2026-08-24",
+    "rows": 1561,
+    "date_min": "2026-08-19",
     "date_max": "2026-08-24",
     "product_distinct": 81,
     "variety_distinct": 73,
@@ -59,26 +56,26 @@ Unidades o moneda vacías se reportan; no se convierten ni rellenan series.
     "package_distinct": 11
   },
   "magyp_pilot": {
-    "rows": 1078,
+    "rows": 2876,
     "date_min": "2024-10-02",
-    "date_max": "2026-08-24",
+    "date_max": "2026-10-05",
     "product_distinct": 89,
-    "variety_distinct": 113,
+    "variety_distinct": 121,
     "origin_distinct": 30,
     "package_distinct": 10
   },
   "matches": {
-    "exact_available_dimensions": 81,
-    "probable": 274,
-    "price_difference": 0,
-    "unit_difference": 0,
-    "current_only": 6,
-    "magyp_only": 4,
-    "monthly_not_comparable": 719,
+    "exact": 0,
+    "normalized_exact": 299,
+    "probable": 987,
+    "ambiguous": 377,
+    "current_only": 25,
+    "magyp_only": 16,
+    "monthly_not_comparable": 1077,
     "current_monthly_not_comparable": 782
   },
-  "name_differences": 274,
-  "ambiguous_candidates": 0,
+  "name_differences": 987,
+  "ambiguous_candidates": 131,
   "current_precision": {
     "day": 61744,
     "month": 8708
@@ -87,10 +84,10 @@ Unidades o moneda vacías se reportan; no se convierten ni rellenan series.
     "$/kg": 70452
   },
   "magyp_units": {
-    "ARS/kg": 1078
+    "ARS/kg": 2876
   },
   "magyp_currencies": {
-    "ARS": 1078
+    "ARS": 2876
   },
   "flags": {
     "price_missing": 0,
@@ -100,70 +97,36 @@ Unidades o moneda vacías se reportan; no se convierten ni rellenan series.
     "unit_missing": 0,
     "product_missing": 0,
     "date_missing": 0,
-    "origin_missing": 236,
+    "origin_missing": 636,
     "duplicate_candidate": 0,
     "extreme_value_candidate": 0
   },
   "parse_warnings": {
-    "kg_semantics_unverified": 1078,
-    "official_record_id_not_exported": 1078,
-    "currency_from_official_context": 1078,
-    "currency_context_transfer_requires_confirmation": 687,
-    "suspicious_source_character_preserved": 14
-  }
+    "kg_semantics_unverified": 2876,
+    "official_record_id_not_exported": 2876,
+    "currency_from_official_context": 2506,
+    "currency_context_transfer_requires_confirmation": 1605,
+    "suspicious_source_character_preserved": 39,
+    "currency_from_official_documentation": 370
+  },
+  "price_differences_matched": 0,
+  "magyp_dates_not_daily_comparable": [
+    "2024-10-02",
+    "2024-10-03",
+    "2025-10-02",
+    "2026-10-05"
+  ]
 }
 ```
 
-## Alias exploratorios
+## Límites
 
-{
-  "package": {
-    "CA": "CAJA",
-    "JA": "JAULA",
-    "BO": "BOLSA",
-    "TO": "TORO",
-    "PE": "PERDIDO",
-    "AT": "ATADO",
-    "BA": "BANDEJA",
-    "RT": "RISTRA 100",
-    "TT": "TORITO",
-    "GR": "GRANEL"
-  },
-  "origin": {
-    "BUENOS AIRES": "BS. AS.",
-    "CORRIENTES": "CTES.",
-    "ENTRE RIOS": "E. RIOS",
-    "RIO NEGRO": "R. NEGRO",
-    "SAN JUAN": "S. JUAN",
-    "SAN PEDRO": "S. PEDRO",
-    "MAR DEL PLATA": "M.D.PLAT"
-  }
-}
+Prom.Esp. se conserva separado como species_summary. Kg sigue unknown y volumen null.
+Moneda documentada como pesos/kg en encabezados oficiales de frutas y hortalizas,
+ISO ARS por regla explícita de pesos locales argentinos; RAW legado conserva evidencia contextual.
+Monthly tiene coverage_days y aggregation_status=partial_period; expected_days/ratio null
+hasta validar calendario oficial. No sustituye K_mes.
 
-## Dimensiones y cobertura
-
-Export: Fecha, Tipo, Especie, Variedad, Procedencia, Envase, Calidad, Tamaño, Grado,
-Kg, Promedio x Kg. Conservados los 11 campos originales y trazabilidad por captura.
-No exporta EmpresaID/SucursalID ni códigos de dimensiones disponibles en la grilla;
-no se inventan. Precio min/max/modal, volumen, ID oficial y definición de Kg no informados.
-Prom.Esp. se conserva como species_summary, separado de detail; nunca se promedian juntos.
-ARS/kg es contexto oficial, no campo explícito del XLSX. Evidencia:
-[precio promedio en pesos por kilo MCBA](https://ssma.magyp.gob.ar/frutas.preciospromediof.aspx).
-
-La cobertura del piloto se limita a fechas exportadas, no acredita todos los días entre extremos.
-La mediana mensual piloto es parcial de días observados, no reemplaza el promedio oficial mensual.
-La muestra XLSX presenta `¥` (U+00A5) en etiquetas como PI¥A, JALAPE¥O y ESPA¥A,
-mientras la base actual conserva ñ. Se conserva el carácter publicado, se marca
-suspicious_source_character_preserved y no se corrige ni declara coincidencia automática.
-Las diferencias de cobertura incluyen Frutilla/Tucumán y Zanahoria/Chantenay/Mendoza
-presentes en la base diaria actual; deben contrastarse con export/grilla y revisiones oficiales.
-Los registros fuera de los períodos del piloto se contabilizan en cobertura total;
-no se etiquetan current_only porque no fueron consultados a MAGyP.
-
-## Decisión y siguiente fase
-
-Mantener Excel e integrado productivo. Validar generación autónoma del XLSX GeneXus,
-estabilidad de filtros y semántica del promedio. Después comparar una pequeña muestra
-2024/2025 mensual oficial contra K_mes y varias fechas diarias 2026. Confirmar códigos,
-diccionarios envase/procedencia, licencia/redistribución, moneda y Kg con el organismo.
-No implementar SIO avanzado ni sustituir Corrientes, FOB o dashboard en esta etapa.
+Frutilla/Zanahoria y labels ¥ se investigan en MCBA_PHASE2_REPORT.md y los reportes de
+cobertura/normalización. No asumir pérdida de producto por una presentación ausente en un día.
+No se modifica PRECIOS_MAYORISTAS_INTEGRADO.csv ni frontend.

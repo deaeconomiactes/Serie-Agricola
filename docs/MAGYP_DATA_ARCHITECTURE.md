@@ -1,5 +1,10 @@
 # Arquitectura canónica MAGyP — Serie Agrícola
 
+**Actualización fase 2:** adquisición autónoma desde Python por navegador validada;
+clasificación BROWSER_AUTOMATION_REQUIRED y decisión de migración COMPLEMENT_ONLY.
+Se mantiene RAW → NORMALIZED → ANALYTICAL → DASHBOARD. El apéndice de fase 2
+supersede las limitaciones de adquisición y contrato v1 descritas históricamente abajo.
+
 Estado: piloto aislado MCBA, **COMPLEMENT_ONLY**. No reemplaza bases ni frontend.
 Rama `codex/magyp-data-platform-mcba`, base main
 `e18350e93d4aabf0f7ea46b92da98af69c40ab7d`. SIO avanzado queda pausado.
@@ -185,3 +190,68 @@ app.js/index.html/styles.css, actuales series, Excel, Corrientes, SIO o piloto F
 Código nuevo; no merge/cherry-pick ni copia de scripts de ramas anteriores.
 El reporte de codex/explorar-apis-magyp se consultó sólo como referencia de la exportación
 GeneXus y sus límites. SIO y FOB conservan sus ramas/worktrees y código sin cambios.
+
+## Fase 2 — adquisición, cobertura y semántica
+
+`acquisition.py` separa el navegador del parser. Python + Playwright 1.58.0 + Edge
+headless usa contexto no persistente y UA nativo con sufijo del piloto (no oculta
+HeadlessChrome). Sin flags de evasión, certificados ignorados, proxies ni herramientas
+de bypass. Cookies y estado/anti-CSRF permanecen en memoria; no HAR, traces, perfiles
+persistentes ni storage_state. Sólo se registran nombres de controles/headers/cookies,
+eventos públicos y conteos. Query cifrada y path de export temporal se eliminan del diagnóstico.
+
+Modo `auto` elige navegador: candidato HTTP puro no validado. `--acquisition http`
+falla de forma explícita sin forzar el servicio. Se estudió secuencia real: GET inicial,
+bootstrap/cookies y segundo GET observado por GeneXus; POST JSON con evento
+DDO_GRID.ONOPTIONCLICKED y luego DOEXPORT, GET de archivo temporal en popup.
+Token/firma/header se generan por la implementación oficial de la página.
+
+```powershell
+python -m pip install -r scripts/magyp/requirements-browser.txt
+python scripts/magyp/mcba/fetch_mcba.py --date-from 2026-08-19 --date-to 2026-08-24 --allow-web --timeout 40
+# Chromium alternativo si Edge no está disponible: instalar navegador una vez y usar --browser-channel chromium.
+python -m playwright install chromium
+python scripts/magyp/mcba/normalize_mcba.py
+python scripts/magyp/mcba/build_analytical_mcba.py
+python scripts/magyp/mcba/build_dashboard_mcba.py
+python scripts/magyp/mcba/compare_mcba_current_vs_magyp.py
+python scripts/magyp/mcba/validate_coverage_mcba.py
+```
+
+Red off por defecto; dry-run sin requests/escrituras. Ventana máxima 7 días, máximo
+80 requests oficiales por ejecución (configurable 1–120), timeout 1–60 segundos,
+XLSX <=2 MB y <=10.000 filas, ZIP expandido <=20 MB. Recursos image/font/media se
+abortan antes de solicitarse al servidor; páginas/JS/CSS requeridos mantienen allowlist.
+La descarga se escucha en todo el contexto por el popup. Validar grilla filtrada,
+ventana XLSX/schema/conteo/tamaño antes de crear RAW. No reintentos automáticos.
+Dos pruebas de 2025 fallaron al cargar la página: falla explícita y última salida válida
+conservada. No se declara garantía de estabilidad del proveedor.
+
+Contrato NORMALIZED v2/PARSER 2.0.0: lectura compatible de RAW v1 + v2, sin reescribir
+manifests antiguos. Manifest v2 admite ventana; versiones legadas v1 mantienen un día.
+Nuevos campos observation_level, kg_semantics_status, currency_evidence y *_raw /
+origin_normalized. Los IDs técnicos preservan fórmula original basada en fila original.
+`record_kind` se conserva por compatibilidad; observation_level deja explícito el grano.
+
+Prom.Esp. se infiere como resumen de especie por estructura, atributos vacíos y fila
+publicada adicional. No se conoce fórmula/ponderador; contrastar media simple es
+diagnóstico, no una regla de reconstrucción. Kg sigue unknown y volumen null.
+Ambos encabezados oficiales, frutas y hortalizas, documentan pesos/kg; ISO ARS resulta
+de la regla explícita de pesos locales argentinos. `currency_evidence=documented` en
+nuevas capturas tras esa validación; RAW antiguo conserva contextual. No inferir código
+ISO como campo recibido. Consultar fuentes/evidencia en registro y reporte fase 2.
+
+Aliases en config/mcba_aliases.json. Sólo validated se aplica en NORMALIZED, observed
+sirve para matching probable y manual_review nunca se aplica. Cada regla por dimensión
+y valor; no sustitución global ¥/Ñ ni borrado global de acentos. El reporte de etiquetas
+registra original, normalizado, conteo, regla y confianza. Anomalías no resueltas quedan
+preservadas con advertencia y revisión pendiente.
+
+Matching: exact/normalized_exact/probable/ambiguous/current_only/magyp_only. Exige
+mutua unicidad; múltiples candidatos no se asignan por posición o precio cercano.
+Calidad/tamaño/grado no recuperados en columnas actuales pueden explicar ambigüedades.
+Sólo días presentes en ambas fuentes. Mensuales quedan diagnóstico no comparable.
+Metadata monthly: coverage_days, expected_days=null, coverage_ratio=null,
+aggregation_status=partial_period; calendario oficial desconocido impide denominador.
+
+No Actions, cron, migración productiva o cambios de SIO/FOB/Corrientes/Cantidades.

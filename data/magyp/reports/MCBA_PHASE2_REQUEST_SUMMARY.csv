@@ -1,0 +1,6 @@
+diagnostic,result,request_count,get_count,post_count,stage,inventory_scope
+MCBA_ACQUISITION_2026-10-06T124627_204226Z-e5f71be4.json,success,63,61,2,completed,persisted_diagnostics_only
+MCBA_ACQUISITION_2026-10-06T124717_891082Z-01ba3167.json,success,63,61,2,completed,persisted_diagnostics_only
+MCBA_ACQUISITION_2026-10-06T124845_969986Z-54adef22.json,success,63,61,2,completed,persisted_diagnostics_only
+MCBA_ACQUISITION_2026-10-06T125321_088827Z-17567ec0.json,success,63,61,2,completed,persisted_diagnostics_only
+MCBA_ACQUISITION_FAILED_2026-10-06T125440_626680Z.json,failed,51,51,0,initial_get,persisted_diagnostics_only

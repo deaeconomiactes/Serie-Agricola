@@ -10,8 +10,8 @@
     "package_distinct": 12
   },
   "current_daily_overlap": {
-    "rows": 361,
-    "date_min": "2026-08-24",
+    "rows": 1561,
+    "date_min": "2026-08-19",
     "date_max": "2026-08-24",
     "product_distinct": 81,
     "variety_distinct": 73,
@@ -28,26 +28,26 @@
     "package_distinct": 11
   },
   "magyp_pilot": {
-    "rows": 1078,
+    "rows": 2876,
     "date_min": "2024-10-02",
-    "date_max": "2026-08-24",
+    "date_max": "2026-10-05",
     "product_distinct": 89,
-    "variety_distinct": 113,
+    "variety_distinct": 121,
     "origin_distinct": 30,
     "package_distinct": 10
   },
   "matches": {
-    "exact_available_dimensions": 81,
-    "probable": 274,
-    "price_difference": 0,
-    "unit_difference": 0,
-    "current_only": 6,
-    "magyp_only": 4,
-    "monthly_not_comparable": 719,
+    "exact": 0,
+    "normalized_exact": 299,
+    "probable": 987,
+    "ambiguous": 377,
+    "current_only": 25,
+    "magyp_only": 16,
+    "monthly_not_comparable": 1077,
     "current_monthly_not_comparable": 782
   },
-  "name_differences": 274,
-  "ambiguous_candidates": 0,
+  "name_differences": 987,
+  "ambiguous_candidates": 131,
   "current_precision": {
     "day": 61744,
     "month": 8708
@@ -56,10 +56,10 @@
     "$/kg": 70452
   },
   "magyp_units": {
-    "ARS/kg": 1078
+    "ARS/kg": 2876
   },
   "magyp_currencies": {
-    "ARS": 1078
+    "ARS": 2876
   },
   "flags": {
     "price_missing": 0,
@@ -69,15 +69,23 @@
     "unit_missing": 0,
     "product_missing": 0,
     "date_missing": 0,
-    "origin_missing": 236,
+    "origin_missing": 636,
     "duplicate_candidate": 0,
     "extreme_value_candidate": 0
   },
   "parse_warnings": {
-    "kg_semantics_unverified": 1078,
-    "official_record_id_not_exported": 1078,
-    "currency_from_official_context": 1078,
-    "currency_context_transfer_requires_confirmation": 687,
-    "suspicious_source_character_preserved": 14
-  }
+    "kg_semantics_unverified": 2876,
+    "official_record_id_not_exported": 2876,
+    "currency_from_official_context": 2506,
+    "currency_context_transfer_requires_confirmation": 1605,
+    "suspicious_source_character_preserved": 39,
+    "currency_from_official_documentation": 370
+  },
+  "price_differences_matched": 0,
+  "magyp_dates_not_daily_comparable": [
+    "2024-10-02",
+    "2024-10-03",
+    "2025-10-02",
+    "2026-10-05"
+  ]
 }

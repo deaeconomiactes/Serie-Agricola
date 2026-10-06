@@ -1,0 +1,370 @@
+{
+  "requested_from": "2025-10-02",
+  "requested_to": "2025-10-03",
+  "captured_at_utc": "2026-10-06T12:54:40.626680Z",
+  "result": "failed",
+  "diagnostics": {
+    "stage": "initial_get",
+    "requests": [
+      {
+        "sequence": 1,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/frutas.precios.aspx",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 2,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/DVPaginationBar/DVPaginationBar.css",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 3,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/calendar-system.css",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 4,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/bootstrap/css/bootstrap.min.css",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 5,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/Resources/Spanish/SSMATheme.css",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 6,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/DVMessage/DVMessage.css",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 7,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/Shared/fontawesome_v5/css/fontawesome.min.css",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 8,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/Shared/fontawesome_v5/css/all.min.css",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 9,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/Shared/DVelopBootstrap.css",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 10,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/jquery.js",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 11,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/bootstrap/js/bootstrap.min.js",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 12,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/gxgral.js",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 13,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/gxcfg.js",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 14,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/calendar.js",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 15,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/calendar-setup.js",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 16,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/calendar-es.js",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 17,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/Shared/DVelopBootstrap.js",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 18,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/Shared/WorkWithPlusCommon.js",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 19,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/DropDownOptions/BootstrapDropDownOptionsRender.js",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 20,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/DVPaginationBar/DVPaginationBarRender.js",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 21,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/messages.spa.js",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 22,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/frutas/precios.js",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 23,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/Tooltip/BootstrapTooltipRender.js",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 24,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/DVMessage/pnotify.custom.js",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 25,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/DVMessage/DVMessageRender.js",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 26,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/Mask/jquery.mask.js",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 27,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/WorkWithPlusUtilities/BootstrapSelect.js",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 28,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/WorkWithPlusUtilities/WorkWithPlusUtilitiesRender.js",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 29,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/wwpbaseobjects/wwpbootstrapresponsivemasterpagesm.js",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 30,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/frutas.precios.aspx",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 31,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/DVPaginationBar/DVPaginationBar.css",
+        "status": 200,
+        "stage": "initial"
+      },
+      {
+        "sequence": 32,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/calendar-system.css",
+        "status": null,
+        "stage": "initial"
+      },
+      {
+        "sequence": 33,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/bootstrap/css/bootstrap.min.css",
+        "status": null,
+        "stage": "initial"
+      },
+      {
+        "sequence": 34,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/Resources/Spanish/SSMATheme.css",
+        "status": null,
+        "stage": "initial"
+      },
+      {
+        "sequence": 35,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/DVMessage/DVMessage.css",
+        "status": null,
+        "stage": "initial"
+      },
+      {
+        "sequence": 36,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/Shared/fontawesome_v5/css/fontawesome.min.css",
+        "status": null,
+        "stage": "initial"
+      },
+      {
+        "sequence": 37,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/Shared/fontawesome_v5/css/all.min.css",
+        "status": null,
+        "stage": "initial"
+      },
+      {
+        "sequence": 38,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/Shared/DVelopBootstrap.css",
+        "status": null,
+        "stage": "initial"
+      },
+      {
+        "sequence": 39,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/jquery.js",
+        "status": null,
+        "stage": "initial"
+      },
+      {
+        "sequence": 40,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/bootstrap/js/bootstrap.min.js",
+        "status": null,
+        "stage": "initial"
+      },
+      {
+        "sequence": 41,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/gxgral.js",
+        "status": null,
+        "stage": "initial"
+      },
+      {
+        "sequence": 42,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/gxcfg.js",
+        "status": null,
+        "stage": "initial"
+      },
+      {
+        "sequence": 43,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/calendar.js",
+        "status": null,
+        "stage": "initial"
+      },
+      {
+        "sequence": 44,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/calendar-setup.js",
+        "status": null,
+        "stage": "initial"
+      },
+      {
+        "sequence": 45,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/calendar-es.js",
+        "status": null,
+        "stage": "initial"
+      },
+      {
+        "sequence": 46,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/Shared/DVelopBootstrap.js",
+        "status": null,
+        "stage": "initial"
+      },
+      {
+        "sequence": 47,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/Shared/WorkWithPlusCommon.js",
+        "status": null,
+        "stage": "initial"
+      },
+      {
+        "sequence": 48,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/DropDownOptions/BootstrapDropDownOptionsRender.js",
+        "status": null,
+        "stage": "initial"
+      },
+      {
+        "sequence": 49,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/DVelop/DVPaginationBar/DVPaginationBarRender.js",
+        "status": null,
+        "stage": "initial"
+      },
+      {
+        "sequence": 50,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/messages.spa.js",
+        "status": null,
+        "stage": "initial"
+      },
+      {
+        "sequence": 51,
+        "method": "GET",
+        "endpoint": "https://ssma.magyp.gob.ar/frutas/precios.js",
+        "status": null,
+        "stage": "initial"
+      }
+    ],
+    "errors": [],
+    "protocol": {}
+  }
+}

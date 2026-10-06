@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from scripts.magyp.common.platform import PipelineError, load_raw, write_jsonl
-from scripts.magyp.mcba.model import PARSER_VERSION, SCHEMA_VERSION, normalize, parse_export, validate_canonical
+from scripts.magyp.mcba.model import ACCEPTED_RAW_VERSIONS, normalize, parse_export, validate_canonical
 
 
 def run(data_root):
@@ -18,9 +18,9 @@ def run(data_root):
     rows = []
     for file in folders:
         payload, manifest = load_raw(file.parent)
-        if manifest.parser_version != PARSER_VERSION or manifest.schema_version != SCHEMA_VERSION:
+        if (manifest.parser_version, manifest.schema_version) not in ACCEPTED_RAW_VERSIONS:
             raise PipelineError("Versión de contrato/parser RAW no soportada")
-        records = parse_export(payload, manifest.public_parameters["date_from"])
+        records = parse_export(payload, manifest.public_parameters["date_from"], manifest.public_parameters["date_to"])
         if len(records) != manifest.record_count:
             raise PipelineError("Conteo RAW no coincide con manifest")
         rows.extend(normalize(records, manifest))

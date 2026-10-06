@@ -1,0 +1,652 @@
+{
+  "requests": [
+    {
+      "sequence": 1,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/frutas.precios.aspx",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 2,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/DVPaginationBar/DVPaginationBar.css",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 3,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/calendar-system.css",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 4,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/bootstrap/css/bootstrap.min.css",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 5,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/Resources/Spanish/SSMATheme.css",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 6,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/DVMessage/DVMessage.css",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 7,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/Shared/fontawesome_v5/css/fontawesome.min.css",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 8,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/Shared/fontawesome_v5/css/all.min.css",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 9,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/Shared/DVelopBootstrap.css",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 10,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/jquery.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 11,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/bootstrap/js/bootstrap.min.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 12,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/gxgral.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 13,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/gxcfg.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 14,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/calendar.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 15,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/calendar-setup.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 16,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/calendar-es.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 17,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/Shared/DVelopBootstrap.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 18,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/Shared/WorkWithPlusCommon.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 19,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/DropDownOptions/BootstrapDropDownOptionsRender.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 20,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/DVPaginationBar/DVPaginationBarRender.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 21,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/messages.spa.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 22,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/frutas/precios.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 23,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/Tooltip/BootstrapTooltipRender.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 24,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/DVMessage/pnotify.custom.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 25,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/DVMessage/DVMessageRender.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 26,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/Mask/jquery.mask.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 27,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/WorkWithPlusUtilities/BootstrapSelect.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 28,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/WorkWithPlusUtilities/WorkWithPlusUtilitiesRender.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 29,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/wwpbaseobjects/wwpbootstrapresponsivemasterpagesm.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 30,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/frutas.precios.aspx",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 31,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/DVPaginationBar/DVPaginationBar.css",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 32,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/calendar-system.css",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 33,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/bootstrap/css/bootstrap.min.css",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 34,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/Resources/Spanish/SSMATheme.css",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 35,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/DVMessage/DVMessage.css",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 36,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/Shared/fontawesome_v5/css/fontawesome.min.css",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 37,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/Shared/fontawesome_v5/css/all.min.css",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 38,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/Shared/DVelopBootstrap.css",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 39,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/jquery.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 40,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/bootstrap/js/bootstrap.min.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 41,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/gxgral.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 42,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/gxcfg.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 43,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/calendar.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 44,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/calendar-setup.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 45,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/calendar-es.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 46,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/Shared/DVelopBootstrap.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 47,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/Shared/WorkWithPlusCommon.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 48,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/DropDownOptions/BootstrapDropDownOptionsRender.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 49,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/DVPaginationBar/DVPaginationBarRender.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 50,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/messages.spa.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 51,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/frutas/precios.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 52,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/Bootstrap/Tooltip/BootstrapTooltipRender.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 53,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/DVMessage/pnotify.custom.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 54,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/DVMessage/DVMessageRender.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 55,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/Mask/jquery.mask.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 56,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/WorkWithPlusUtilities/BootstrapSelect.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 57,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/DVelop/WorkWithPlusUtilities/WorkWithPlusUtilitiesRender.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 58,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/wwpbaseobjects/wwpbootstrapresponsivemasterpagesm.js",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 59,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/Resources/escudo_nacional_argentino.png",
+      "status": 200,
+      "stage": "initial"
+    },
+    {
+      "sequence": 60,
+      "method": "POST",
+      "endpoint": "https://ssma.magyp.gob.ar/frutas.precios.aspx",
+      "status": 200,
+      "stage": "filtered",
+      "json_keys": [
+        "MPage",
+        "cmpCtx",
+        "events",
+        "grids",
+        "hsh",
+        "objClass",
+        "parms",
+        "pkgName"
+      ],
+      "events": [
+        "DDO_GRID.ONOPTIONCLICKED"
+      ],
+      "parameter_count": 35,
+      "hashed_parameter_count": 2,
+      "header_names": [
+        "accept",
+        "ajax_security_token",
+        "content-type",
+        "cookie",
+        "gxajaxrequest",
+        "origin",
+        "referer",
+        "sec-ch-ua",
+        "sec-ch-ua-mobile",
+        "sec-ch-ua-platform",
+        "user-agent",
+        "x-gxauth-token"
+      ]
+    },
+    {
+      "sequence": 61,
+      "method": "POST",
+      "endpoint": "https://ssma.magyp.gob.ar/frutas.precios.aspx",
+      "status": 200,
+      "stage": "filtered",
+      "json_keys": [
+        "MPage",
+        "cmpCtx",
+        "events",
+        "grids",
+        "hsh",
+        "objClass",
+        "parms",
+        "pkgName"
+      ],
+      "events": [
+        "'DOEXPORT'"
+      ],
+      "parameter_count": 34,
+      "hashed_parameter_count": 1,
+      "header_names": [
+        "accept",
+        "ajax_security_token",
+        "content-type",
+        "cookie",
+        "gxajaxrequest",
+        "origin",
+        "referer",
+        "sec-ch-ua",
+        "sec-ch-ua-mobile",
+        "sec-ch-ua-platform",
+        "user-agent",
+        "x-gxauth-token"
+      ]
+    },
+    {
+      "sequence": 62,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/<temporary-export>",
+      "status": 200,
+      "stage": "filtered"
+    },
+    {
+      "sequence": 63,
+      "method": "GET",
+      "endpoint": "https://ssma.magyp.gob.ar/<temporary-export>",
+      "status": 200,
+      "stage": "filtered"
+    }
+  ],
+  "request_count": 63,
+  "protocol": {
+    "hidden_field_names": [
+      "GXState",
+      "GridContainerDataV",
+      "vDDO_FRUTAS_PRECIOS_FECHAAUXDATE",
+      "vDDO_FRUTAS_PRECIOS_FECHAAUXDATETO"
+    ],
+    "has_gxstate": true,
+    "has_date_controls": true
+  },
+  "cookie_names_only": [
+    "ASP.NET_SessionId",
+    "GX_CLIENT_ID",
+    "GX_SESSION_ID",
+    "GxTZOffset"
+  ],
+  "visible_grid_rows": [
+    {
+      "date": "24/08/2026",
+      "type": "Frutas",
+      "product": "MANDARINA",
+      "variety": "AFOURER",
+      "origin": "E. RIOS",
+      "package": "PERDIDO",
+      "quality": "Elegido",
+      "size": "MEDIANO",
+      "grade": "",
+      "kg": "0,00",
+      "price": "555,56"
+    },
+    {
+      "date": "24/08/2026",
+      "type": "Hortalizas",
+      "product": "TOMATE",
+      "variety": "CHERRY",
+      "origin": "SALTA",
+      "package": "CAJA",
+      "quality": "Primera",
+      "size": "MEDIANO",
+      "grade": "PTN/INV",
+      "kg": "0,00",
+      "price": "3.400,00"
+    },
+    {
+      "date": "24/08/2026",
+      "type": "Frutas",
+      "product": "KIWI",
+      "variety": "Prom.Esp.",
+      "origin": "",
+      "package": "",
+      "quality": "",
+      "size": "",
+      "grade": "",
+      "kg": "0,00",
+      "price": "3.880,00"
+    },
+    {
+      "date": "24/08/2026",
+      "type": "Frutas",
+      "product": "LIMON",
+      "variety": "Prom.Esp.",
+      "origin": "",
+      "package": "",
+      "quality": "",
+      "size": "",
+      "grade": "",
+      "kg": "0,00",
+      "price": "620,84"
+    },
+    {
+      "date": "24/08/2026",
+      "type": "Frutas",
+      "product": "UVA",
+      "variety": "Prom.Esp.",
+      "origin": "",
+      "package": "",
+      "quality": "",
+      "size": "",
+      "grade": "",
+      "kg": "0,00",
+      "price": "7.500,00"
+    },
+    {
+      "date": "24/08/2026",
+      "type": "Hortalizas",
+      "product": "LECHUGA",
+      "variety": "Prom.Esp.",
+      "origin": "",
+      "package": "",
+      "quality": "",
+      "size": "",
+      "grade": "",
+      "kg": "0,00",
+      "price": "971,92"
+    },
+    {
+      "date": "24/08/2026",
+      "type": "Hortalizas",
+      "product": "REMOLACHA",
+      "variety": "",
+      "origin": "BS. AS.",
+      "package": "JAULA",
+      "quality": "Primera",
+      "size": "MEDIANO",
+      "grade": "",
+      "kg": "0,00",
+      "price": "933,33"
+    },
+    {
+      "date": "24/08/2026",
+      "type": "Frutas",
+      "product": "MANZANA",
+      "variety": "CRIPPS PIN",
+      "origin": "R. NEGRO",
+      "package": "CAJA",
+      "quality": "Elegido",
+      "size": "125/138",
+      "grade": "",
+      "kg": "0,00",
+      "price": "1.888,89"
+    },
+    {
+      "date": "24/08/2026",
+      "type": "Frutas",
+      "product": "MEMBRILLO",
+      "variety": "",
+      "origin": "R. NEGRO",
+      "package": "CAJA",
+      "quality": "Elegido",
+      "size": "MEDIANO",
+      "grade": "",
+      "kg": "0,00",
+      "price": "2.500,00"
+    },
+    {
+      "date": "24/08/2026",
+      "type": "Frutas",
+      "product": "MANDARINA",
+      "variety": "ENCORE",
+      "origin": "E. RIOS",
+      "package": "TORO",
+      "quality": "Elegido",
+      "size": "GRANDE",
+      "grade": "",
+      "kg": "0,00",
+      "price": "944,44"
+    }
+  ]
+}

@@ -3,20 +3,12 @@ import argparse
 import csv
 import json
 import sys
-import unicodedata
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from scripts.magyp.common.platform import atomic_write, csv_bytes, read_jsonl
 from scripts.magyp.mcba.model import canonical, number
-
-# Alias exploratorios; sólo generan coincidencias PROBABLES. No transforman la base.
-PACKAGE_ALIASES = {"CA": "CAJA", "JA": "JAULA", "BO": "BOLSA", "TO": "TORO", "PE": "PERDIDO",
-                   "AT": "ATADO", "BA": "BANDEJA", "RT": "RISTRA 100", "TT": "TORITO", "GR": "GRANEL"}
-ORIGIN_ALIASES = {"BUENOS AIRES": "BS. AS.", "CORRIENTES": "CTES.", "ENTRE RIOS": "E. RIOS",
-                  "RIO NEGRO": "R. NEGRO", "SAN JUAN": "S. JUAN", "SAN PEDRO": "S. PEDRO",
-                  "MAR DEL PLATA": "M.D.PLAT"}
 
 
 def current_rows(path):
@@ -46,25 +38,6 @@ def current_price(row):
     return number(row.get("precio_observado") or row.get("precio_promedio") or row.get("precio"))
 
 
-def keys(row, magyp=False, aliases=False, omit_unit=False):
-    if magyp:
-        values = [row["observation_date"], row["type"], row["product"], row["variety"],
-                  row["origin"], row["package"], row["price_unit"]]
-    else:
-        values = [row["fecha"], row.get("rubro"), row["especie"], row["variedad"],
-                  row["procedencia"], row["envase"], units(row)]
-    values = [canonical(x) or "" for x in values]
-    # $/kg se conserva como tal en el reporte; equivalencia contextual local a ARS/kg.
-    if values[-1] == "$/KG":
-        values[-1] = "ARS/KG"
-    if aliases:
-        # Sólo para candidatos probables, nunca modifica etiquetas ni IDs canónicos.
-        values = ["".join(c for c in unicodedata.normalize("NFKD", v) if not unicodedata.combining(c))
-                  for v in values]
-        values[4] = ORIGIN_ALIASES.get(values[4], values[4])
-        values[5] = PACKAGE_ALIASES.get(values[5], values[5])
-    return tuple(values[:-1] if omit_unit else values)
-
 
 def coverage(rows, magyp=False):
     fields = {"product": "product" if magyp else "especie", "variety": "variety" if magyp else "variedad",
@@ -78,49 +51,32 @@ def coverage(rows, magyp=False):
 
 
 def compare(current, magyp):
-    dates = {r["observation_date"] for r in magyp}
-    periods = {r["period"] for r in magyp}
-    monthly = [r for r in current if precision(r) == "month" and r["fecha"][:7] in periods]
-    daily = [r for r in current if precision(r) == "day" and r["fecha"] in dates]
-    # No joins por precio sin dimensiones. Consumo 1:1 evita multiplicar coincidencias.
-    available = set(range(len(daily)))
-    indexed = {}
-    for alias, omit_unit in ((False, False), (True, False), (True, True)):
-        index = defaultdict(list)
-        for i, row in enumerate(daily):
-            index[keys(row, aliases=alias, omit_unit=omit_unit)].append(i)
-        indexed[alias, omit_unit] = index
+    from scripts.magyp.mcba.matching import mutual_unique_matches
+    dates = {r['observation_date'] for r in magyp}
+    periods = {r['period'] for r in magyp}
+    monthly = [r for r in current if precision(r) == 'month' and r['fecha'][:7] in periods]
+    daily = [r for r in current if precision(r) == 'day' and r['fecha'] in dates]
+    common_dates = {r['fecha'] for r in daily}
+    comparable = [r for r in magyp if r['observation_date'] in common_dates]
     result = []
-    for row in magyp:
-        matched = None
-        status = "magyp_only"
-        ambiguous = 0
-        for alias, omit_unit in ((False, False), (True, False), (True, True)):
-            candidates = [i for i in indexed[alias, omit_unit].get(keys(row, True, alias, omit_unit), [])
-                          if i in available]
-            same_price = [i for i in candidates if current_price(daily[i]) is not None and row["price"] is not None
-                          and abs(current_price(daily[i]) - row["price"]) <= 0.011]
-            if same_price:
-                matched = same_price[0]
-                ambiguous = len(same_price)
-                status = "unit_difference" if omit_unit else "probable" if alias else "exact_available_dimensions"
-                break
-        if matched is None:
-            candidates = [i for i in indexed[True, False].get(keys(row, True, True), []) if i in available]
-            if candidates:
-                matched = min(candidates, key=lambda i: abs((current_price(daily[i]) or 0) - (row["price"] or 0)))
-                ambiguous = len(candidates)
-                status = "price_difference"
-        cur = daily[matched] if matched is not None else None
-        if matched is not None:
-            available.remove(matched)
-        if cur is None and row["period"] in {r["fecha"][:7] for r in monthly}:
-            status = "monthly_not_comparable"
-        result.append(report_row(status, row, cur, ambiguous))
-    for i in sorted(available):
-        result.append(report_row("current_only", None, daily[i], 0))
-    for row in monthly:
-        result.append(report_row("current_monthly_not_comparable", None, row, 0))
+    for match in mutual_unique_matches(daily, comparable):
+        m = comparable[match['magyp_index']] if match['magyp_index'] is not None else None
+        c = daily[match['current_index']] if match['current_index'] is not None else None
+        out = report_row(match['status'], m, c, len(match['candidate_indices']))
+        out['matching_rule'] = match['rule']
+        out['candidate_references'] = [daily[i].get('_current_row', i) for i in match['candidate_indices']] if m else [comparable[i]['observation_id'] for i in match['candidate_indices']]
+        result.append(out)
+    # Diagnóstico temporal; nunca se declara match ni diferencia de precio día/mes.
+    monthly_periods = {r['fecha'][:7] for r in monthly}
+    for m in magyp:
+        if m['observation_date'] not in common_dates and m['period'] in monthly_periods:
+            out = report_row('monthly_not_comparable', m, None, 0)
+            out.update(matching_rule='not_comparable_precision', candidate_references=[])
+            result.append(out)
+    for c in monthly:
+        out = report_row('current_monthly_not_comparable', None, c, 0)
+        out.update(matching_rule='not_comparable_precision', candidate_references=[])
+        result.append(out)
     return result, daily, monthly
 
 
@@ -155,7 +111,7 @@ def run(data_root, current_file):
     magyp = read_jsonl(data_root / "analytical/mcba/market_price_observation.jsonl")
     rows, daily, monthly = compare(current, magyp)
     match_counts = Counter(r["match_status"] for r in rows)
-    categories = ["exact_available_dimensions", "probable", "price_difference", "unit_difference",
+    categories = ["exact", "normalized_exact", "probable", "ambiguous",
                   "current_only", "magyp_only", "monthly_not_comparable", "current_monthly_not_comparable"]
     flag_counts = Counter(f for r in magyp for f in r["quality_flags"])
     flags = ["price_missing", "price_zero", "price_negative", "currency_missing", "unit_missing",
@@ -172,73 +128,53 @@ def run(data_root, current_file):
              "flags": {k: flag_counts[k] for k in flags}}
     stats["parse_warnings"] = dict(Counter(f for r in magyp for f in r["parse_warnings"]))
     folder = data_root / "reports"
-    atomic_write(folder / "MCBA_CURRENT_VS_MAGYP.csv", csv_bytes(rows, list(rows[0])))
-    atomic_write(folder / "MCBA_PILOT_METRICS.json", (json.dumps(stats, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
-    report = """# Comparación MCBA actual vs MAGyP
+    columns = list(report_row('', None, None, 0)) + ['matching_rule', 'candidate_references']
+    atomic_write(folder / "MCBA_CURRENT_VS_MAGYP.csv", csv_bytes(rows, columns))
+    stats['price_differences_matched'] = sum(r['price_difference'] is not None and abs(r['price_difference']) > 0.011 for r in rows if r['match_status'] in {'exact','normalized_exact','probable'})
+    stats['magyp_dates_not_daily_comparable'] = sorted({r['observation_date'] for r in magyp} - {r['fecha'] for r in daily})
+    atomic_write(folder / 'MCBA_PILOT_METRICS.json', (json.dumps(stats, ensure_ascii=False, indent=2)+'\n').encode('utf-8'))
+    report = """# Comparación MCBA — fase 2
 
-Clasificación: **COMPLEMENT_ONLY**. La muestra oficial valida el procesamiento;
-no prueba adquisición autónoma, continuidad histórica ni equivalencia mensual.
+Clasificación **COMPLEMENT_ONLY**. Adquisición automatizada con navegador validada;
+no se valida reemplazo de promedio mensual, continuidad completa ni equivalencia de todas las dimensiones.
 
-## Método y límites
+## Reglas
 
-Se compara `PRECIOS_MAYORISTAS_INTEGRADO.csv` sin modificarlo. Mercado se selecciona
-por MCBA/Mercado Central de Buenos Aires. 2024–2025 `fecha_precision=mensual`
-se compara únicamente en cobertura mensual: el primer día es ancla, no observación diaria.
-Para 2026 se considera diario sólo archivo RF/RH con fecha ISO; otros casos quedan unknown.
-Un día de MAGyP no reproduce K_mes de PFRU/PHOR. No hay coincidencias día/mes declaradas.
+Sólo fechas diarias efectivamente presentes en ambas fuentes. Fechas MAGyP fuera del
+histórico actual se informan separadamente, no como pérdida current_only/magyp_only.
+Las filas mensuales se incluyen como diagnóstico not_comparable_precision; el ancla
+01 del mes no es un día observado. No se calculan diferencias día/mes.
 
-Join multiconjunto 1:1: fecha, tipo, especie, variedad, procedencia, envase,
-unidad y mercado; luego precio con tolerancia 0.011 (centavos publicados).
-NFKC, mayúsculas y espacios son normalización textual; no se corrigen variedades.
-`$/kg` se interpreta ARS/kg por contexto local, sin cambiar el original del reporte.
-Exact_available_dimensions significa igualdad sólo de dimensiones disponibles;
-calidad/tamaño/grado no están estructurados en la base diaria actual y no se valida
-su equivalencia. Candidate_count >1 informa ambigüedad, no ID oficial validado.
+Exact: etiquetas literales y precio. Normalized_exact: NFKC/mayúsculas/espacios y
+reglas validated. Probable: sólo reglas observed explícitas en config/mcba_aliases.json.
+Manual_review nunca se aplica; no se eliminan diacríticos globalmente. $/kg→ARS/kg
+es equivalencia contextual exclusiva de MCBA, con originales reportados.
 
-Probable admite exclusivamente los alias exploratorios detallados abajo; requieren
-diccionario para pasar a una equivalencia validada. Además elimina diacríticos sólo
-para candidatos probables; los originales y las claves canónicas conservan acentos.
-Diferencia de precio conserva
-ambos importes. No se consideran precios iguales por cercanía entre productos.
-Unidades o moneda vacías se reportan; no se convierten ni rellenan series.
+Claves: mercado MCBA/fecha/tipo/producto/variedad/procedencia/envase/unidad; moneda
+explícita incompatible excluye candidato. Coincidencias de precio toleran 0.011.
+Sólo parejas MUTUAMENTE ÚNICAS. Múltiples candidatos en cualquiera de las dos fuentes
+producen ambiguous, con referencias a todos los candidatos; nunca se elige el primero
+ni el precio más cercano. La categoría probable con regla unique_dimensions_price_difference
+conserva discrepancias de precio. Quality/size/grade no estructurados en base diaria actual:
+no se afirma equivalencia de esas dimensiones. Matching_rule registra qué se usó.
 
-## Métricas reproducibles
+## Métricas
 
 ```json
 """ + json.dumps(stats, ensure_ascii=False, indent=2) + """
 ```
 
-## Alias exploratorios
+## Límites
 
-""" + json.dumps({"package": PACKAGE_ALIASES, "origin": ORIGIN_ALIASES}, ensure_ascii=False, indent=2) + """
+Prom.Esp. se conserva separado como species_summary. Kg sigue unknown y volumen null.
+Moneda documentada como pesos/kg en encabezados oficiales de frutas y hortalizas,
+ISO ARS por regla explícita de pesos locales argentinos; RAW legado conserva evidencia contextual.
+Monthly tiene coverage_days y aggregation_status=partial_period; expected_days/ratio null
+hasta validar calendario oficial. No sustituye K_mes.
 
-## Dimensiones y cobertura
-
-Export: Fecha, Tipo, Especie, Variedad, Procedencia, Envase, Calidad, Tamaño, Grado,
-Kg, Promedio x Kg. Conservados los 11 campos originales y trazabilidad por captura.
-No exporta EmpresaID/SucursalID ni códigos de dimensiones disponibles en la grilla;
-no se inventan. Precio min/max/modal, volumen, ID oficial y definición de Kg no informados.
-Prom.Esp. se conserva como species_summary, separado de detail; nunca se promedian juntos.
-ARS/kg es contexto oficial, no campo explícito del XLSX. Evidencia:
-[precio promedio en pesos por kilo MCBA](https://ssma.magyp.gob.ar/frutas.preciospromediof.aspx).
-
-La cobertura del piloto se limita a fechas exportadas, no acredita todos los días entre extremos.
-La mediana mensual piloto es parcial de días observados, no reemplaza el promedio oficial mensual.
-La muestra XLSX presenta `¥` (U+00A5) en etiquetas como PI¥A, JALAPE¥O y ESPA¥A,
-mientras la base actual conserva ñ. Se conserva el carácter publicado, se marca
-suspicious_source_character_preserved y no se corrige ni declara coincidencia automática.
-Las diferencias de cobertura incluyen Frutilla/Tucumán y Zanahoria/Chantenay/Mendoza
-presentes en la base diaria actual; deben contrastarse con export/grilla y revisiones oficiales.
-Los registros fuera de los períodos del piloto se contabilizan en cobertura total;
-no se etiquetan current_only porque no fueron consultados a MAGyP.
-
-## Decisión y siguiente fase
-
-Mantener Excel e integrado productivo. Validar generación autónoma del XLSX GeneXus,
-estabilidad de filtros y semántica del promedio. Después comparar una pequeña muestra
-2024/2025 mensual oficial contra K_mes y varias fechas diarias 2026. Confirmar códigos,
-diccionarios envase/procedencia, licencia/redistribución, moneda y Kg con el organismo.
-No implementar SIO avanzado ni sustituir Corrientes, FOB o dashboard en esta etapa.
+Frutilla/Zanahoria y labels ¥ se investigan en MCBA_PHASE2_REPORT.md y los reportes de
+cobertura/normalización. No asumir pérdida de producto por una presentación ausente en un día.
+No se modifica PRECIOS_MAYORISTAS_INTEGRADO.csv ni frontend.
 """
     atomic_write(folder / "MCBA_CURRENT_VS_MAGYP.md", report.encode("utf-8"))
     print(f"[COMPARE] {len(current)} filas actuales; {len(magyp)} MAGyP; {stats['matches']}")

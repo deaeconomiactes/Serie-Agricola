@@ -56,6 +56,9 @@ class RawManifest:
     price_unit: str | None = None
     context_evidence_url: str | None = None
     response_url: str | None = None
+    currency_evidence: str = "contextual"
+    acquisition_classification: str | None = None
+    request_count: int | None = None
 
 
 class SourceFetcher(Protocol):
@@ -100,15 +103,21 @@ def validate_manifest(m: RawManifest, payload: bytes) -> None:
         official_url(m.response_url)
         if urlparse(m.response_url).query:
             raise PipelineError("URL de respuesta con estado de sesión rechazada")
-    if set(m.public_parameters) - {"date_from", "date_to"}:
+    if set(m.public_parameters) != {"date_from", "date_to"}:
         raise PipelineError("Parámetros de request no autorizados para persistencia")
     for value in m.public_parameters.values():
         try:
             datetime.strptime(value, "%Y-%m-%d")
         except (ValueError, TypeError) as e:
             raise PipelineError("Fecha pública inválida") from e
-    if m.public_parameters.get("date_from") != m.public_parameters.get("date_to"):
-        raise PipelineError("Piloto limitado a un día por captura")
+    start = datetime.strptime(m.public_parameters.get("date_from", ""), "%Y-%m-%d")
+    end = datetime.strptime(m.public_parameters.get("date_to", ""), "%Y-%m-%d")
+    if start > end or (end - start).days > 6:
+        raise PipelineError("Ventana RAW limitada a 1–7 días")
+    if m.schema_version.endswith("v1") and start != end:
+        raise PipelineError("Contrato legado v1 limitado a un día")
+    if m.currency_evidence not in {"documented", "contextual", "unknown"}:
+        raise PipelineError("Evidencia de moneda inválida")
     if m.byte_size != len(payload) or m.sha256 != sha256(payload):
         raise PipelineError("RAW no coincide con tamaño/SHA-256 del manifest")
     try:

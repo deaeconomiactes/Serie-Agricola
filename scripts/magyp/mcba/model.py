@@ -1,4 +1,4 @@
-"""Parser XLSX MCBA y modelo market_price_observation v1.
+"""Parser XLSX MCBA y modelo market_price_observation v2, compatible con RAW v1.
 
 No conserva formularios HTML con tokens GeneXus ni inventa volumen.
 """
@@ -18,9 +18,12 @@ from statistics import median
 from openpyxl import load_workbook
 
 from scripts.magyp.common.platform import PipelineError, RawManifest, stable_id
+from scripts.magyp.mcba.labels import normalized_label, load_rules
 
-PARSER_VERSION = "mcba-xlsx-1.0.0"
-SCHEMA_VERSION = "market_price_observation-v1"
+PARSER_VERSION = "mcba-xlsx-2.0.0"
+SCHEMA_VERSION = "market_price_observation-v2"
+ACCEPTED_RAW_VERSIONS = {("mcba-xlsx-1.0.0", "market_price_observation-v1"),
+                         (PARSER_VERSION, SCHEMA_VERSION)}
 ENDPOINT = "https://ssma.magyp.gob.ar/frutas.precios.aspx"
 CONTEXT_URL = "https://ssma.magyp.gob.ar/frutas.preciospromediof.aspx"
 HEADERS = ["Fecha", "Tipo", "Especie", "Variedad", "Procedencia", "Envase", "Calidad",
@@ -34,7 +37,9 @@ FIELDS = ["observation_id", "source", "source_family", "market", "market_normali
           "source_record_id", "capture_id", "capture_timestamp", "raw_sha256", "source_url",
           "schema_version", "parser_version", "parse_warnings", "quality_flags", "original_dimensions",
           "price_raw", "kg_raw", "source_row_number", "record_kind", "currency_basis", "unit_basis",
-          "dimension_key", "record_fingerprint"]
+          "dimension_key", "record_fingerprint", "observation_level", "kg_semantics_status",
+          "currency_evidence", "product_raw", "variety_raw", "origin_raw", "origin_normalized",
+          "package_raw"]
 
 
 def text(value):
@@ -71,7 +76,7 @@ def iso_date(value):
     return None
 
 
-def parse_export(payload: bytes, requested_date: str) -> list[dict]:
+def parse_export(payload: bytes, requested_date: str, date_to: str | None = None) -> list[dict]:
     """Preserva filas con valores inválidos. Rechaza schema, vacío o ventana distinta."""
     if not payload.startswith(b"PK"):
         raise PipelineError("Respuesta no XLSX (posible HTML/error de servicio)")
@@ -96,20 +101,21 @@ def parse_export(payload: bytes, requested_date: str) -> list[dict]:
             continue
         record = dict(zip(HEADERS, cells))
         parsed = iso_date(record["Fecha"])
-        if parsed and parsed != requested_date:
+        if parsed and not requested_date <= parsed <= (date_to or requested_date):
             raise PipelineError("Exportación fuera del día solicitado: captura rechazada")
         record["_row"] = i
         records.append(record)
     if not records:
         raise PipelineError("Exportación vacía; ausencia de publicación no demostrada")
-    if not any(iso_date(x["Fecha"]) == requested_date for x in records):
-        raise PipelineError("Ninguna fecha del export confirma el día solicitado")
+    if not any(iso_date(x["Fecha"]) and requested_date <= iso_date(x["Fecha"]) <= (date_to or requested_date) for x in records):
+        raise PipelineError("Ninguna fecha del export confirma la ventana solicitada")
     return records
 
 
 def normalize(records: list[dict], manifest: RawManifest) -> list[dict]:
     results = []
     counts = Counter()
+    rules = load_rules()
     for r in records:
         row = dict.fromkeys(FIELDS)
         d = iso_date(r["Fecha"])
@@ -123,16 +129,17 @@ def normalize(records: list[dict], manifest: RawManifest) -> list[dict]:
         if price is None and text(r["Promedio x Kg."]) is not None:
             warnings.append("price_parse_failed")
         if manifest.currency:
-            warnings.append("currency_from_official_context")
-            if canonical(r["Tipo"]) == "HORTALIZAS":
+            warnings.append("currency_from_official_documentation" if manifest.currency_evidence == "documented"
+                            else "currency_from_official_context")
+            if canonical(r["Tipo"]) == "HORTALIZAS" and manifest.currency_evidence != "documented":
                 warnings.append("currency_context_transfer_requires_confirmation")
         row.update(source="mcba", source_family="market_price_observation",
                    market="Mercado Central de Buenos Aires", market_normalized="MCBA",
                    observation_date=d, period=d[:7] if d else None,
                    frequency="daily", date_precision="day", product=text(r["Especie"]),
-                   product_normalized=canonical(r["Especie"]), variety=text(r["Variedad"]),
-                   variety_normalized=canonical(r["Variedad"]), origin=text(r["Procedencia"]),
-                   package=text(r["Envase"]), package_normalized=canonical(r["Envase"]),
+                   product_normalized=normalized_label("product", r["Especie"], rules), variety=text(r["Variedad"]),
+                   variety_normalized=normalized_label("variety", r["Variedad"], rules), origin=text(r["Procedencia"]),
+                   package=text(r["Envase"]), package_normalized=normalized_label("package", r["Envase"], rules),
                    quality=text(r["Calidad"]), type=text(r["Tipo"]), size=text(r["Tamaño"]),
                    grade=text(r["Grado"]), currency=manifest.currency, price_unit=manifest.price_unit,
                    price_average=price, price=price, capture_id=manifest.capture_id,
@@ -141,6 +148,12 @@ def normalize(records: list[dict], manifest: RawManifest) -> list[dict]:
                    parse_warnings=warnings, original_dimensions=raw, price_raw=raw["Promedio x Kg."],
                    kg_raw=raw["Kg"], source_row_number=r["_row"],
                    record_kind="species_summary" if canonical(r["Variedad"]) == "PROM.ESP." else "detail",
+                   observation_level="species_summary" if canonical(r["Variedad"]) == "PROM.ESP." else
+                                     "detail" if text(r["Especie"]) else "unknown",
+                   kg_semantics_status="unknown", currency_evidence=manifest.currency_evidence if manifest.currency else "unknown",
+                   product_raw=text(r["Especie"]), variety_raw=text(r["Variedad"]),
+                   origin_raw=text(r["Procedencia"]), origin_normalized=normalized_label("origin", r["Procedencia"], rules),
+                   package_raw=text(r["Envase"]),
                    currency_basis="official_context" if manifest.currency else "not_reported",
                    unit_basis="export_header_and_currency_context" if manifest.price_unit else "not_reported")
         dimensions = [row[k] for k in ("source", "market_normalized", "observation_date", "type", "product",
@@ -241,13 +254,15 @@ def dashboard_rows(rows):
     validate_canonical(rows, analytical=True)
     # Todas las dimensiones, incluyendo origen/calidad/tamaño/grado y Prom.Esp., siguen separadas.
     dimensions = ["source", "market_normalized", "type", "product_normalized", "variety_normalized",
-                  "origin", "package_normalized", "quality", "size", "grade", "currency", "price_unit", "record_kind"]
+                  "origin_normalized", "package_normalized", "quality", "size", "grade", "currency", "price_unit", "record_kind",
+                  "observation_level"]
     daily = []
     for r in rows:
         if r["valid_for_price_series"]:
             daily.append({**{k: r[k] for k in dimensions}, "date": r["observation_date"],
                           "price": r["price"], "observation_id": r["observation_id"],
                           "source_url": r["source_url"], "updated_at": r["capture_timestamp"],
+                          "currency_evidence": r["currency_evidence"], "kg_semantics_status": r["kg_semantics_status"],
                           "quality_flags": r["quality_flags"]})
     if not daily:
         raise PipelineError("No hay precios válidos: última salida conservada")
@@ -265,6 +280,9 @@ def dashboard_rows(rows):
         monthly.append({**dict(zip(dimensions, key)), "period": period,
                         "price_median": median(r["price"] for r in group), "observation_count": len(group),
                         "observed_days": len({r["date"] for r in group}),
+                        "coverage_days": len({r["date"] for r in group}),
+                        "expected_days": None, "coverage_ratio": None,
+                        "aggregation_status": "partial_period", "expected_days_basis": "official_publication_calendar_unverified",
                         "coverage_status": "partial_unverified", "method": "median_observed_daily_prices",
                         "source_url": ENDPOINT, "updated_at": max(r["updated_at"] for r in group)})
     flags = Counter(f for r in rows for f in r["quality_flags"])

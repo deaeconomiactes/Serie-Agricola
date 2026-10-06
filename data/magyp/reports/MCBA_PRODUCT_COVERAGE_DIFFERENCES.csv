@@ -1,0 +1,98 @@
+date,product,origin_raw,magyp_rows,current_rows,interpretation
+2024-10-02,FRUTILLA,,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-02,FRUTILLA,BS. AS.,2,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-02,FRUTILLA,CTES.,2,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-02,FRUTILLA,SANTA FE,3,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-02,FRUTILLA,TUCUMAN,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-02,ZANAHORIA,,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-02,ZANAHORIA,BRASIL,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-02,ZANAHORIA,CORDOBA,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-02,ZANAHORIA,MENDOZA,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-02,ZANAHORIA,SANTA FE,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-02,ZANAHORIA,SGO.EST.,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-03,FRUTILLA,,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-03,FRUTILLA,BS. AS.,2,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-03,FRUTILLA,CTES.,2,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-03,FRUTILLA,SANTA FE,3,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-03,FRUTILLA,TUCUMAN,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-03,ZANAHORIA,,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-03,ZANAHORIA,BRASIL,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-03,ZANAHORIA,CORDOBA,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-03,ZANAHORIA,MENDOZA,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-03,ZANAHORIA,SANTA FE,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2024-10-03,ZANAHORIA,SGO.EST.,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2025-10-02,FRUTILLA,,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2025-10-02,FRUTILLA,BS. AS.,2,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2025-10-02,FRUTILLA,CTES.,2,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2025-10-02,FRUTILLA,SANTA FE,2,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2025-10-02,FRUTILLA,TUCUMAN,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2025-10-02,ZANAHORIA,,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2025-10-02,ZANAHORIA,MENDOZA,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2025-10-02,ZANAHORIA,SANTA FE,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2025-10-02,ZANAHORIA,SGO.EST.,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-19,FRUTILLA,,1,2,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-19,FRUTILLA,CTES.,2,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-19,FRUTILLA,Corrientes,0,4,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-19,FRUTILLA,SANTA FE,2,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-19,FRUTILLA,Santa Fe,0,4,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-19,FRUTILLA,TUCUMAN,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-19,FRUTILLA,Tucumán,0,2,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-19,ZANAHORIA,,1,1,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-19,ZANAHORIA,MENDOZA,2,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-19,ZANAHORIA,Mendoza,0,3,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-19,ZANAHORIA,SANTA FE,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-19,ZANAHORIA,SGO.EST.,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-19,ZANAHORIA,Santa Fe,0,1,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-19,ZANAHORIA,Sgo.Est.,0,1,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-20,FRUTILLA,,1,1,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-20,FRUTILLA,CTES.,2,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-20,FRUTILLA,Corrientes,0,2,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-20,FRUTILLA,SANTA FE,2,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-20,FRUTILLA,Santa Fe,0,2,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-20,FRUTILLA,TUCUMAN,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-20,FRUTILLA,Tucumán,0,1,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-20,ZANAHORIA,,1,1,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-20,ZANAHORIA,MENDOZA,2,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-20,ZANAHORIA,Mendoza,0,3,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-20,ZANAHORIA,SANTA FE,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-20,ZANAHORIA,SGO.EST.,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-20,ZANAHORIA,Santa Fe,0,1,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-20,ZANAHORIA,Sgo.Est.,0,1,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-21,FRUTILLA,,1,1,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-21,FRUTILLA,CTES.,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-21,FRUTILLA,Corrientes,0,1,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-21,FRUTILLA,SANTA FE,2,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-21,FRUTILLA,Santa Fe,0,2,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-21,FRUTILLA,TUCUMAN,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-21,FRUTILLA,Tucumán,0,2,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-21,ZANAHORIA,,1,1,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-21,ZANAHORIA,MENDOZA,2,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-21,ZANAHORIA,Mendoza,0,3,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-21,ZANAHORIA,SANTA FE,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-21,ZANAHORIA,SGO.EST.,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-21,ZANAHORIA,Santa Fe,0,1,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-21,ZANAHORIA,Sgo.Est.,0,1,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-24,FRUTILLA,,1,1,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-24,FRUTILLA,CTES.,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-24,FRUTILLA,Corrientes,0,1,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-24,FRUTILLA,SANTA FE,2,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-24,FRUTILLA,Santa Fe,0,2,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-24,FRUTILLA,TUCUMAN,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-24,FRUTILLA,Tucumán,0,2,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-24,ZANAHORIA,,1,1,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-24,ZANAHORIA,MENDOZA,2,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-24,ZANAHORIA,Mendoza,0,3,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-24,ZANAHORIA,SANTA FE,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-24,ZANAHORIA,SGO.EST.,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-24,ZANAHORIA,Santa Fe,0,1,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-08-24,ZANAHORIA,Sgo.Est.,0,1,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-10-05,FRUTILLA,,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-10-05,FRUTILLA,BS. AS.,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-10-05,FRUTILLA,CTES.,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-10-05,FRUTILLA,SANTA FE,2,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-10-05,FRUTILLA,TUCUMAN,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-10-05,ZANAHORIA,,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-10-05,ZANAHORIA,BRASIL,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-10-05,ZANAHORIA,MENDOZA,2,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-10-05,ZANAHORIA,SANTA FE,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss
+2026-10-05,ZANAHORIA,SGO.EST.,1,0,labels_not_yet_equated; presentation_difference_is_not_product_loss

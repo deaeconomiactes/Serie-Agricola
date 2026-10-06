@@ -1,0 +1,1534 @@
+{
+  "version": "v1",
+  "policy": "Only validated applied in NORMALIZED; observed only probable matching; manual_review never applied.",
+  "rules": [
+    {
+      "dimension": "origin",
+      "source_value": "Bolivia",
+      "canonical_value": "BOLIVIA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Brasil",
+      "canonical_value": "BRASIL",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Buenos Aires",
+      "canonical_value": "BS. AS.",
+      "status": "observed",
+      "evidence": "MCBA_CURRENT_VS_MAGYP.csv: unique dimensions/price candidate on 2026-08-24",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Catamarc",
+      "canonical_value": "CATAMARC",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Chile",
+      "canonical_value": "CHILE",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "China",
+      "canonical_value": "CHINA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Corrientes",
+      "canonical_value": "CTES.",
+      "status": "observed",
+      "evidence": "MCBA_CURRENT_VS_MAGYP.csv: unique dimensions/price candidate on 2026-08-24",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Córdoba",
+      "canonical_value": "CORDOBA",
+      "status": "observed",
+      "evidence": "MCBA_CURRENT_VS_MAGYP.csv: unique dimensions/price candidate on 2026-08-24",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "ESPA¥A",
+      "canonical_value": "ESPAÑA",
+      "status": "manual_review",
+      "evidence": "Export has U+00A5; current official RF/RH labels have U+00D1 at matching prices; potential OEM/Latin1 decoding; official archived publication also contains PI¥A/ESPA¥A: https://www.magyp.gob.ar/new/0-0/programas/dma/frutas/series_frutas_17/01_frutas_2017-04-03.php",
+      "notes": "Anomaly also exists in public historical HTML, not just XLSX. OEM/Latin1 cause is inferred, not documented. Keep original until validated per label."
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Ecuador",
+      "canonical_value": "ECUADOR",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Entre Ríos",
+      "canonical_value": "E. RIOS",
+      "status": "observed",
+      "evidence": "MCBA_CURRENT_VS_MAGYP.csv: unique dimensions/price candidate on 2026-08-24",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Formosa",
+      "canonical_value": "FORMOSA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Jujuy",
+      "canonical_value": "JUJUY",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Mar del Plata",
+      "canonical_value": "M.D.PLAT",
+      "status": "observed",
+      "evidence": "MCBA_CURRENT_VS_MAGYP.csv: unique dimensions/price candidate on 2026-08-24",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Mendoza",
+      "canonical_value": "MENDOZA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Misiones",
+      "canonical_value": "MISIONES",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Paraguay",
+      "canonical_value": "PARAGUAY",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Perú",
+      "canonical_value": "PERU",
+      "status": "observed",
+      "evidence": "MCBA_CURRENT_VS_MAGYP.csv: unique dimensions/price candidate on 2026-08-24",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Río Negro",
+      "canonical_value": "R. NEGRO",
+      "status": "observed",
+      "evidence": "MCBA_CURRENT_VS_MAGYP.csv: unique dimensions/price candidate on 2026-08-24",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "S.Bs.As.",
+      "canonical_value": "S.BS.AS.",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Salta",
+      "canonical_value": "SALTA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "San Juan",
+      "canonical_value": "SAN JUAN",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "San Pedro",
+      "canonical_value": "S. PEDRO",
+      "status": "observed",
+      "evidence": "MCBA_CURRENT_VS_MAGYP.csv: unique dimensions/price candidate on 2026-08-24",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Santa Fe",
+      "canonical_value": "SANTA FE",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Se Bs.As",
+      "canonical_value": "SE BS.AS",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Sgo.Est.",
+      "canonical_value": "SGO.EST.",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "Tucumán",
+      "canonical_value": "TUCUMAN",
+      "status": "observed",
+      "evidence": "MCBA_CURRENT_VS_MAGYP.csv: unique dimensions/price candidate on 2026-08-24",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "origin",
+      "source_value": "V.Dolor.",
+      "canonical_value": "V.DOLOR.",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "package",
+      "source_value": "At",
+      "canonical_value": "ATADO",
+      "status": "observed",
+      "evidence": "MCBA_CURRENT_VS_MAGYP.csv: unique dimensions/price candidate on 2026-08-24",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "package",
+      "source_value": "Ba",
+      "canonical_value": "BANDEJA",
+      "status": "observed",
+      "evidence": "MCBA_CURRENT_VS_MAGYP.csv: unique dimensions/price candidate on 2026-08-24",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "package",
+      "source_value": "Bo",
+      "canonical_value": "BOLSA",
+      "status": "observed",
+      "evidence": "MCBA_CURRENT_VS_MAGYP.csv: unique dimensions/price candidate on 2026-08-24",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "package",
+      "source_value": "Ca",
+      "canonical_value": "CAJA",
+      "status": "observed",
+      "evidence": "MCBA_CURRENT_VS_MAGYP.csv: unique dimensions/price candidate on 2026-08-24",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "package",
+      "source_value": "Gr",
+      "canonical_value": "GRANEL",
+      "status": "observed",
+      "evidence": "MCBA_CURRENT_VS_MAGYP.csv: unique dimensions/price candidate on 2026-08-24",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "package",
+      "source_value": "Ja",
+      "canonical_value": "JAULA",
+      "status": "observed",
+      "evidence": "MCBA_CURRENT_VS_MAGYP.csv: unique dimensions/price candidate on 2026-08-24",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "package",
+      "source_value": "Pe",
+      "canonical_value": "PERDIDO",
+      "status": "observed",
+      "evidence": "MCBA_CURRENT_VS_MAGYP.csv: unique dimensions/price candidate on 2026-08-24",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "package",
+      "source_value": "Rt",
+      "canonical_value": "RISTRA 100",
+      "status": "observed",
+      "evidence": "MCBA_CURRENT_VS_MAGYP.csv: unique dimensions/price candidate on 2026-08-24",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "package",
+      "source_value": "To",
+      "canonical_value": "TORO",
+      "status": "observed",
+      "evidence": "MCBA_CURRENT_VS_MAGYP.csv: unique dimensions/price candidate on 2026-08-24",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "package",
+      "source_value": "Tt",
+      "canonical_value": "TORITO",
+      "status": "observed",
+      "evidence": "MCBA_CURRENT_VS_MAGYP.csv: unique dimensions/price candidate on 2026-08-24",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Acelga",
+      "canonical_value": "ACELGA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Achicoria",
+      "canonical_value": "ACHICORIA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Acusay",
+      "canonical_value": "ACUSAY",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Ajo",
+      "canonical_value": "AJO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Albahaca",
+      "canonical_value": "ALBAHACA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Alcaucil",
+      "canonical_value": "ALCAUCIL",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Anana",
+      "canonical_value": "ANANA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Apio",
+      "canonical_value": "APIO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Arandano",
+      "canonical_value": "ARANDANO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Arveja",
+      "canonical_value": "ARVEJA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Banana",
+      "canonical_value": "BANANA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Batata",
+      "canonical_value": "BATATA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Berenjena",
+      "canonical_value": "BERENJENA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Berro",
+      "canonical_value": "BERRO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Brocoli",
+      "canonical_value": "BROCOLI",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Brote Alfa",
+      "canonical_value": "BROTE ALFA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Brote Soja",
+      "canonical_value": "BROTE SOJA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Cardo",
+      "canonical_value": "CARDO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Ceb.Verdeo",
+      "canonical_value": "CEB.VERDEO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Cebolla",
+      "canonical_value": "CEBOLLA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Chaucha",
+      "canonical_value": "CHAUCHA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Choclo",
+      "canonical_value": "CHOCLO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Ciboulle",
+      "canonical_value": "CIBOULLE",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Cilandro",
+      "canonical_value": "CILANDRO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Ciruela",
+      "canonical_value": "CIRUELA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Coco",
+      "canonical_value": "COCO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Coliflor",
+      "canonical_value": "COLIFLOR",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Curcuma",
+      "canonical_value": "CURCUMA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Echalote",
+      "canonical_value": "ECHALOTE",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Endibia",
+      "canonical_value": "ENDIBIA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Escarola",
+      "canonical_value": "ESCAROLA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Esparrago",
+      "canonical_value": "ESPARRAGO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Espinaca",
+      "canonical_value": "ESPINACA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Frutilla",
+      "canonical_value": "FRUTILLA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Haba",
+      "canonical_value": "HABA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Hinojo",
+      "canonical_value": "HINOJO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Hongos",
+      "canonical_value": "HONGOS",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Jengibre",
+      "canonical_value": "JENGIBRE",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Kale",
+      "canonical_value": "KALE",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Kiwi",
+      "canonical_value": "KIWI",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Kumquat",
+      "canonical_value": "KUMQUAT",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Lechuga",
+      "canonical_value": "LECHUGA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Lima",
+      "canonical_value": "LIMA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Limon",
+      "canonical_value": "LIMON",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Mandarina",
+      "canonical_value": "MANDARINA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Mandioca",
+      "canonical_value": "MANDIOCA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Mango",
+      "canonical_value": "MANGO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Manzana",
+      "canonical_value": "MANZANA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Melon",
+      "canonical_value": "MELON",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Membrillo",
+      "canonical_value": "MEMBRILLO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Menta",
+      "canonical_value": "MENTA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Nabo",
+      "canonical_value": "NABO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Naranja",
+      "canonical_value": "NARANJA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Nuez",
+      "canonical_value": "NUEZ",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Oregano",
+      "canonical_value": "OREGANO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Pack Choy",
+      "canonical_value": "PACK CHOY",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Palta",
+      "canonical_value": "PALTA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Papa",
+      "canonical_value": "PAPA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Pepino",
+      "canonical_value": "PEPINO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Pera",
+      "canonical_value": "PERA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Perejil",
+      "canonical_value": "PEREJIL",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Pimiento",
+      "canonical_value": "PIMIENTO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Platano",
+      "canonical_value": "PLATANO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Pomelo",
+      "canonical_value": "POMELO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Puerro",
+      "canonical_value": "PUERRO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Rabanito",
+      "canonical_value": "RABANITO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Radicchio",
+      "canonical_value": "RADICCHIO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Radicheta",
+      "canonical_value": "RADICHETA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Remolacha",
+      "canonical_value": "REMOLACHA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Rep.Brusel",
+      "canonical_value": "REP.BRUSEL",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Repollo",
+      "canonical_value": "REPOLLO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Romero",
+      "canonical_value": "ROMERO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Rucula",
+      "canonical_value": "RUCULA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Salvia",
+      "canonical_value": "SALVIA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Sandia",
+      "canonical_value": "SANDIA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Tomate",
+      "canonical_value": "TOMATE",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Tomillo",
+      "canonical_value": "TOMILLO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Uva",
+      "canonical_value": "UVA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Zanahoria",
+      "canonical_value": "ZANAHORIA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Zapallito",
+      "canonical_value": "ZAPALLITO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "product",
+      "source_value": "Zapallo",
+      "canonical_value": "ZAPALLO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "1Er.Corte",
+      "canonical_value": "1ER.CORTE",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "2Do.Corte",
+      "canonical_value": "2DO.CORTE",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Afourer",
+      "canonical_value": "AFOURER",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Agaricus",
+      "canonical_value": "AGARICUS",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Agata",
+      "canonical_value": "AGATA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Amarillo",
+      "canonical_value": "AMARILLO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Anc.Cokena",
+      "canonical_value": "ANC.COKENA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Arapey",
+      "canonical_value": "ARAPEY",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Arra 15",
+      "canonical_value": "ARRA 15",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Asiatica",
+      "canonical_value": "ASIATICA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Autumn Cri",
+      "canonical_value": "AUTUMN CRI",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Beauregard",
+      "canonical_value": "BEAUREGARD",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Blanco",
+      "canonical_value": "BLANCO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Capuchina",
+      "canonical_value": "CAPUCHINA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Cavendish",
+      "canonical_value": "CAVENDISH",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Chantenay",
+      "canonical_value": "CHANTENAY",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Cherry",
+      "canonical_value": "CHERRY",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Colorada",
+      "canonical_value": "COLORADA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Colorado",
+      "canonical_value": "COLORADO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Crespo",
+      "canonical_value": "CRESPO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Criolla",
+      "canonical_value": "CRIOLLA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Cripps Pin",
+      "canonical_value": "CRIPPS PIN",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Dancy",
+      "canonical_value": "DANCY",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Ellendale",
+      "canonical_value": "ELLENDALE",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Encore",
+      "canonical_value": "ENCORE",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Esmeralda",
+      "canonical_value": "ESMERALDA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Eureka",
+      "canonical_value": "EUREKA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Francesa",
+      "canonical_value": "FRANCESA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Genova",
+      "canonical_value": "GENOVA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Granny Smi",
+      "canonical_value": "GRANNY SMI",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Hass",
+      "canonical_value": "HASS",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Hoja Ancha",
+      "canonical_value": "HOJA ANCHA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Hoja Fina",
+      "canonical_value": "HOJA FINA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "JALAPE¥O",
+      "canonical_value": "JALAPEÑO",
+      "status": "manual_review",
+      "evidence": "Export has U+00A5; current official RF/RH labels have U+00D1 at matching prices; potential OEM/Latin1 decoding; official archived publication also contains PI¥A/ESPA¥A: https://www.magyp.gob.ar/new/0-0/programas/dma/frutas/series_frutas_17/01_frutas_2017-04-03.php",
+      "notes": "Anomaly also exists in public historical HTML, not just XLSX. OEM/Latin1 cause is inferred, not documented. Keep original until validated per label."
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Jalapeño",
+      "canonical_value": "JALAPEÑO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Largo",
+      "canonical_value": "LARGO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Mantecosa",
+      "canonical_value": "MANTECOSA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Mdo. Chino",
+      "canonical_value": "MDO. CHINO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Morado",
+      "canonical_value": "MORADO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Morron",
+      "canonical_value": "MORRON",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Murcot",
+      "canonical_value": "MURCOT",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Nanika",
+      "canonical_value": "NANIKA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "New Hall",
+      "canonical_value": "NEW HALL",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Nova",
+      "canonical_value": "NOVA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Optima",
+      "canonical_value": "OPTIMA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Orange",
+      "canonical_value": "ORANGE",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Oyster",
+      "canonical_value": "OYSTER",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "PI¥A",
+      "canonical_value": "PIÑA",
+      "status": "manual_review",
+      "evidence": "Export has U+00A5; current official RF/RH labels have U+00D1 at matching prices; potential OEM/Latin1 decoding; official archived publication also contains PI¥A/ESPA¥A: https://www.magyp.gob.ar/new/0-0/programas/dma/frutas/series_frutas_17/01_frutas_2017-04-03.php",
+      "notes": "Anomaly also exists in public historical HTML, not just XLSX. OEM/Latin1 cause is inferred, not documented. Keep original until validated per label."
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Packham'S",
+      "canonical_value": "PACKHAM'S",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Perita",
+      "canonical_value": "PERITA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Portobelo",
+      "canonical_value": "PORTOBELO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Red Delici",
+      "canonical_value": "RED DELICI",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Red Globe",
+      "canonical_value": "RED GLOBE",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Redondo",
+      "canonical_value": "REDONDO",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Rolliza",
+      "canonical_value": "ROLLIZA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Rome Beaut",
+      "canonical_value": "ROME BEAUT",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Salustiana",
+      "canonical_value": "SALUSTIANA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Shiitake",
+      "canonical_value": "SHIITAKE",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Sin Varied",
+      "canonical_value": "SIN VARIED",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Spunta",
+      "canonical_value": "SPUNTA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Star Ruby",
+      "canonical_value": "STAR RUBY",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Sugar Crip",
+      "canonical_value": "SUGAR CRIP",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Tahiti",
+      "canonical_value": "TAHITI",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Tetsukab.",
+      "canonical_value": "TETSUKAB.",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Torres",
+      "canonical_value": "TORRES",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Valenciana",
+      "canonical_value": "VALENCIANA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Verde",
+      "canonical_value": "VERDE",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Victoria",
+      "canonical_value": "VICTORIA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Vinagre",
+      "canonical_value": "VINAGRE",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Violeta",
+      "canonical_value": "VIOLETA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "Vta.Med.La",
+      "canonical_value": "VTA.MED.LA",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "W.Navel",
+      "canonical_value": "W.NAVEL",
+      "status": "validated",
+      "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
+      "notes": "Experimental correspondence, not official nomenclature dictionary"
+    }
+  ]
+}
