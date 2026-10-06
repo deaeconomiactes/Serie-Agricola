@@ -1,0 +1,28 @@
+{
+  "automatable": false,
+  "attempts": [
+    {
+      "url": "https://ssma.magyp.gob.ar/frutas.msdmensual.aspx",
+      "method": "GET",
+      "timeout_seconds": 20,
+      "max_bytes": 500000,
+      "captured_at_utc": "2026-10-06T14:16:02.564303+00:00",
+      "result": "unavailable",
+      "error_class": "TimeoutError",
+      "elapsed_seconds": 22.22
+    },
+    {
+      "url": "https://www.magyp.gob.ar/mercadosagropecuarios/",
+      "method": "GET",
+      "timeout_seconds": 20,
+      "max_bytes": 500000,
+      "captured_at_utc": "2026-10-06T14:16:24.777148+00:00",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "byte_size": 40191,
+      "result": "html_received_not_structured_monthly",
+      "public_links": [],
+      "elapsed_seconds": 0.64
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+name: MAGyP MCBA - actualización manual para revisión
+
+on:
+  workflow_dispatch:
+    inputs:
+      requested_date:
+        description: Un día ISO YYYY-MM-DD, sin backfill ni retry automático
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: magyp-mcba-manual
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      MCBA_DATE: ${{ inputs.requested_date }}
+      MCBA_CAPTURE_ROOT: ${{ runner.temp }}/mcba-capture
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # Tests de regresión comparan contra 5fb5987.
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Dependencias fijadas y Chromium
+        run: |
+          python -m pip install -r scripts/magyp/requirements-browser.txt
+          python -m playwright install --with-deps chromium
+      - name: Tests offline antes de la captura
+        run: |
+          python -m unittest discover -s tests/magyp_common -v
+          python -m unittest discover -s tests/magyp_mcba -v
+          node --test tests/magyp_frontend/*.test.cjs
+      - name: Captura, normalización, analytical y publicación local validada
+        run: >-
+          python scripts/magyp/mcba/update_mcba_dashboard.py
+          --date "$MCBA_DATE" --data-root "$MCBA_CAPTURE_ROOT" --allow-web
+      - name: Validar bundle final
+        run: |
+          python -c "from pathlib import Path; from scripts.magyp.mcba.update_mcba_dashboard import read_bundle; print(len(read_bundle(Path('data/magyp/dashboard/mcba'))))"
+          node --test tests/magyp_frontend/*.test.cjs
+      - name: CSV livianos para revisión y posterior publicación manual
+        uses: actions/upload-artifact@v5
+        with:
+          name: mcba-pages-candidate
+          retention-days: 14
+          path: |
+            data/magyp/dashboard/mcba/MCBA_MAGYP_DAILY.csv
+            data/magyp/dashboard/mcba/MCBA_MAGYP_DETAIL.csv
+            data/magyp/dashboard/mcba/MCBA_MAGYP_LATEST.csv
+            data/magyp/dashboard/mcba/MCBA_MAGYP_SUMMARY.csv
+            data/magyp/dashboard/mcba/MCBA_MAGYP_UPDATE_STATUS.json
+            data/magyp/dashboard/mcba/_SUCCESS.json
+      - name: Respaldo RAW sin estado de sesión, separado de Pages
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: mcba-raw-audit
+          retention-days: 90
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/mcba-capture/raw/mcba/**/manifest.json
+            ${{ runner.temp }}/mcba-capture/raw/mcba/**/response.xlsx
+      - name: Resultado público del intento
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: mcba-update-diagnostics
+          retention-days: 14
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/mcba-capture/reports/MCBA_INTEGRATION_ATTEMPT.json
+            data/magyp/dashboard/mcba/MCBA_MAGYP_UPDATE_STATUS.json
+      # Sin cron, commits ni deploy. Validar manualmente y definir archivo RAW duradero antes de activarlo.

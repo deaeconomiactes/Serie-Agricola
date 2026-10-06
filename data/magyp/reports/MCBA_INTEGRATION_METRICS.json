@@ -1,0 +1,32 @@
+{
+  "total_rows": 10380,
+  "detail_rows": 8126,
+  "summary_rows": 2254,
+  "date_min": "2024-10-02",
+  "date_max": "2026-10-05",
+  "observed_days": 28,
+  "detail_dimensions": {
+    "product_normalized": 91,
+    "variety_normalized": 129,
+    "origin_normalized": 30,
+    "package_normalized": 10,
+    "quality": 5,
+    "size": 63,
+    "grade": 15
+  },
+  "files": {
+    ".gitkeep": 0,
+    "MCBA_MAGYP_DAILY.csv": 5337468,
+    "MCBA_MAGYP_DETAIL.csv": 4166969,
+    "MCBA_MAGYP_LATEST.csv": 379103,
+    "MCBA_MAGYP_MONTHLY.csv": 448581,
+    "MCBA_MAGYP_SUMMARY.csv": 443,
+    "MCBA_MAGYP_UPDATE_STATUS.json": 117,
+    "_SUCCESS.json": 530
+  },
+  "update_status": {
+    "source_status": "MAGYP_LAST_VALID",
+    "attempted_at": "2026-10-06T14:24:54.532139Z",
+    "requested_date": "2026-10-06"
+  }
+}

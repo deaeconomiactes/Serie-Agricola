@@ -316,6 +316,10 @@ let filteredData = [];
 let rawPriceData = [];
 let priceData = [];
 let validPriceData = [];
+let legacyPriceData = [];
+let magypPriceData = [];
+let magypPriceInfo = null;
+let magypPriceWarning = '';
 let futurePriceData = [];
 let filteredPriceData = [];
 let priceSeriesData = [];
@@ -438,14 +442,17 @@ function updatePriceFrequencyOptions() {
     const frequencySource = scopedRows.length ? scopedRows : priceData;
     const allowed = new Set(availableFrequencies(detectFrequency(frequencySource)));
     if (!scopedRows.some(row => row.fechaPrecision !== 'mensual')) allowed.delete('diaria');
-    if (!hasSpecificSpecies) allowed.delete('diaria');
+    const mcbaSelected = isAllSelected(getSelectedValues('priceFilterMercado'))
+        || getSelectedValues('priceFilterMercado').includes(MCBAPrices.MCBA);
+    if (mcbaSelected && frequencySource.some(row => row.data_source === 'MAGYP')) allowed.add('diaria');
+    if (!hasSpecificSpecies && !mcbaSelected) allowed.delete('diaria');
     [...select.options].forEach(option => { option.disabled = !allowed.has(option.value); });
     priceFrequency = allowed.has(priceFrequency) ? priceFrequency : (allowed.has('mensual') ? 'mensual' : [...allowed][0]);
     select.value = priceFrequency;
-    select.onchange = () => { priceFrequency = select.value; updatePriceDashboard(); };
+    select.onchange = () => { priceFrequency = select.value; populatePriceFilters(); updatePriceDashboard(); };
     const frequencyStatus = document.getElementById('priceFrequencyStatus');
     if (frequencyStatus) {
-        frequencyStatus.textContent = !hasSpecificSpecies && availableFrequencies(detectFrequency(priceData)).includes('diaria')
+        frequencyStatus.textContent = !mcbaSelected && !hasSpecificSpecies && availableFrequencies(detectFrequency(priceData)).includes('diaria')
             ? 'Para visualizar detalle diario, seleccioná una especie específica. La vista general se muestra mensual para mantener legibilidad.' : '';
         frequencyStatus.classList.toggle('is-visible', Boolean(frequencyStatus.textContent));
     }
@@ -525,7 +532,16 @@ async function loadPriceData() {
         priceSeriesData = parsePriceCSV(await qualityResponse.text());
         priceQualityMap = new Map(priceSeriesData.map(row => [priceSeriesKey(row), row.indicador_serie_utilizable || '']));
     }
-    rawPriceData = processPriceData(parsePriceCSV(await response.text()), sourcePath);
+    legacyPriceData = processPriceData(parsePriceCSV(await response.text()), sourcePath).map(row => ({
+        ...row, data_source: 'LEGACY', source_status: 'LEGACY', last_update: '',
+        fechaPrecision: row.mercado === MCBAPrices.MCBA ? String(row.fechaPrecision).toLowerCase() : row.fechaPrecision,
+        calidadMCBA: '', tamanoMCBA: '', gradoMCBA: ''
+    }));
+    const magyp = await MCBAPrices.load();
+    magypPriceData = MCBAPrices.adapt(magyp.rows, MONTHS_FULL, magyp.status, formatLabel);
+    magypPriceInfo = magyp.info;
+    magypPriceWarning = magyp.warning;
+    rawPriceData = legacyPriceData.concat(magypPriceData);
     console.warn('Valores inválidos de planilla excluidos o normalizados:', spreadsheetInvalidCount);
     const dateSplit = filterFutureDates(rawPriceData);
     futurePriceData = dateSplit.futureRows;
@@ -612,6 +628,8 @@ function getPriceValue(row) {
 }
 
 function getPriceMetricLabel() {
+    if (priceUnitMode === 'comparable' && filteredPriceData.length &&
+        filteredPriceData.every(row => row.data_source === 'MAGYP')) return 'Precio publicado por kg';
     return priceUnitMode === 'comparable' ? 'Precio estimado por kg' : 'Precio observado';
 }
 
@@ -857,21 +875,31 @@ function setMultiSelectOptions(selectId, values, allLabel, selectedValues = []) 
 }
 
 function populatePriceFilters() {
+    const yearSelection = getSelectedValues('priceFilterYear');
+    const marketSelection = getSelectedValues('priceFilterMercado');
+    const sourceRows = getPriceSourceRows().filter(row =>
+        (isAllSelected(yearSelection) || yearSelection.includes(String(row.year))) &&
+        (isAllSelected(marketSelection) || marketSelection.includes(row.mercado)));
     const selectedSpecies = getSelectedValues('priceFilterEspecie');
     const definitions = [
         ['priceFilterYear', validPriceData.map(row => row.year), 'Todos los años'],
-        ['priceFilterRubro', validPriceData.map(row => row.rubro), 'Todos'],
-        ['priceFilterMes', validPriceData.map(row => row.mes), 'Todos los meses'],
-        ['priceFilterEspecie', validPriceData.map(row => row.especie), 'Todas las especies'],
-        ['priceFilterVariedad', validPriceData.filter(row => !Array.isArray(selectedSpecies) || !selectedSpecies.length || selectedSpecies.includes('TODOS') || selectedSpecies.includes(row.especie)).map(row => row.variedad || 'Sin especificar'), 'Todas las variedades'],
+        ['priceFilterRubro', sourceRows.map(row => row.rubro), 'Todos'],
+        ['priceFilterMes', sourceRows.map(row => row.mes), 'Todos los meses'],
+        ['priceFilterEspecie', sourceRows.map(row => row.especie), 'Todas las especies'],
+        ['priceFilterVariedad', sourceRows.filter(row => !Array.isArray(selectedSpecies) || !selectedSpecies.length || selectedSpecies.includes('TODOS') || selectedSpecies.includes(row.especie)).map(row => row.variedad || 'Sin especificar'), 'Todas las variedades'],
         ['priceFilterMercado', validPriceData.map(row => row.mercado), 'Todos los mercados'],
-        ['priceFilterProcedencia', validPriceData.map(row => row.procedencia), 'Todas'],
-        ['priceFilterUnidad', validPriceData.map(row => row.unidad), 'Todas']
+        ['priceFilterProcedencia', sourceRows.map(row => row.procedencia), 'Todas'],
+        ['priceFilterUnidad', sourceRows.map(row => row.unidad), 'Todas'],
+        ['priceFilterEnvase', sourceRows.map(row => row.envase), 'Todos'],
+        ['priceFilterCalidad', sourceRows.map(row => row.calidadMCBA), 'Todas'],
+        ['priceFilterTamano', sourceRows.map(row => row.tamanoMCBA), 'Todos'],
+        ['priceFilterGrado', sourceRows.map(row => row.gradoMCBA), 'Todos']
     ];
     definitions.forEach(([id, values, allLabel]) => {
         const select = document.getElementById(id);
-        const current = select?.multiple ? getSelectedValues(id) : select.value;
-        const unique = [...new Set(values.filter(value => String(value || '').trim()))];
+        if (!select) return;
+        const current = select.multiple ? getSelectedValues(id) : select.value;
+        const unique = [...new Set(values.filter(value => String(value || '').trim()).map(String))];
         if (id === 'priceFilterMes') unique.sort((a, b) => monthNumber(a) - monthNumber(b));
         else unique.sort((a, b) => String(a).localeCompare(String(b), 'es'));
         populateSelect(select, unique, allLabel, value => value);
@@ -882,6 +910,13 @@ function populatePriceFilters() {
             if (!kept.length) select.options[0].selected = true;
         } else if (unique.includes(current)) select.value = current;
         select.onchange = () => {
+            if (id === 'priceFilterMercado' || id === 'priceFilterYear') {
+                // Reset source-specific dimensions on market change; Corrientes remains unchanged.
+                if (id === 'priceFilterMercado') ['priceFilterEnvase', 'priceFilterCalidad', 'priceFilterTamano', 'priceFilterGrado'].forEach(key => {
+                    const field = document.getElementById(key); if (field) field.value = 'TODOS';
+                });
+                populatePriceFilters();
+            }
             if (id === 'priceFilterEspecie') updatePriceVarietyFilter();
             updatePriceFrequencyOptions();
             if (select.multiple) updateMultiSelectSummary(id);
@@ -901,7 +936,11 @@ function updatePriceVarietyFilter() {
     if (!select) return;
     const selectedVarieties = getSelectedValues('priceFilterVariedad');
     const selectedSpecies = getSelectedValues('priceFilterEspecie');
-    const unique = [...new Set(validPriceData
+    const markets = getSelectedValues('priceFilterMercado');
+    const years = getSelectedValues('priceFilterYear');
+    const unique = [...new Set(getPriceSourceRows()
+        .filter(row => (isAllSelected(markets) || markets.includes(row.mercado)) &&
+            (isAllSelected(years) || years.includes(String(row.year))))
         .filter(row => isAllSelected(selectedSpecies) || selectedSpecies.includes(row.especie))
         .map(row => row.variedad || 'Sin especificar')
         .filter(value => String(value || '').trim()))]
@@ -935,19 +974,31 @@ function getPriceFilters() {
         mercado: getSelectedValues('priceFilterMercado'),
         procedencia: getSelectedValues('priceFilterProcedencia'),
         unidad: getSelectedValues('priceFilterUnidad'),
+        envase: getSelectedValues('priceFilterEnvase'),
+        calidadMCBA: getSelectedValues('priceFilterCalidad'),
+        tamanoMCBA: getSelectedValues('priceFilterTamano'),
+        gradoMCBA: getSelectedValues('priceFilterGrado'),
         unidadComparable: document.getElementById('priceFilterComparable')?.value || 'comparables'
     };
 }
 
-function getFilteredPriceData({ applyFrequencyPrecision = true } = {}) {
+function getPriceSourceRows(frequency = priceFrequency) {
+    const legacy = validPriceData.filter(row => row.data_source === 'LEGACY');
+    const magyp = validPriceData.filter(row => row.data_source === 'MAGYP');
+    const routed = MCBAPrices.route(legacy, magyp, frequency, magypPriceInfo !== null);
+    return routed;
+}
+
+function getFilteredPriceData({ applyFrequencyPrecision = true, frequency = priceFrequency } = {}) {
     const filters = getPriceFilters();
     priceUnitMode = filters.unidadComparable === 'comparables' ? 'comparable' : filters.unidadComparable === 'no-comparables' ? 'nonComparable' : 'all';
     const selectedYear = isAllSelected(filters.year) ? null : Number(filters.year[0]);
-    return validPriceData.filter(row =>
+    const sourceRows = applyFrequencyPrecision ? getPriceSourceRows(frequency) : validPriceData;
+    return sourceRows.filter(row =>
         (filters.unidadComparable === 'comparables' ? isComparablePriceRow(row) : filters.unidadComparable === 'no-comparables' ? !isComparablePriceRow(row) && isValidPrice(row.precioObservado) : isValidPrice(row.precioObservado))
         &&
         (selectedYear === null || Number(row.year) === selectedYear)
-        && (!applyFrequencyPrecision || priceFrequency !== 'diaria' || row.fechaPrecision !== 'mensual')
+        && (!applyFrequencyPrecision || frequency !== 'diaria' || row.fechaPrecision !== 'mensual')
         && Object.entries(filters).every(([key, value]) => key === 'year' || key === 'unidadComparable' || matchesPriceFilter(row, key, value))
     );
 }
@@ -965,6 +1016,7 @@ function updatePriceDashboard() {
         ? beforeYearFilterCount
         : validPriceData.filter(row => Number(row.year) === Number(selectedYear)).length;
     applyPriceFilters();
+    updatePriceSourceStatus();
     console.log('Filtros precios:', filters);
     console.log('Filtros de precios aplicados:', filters);
     console.log('Año de precios seleccionado:', selectedYear);
@@ -989,6 +1041,31 @@ function updatePriceDashboard() {
     }
     updatePriceKPIs();
     renderPriceCharts();
+}
+
+function updatePriceSourceStatus() {
+    const node = document.getElementById('priceSourceStatus');
+    if (!node) return;
+    const filters = getPriceFilters();
+    const selected = isAllSelected(filters.mercado) || filters.mercado.includes(MCBAPrices.MCBA);
+    const mcba = filteredPriceData.filter(row => row.mercado === MCBAPrices.MCBA);
+    const sources = new Set(mcba.map(row => row.source_status));
+    const parts = [];
+    if (selected) {
+        if (sources.has('MAGYP') || sources.has('MAGYP_LAST_VALID')) {
+            parts.push('Fuente: MAGyP / Mercado Central de Buenos Aires · Diaria · Detalle por presentación');
+            if (magypPriceInfo?.updated_at) parts.push('Última captura válida: ' +
+                new Date(magypPriceInfo.updated_at).toLocaleString('es-AR'));
+        }
+        if (priceFrequency !== 'diaria') parts.push('MCBA ' + priceFrequency + ': fuente legacy. Mensual oficial MAGyP pendiente de automatización.');
+        else if (sources.has('LEGACY')) parts.push('Respaldo legacy en fechas sin cobertura MAGyP.');
+        if (hasMixedMCBASources(mcba)) parts.push('Evolución y ranking separados por fuente; los KPIs resumen la selección.');
+        if (magypPriceWarning && priceFrequency === 'diaria') parts.push(magypPriceWarning);
+        if (!mcba.length && priceFrequency === 'diaria' && !magypPriceWarning)
+            parts.push('Sin detalle MCBA para esta selección. No se completan productos ausentes con legacy en fechas cubiertas por MAGyP.');
+    }
+    node.textContent = parts.join(' · ');
+    node.classList.toggle('is-visible', Boolean(node.textContent));
 }
 
 function getPriceAnalysisLevel(filters) {
@@ -1024,6 +1101,7 @@ function getPriceDimensionValue(row, dimension) {
 }
 
 function formatPriceDimensionValue(row, dimension) {
+    if (dimension === 'data_source') return row.data_source === 'MAGYP' ? 'MAGyP' : 'Legacy';
     return formatLabel(getPriceDimensionValue(row, dimension));
 }
 
@@ -1175,6 +1253,7 @@ function createPriceChart(chartKey, canvasId, config) {
 
 function preparePriceEvolutionData(data, frequency, filters = getPriceFilters()) {
     const splitDimensions = getPriceSplitDimensions(filters);
+    if (hasMixedMCBASources(data)) splitDimensions.push('data_source');
     if (!splitDimensions.length) {
         const aggregate = aggregatePriceData(data, frequency).filter(item => isValidPrice(item.value));
         const values = aggregate.map(item => item.value);
@@ -1219,9 +1298,15 @@ function preparePriceEvolutionData(data, frequency, filters = getPriceFilters())
     };
 }
 
+function hasMixedMCBASources(data) {
+    const sources = new Set(data.filter(row => row.mercado === MCBAPrices.MCBA).map(row => row.data_source));
+    return sources.has('MAGYP') && sources.has('LEGACY');
+}
+
 function preparePriceRankingData(data, analysisLevel = 'general', filters = getPriceFilters()) {
     const field = analysisLevel === 'species_detail' ? 'variedad' : analysisLevel === 'variety_detail' ? 'procedencia' : 'especie';
     const dimensions = [...new Set([...getPriceSplitDimensions(filters), field])];
+    if (hasMixedMCBASources(data)) dimensions.push('data_source');
     const grouped = new Map();
     data.filter(row => isValidPrice(getPriceValue(row))).forEach(row => {
         const key = dimensions.map(dimension => String(getPriceDimensionValue(row, dimension))).join('|');
@@ -1478,7 +1563,15 @@ function renderPriceCharts() {
     console.log('Series comparables para variación:', Math.max(increases.meta.length, decreases.meta.length));
     console.log('Subas mostradas:', increases.labels.length);
     console.log('Bajas mostradas:', decreases.labels.length);
-    renderPriceTrafficLightTable(filteredPriceData, 'mensual');
+    // The semaphore always uses monthly data, even when the evolution shows daily MAGyP.
+    const monthlyRows = getFilteredPriceData({ frequency: 'mensual' });
+    renderPriceTrafficLightTable(monthlyRows, 'mensual');
+    const monthlyNote = document.getElementById('priceMonthlySourceNote');
+    if (monthlyNote) {
+        const show = isAllSelected(filters.mercado) || filters.mercado.includes(MCBAPrices.MCBA);
+        monthlyNote.textContent = show ? 'MCBA: semáforo mensual con fuente legacy; los precios diarios MAGyP no se usan para reconstruir el mensual oficial.' : '';
+        monthlyNote.hidden = !show;
+    }
 }
 
 function priceChartOptions(axisLabel, horizontal = false) {

@@ -151,6 +151,10 @@ Thumbs.db
 !scripts/magyp/**/*.py
 !tests/magyp_common/**/*.py
 !tests/magyp_mcba/**/*.py
+!tests/magyp_frontend/
+!tests/magyp_frontend/*.cjs
+!tests/magyp_frontend/*.js
+!mcba-prices.js
 data/magyp/raw/**
 data/magyp/normalized/**
 data/magyp/analytical/**

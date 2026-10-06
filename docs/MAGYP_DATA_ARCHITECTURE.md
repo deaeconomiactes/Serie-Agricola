@@ -1,5 +1,19 @@
 # Arquitectura canónica MAGyP — Serie Agrícola
 
+**Estado actual (integración local autorizada):** el detalle diario MCBA MAGyP
+alimenta Precios Mayoristas en la copia de trabajo. Mensual/anual usan legacy
+identificado; Corrientes y Commodities conservan sus fuentes. Arquitectura sin cambios.
+Ver `MCBA_DASHBOARD_INTEGRATION.md` y `MCBA_DASHBOARD_INTEGRATION_REPORT.md`.
+Sin commit, push, merge, cron ni deploy. Las notas de aislamiento de las fases
+anteriores que siguen abajo son históricas y no describen el frontend actual.
+
+**Fase 3:** arquitectura congelada. Política propuesta en `MCBA_PRODUCTION_POLICY.md`;
+validación de readiness en `data/magyp/reports/MCBA_PHASE3_READINESS_REPORT.md`.
+Entorno Python aislado y Chromium instalados; esto no acredita adquisición exitosa
+ni ejecución cloud. Workflow nuevo sólo manual, sin commits ni salidas productivas.
+Nuevos manifests separan ARS y price_unit=kg; legado inmutable mantiene ARS/kg.
+Export DETAIL se recomienda para visualización desagregada del piloto.
+
 **Actualización fase 2:** adquisición autónoma desde Python por navegador validada;
 clasificación BROWSER_AUTOMATION_REQUIRED y decisión de migración COMPLEMENT_ONLY.
 Se mantiene RAW → NORMALIZED → ANALYTICAL → DASHBOARD. El apéndice de fase 2

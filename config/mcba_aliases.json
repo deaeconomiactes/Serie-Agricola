@@ -72,7 +72,8 @@
       "canonical_value": "ESPAÑA",
       "status": "manual_review",
       "evidence": "Export has U+00A5; current official RF/RH labels have U+00D1 at matching prices; potential OEM/Latin1 decoding; official archived publication also contains PI¥A/ESPA¥A: https://www.magyp.gob.ar/new/0-0/programas/dma/frutas/series_frutas_17/01_frutas_2017-04-03.php",
-      "notes": "Anomaly also exists in public historical HTML, not just XLSX. OEM/Latin1 cause is inferred, not documented. Keep original until validated per label."
+      "notes": "Anomaly also exists in public historical HTML, not just XLSX. OEM/Latin1 cause is inferred, not documented. Keep original until validated per label.",
+      "anomaly_type": "encoding_anomaly"
     },
     {
       "dimension": "origin",
@@ -1224,7 +1225,8 @@
       "canonical_value": "JALAPEÑO",
       "status": "manual_review",
       "evidence": "Export has U+00A5; current official RF/RH labels have U+00D1 at matching prices; potential OEM/Latin1 decoding; official archived publication also contains PI¥A/ESPA¥A: https://www.magyp.gob.ar/new/0-0/programas/dma/frutas/series_frutas_17/01_frutas_2017-04-03.php",
-      "notes": "Anomaly also exists in public historical HTML, not just XLSX. OEM/Latin1 cause is inferred, not documented. Keep original until validated per label."
+      "notes": "Anomaly also exists in public historical HTML, not just XLSX. OEM/Latin1 cause is inferred, not documented. Keep original until validated per label.",
+      "anomaly_type": "encoding_anomaly"
     },
     {
       "dimension": "variety",
@@ -1336,7 +1338,8 @@
       "canonical_value": "PIÑA",
       "status": "manual_review",
       "evidence": "Export has U+00A5; current official RF/RH labels have U+00D1 at matching prices; potential OEM/Latin1 decoding; official archived publication also contains PI¥A/ESPA¥A: https://www.magyp.gob.ar/new/0-0/programas/dma/frutas/series_frutas_17/01_frutas_2017-04-03.php",
-      "notes": "Anomaly also exists in public historical HTML, not just XLSX. OEM/Latin1 cause is inferred, not documented. Keep original until validated per label."
+      "notes": "Anomaly also exists in public historical HTML, not just XLSX. OEM/Latin1 cause is inferred, not documented. Keep original until validated per label.",
+      "anomaly_type": "encoding_anomaly"
     },
     {
       "dimension": "variety",
@@ -1529,6 +1532,24 @@
       "status": "validated",
       "evidence": "Deterministic NFKC/uppercase/whitespace equality, plus observed same dimensions/price. No semantic conversion.",
       "notes": "Experimental correspondence, not official nomenclature dictionary"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "¥. FRANCES",
+      "canonical_value": "Ñ. FRANCES",
+      "status": "manual_review",
+      "evidence": "MCBA_MONTH_MATCHING_HISTORICAL_MONTHLY.csv: 2025-10 original MAGyP U+00A5 vs current Excel U+00D1 labels; no official recoding dictionary",
+      "notes": "Individual encoding hypothesis; monthly formula/encoding cause unverified. Never apply automatically.",
+      "anomaly_type": "encoding_anomaly"
+    },
+    {
+      "dimension": "variety",
+      "source_value": "ESPA¥OLA",
+      "canonical_value": "ESPAÑOLA",
+      "status": "manual_review",
+      "evidence": "MCBA_MONTH_MATCHING_HISTORICAL_MONTHLY.csv: 2025-10 original MAGyP U+00A5 vs current Excel U+00D1 labels; no official recoding dictionary",
+      "notes": "Individual encoding hypothesis; monthly formula/encoding cause unverified. Never apply automatically.",
+      "anomaly_type": "encoding_anomaly"
     }
   ]
 }

@@ -223,6 +223,10 @@ def validate_canonical(rows: list[dict], analytical=False) -> None:
             raise PipelineError("Fecha canónica inválida")
         if number(row["price"]) != row["price"] or not isinstance(row["quality_flags"], list):
             raise PipelineError("Precio/flags inválidos")
+        if row['observation_level'] not in {'detail','species_summary','unknown'}:
+            raise PipelineError('Nivel de observación inválido')
+        if row['kg_semantics_status']=='unknown' and (row['volume'] is not None or row['volume_unit'] is not None):
+            raise PipelineError('Kg desconocido no puede generar volumen ni unidad de volumen')
         if not set(quality_flags(row)).issubset(row["quality_flags"]):
             raise PipelineError("Flags inconsistentes")
 
@@ -264,6 +268,14 @@ def dashboard_rows(rows):
                           "source_url": r["source_url"], "updated_at": r["capture_timestamp"],
                           "currency_evidence": r["currency_evidence"], "kg_semantics_status": r["kg_semantics_status"],
                           "quality_flags": r["quality_flags"]})
+            daily[-1].update({k: r[k] for k in (
+                "product_raw", "variety_raw", "origin_raw", "package_raw", "kg_raw",
+                "raw_sha256", "capture_id", "schema_version", "parser_version")})
+            if r["currency"] != "ARS" or r["price_unit"] not in {"kg", "ARS/kg"}:
+                raise PipelineError("Moneda/unidad MCBA no validada; última salida conservada")
+            daily[-1].update(currency="ARS", price_unit="kg", price_unit_raw=r["price_unit"], volume=None,
+                             capture_timestamp=r["capture_timestamp"], data_source="MAGYP",
+                             source_status="MAGYP", last_update=r["capture_timestamp"])
     if not daily:
         raise PipelineError("No hay precios válidos: última salida conservada")
     daily.sort(key=lambda r: (r["date"], str(tuple(r[k] for k in dimensions)), r["observation_id"]))
@@ -292,4 +304,10 @@ def dashboard_rows(rows):
                 "summary_rows": sum(r["record_kind"] == "species_summary" for r in rows),
                 "quality_flags": dict(flags), "source_url": ENDPOINT,
                 "updated_at": max(r["capture_timestamp"] for r in rows)}]
-    return {"DAILY": daily, "MONTHLY": monthly, "LATEST": list(last.values()), "SUMMARY": summary}
+    summary[0].update(data_source="MAGYP", source_status="MAGYP",
+                      last_update=summary[0]["updated_at"], monthly_official_status="not_operational",
+                      dashboard_schema_version="mcba-dashboard-v3")
+    # Export recomendado para exploración desagregada; DAILY preserva ambos niveles identificados.
+    details = [r for r in daily if r["observation_level"] == "detail"]
+    return {"DAILY": daily, "MONTHLY": monthly, "LATEST": list(last.values()), "SUMMARY": summary,
+            **({"DETAIL": details} if details else {})}

@@ -57,7 +57,7 @@ def capture(payload, requested_date, data_root, mode, status=None, content_type=
                            {"date_from": requested_date, "date_to": date_to}, stamp,
                            status, content_type, None, len(payload), sha256(payload), SCHEMA_VERSION,
                            PARSER_VERSION, len(records), "validated", capture_id, mode,
-                           "ARS", "ARS/kg", CONTEXT_URL, response_url,
+                           "ARS", "kg", CONTEXT_URL, response_url,
                            "documented", acquisition_classification, request_count)
     folder = store_raw(data_root, payload, manifest)
     print(f"[FETCH] MCBA {requested_date} modo={mode} HTTP={status or 'no_observado'}")

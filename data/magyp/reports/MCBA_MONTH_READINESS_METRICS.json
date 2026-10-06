@@ -1,0 +1,112 @@
+{
+  "month": "2025-10",
+  "calendar_days": 31,
+  "days_requested": 31,
+  "days_with_data": 21,
+  "days_without_data": 10,
+  "days_unverified": 0,
+  "successful_exports": 5,
+  "failed_exports": 3,
+  "coverage_ratio_requested": 1.0,
+  "coverage_ratio_definition": "days_in_validated_export_windows / unique_days_requested",
+  "month_coverage_status": "complete_requested_window",
+  "rows_magyp": 7867,
+  "calendar_status": "unknown",
+  "official_monthly_equivalence": false,
+  "rows_current": 372,
+  "rows_current_daily_comparable": 0,
+  "rows_current_historical_monthly": 372,
+  "common_daily_dates": [],
+  "magyp_dimensions": {
+    "product": 85,
+    "variety": 97,
+    "origin": 28,
+    "package": 10,
+    "quality": 5,
+    "size": 45,
+    "grade": 12
+  },
+  "current_month_duplicate_groups": 0,
+  "matching_A": {
+    "report_entities_or_pairs": 0,
+    "denominator_definition": "unique_pairs_plus_unpaired_entities_ambiguous_counted_per_side",
+    "magyp_entities": 0,
+    "current_entities": 0,
+    "ambiguous_magyp_entities": 0,
+    "ambiguous_current_entities": 0,
+    "counts": {
+      "exact": 0,
+      "normalized_exact": 0,
+      "probable": 0,
+      "ambiguous": 0,
+      "current_only": 0,
+      "magyp_only": 0
+    },
+    "percentages": {
+      "exact": null,
+      "normalized_exact": null,
+      "probable": null,
+      "ambiguous": null,
+      "current_only": null,
+      "magyp_only": null
+    },
+    "paired_price_differences_over_0_011": 0,
+    "max_absolute_price_difference": null,
+    "max_absolute_relative_price_difference": null
+  },
+  "matching_B": {
+    "report_entities_or_pairs": 0,
+    "denominator_definition": "unique_pairs_plus_unpaired_entities_ambiguous_counted_per_side",
+    "magyp_entities": 0,
+    "current_entities": 0,
+    "ambiguous_magyp_entities": 0,
+    "ambiguous_current_entities": 0,
+    "counts": {
+      "exact": 0,
+      "normalized_exact": 0,
+      "probable": 0,
+      "ambiguous": 0,
+      "current_only": 0,
+      "magyp_only": 0
+    },
+    "percentages": {
+      "exact": null,
+      "normalized_exact": null,
+      "probable": null,
+      "ambiguous": null,
+      "current_only": null,
+      "magyp_only": null
+    },
+    "paired_price_differences_over_0_011": 0,
+    "max_absolute_price_difference": null,
+    "max_absolute_relative_price_difference": null
+  },
+  "matching_C": {
+    "report_entities_or_pairs": 542,
+    "denominator_definition": "unique_pairs_plus_unpaired_entities_ambiguous_counted_per_side",
+    "magyp_entities": 376,
+    "current_entities": 372,
+    "ambiguous_magyp_entities": 159,
+    "ambiguous_current_entities": 158,
+    "counts": {
+      "exact": 0,
+      "normalized_exact": 0,
+      "probable": 206,
+      "ambiguous": 317,
+      "current_only": 8,
+      "magyp_only": 11
+    },
+    "percentages": {
+      "exact": 0.0,
+      "normalized_exact": 0.0,
+      "probable": 38.00738007380074,
+      "ambiguous": 58.48708487084871,
+      "current_only": 1.4760147601476015,
+      "magyp_only": 2.029520295202952
+    },
+    "paired_price_differences_over_0_011": 182,
+    "max_absolute_price_difference": 1030.1578947368425,
+    "max_absolute_relative_price_difference": 0.13263266315653954
+  },
+  "historical_comparison_status": "diagnostic_formula_unverified"
+}

@@ -1,5 +1,22 @@
 # Diccionario de esquemas MAGyP — v1
 
+**Contrato DASHBOARD actual: mcba-dashboard-v3.** DAILY/DETAIL/LATEST añaden
+`product_raw`, `variety_raw`, `origin_raw`, `package_raw`, `kg_raw`,
+`raw_sha256`, `capture_id`, `capture_timestamp`, `schema_version`,
+`parser_version`, `price_unit_raw`, `volume`, `data_source`,
+`source_status` y `last_update`. No cambia el grano canónico ni el parser XLSX.
+En esta salida currency=ARS, price_unit=kg y volume=null; ARS/kg legado se conserva
+en price_unit_raw sin conversión numérica. SUMMARY registra versión, conteos y estado
+mensual no operativo; UPDATE_STATUS informa fallo de actualización sin alterar precios.
+El frontend usa detail, valida hashes del marcador y separa fuentes al graficar períodos mixtos.
+
+**Fase 3:** contrato v2 conservado. Nuevos RAW usan currency=ARS, price_unit=kg y
+currency_evidence=documented. Manifests/filas legadas preservan su evidencia y
+unidad ARS/kg; equivalencia de etiqueta explícita en diagnóstico, sin conversión
+numérica. `MCBA_MAGYP_DETAIL.csv` contiene exclusivamente observation_level=detail.
+Kg unknown exige volume/volume_unit null y se valida antes de publicar. Consultar
+`MCBA_PRODUCTION_POLICY.md` para agregados/matching A/B/C y calendario desconocido.
+
 **Fase 2: contrato canónico vigente v2.** La tabla original se conserva como referencia;
 los campos siguientes se añaden sin eliminar dimensiones ni modificar RAW legado.
 

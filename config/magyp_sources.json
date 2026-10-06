@@ -31,7 +31,7 @@
       ],
       "price_context": {
         "currency": "ARS",
-        "price_unit": "ARS/kg",
+        "price_unit": "kg",
         "basis": "documented_pesos_per_kg_both_categories; ISO_ARS_mapping_local_Argentina_explicit",
         "evidence_url": "https://ssma.magyp.gob.ar/frutas.preciospromediof.aspx",
         "observed_label": "PRECIO PROMEDIO DE FRUTAS EN PESOS POR KILO EN MCBA",

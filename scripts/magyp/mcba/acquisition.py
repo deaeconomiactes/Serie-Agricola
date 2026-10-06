@@ -74,6 +74,8 @@ def browser_fetch(start, end, timeout=25, max_requests=80, channel="msedge"):
     a, b = validate_window(start, end)
     if not 1 <= max_requests <= 120 or not 1 <= timeout <= 60:
         raise PipelineError("Límites de adquisición inválidos")
+    if channel not in {"msedge", "chromium"}:
+        raise PipelineError("Canal de navegador no permitido")
     try:
         from playwright.sync_api import sync_playwright
     except ImportError as e:
@@ -223,6 +225,8 @@ def browser_fetch(start, end, timeout=25, max_requests=80, channel="msedge"):
             return AcquisitionResult(payload, "BROWSER_AUTOMATION_REQUIRED", export_meta.get("status"),
                                      export_meta.get("content_type"), export_meta.get("method"),
                                      {"requests": network, "request_count": len(network),
+                                      "browser_channel": channel, "browser_version": str(browser.version),
+                                      "headless": True, "persistent_profile": False,
                                       "export_response": export_meta,
                                       "protocol": protocol, "cookie_names_only": cookie_names,
                                       "visible_grid_rows": inspected_rows}, inspected_rows)

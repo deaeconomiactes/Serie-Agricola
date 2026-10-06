@@ -1,0 +1,4 @@
+attempt_id,date,date_to,purpose,captured_at_utc,result,failure_stage,duration_seconds,request_count,rows,xlsx_valid,error_category,capture_id,browser_channel,python_version,platform,playwright_version,timeout_seconds,max_requests,attempt_type
+33de3863eeb54fb0b80e5569a7bf28a6,2025-10-02,2025-10-02,validation_2025,2026-10-06T13:17:42.098509Z,failed,initial_get,42.531,30,0,False,timeout,,chromium,3.12.10,Windows,1.58.0,40,80,initial
+70ffc411485d40f29f5e1ef7b7fcffd5,2025-10-15,2025-10-15,validation_2025,2026-10-06T13:18:32.740495Z,failed,initial_get,41.484,58,0,False,timeout,,chromium,3.12.10,Windows,1.58.0,40,80,initial
+9bd86dee1edc437b950cf075c396c44f,2025-10-02,2025-10-02,validation_2025,2026-10-06T13:22:40.668409Z,failed,initial_get,59.235,30,0,False,PipelineError,,chromium,3.12.10,Windows,1.58.0,40,80,legacy_repeat

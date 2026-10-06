@@ -18,8 +18,8 @@ def dimension_key(r, magyp, stage, rules):
     if stage == "exact":
         return tuple(v or "" for v in values)
     values = [canonical(v) or "" for v in values]
-    if values[-1] == "$/KG":
-        values[-1] = "ARS/KG"  # Contexto MCBA exclusivo, reporta originales.
+    if values[-1] in {"$/KG", "ARS/KG", "KG"}:
+        values[-1] = "KG"  # MCBA: pesos documentados; moneda separada, sin cambiar precios.
     for i, dim in ((2, "product"), (3, "variety"), (4, "origin"), (5, "package")):
         values[i] = normalized_label(dim, values[i], rules, allow_observed=stage == "probable") or ""
     return tuple(values)
