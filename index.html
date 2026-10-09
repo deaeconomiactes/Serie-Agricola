@@ -446,21 +446,22 @@
             <div>
                 <span class="section-eyebrow">Fuente operativa independiente</span>
                 <h2 class="commodities-title">Commodities agrícolas</h2>
-                <p id="commoditySourceSubtitle" class="commodities-subtitle">Fuente SIO Granos — operaciones informadas</p>
+                <p id="commoditySourceSubtitle" class="commodities-subtitle">Precios internos MAGyP</p>
                 <p id="commodityDataFreshness" class="commodity-data-freshness" role="status" aria-live="polite"></p>
                 <p id="commodityDataLastOperation" class="commodity-data-meta" role="status" aria-live="polite"></p>
                 <p id="commodityDataOperationRange" class="commodity-data-meta" role="status" aria-live="polite"></p>
             </div>
             <span id="commodityDataStatus" class="commodity-data-status" role="status" aria-live="polite">Cargando datos…</span>
         </div>
-        <p id="commodityMethodNote" class="method-note methodology-note commodity-method-note">Fuente: SIO Granos. Operaciones informadas. Los precios cero se excluyen de las series. ARS y USD se analizan por separado.</p>
-        <p id="commodityPriceScope" class="commodity-price-scope">Precios en la moneda y unidad seleccionadas · mediana de operaciones con precio positivo</p>
+        <p id="commodityMethodNote" class="method-note methodology-note commodity-method-note">Precios internos mensuales publicados por MAGyP, en ARS/TN por plaza. El histórico local permanece disponible por separado.</p>
+        <p id="commodityPriceScope" class="commodity-price-scope">Precios mensuales en la moneda y unidad seleccionadas · referencias por serie</p>
 
         <div class="commodity-filters filters-card filters-grid" aria-label="Filtros de commodities agrícolas">
             <div class="filter-group">
                 <label class="filter-label" for="commodityFilterSource">Tipo de referencia / Fuente</label>
                 <select id="commodityFilterSource" class="filter-select">
-                    <option value="sio" selected>SIO Granos — operaciones informadas</option>
+                    <option value="magyp_internal" selected>Precios internos MAGyP</option>
+                    <option value="sio">SIO Granos — operaciones informadas</option>
                     <option value="local_mensual">Histórico local mensual — precios internos</option>
                 </select>
             </div>
@@ -486,8 +487,8 @@
                 <label class="filter-label" for="commodityFilterUnit">Unidad</label>
                 <select id="commodityFilterUnit" class="filter-select"><option value="TODOS">Todas</option></select>
             </div>
-            <div class="filter-group">
-                <label class="filter-label" for="commodityFilterType">Tipo de precio</label>
+            <div class="filter-group" id="commodityTypeGroup" hidden>
+                <label class="filter-label" id="commodityTypeLabel" for="commodityFilterType">Tipo de precio</label>
                 <select id="commodityFilterType" class="filter-select"><option value="TODOS">Todos</option></select>
             </div>
             <div class="filter-group" id="commodityConditionGroup" hidden>
@@ -505,11 +506,11 @@
 
         <div class="commodity-kpi-grid">
             <div class="kpi-card commodity-kpi-update"><div class="kpi-icon">◷</div><div class="kpi-content"><span class="kpi-label">Último período disponible</span><span class="kpi-value" id="commodityKpiUpdate">–</span><span class="kpi-unit" id="commodityKpiRange">Rango sin datos</span></div></div>
-            <div class="kpi-card commodity-kpi-median"><div class="kpi-icon">$</div><div class="kpi-content"><span class="kpi-label">Mediana del último período</span><span class="kpi-value" id="commodityKpiMedian">–</span><span class="kpi-unit" id="commodityKpiMedianUnit">por unidad</span></div></div>
-            <div class="kpi-card commodity-kpi-monthly"><div class="kpi-icon">↕</div><div class="kpi-content"><span class="kpi-label">Variación mensual</span><span class="kpi-value" id="commodityKpiMonthlyVariation">–</span><span class="kpi-unit" id="commodityKpiMonthlyVariationDetail">última serie disponible</span></div></div>
-            <div class="kpi-card commodity-kpi-yoy"><div class="kpi-icon">↗</div><div class="kpi-content"><span class="kpi-label">Variación interanual</span><span class="kpi-value" id="commodityKpiYoYVariation">–</span><span class="kpi-unit" id="commodityKpiYoYVariationDetail">última serie disponible</span></div></div>
-            <div class="kpi-card commodity-kpi-products"><div class="kpi-icon">✦</div><div class="kpi-content"><span class="kpi-label">Commodities disponibles</span><span class="kpi-value" id="commodityKpiProducts">–</span><span class="kpi-unit">dentro del filtro</span></div></div>
-            <div class="kpi-card commodity-kpi-operations"><div class="kpi-icon">#</div><div class="kpi-content"><span class="kpi-label" id="commodityKpiOperationsLabel">Operaciones con precio</span><span class="kpi-value" id="commodityKpiOperations">–</span><span class="kpi-unit" id="commodityKpiOperationsUnit">precios positivos</span></div></div>
+            <div class="kpi-card commodity-kpi-median"><div class="kpi-icon">$</div><div class="kpi-content"><span class="kpi-label" id="commodityKpiMedianLabel">Precio mensual por serie</span><span class="kpi-value" id="commodityKpiMedian">–</span><span class="kpi-unit" id="commodityKpiMedianUnit">por unidad</span></div></div>
+            <div class="kpi-card commodity-kpi-monthly"><div class="kpi-icon">↕</div><div class="kpi-content"><span class="kpi-label" id="commodityKpiMonthlyLabel">Variación mensual</span><span class="kpi-value" id="commodityKpiMonthlyVariation">–</span><span class="kpi-unit" id="commodityKpiMonthlyVariationDetail">última serie disponible</span></div></div>
+            <div class="kpi-card commodity-kpi-yoy"><div class="kpi-icon">↗</div><div class="kpi-content"><span class="kpi-label" id="commodityKpiYoYLabel">Variación interanual</span><span class="kpi-value" id="commodityKpiYoYVariation">–</span><span class="kpi-unit" id="commodityKpiYoYVariationDetail">última serie disponible</span></div></div>
+            <div class="kpi-card commodity-kpi-products"><div class="kpi-icon">✦</div><div class="kpi-content"><span class="kpi-label" id="commodityKpiProductsLabel">Commodities disponibles</span><span class="kpi-value" id="commodityKpiProducts">–</span><span class="kpi-unit">dentro del filtro</span></div></div>
+            <div class="kpi-card commodity-kpi-operations"><div class="kpi-icon">#</div><div class="kpi-content"><span class="kpi-label" id="commodityKpiOperationsLabel">Observaciones con precio</span><span class="kpi-value" id="commodityKpiOperations">–</span><span class="kpi-unit" id="commodityKpiOperationsUnit">cotizaciones positivas</span></div></div>
             <div class="kpi-card commodity-kpi-currency"><div class="kpi-icon">◉</div><div class="kpi-content"><span class="kpi-label">Moneda seleccionada</span><span class="kpi-value" id="commodityKpiCurrency">–</span><span class="kpi-unit">serie sin mezcla monetaria</span></div></div>
         </div>
 
@@ -523,14 +524,14 @@
                 <div class="chart-body commodity-chart-body"><canvas id="commodityRanking"></canvas><div id="commodityRankingStatus" class="commodity-inline-status">No hay datos para los filtros seleccionados.</div></div>
             </div>
             <div class="chart-card commodity-chart-card">
-                <div class="chart-header"><h2 class="chart-title" id="commodityVolumeTitle">Volumen acumulado informado (TN)</h2><p class="chart-desc" id="commodityVolumeDesc">Suma de toneladas del período visible</p></div>
+                <div class="chart-header"><h2 class="chart-title" id="commodityVolumeTitle">Observaciones por referencia</h2><p class="chart-desc" id="commodityVolumeDesc">Cantidad de cotizaciones positivas publicadas</p></div>
                 <div class="chart-body commodity-chart-body"><canvas id="commodityVolume"></canvas><div id="commodityVolumeStatus" class="commodity-inline-status">No hay volumen válido para mostrar.</div></div>
             </div>
         </div>
 
         <div class="chart-card commodity-latest-card commodity-latest-featured">
             <div class="chart-header"><h2 class="chart-title" id="commodityLatestTitle">Últimos precios por serie</h2><p class="chart-desc" id="commodityLatestDesc">Precio mediano del último período disponible, con plaza y fuente visibles</p></div>
-            <div class="commodity-table-wrap"><table class="commodity-latest-table"><thead><tr><th>Commodity</th><th>Fuente</th><th>Mercado / plaza</th><th>Moneda</th><th>Unidad</th><th>Tipo</th><th>Período</th><th>Precio mediano</th><th>Observaciones</th><th id="commodityLatestVariationShort">Var. mensual</th><th id="commodityLatestVariationLong">Var. interanual</th><th>Estado</th><th id="commodityLatestConditionHeader" hidden>Condición / fuente</th></tr></thead><tbody id="commodityLatestBody"></tbody></table><div id="commodityLatestStatus" class="commodity-inline-status commodity-table-status is-visible">No hay últimos precios para mostrar.</div></div>
+            <div class="commodity-table-wrap"><table class="commodity-latest-table"><thead><tr><th>Commodity</th><th>Fuente</th><th>Mercado / plaza</th><th>Moneda</th><th>Unidad</th><th>Tipo</th><th>Período</th><th id="commodityLatestPriceHeader">Precio de referencia</th><th id="commodityLatestCountHeader">Observaciones</th><th id="commodityLatestVariationShort">Var. mensual</th><th id="commodityLatestVariationLong">Var. interanual</th><th>Estado</th><th id="commodityLatestConditionHeader" hidden>Condición / fuente</th></tr></thead><tbody id="commodityLatestBody"></tbody></table><div id="commodityLatestStatus" class="commodity-inline-status commodity-table-status is-visible">No hay últimos precios para mostrar.</div></div>
         </div>
 
         <div class="chart-card commodity-semaphore-card">
