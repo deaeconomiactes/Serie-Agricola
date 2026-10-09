@@ -1,0 +1,55 @@
+name: Preparar referencias MAGyP para revisión
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Fecha ISO de control / consulta FOB (día publicado, YYYY-MM-DD)'
+        required: true
+      source:
+        description: 'Familia independiente'
+        type: choice
+        options: [all, internal, board, fas, fob, futures]
+        default: all
+permissions:
+  contents: read
+concurrency:
+  group: magyp-commodities-review
+  cancel-in-progress: false
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - name: Tests offline de referencias
+        run: |
+          python -m unittest discover -s tests/magyp_common -p test_references.py -v
+          node --test tests/magyp_frontend/commodities.test.cjs tests/magyp_frontend/regression.test.cjs tests/magyp_frontend/mcba.test.cjs
+      - name: Descargar, validar y preparar salidas
+        env:
+          REQUESTED_DATE: ${{ inputs.date }}
+          SOURCE: ${{ inputs.source }}
+        run: python scripts/magyp/grains/references.py --source "$SOURCE" --date "$REQUESTED_DATE" --allow-web
+      - name: Validar salidas generadas para el dashboard
+        run: node --test tests/magyp_frontend/commodities.test.cjs
+      - name: Evidencia y salidas para revisión (sin commit/push/deploy)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: magyp-commodities-review-${{ github.run_id }}
+          retention-days: 30
+          path: |
+            data/magyp/raw/commodities/
+            data/magyp/normalized/commodities/
+            data/magyp/analytical/commodities/
+            data/magyp/dashboard/commodities/

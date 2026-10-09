@@ -1,0 +1,191 @@
+{
+  "registry_version": "v1",
+  "updated_at": "2026-10-06",
+  "allowed_statuses": [
+    "exploring",
+    "pilot",
+    "validated",
+    "production",
+    "fallback",
+    "deprecated"
+  ],
+  "sources": [
+    {
+      "official_url": "https://ssma.magyp.gob.ar/frutas.precios.aspx",
+      "endpoint": "https://ssma.magyp.gob.ar/frutas.precios.aspx",
+      "method": "Browser automated public GeneXus AJAX POST → GET XLSX",
+      "format": "XLSX (11 columnas); grilla GeneXus",
+      "authentication": "Public UI; cookies/anti-CSRF only in nonpersistent browser context",
+      "granularity": "fecha/tipo/especie/variedad/procedencia/envase/calidad/tamaño/grado; Prom.Esp. separado",
+      "production_candidate": false,
+      "source_id": "mcba",
+      "family": "market_price_observation",
+      "name": "MCBA frutas y hortalizas",
+      "frequency": "daily",
+      "status": "pilot",
+      "notes": [
+        "Headless Python acquisition verified for 2024/2026 bounded windows; 2025 initial page timeouts on two attempts.",
+        "HTTP-only GeneXus contract not validated; no bypass, no scheduler.",
+        "Prom.Esp. species summary inferred from structure; formula not documented. Kg unknown; volume null.",
+        "Coverage/aliases/matching remain pilot. No productive replacement."
+      ],
+      "price_context": {
+        "currency": "ARS",
+        "price_unit": "kg",
+        "basis": "documented_pesos_per_kg_both_categories; ISO_ARS_mapping_local_Argentina_explicit",
+        "evidence_url": "https://ssma.magyp.gob.ar/frutas.preciospromediof.aspx",
+        "observed_label": "PRECIO PROMEDIO DE FRUTAS EN PESOS POR KILO EN MCBA",
+        "verified_at": "2026-10-06",
+        "evidence_urls": [
+          "https://ssma.magyp.gob.ar/frutas.preciospromediof.aspx",
+          "https://ssma.magyp.gob.ar/frutas.preciospromedioh.aspx"
+        ],
+        "observed_labels": [
+          "PRECIO PROMEDIO DE FRUTAS EN PESOS POR KILO EN MCBA",
+          "PRECIO PROMEDIO DE HORTALIZAS EN PESOS POR KILO EN MCBA"
+        ],
+        "currency_evidence": "documented"
+      },
+      "acquisition_classification": "BROWSER_AUTOMATION_REQUIRED"
+    },
+    {
+      "official_url": "https://www.magyp.gob.ar/mercadosagropecuarios/",
+      "endpoint": null,
+      "method": null,
+      "format": null,
+      "authentication": "not_validated",
+      "granularity": "pending_validation",
+      "production_candidate": false,
+      "source_id": "corrientes",
+      "family": "market_price_observation",
+      "name": "Mercado de Corrientes",
+      "status": "fallback",
+      "frequency": "daily_or_monthly_by_current_source",
+      "notes": [
+        "Mantener adquisición/base actual. No se verificó fuente MAGyP equivalente."
+      ]
+    },
+    {
+      "official_url": "https://www.magyp.gob.ar/mercadosagropecuarios/",
+      "endpoint": null,
+      "method": null,
+      "format": null,
+      "authentication": "not_validated",
+      "granularity": "pending_validation",
+      "production_candidate": false,
+      "source_id": "grains_internal",
+      "family": "commodity_reference_price",
+      "name": "Precios internos granos",
+      "status": "exploring",
+      "frequency": "pending_validation",
+      "notes": [
+        "Referencia distinta a SIO; pendiente contrato y método."
+      ]
+    },
+    {
+      "official_url": "https://www.magyp.gob.ar/mercadosagropecuarios/",
+      "endpoint": null,
+      "method": null,
+      "format": null,
+      "authentication": "not_validated",
+      "granularity": "pending_validation",
+      "production_candidate": false,
+      "source_id": "grains_board",
+      "family": "commodity_reference_price",
+      "name": "Pizarra / Cámara",
+      "status": "exploring",
+      "frequency": "daily",
+      "notes": [
+        "Mantener plaza/cámara y metodología independientes; API no validada en esta fase."
+      ]
+    },
+    {
+      "official_url": "https://www.magyp.gob.ar/mercadosagropecuarios/",
+      "endpoint": null,
+      "method": null,
+      "format": null,
+      "authentication": "not_validated",
+      "granularity": "pending_validation",
+      "production_candidate": false,
+      "source_id": "grains_fas",
+      "family": "commodity_reference_price",
+      "name": "FAS teórico",
+      "status": "exploring",
+      "frequency": "daily",
+      "notes": [
+        "Referencia teórica; no mezclar con FOB ni operaciones."
+      ]
+    },
+    {
+      "official_url": "https://www.magyp.gob.ar/mercadosagropecuarios/",
+      "endpoint": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/ws/ssma/precios_fob.php",
+      "method": "GET Fecha=DD/MM/YYYY",
+      "format": "JSON posts[]",
+      "authentication": "not_validated",
+      "granularity": "fecha/circular/posición/intervalo de embarque",
+      "production_candidate": false,
+      "source_id": "grains_fob",
+      "family": "commodity_reference_price",
+      "name": "FOB oficial",
+      "status": "exploring",
+      "frequency": "daily_publication",
+      "notes": [
+        "Endpoint identificado en relevamiento previo, sin reconfirmación en esta fase.",
+        "Piloto previo se preserva; no se copia ni migra.",
+        "Producto/unidad/moneda requieren diccionario oficial."
+      ]
+    },
+    {
+      "official_url": "https://www.magyp.gob.ar/mercadosagropecuarios/",
+      "endpoint": null,
+      "method": null,
+      "format": null,
+      "authentication": "not_validated",
+      "granularity": "pending_validation",
+      "production_candidate": false,
+      "source_id": "sio_grains",
+      "family": "transaction_event",
+      "name": "SIO Granos",
+      "status": "exploring",
+      "frequency": "event",
+      "notes": [
+        "Piloto previo preservado, reconstrucción contractual pausada.",
+        "Validar 72h, export histórico, Compraventa/Canje, eventos, rectificaciones/anulaciones, última instancia e incrementalidad."
+      ]
+    },
+    {
+      "official_url": "https://www.magyp.gob.ar/mercadosagropecuarios/",
+      "endpoint": null,
+      "method": null,
+      "format": null,
+      "authentication": "not_validated",
+      "granularity": "pending_validation",
+      "production_candidate": false,
+      "source_id": "futures",
+      "family": "commodity_reference_price",
+      "name": "Futuros agrícolas",
+      "status": "exploring",
+      "frequency": "pending_validation",
+      "notes": [
+        "Contrato/mercado/vencimiento/tipo de ajuste; adquisición no implementada."
+      ]
+    },
+    {
+      "official_url": "https://www.magyp.gob.ar/mercadosagropecuarios/",
+      "endpoint": null,
+      "method": null,
+      "format": null,
+      "authentication": "not_validated",
+      "granularity": "pending_validation",
+      "production_candidate": false,
+      "source_id": "sio_meats",
+      "family": "livestock_transaction_event",
+      "name": "SIO Carnes",
+      "status": "exploring",
+      "frequency": "event",
+      "notes": [
+        "Contrato reservado para fase futura. Sin adquisición."
+      ]
+    }
+  ]
+}

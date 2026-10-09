@@ -1,0 +1,9 @@
+id,method,endpoint,status,purpose
+1,GET,https://ssma.magyp.gob.ar/frutas.precios.aspx,200,Confirmar formulario y controles; cuerpo no persistido
+2,GET,https://ssma.magyp.gob.ar/gxgral.js,200,Inspección de protocolo público GeneXus
+3,GET,https://ssma.magyp.gob.ar/frutas/precios.js,200,Evento público DOEXPORT y orden de parámetros
+4,GET,https://ssma.magyp.gob.ar/frutas.precios.aspx,200,Formulario nuevo para prueba directa acotada
+5,POST,https://ssma.magyp.gob.ar/frutas.precios.aspx,403,Refresh directo solicitado 2026-08-24; sin persistir sesión/cuerpo
+6,GET,https://ssma.magyp.gob.ar/gxgral.js,200,Inspección AJAX público
+7,GET,https://ssma.magyp.gob.ar/gxgral.js,200,Inspección seguridad AJAX pública; no persistir secretos
+8,GET,https://ssma.magyp.gob.ar/frutas.preciospromediof.aspx,200,Verificar etiqueta pesos por kilo MCBA; sin HTML persistido

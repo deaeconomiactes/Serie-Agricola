@@ -1,0 +1,104 @@
+{
+  "checked_on": "2026-10-09",
+  "sources": [
+    {
+      "source": "internal",
+      "source_url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/granos/_archivos/000056_Precios%20Locales/000010_Precios%20Internos%20de%20los%20Principales%20Granos/000001_Informe%20Actual%20de%20la%20Evolucion%20Precios%20Internos%20de%20Granos.php",
+      "latest_observation": "2026-09-01",
+      "date_min": "2026-01-01",
+      "valid_positive": 56,
+      "preserved_cells": 198,
+      "raw_captures": 1,
+      "size_bytes": 258148,
+      "last_capture": "2026-10-09T11:25:26.937805Z",
+      "content_types": [
+        "text/html; charset=UTF-8"
+      ]
+    },
+    {
+      "source": "board",
+      "source_url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/granos/_archivos/000056_Precios%20Locales/000020_Precios%20C%C3%A1mara%20-%20Diario/000001_Cotizaciones%20de%20Pizarra%20sobre%20Puerto%20-%20Precios%20C%C3%A1maras.php?accion=imp",
+      "latest_observation": "2026-10-07",
+      "date_min": "2026-10-07",
+      "valid_positive": 4,
+      "preserved_cells": 30,
+      "raw_captures": 1,
+      "size_bytes": 37489,
+      "last_capture": "2026-10-09T11:25:28.779456Z",
+      "content_types": [
+        "text/html; charset=UTF-8"
+      ]
+    },
+    {
+      "source": "fas",
+      "source_url": "https://dinem.magyp.gob.ar/dinem_fas.cfas_all.aspx",
+      "latest_observation": "2026-10-08",
+      "date_min": "2025-10-21",
+      "valid_positive": 162,
+      "preserved_cells": 162,
+      "raw_captures": 2,
+      "size_bytes": 254946,
+      "last_capture": "2026-10-09T11:29:30.328305Z",
+      "content_types": [
+        "text/html; charset=utf-8"
+      ]
+    },
+    {
+      "source": "fob",
+      "source_url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/ws/ssma/precios_fob.php",
+      "latest_observation": "2026-10-08",
+      "date_min": "2026-10-08",
+      "valid_positive": 134,
+      "preserved_cells": 134,
+      "raw_captures": 1,
+      "size_bytes": 501243,
+      "last_capture": "2026-10-09T11:25:35.051208Z",
+      "content_types": [
+        "text/html; charset=UTF-8"
+      ]
+    },
+    {
+      "source": "futures",
+      "source_url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/granos/_archivos/000057_Precios%20Internacionales/000010_Futuros%20-%20Chicago,%20Kansas,%20Winnipeg%20(Diario)/000001_Informe.php",
+      "latest_observation": "2026-10-08",
+      "date_min": "2026-10-07",
+      "valid_positive": 104,
+      "preserved_cells": 156,
+      "raw_captures": 1,
+      "size_bytes": 322115,
+      "last_capture": "2026-10-09T11:25:37.017877Z",
+      "content_types": [
+        "text/html; charset=UTF-8"
+      ]
+    }
+  ],
+  "sio_probe": {
+    "method": "POST",
+    "source_url": "https://www.siogranos.com.ar/consulta_publica/operaciones_informadas_ultimas.aspx/GetOperaciones",
+    "public_parameters": {
+      "pPageSize": "20",
+      "pCurrentPage": "1"
+    },
+    "status": 200,
+    "items": 1,
+    "latest_operation": "2026-10-09",
+    "declared_record_count": 0,
+    "production_sio_changed": false
+  },
+  "fas_reduced_dictionary_check": {
+    "url": "https://dinem.magyp.gob.ar/dinem_fas/cfasn_r.js",
+    "sha256": "b4730c089915115e2e7aeebb05eaec944d87c0ebb8d7be0e6f9f16ee48397190",
+    "ordered_codes": [
+      "TP",
+      "MA",
+      "CEBC",
+      "CEBF",
+      "SOR",
+      "SO",
+      "GI",
+      "AS",
+      "AG"
+    ],
+    "same_order_as_complete": true
+  }
+}

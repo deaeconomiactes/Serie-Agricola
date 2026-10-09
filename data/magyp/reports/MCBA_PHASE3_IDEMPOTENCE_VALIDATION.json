@@ -1,0 +1,12 @@
+{
+  "network_requests": 0,
+  "identical_sha256": true,
+  "method": "rebuild_from_immutable_RAW",
+  "layers": [
+    "raw",
+    "normalized",
+    "analytical",
+    "dashboard"
+  ],
+  "verified_files": 36
+}

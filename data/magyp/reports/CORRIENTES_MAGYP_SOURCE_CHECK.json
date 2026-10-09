@@ -1,0 +1,120 @@
+{
+  "investigation_only": true,
+  "as_of": "2026-10-06",
+  "controlled_requests": 5,
+  "max_requests": 5,
+  "legacy": {
+    "source_file": "PRECIOS_MAYORISTAS_INTEGRADO.csv",
+    "as_of": "2026-10-06",
+    "rows": 46587,
+    "non_future_rows": 46469,
+    "invalid_or_nonpositive_price_rows": 56,
+    "valid_observed_rows": 46413,
+    "comparable_rows": 46409,
+    "future_date_rows": 115,
+    "invalid_date_rows": 3,
+    "date_min": "2024-12-29",
+    "date_max": "2026-08-25",
+    "observed_dates": 400,
+    "date_precision_raw": {
+      "not_reported": 46413
+    },
+    "dimension_counts": {
+      "rubro": 3,
+      "especie": 171,
+      "variedad": 0,
+      "procedencia": 19,
+      "localidad_corrientes": 19,
+      "envase": 69,
+      "unidad": 1,
+      "unidad_precio_observado": 1,
+      "moneda": 0
+    },
+    "units_raw": [
+      "$/bulto"
+    ],
+    "currency_labels_raw": [],
+    "source_files": [
+      "MARTIN MICELLI 26-08-2026.xlsx"
+    ]
+  },
+  "requests": [
+    {
+      "url": "https://www.magyp.gob.ar/mercadosagropecuarios/",
+      "method": "GET",
+      "timeout_seconds": 15,
+      "max_bytes": 500000,
+      "captured_at_utc": "2026-10-06T14:59:51.219639+00:00",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "byte_size": 40191,
+      "encoding": "utf-8",
+      "result": "html_received",
+      "corrientes_links": [],
+      "elapsed_seconds": 0.797
+    },
+    {
+      "url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/frutas/index.php",
+      "method": "GET",
+      "timeout_seconds": 15,
+      "max_bytes": 500000,
+      "captured_at_utc": "2026-10-06T14:59:52.013663+00:00",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "byte_size": 43518,
+      "encoding": "utf-8",
+      "result": "html_received",
+      "corrientes_links": [
+        {
+          "url": "http://www.mptt.gov.ar/site13/index.php/preciosmercado",
+          "label": "Precios Diarios del Mercado de Corrientes"
+        }
+      ],
+      "elapsed_seconds": 0.234
+    },
+    {
+      "url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/hortalizas/",
+      "method": "GET",
+      "timeout_seconds": 15,
+      "max_bytes": 500000,
+      "captured_at_utc": "2026-10-06T14:59:52.256339+00:00",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "byte_size": 22038,
+      "encoding": "utf-8",
+      "result": "html_received",
+      "corrientes_links": [
+        {
+          "url": "http://www.mptt.gov.ar/site13/index.php/preciosmercado",
+          "label": "Mercado de Corrientes"
+        }
+      ],
+      "elapsed_seconds": 0.141
+    },
+    {
+      "url": "http://www.mptt.gov.ar/site13/index.php/preciosmercado",
+      "method": "GET",
+      "timeout_seconds": 15,
+      "max_bytes": 500000,
+      "captured_at_utc": "2026-10-06T14:59:52.397371+00:00",
+      "status": null,
+      "result": "dns_error",
+      "error_class": "gaierror",
+      "elapsed_seconds": 0.094
+    },
+    {
+      "url": "https://www.mptt.gov.ar/site13/index.php/preciosmercado",
+      "method": "GET",
+      "timeout_seconds": 15,
+      "max_bytes": 500000,
+      "captured_at_utc": "2026-10-06T14:59:52.477412+00:00",
+      "status": null,
+      "result": "dns_error",
+      "error_class": "gaierror",
+      "elapsed_seconds": 0.031
+    }
+  ],
+  "classification": "D_NO_UTILIZABLE",
+  "note": "No inferir desactualización ni ausencia universal sin publicación fechada verificable.",
+  "classification_scope": "Ruta institucional examinada; sin cotizaciones recuperadas. No prueba desactualización ni ausencia universal."
+}

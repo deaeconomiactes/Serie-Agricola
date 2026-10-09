@@ -1,0 +1,3 @@
+# Hashes publicados deben ser idénticos en Windows, Linux y GitHub Pages.
+data/magyp/dashboard/**/*.csv text eol=lf
+data/magyp/dashboard/**/*.json text eol=lf

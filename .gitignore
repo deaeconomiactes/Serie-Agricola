@@ -146,3 +146,23 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Piloto canónico MAGyP: scripts/tests y salidas livianas; RAW/bases completas locales.
+!scripts/magyp/**/*.py
+!tests/magyp_common/**/*.py
+!tests/magyp_mcba/**/*.py
+!tests/magyp_frontend/
+!tests/magyp_frontend/*.cjs
+!tests/magyp_frontend/*.js
+!mcba-prices.js
+data/magyp/raw/**
+data/magyp/normalized/**
+data/magyp/analytical/**
+!data/magyp/raw/**/
+!data/magyp/normalized/**/
+!data/magyp/analytical/**/
+!data/magyp/raw/**/.gitkeep
+!data/magyp/normalized/**/.gitkeep
+!data/magyp/analytical/**/.gitkeep
+!data/magyp/dashboard/**/*.csv
+!data/magyp/reports/*.csv

@@ -1,0 +1,231 @@
+{
+  "checked_at_utc": "2026-10-09T12:04:37.121907+00:00",
+  "branch": "codex/magyp-data-platform-mcba",
+  "accepted_commit": "98147a54902de5a72881bea5127e139c83eb26e2",
+  "classification": "PENDING_GITHUB_ACTIONS_VALIDATION",
+  "workflow": {
+    "path": ".github/workflows/magyp-commodities-review.yml",
+    "dispatch_ref": "codex/magyp-data-platform-mcba",
+    "inputs": {
+      "date": "2026-10-08",
+      "source": "all"
+    },
+    "dispatch_http_status": 404,
+    "run_created": false,
+    "default_branch": "main",
+    "workflow_on_main_http_status": 404,
+    "workflow_on_work_branch_http_status": 200,
+    "authenticated_workflows_list_http_status": 200,
+    "linux_execution": "NOT_RUN",
+    "reason": "workflow_dispatch requires the workflow to exist on the default branch; review workflow is absent from main. No merge or push performed.",
+    "local_linux_available": false,
+    "action_refs_verified": [
+      "actions/checkout@v7",
+      "actions/setup-python@v7",
+      "actions/setup-node@v7",
+      "actions/upload-artifact@v7"
+    ]
+  },
+  "tests": {
+    "python_passed": 18,
+    "node_passed": 20,
+    "failed": 0,
+    "changed_node_suite_retested_passed": 7,
+    "platform": "Windows / Python 3.12 / Node",
+    "failure_protection": "Offline tests include schema/HTTP/empty/atomic publication failures and preservation of the last valid dashboard."
+  },
+  "independent_generation": {
+    "mode": "Offline replay in temporary data root, accepted RAW and dashboard memory copied; no new source requests",
+    "date": "2026-10-08",
+    "sources": [
+      {
+        "source": "internal",
+        "positive_observations": 56,
+        "from": "2026-01-01",
+        "to": "2026-09-01",
+        "sha256_unchanged": true
+      },
+      {
+        "source": "board",
+        "positive_observations": 4,
+        "from": "2026-10-07",
+        "to": "2026-10-07",
+        "sha256_unchanged": true
+      },
+      {
+        "source": "fas",
+        "positive_observations": 162,
+        "from": "2025-10-21",
+        "to": "2026-10-08",
+        "sha256_unchanged": true
+      },
+      {
+        "source": "fob",
+        "positive_observations": 134,
+        "from": "2026-10-08",
+        "to": "2026-10-08",
+        "sha256_unchanged": true
+      },
+      {
+        "source": "futures",
+        "positive_observations": 104,
+        "from": "2026-10-07",
+        "to": "2026-10-08",
+        "sha256_unchanged": true
+      }
+    ]
+  },
+  "browser": {
+    "captured_at_utc": "2026-10-09T12:03:27.027864+00:00",
+    "platform": "Windows / Chromium headless",
+    "checks": [
+      {
+        "source": "sio",
+        "rows": 9,
+        "latest": 6,
+        "table": 6,
+        "semaphore": 6,
+        "charts": true,
+        "freshness": "Actualizado al: 05/10/2026 21:19",
+        "currencies": [
+          "ARS"
+        ],
+        "units": [
+          "TN"
+        ],
+        "source_links": 0,
+        "kpi": "05/10/2026"
+      },
+      {
+        "source": "local_mensual",
+        "rows": 343,
+        "latest": 5,
+        "table": 5,
+        "semaphore": 5,
+        "charts": true,
+        "freshness": "",
+        "currencies": [
+          "ARS"
+        ],
+        "units": [
+          "TN"
+        ],
+        "source_links": 0,
+        "kpi": "Ago 2026"
+      },
+      {
+        "source": "magyp_internal",
+        "rows": 44,
+        "latest": 5,
+        "table": 5,
+        "semaphore": 5,
+        "charts": true,
+        "freshness": "Actualizado al (UTC): 09/10/2026 11:25",
+        "currencies": [
+          "ARS"
+        ],
+        "units": [
+          "TN"
+        ],
+        "source_links": 5,
+        "kpi": "Sep 2026"
+      },
+      {
+        "source": "magyp_board",
+        "rows": 4,
+        "latest": 4,
+        "table": 4,
+        "semaphore": 4,
+        "charts": true,
+        "freshness": "Actualizado al (UTC): 09/10/2026 11:25",
+        "currencies": [
+          "ARS"
+        ],
+        "units": [
+          "TN"
+        ],
+        "source_links": 4,
+        "kpi": "Oct 2026"
+      },
+      {
+        "source": "magyp_fas",
+        "rows": 14,
+        "latest": 7,
+        "table": 7,
+        "semaphore": 7,
+        "charts": true,
+        "freshness": "Actualizado al (UTC): 09/10/2026 11:29",
+        "currencies": [
+          "ARS"
+        ],
+        "units": [
+          "TN"
+        ],
+        "source_links": 7,
+        "kpi": "Oct 2026"
+      },
+      {
+        "source": "magyp_fob",
+        "rows": 134,
+        "latest": 134,
+        "table": 134,
+        "semaphore": 10,
+        "charts": true,
+        "freshness": "Actualizado al (UTC): 09/10/2026 11:25",
+        "currencies": [
+          "Sin identificar"
+        ],
+        "units": [
+          "Sin identificar"
+        ],
+        "source_links": 134,
+        "kpi": "Oct 2026"
+      },
+      {
+        "source": "magyp_futures",
+        "rows": 52,
+        "latest": 52,
+        "table": 52,
+        "semaphore": 10,
+        "charts": true,
+        "freshness": "Actualizado al (UTC): 09/10/2026 11:25",
+        "currencies": [
+          "USD"
+        ],
+        "units": [
+          "TN"
+        ],
+        "source_links": 52,
+        "kpi": "Oct 2026"
+      }
+    ],
+    "currency_unit_mixing_blocked": true,
+    "unknown_fob_explicit": true,
+    "fas_der_historical_2025": true,
+    "condition_filter_preserved": true,
+    "daily_last_prices_exact": true,
+    "page_errors": [],
+    "frontend_magyp_requests": [],
+    "app_sha256": "7601ed8dfa60b58ea5cf0fdbe0ae8bd633efbd8f09cf2a61821dd929d81626e6"
+  },
+  "preservation": {
+    "all_preexisting_tracked_files_hashed": 261,
+    "changed_preexisting_files": [
+      ".github/workflows/magyp-commodities-review.yml",
+      "tests/magyp_frontend/commodities.test.cjs"
+    ],
+    "app_index_styles_and_accepted_csv_unchanged": true,
+    "protected_modules_unchanged": true,
+    "accepted_commit_unchanged": true,
+    "sio_separate": true,
+    "legacy_monthly_retained": true,
+    "fas_der_historical": true,
+    "local_futures_excluded": true
+  },
+  "production_notes": [
+    "No new source research or market requests in this closing task. Publication dates reflect accepted captures, not a new live acquisition.",
+    "Workflow remains manual/read-only with review artifacts, no cron/commit/push/deploy.",
+    "Review artifacts expire after 30 days; durable RAW storage policy must be confirmed before unattended production."
+  ],
+  "next_gate": "After user review and normal registration of the workflow on main, dispatch this review workflow on the accepted work branch with a valid published FOB date. Require a successful Ubuntu run and post-generation tests before READY_FOR_PRODUCTION_AUTOMATION."
+}

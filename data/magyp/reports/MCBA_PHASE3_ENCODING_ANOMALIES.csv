@@ -1,0 +1,7 @@
+source,field,raw_value,count,anomaly_type,normalization_status
+mcba_current,variety,Jalape±O,1,encoding_anomaly,pending_original_preserved
+mcba_current,variety,Red Cha±Ar,1,encoding_anomaly,pending_original_preserved
+mcba_magyp,origin,ESPA¥A,36,encoding_anomaly,pending_original_preserved
+mcba_magyp,variety,ESPA¥OLA,23,encoding_anomaly,pending_original_preserved
+mcba_magyp,variety,JALAPE¥O,21,encoding_anomaly,pending_original_preserved
+mcba_magyp,variety,¥. FRANCES,34,encoding_anomaly,pending_original_preserved

@@ -1,0 +1,20 @@
+{
+  "python_version": "3.12.10",
+  "platform": "Windows",
+  "isolated_venv": true,
+  "system_site_packages": false,
+  "playwright": "1.58.0",
+  "chromium_build": "1208",
+  "chromium_version": "145.0.7632.6",
+  "ci_execution_status": "prepared_not_executed",
+  "packages": {
+    "playwright": "1.58.0",
+    "openpyxl": "3.1.5",
+    "et-xmlfile": "2.0.0",
+    "pyee": "13.0.1",
+    "greenlet": "3.5.6",
+    "typing-extensions": "4.16.0"
+  },
+  "offline_tests": 71,
+  "offline_tests_status": "passed"
+}

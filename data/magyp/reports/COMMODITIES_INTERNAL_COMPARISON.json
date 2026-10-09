@@ -1,0 +1,591 @@
+{
+  "comparison_only": true,
+  "matched_count": 50,
+  "equal_count": 50,
+  "new_only_count": 6,
+  "new_only": [
+    {
+      "period": "2026-09",
+      "product": "TRIGO",
+      "market": "ROSARIO"
+    },
+    {
+      "period": "2026-09",
+      "product": "MAIZ",
+      "market": "ROSARIO"
+    },
+    {
+      "period": "2026-09",
+      "product": "TRIGO",
+      "market": "CORDOBA"
+    },
+    {
+      "period": "2026-09",
+      "product": "SOJA",
+      "market": "ROSARIO"
+    },
+    {
+      "period": "2026-09",
+      "product": "SOJA",
+      "market": "B.BLANCA"
+    },
+    {
+      "period": "2026-09",
+      "product": "SORGO",
+      "market": "ROSARIO"
+    }
+  ],
+  "matches": [
+    {
+      "period": "2026-01",
+      "product_raw": "TRIGO",
+      "legacy_product": "Trigo",
+      "market": "ROSARIO",
+      "new_price": "257400.95",
+      "legacy_price": "257400.95",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-01",
+      "product_raw": "MAIZ",
+      "legacy_product": "Maíz",
+      "market": "ROSARIO",
+      "new_price": "278655.00",
+      "legacy_price": "278655",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-01",
+      "product_raw": "TRIGO",
+      "legacy_product": "Trigo",
+      "market": "CORDOBA",
+      "new_price": "255026.15",
+      "legacy_price": "255026.15",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-01",
+      "product_raw": "SOJA",
+      "legacy_product": "Soja",
+      "market": "ROSARIO",
+      "new_price": "489506.19",
+      "legacy_price": "489506.19",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-01",
+      "product_raw": "GIRASOL",
+      "legacy_product": "Girasol",
+      "market": "ROSARIO",
+      "new_price": "501130.50",
+      "legacy_price": "501130.5",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-01",
+      "product_raw": "SORGO",
+      "legacy_product": "Sorgo",
+      "market": "ROSARIO",
+      "new_price": "241570.00",
+      "legacy_price": "241570",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-02",
+      "product_raw": "TRIGO",
+      "legacy_product": "Trigo",
+      "market": "ROSARIO",
+      "new_price": "253202.78",
+      "legacy_price": "253202.78",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-02",
+      "product_raw": "MAIZ",
+      "legacy_product": "Maíz",
+      "market": "ROSARIO",
+      "new_price": "253156.39",
+      "legacy_price": "253156.39",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-02",
+      "product_raw": "TRIGO",
+      "legacy_product": "Trigo",
+      "market": "CORDOBA",
+      "new_price": "251127.14",
+      "legacy_price": "251127.14",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-02",
+      "product_raw": "TRIGO",
+      "legacy_product": "Trigo",
+      "market": "QUEQUEN",
+      "new_price": "279800.00",
+      "legacy_price": "279800",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-02",
+      "product_raw": "SOJA",
+      "legacy_product": "Soja",
+      "market": "ROSARIO",
+      "new_price": "466250.00",
+      "legacy_price": "466250",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-02",
+      "product_raw": "GIRASOL",
+      "legacy_product": "Girasol",
+      "market": "ROSARIO",
+      "new_price": "523944.72",
+      "legacy_price": "523944.72",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-02",
+      "product_raw": "SORGO",
+      "legacy_product": "Sorgo",
+      "market": "ROSARIO",
+      "new_price": "246137.50",
+      "legacy_price": "246137.5",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-02",
+      "product_raw": "CEBADA FORRAJERA",
+      "legacy_product": "Cebada forrajera",
+      "market": "QUEQUEN",
+      "new_price": "280000.00",
+      "legacy_price": "280000",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-03",
+      "product_raw": "TRIGO",
+      "legacy_product": "Trigo",
+      "market": "ROSARIO",
+      "new_price": "254403.50",
+      "legacy_price": "254403.5",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-03",
+      "product_raw": "MAIZ",
+      "legacy_product": "Maíz",
+      "market": "ROSARIO",
+      "new_price": "243569.75",
+      "legacy_price": "243569.75",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-03",
+      "product_raw": "TRIGO",
+      "legacy_product": "Trigo",
+      "market": "CORDOBA",
+      "new_price": "250397.82",
+      "legacy_price": "250397.82",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-03",
+      "product_raw": "SOJA",
+      "legacy_product": "Soja",
+      "market": "ROSARIO",
+      "new_price": "466150.00",
+      "legacy_price": "466150",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-03",
+      "product_raw": "GIRASOL",
+      "legacy_product": "Girasol",
+      "market": "ROSARIO",
+      "new_price": "536143.70",
+      "legacy_price": "536143.7",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-03",
+      "product_raw": "SORGO",
+      "legacy_product": "Sorgo",
+      "market": "ROSARIO",
+      "new_price": "261981.11",
+      "legacy_price": "261981.11",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-04",
+      "product_raw": "TRIGO",
+      "legacy_product": "Trigo",
+      "market": "ROSARIO",
+      "new_price": "268636.42",
+      "legacy_price": "268636.42",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-04",
+      "product_raw": "MAIZ",
+      "legacy_product": "Maíz",
+      "market": "ROSARIO",
+      "new_price": "256038.95",
+      "legacy_price": "256038.95",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-04",
+      "product_raw": "TRIGO",
+      "legacy_product": "Trigo",
+      "market": "CORDOBA",
+      "new_price": "259040.00",
+      "legacy_price": "259040",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-04",
+      "product_raw": "SOJA",
+      "legacy_product": "Soja",
+      "market": "ROSARIO",
+      "new_price": "431789.47",
+      "legacy_price": "431789.47",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-04",
+      "product_raw": "GIRASOL",
+      "legacy_product": "Girasol",
+      "market": "ROSARIO",
+      "new_price": "554538.47",
+      "legacy_price": "554538.47",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-04",
+      "product_raw": "SORGO",
+      "legacy_product": "Sorgo",
+      "market": "ROSARIO",
+      "new_price": "264024.32",
+      "legacy_price": "264024.32",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-05",
+      "product_raw": "TRIGO",
+      "legacy_product": "Trigo",
+      "market": "ROSARIO",
+      "new_price": "295723.11",
+      "legacy_price": "295723.11",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-05",
+      "product_raw": "MAIZ",
+      "legacy_product": "Maíz",
+      "market": "ROSARIO",
+      "new_price": "257954.89",
+      "legacy_price": "257954.89",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-05",
+      "product_raw": "TRIGO",
+      "legacy_product": "Trigo",
+      "market": "CORDOBA",
+      "new_price": "291460.00",
+      "legacy_price": "291460",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-05",
+      "product_raw": "SOJA",
+      "legacy_product": "Soja",
+      "market": "ROSARIO",
+      "new_price": "455000.00",
+      "legacy_price": "455000",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-05",
+      "product_raw": "GIRASOL",
+      "legacy_product": "Girasol",
+      "market": "ROSARIO",
+      "new_price": "588840.00",
+      "legacy_price": "588840",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-05",
+      "product_raw": "SORGO",
+      "legacy_product": "Sorgo",
+      "market": "ROSARIO",
+      "new_price": "274452.53",
+      "legacy_price": "274452.53",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-06",
+      "product_raw": "TRIGO",
+      "legacy_product": "Trigo",
+      "market": "ROSARIO",
+      "new_price": "296331.85",
+      "legacy_price": "296331.85",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-06",
+      "product_raw": "MAIZ",
+      "legacy_product": "Maíz",
+      "market": "ROSARIO",
+      "new_price": "259120.48",
+      "legacy_price": "259120.48",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-06",
+      "product_raw": "TRIGO",
+      "legacy_product": "Trigo",
+      "market": "CORDOBA",
+      "new_price": "299305.00",
+      "legacy_price": "299305",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-06",
+      "product_raw": "SOJA",
+      "legacy_product": "Soja",
+      "market": "ROSARIO",
+      "new_price": "466190.48",
+      "legacy_price": "466190.48",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-06",
+      "product_raw": "GIRASOL",
+      "legacy_product": "Girasol",
+      "market": "ROSARIO",
+      "new_price": "648900.00",
+      "legacy_price": "648900",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-06",
+      "product_raw": "SORGO",
+      "legacy_product": "Sorgo",
+      "market": "ROSARIO",
+      "new_price": "279841.44",
+      "legacy_price": "279841.44",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-07",
+      "product_raw": "TRIGO",
+      "legacy_product": "Trigo",
+      "market": "ROSARIO",
+      "new_price": "297161.58",
+      "legacy_price": "297161.58",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-07",
+      "product_raw": "MAIZ",
+      "legacy_product": "Maíz",
+      "market": "ROSARIO",
+      "new_price": "273318.47",
+      "legacy_price": "273318.47",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-07",
+      "product_raw": "TRIGO",
+      "legacy_product": "Trigo",
+      "market": "CORDOBA",
+      "new_price": "296710.00",
+      "legacy_price": "296710",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-07",
+      "product_raw": "SOJA",
+      "legacy_product": "Soja",
+      "market": "ROSARIO",
+      "new_price": "494868.42",
+      "legacy_price": "494868.42",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-07",
+      "product_raw": "GIRASOL",
+      "legacy_product": "Girasol",
+      "market": "ROSARIO",
+      "new_price": "679635.00",
+      "legacy_price": "679635",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-07",
+      "product_raw": "SORGO",
+      "legacy_product": "Sorgo",
+      "market": "ROSARIO",
+      "new_price": "269094.42",
+      "legacy_price": "269094.42",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-08",
+      "product_raw": "TRIGO",
+      "legacy_product": "Trigo",
+      "market": "ROSARIO",
+      "new_price": "330539.45",
+      "legacy_price": "330539.45",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-08",
+      "product_raw": "MAIZ",
+      "legacy_product": "Maíz",
+      "market": "ROSARIO",
+      "new_price": "271477.50",
+      "legacy_price": "271477.5",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-08",
+      "product_raw": "TRIGO",
+      "legacy_product": "Trigo",
+      "market": "CORDOBA",
+      "new_price": "316385.00",
+      "legacy_price": "316385",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-08",
+      "product_raw": "SOJA",
+      "legacy_product": "Soja",
+      "market": "ROSARIO",
+      "new_price": "518425.00",
+      "legacy_price": "518425",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-08",
+      "product_raw": "GIRASOL",
+      "legacy_product": "Girasol",
+      "market": "ROSARIO",
+      "new_price": "743250.00",
+      "legacy_price": "743250",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    },
+    {
+      "period": "2026-08",
+      "product_raw": "SORGO",
+      "legacy_product": "Sorgo",
+      "market": "ROSARIO",
+      "new_price": "275535.20",
+      "legacy_price": "275535.2",
+      "difference": "0.00",
+      "currency": "ARS",
+      "unit": "TN"
+    }
+  ],
+  "rule": "Alias explícitos sólo para comparación; producto original preservado. Plaza = sufijo original tras —. Mismo ARS/TN y período mensual; sin conversiones."
+}

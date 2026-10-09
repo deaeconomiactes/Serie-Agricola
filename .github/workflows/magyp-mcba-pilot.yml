@@ -1,0 +1,62 @@
+name: MAGyP MCBA - smoke manual Chromium
+
+on:
+  workflow_dispatch:
+    inputs:
+      allow_web:
+        description: Una captura oficial controlada (sin retry)
+        required: true
+        type: boolean
+        default: false
+      requested_date:
+        description: Fecha ISO YYYY-MM-DD (usada sólo con allow_web)
+        required: true
+        type: string
+        default: '2025-10-02'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      MCBA_DATE: ${{ inputs.requested_date }}
+      MCBA_SMOKE_ROOT: ${{ runner.temp }}/mcba-smoke
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Dependencias fijadas
+        run: python -m pip install -r scripts/magyp/requirements-browser.txt
+      - name: Instalar Chromium y dependencias Linux
+        run: python -m playwright install --with-deps chromium
+      - name: Tests offline
+        shell: bash
+        run: |
+          mkdir -p "$MCBA_SMOKE_ROOT/reports"
+          set -o pipefail
+          python -m unittest discover -s tests/magyp_common -v 2>&1 | tee "$MCBA_SMOKE_ROOT/reports/common-tests.txt"
+          python -m unittest discover -s tests/magyp_mcba -v 2>&1 | tee "$MCBA_SMOKE_ROOT/reports/mcba-tests.txt"
+      - name: Una captura opcional, fuera del checkout
+        if: ${{ inputs.allow_web }}
+        run: >-
+          python scripts/magyp/mcba/validate_acquisition_mcba.py
+          --date-from "$MCBA_DATE" --purpose clean_smoke
+          --browser-channel chromium --timeout 40 --max-requests 80
+          --data-root "$MCBA_SMOKE_ROOT" --allow-web
+      - name: Diagnósticos públicos livianos
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: mcba-smoke-public-reports
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/mcba-smoke/reports/*tests.txt
+            ${{ runner.temp }}/mcba-smoke/reports/MCBA_PHASE3_ATTEMPT_*.json
+            ${{ runner.temp }}/mcba-smoke/reports/MCBA_PHASE3_ACQUISITION_ATTEMPTS.csv

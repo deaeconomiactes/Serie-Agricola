@@ -1,0 +1,13 @@
+attempt_id,date,date_to,purpose,captured_at_utc,result,failure_stage,duration_seconds,request_count,rows,xlsx_valid,error_category,capture_id,browser_channel,python_version,platform,playwright_version,timeout_seconds,max_requests,attempt_type
+33de3863eeb54fb0b80e5569a7bf28a6,2025-10-02,2025-10-02,validation_2025,2026-10-06T13:17:42.098509Z,failed,initial_get,42.531,30,0,False,timeout,,chromium,3.12.10,Windows,1.58.0,40,80,initial
+70ffc411485d40f29f5e1ef7b7fcffd5,2025-10-15,2025-10-15,validation_2025,2026-10-06T13:18:32.740495Z,failed,initial_get,41.484,58,0,False,timeout,,chromium,3.12.10,Windows,1.58.0,40,80,initial
+ac8bfabda1e544f78297902d4eb6e2b9,2026-08-24,2026-08-24,clean_smoke,2026-10-06T13:19:53.545962Z,failed,initial_get,42.328,51,0,False,timeout,,chromium,3.12.10,Windows,1.58.0,40,80,initial
+9bd86dee1edc437b950cf075c396c44f,2025-10-02,2025-10-02,validation_2025,2026-10-06T13:22:40.668409Z,failed,initial_get,59.235,30,0,False,PipelineError,,chromium,3.12.10,Windows,1.58.0,40,80,legacy_repeat
+569e9861d84b413fb61bffaa5d3ef52e,2025-10-01,2025-10-07,month_validation,2026-10-06T13:25:22.001786Z,failed,initial_get,44.125,30,0,False,timeout,,chromium,3.12.10,Windows,1.58.0,40,80,initial
+6919a6027e77494ab118daf44c50a76d,2025-10-08,2025-10-14,month_validation,2026-10-06T13:26:17.163782Z,failed,date_controls,78.906,29,0,False,timeout,,chromium,3.12.10,Windows,1.58.0,40,80,initial
+b18a04db6b204453a9a8dbab173ef8a1,2025-10-15,2025-10-21,month_validation,2026-10-06T13:27:47.152948Z,failed,initial_get,41.781,51,0,False,timeout,,chromium,3.12.10,Windows,1.58.0,40,80,initial
+7c7064f4c79547bc81f41a00a5b110e3,2025-10-22,2025-10-28,month_validation,2026-10-06T13:28:39.766117Z,success,,50.266,62,1910,True,,2026-10-06T132930_034400Z-94407736,chromium,3.12.10,Windows,1.58.0,40,80,initial
+e68e48d3daf14692b26dd17b64e88eae,2025-10-29,2025-10-31,month_validation,2026-10-06T13:29:40.767313Z,success,,53.734,62,1137,True,,2026-10-06T133034_494345Z-b491a9c7,chromium,3.12.10,Windows,1.58.0,40,80,initial
+ba6bea40c85540b4a9272b651f4ed58c,2025-10-01,2025-10-07,month_validation,2026-10-06T13:31:47.221690Z,success,,60.234,62,1822,True,,2026-10-06T133247_423426Z-e50dd3af,chromium,3.12.10,Windows,1.58.0,40,80,explicit_retry
+d250a2e218f948abadfa83b1c926c704,2025-10-08,2025-10-14,month_validation,2026-10-06T13:32:58.277655Z,success,,48.625,62,1486,True,,2026-10-06T133346_907383Z-53548942,chromium,3.12.10,Windows,1.58.0,40,80,explicit_retry
+0c10040538bb4e65baa352351e6ce712,2025-10-15,2025-10-21,month_validation,2026-10-06T13:33:57.680002Z,success,,49.703,62,1512,True,,2026-10-06T133447_388718Z-f77c4da9,chromium,3.12.10,Windows,1.58.0,40,80,explicit_retry

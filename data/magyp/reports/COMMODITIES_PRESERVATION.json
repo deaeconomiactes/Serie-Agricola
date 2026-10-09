@@ -1,0 +1,20 @@
+{
+  "checked_at_utc": "2026-10-09T11:40:13.563370+00:00",
+  "head": "d82fcbccc29c4aa528546e32dc58c9adfe072014",
+  "preexisting_files": 247,
+  "unchanged_files": 244,
+  "authorized_changes": [
+    "app.js",
+    "index.html",
+    "tests/magyp_frontend/regression.test.cjs"
+  ],
+  "unexpected_changes": [],
+  "offline_replay_idempotent": true,
+  "dashboard_sha256": {
+    "board.csv": "04542633e6b0781376c8b522a63026d3e2059cf86a8ee004d20f132a880d94f4",
+    "fas.csv": "7a2e75aa61668e2cab7065ec33780855653955ee8dac39c5df6afaa0c7b2061c",
+    "fob.csv": "2d6b3c98e6dfd9b74ec5c193593311bb7f875840dca98c7323891e80b273c8dc",
+    "futures.csv": "01b99a90644ccba95e58a005a549f744a5f091d4e9d2d38d6f8470d23d9b991e",
+    "internal.csv": "cb08e4b68afe649f255df96b051762792b5e37536b855f600d3eb76d75786131"
+  }
+}

@@ -363,6 +363,16 @@
             </div>
         </div>
         <div id="priceFrequencyStatus" class="price-inline-status" role="status" aria-live="polite"></div>
+        <details class="price-method-note" id="priceSecondaryFilters">
+            <summary>Filtros adicionales de presentación</summary>
+            <div class="filters-grid">
+                <div class="filter-group"><label for="priceFilterEnvase">Envase</label><select id="priceFilterEnvase" class="filter-select"><option value="TODOS">Todos</option></select></div>
+                <div class="filter-group"><label for="priceFilterCalidad">Calidad MCBA</label><select id="priceFilterCalidad" class="filter-select"><option value="TODOS">Todas</option></select></div>
+                <div class="filter-group"><label for="priceFilterTamano">Tamaño</label><select id="priceFilterTamano" class="filter-select"><option value="TODOS">Todos</option></select></div>
+                <div class="filter-group"><label for="priceFilterGrado">Grado</label><select id="priceFilterGrado" class="filter-select"><option value="TODOS">Todos</option></select></div>
+            </div>
+        </details>
+        <div id="priceSourceStatus" class="price-inline-status" role="status" aria-live="polite"></div>
 
         <div id="priceStatus" class="price-status" role="status" aria-live="polite"></div>
         <div id="priceUnitStatus" class="price-inline-status price-unit-status" role="status" aria-live="polite"></div>
@@ -404,6 +414,7 @@
         <div class="price-semaphore-card chart-card">
             <div class="chart-header"><h2 class="chart-title">Semáforo de precios</h2><p class="chart-desc">Control rápido de variación de precios por producto</p></div>
             <div class="price-semaphore-note">El sombreado destaca cambios relativos de precios entre meses. No representa escasez ni abastecimiento.</div>
+            <p id="priceMonthlySourceNote" class="method-note price-method-note" hidden></p>
             <div class="price-semaphore-wrap"><table class="price-semaphore-table"><thead><tr><th>Producto</th><th>Ene</th><th>Feb</th><th>Mar</th><th>Abr</th><th>May</th><th>Jun</th><th>Jul</th><th>Ago</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dic</th><th>Variación período</th><th>Estado</th></tr></thead><tbody id="priceTrafficLightBody"></tbody></table><div id="priceTrafficLightStatus" class="price-inline-status is-visible">No hay suficientes precios mensuales para construir el semáforo con los filtros seleccionados.</div></div>
         </div>
         <p class="method-note price-method-note">Los precios se muestran como promedios simples por período. No están ponderados por cantidades salvo que exista un ponderador explícito. Las visualizaciones respetan la frecuencia original y no desagregan datos artificialmente.</p>
@@ -447,7 +458,7 @@
 
         <div class="commodity-filters filters-card filters-grid" aria-label="Filtros de commodities agrícolas">
             <div class="filter-group">
-                <label class="filter-label" for="commodityFilterSource">Fuente</label>
+                <label class="filter-label" for="commodityFilterSource">Tipo de referencia / Fuente</label>
                 <select id="commodityFilterSource" class="filter-select">
                     <option value="sio" selected>SIO Granos — operaciones informadas</option>
                     <option value="local_mensual">Histórico local mensual — precios internos</option>
@@ -478,6 +489,10 @@
             <div class="filter-group">
                 <label class="filter-label" for="commodityFilterType">Tipo de precio</label>
                 <select id="commodityFilterType" class="filter-select"><option value="TODOS">Todos</option></select>
+            </div>
+            <div class="filter-group" id="commodityConditionGroup" hidden>
+                <label class="filter-label" for="commodityFilterCondition">Condición / posición</label>
+                <select id="commodityFilterCondition" class="filter-select"><option value="TODOS">Todas</option></select>
             </div>
             <div class="filter-group">
                 <label class="filter-label" for="commodityFilterFrequency">Frecuencia</label>
@@ -515,7 +530,7 @@
 
         <div class="chart-card commodity-latest-card commodity-latest-featured">
             <div class="chart-header"><h2 class="chart-title" id="commodityLatestTitle">Últimos precios por serie</h2><p class="chart-desc" id="commodityLatestDesc">Precio mediano del último período disponible, con plaza y fuente visibles</p></div>
-            <div class="commodity-table-wrap"><table class="commodity-latest-table"><thead><tr><th>Commodity</th><th>Fuente</th><th>Mercado / plaza</th><th>Moneda</th><th>Unidad</th><th>Tipo</th><th>Período</th><th>Precio mediano</th><th>Observaciones</th><th id="commodityLatestVariationShort">Var. mensual</th><th id="commodityLatestVariationLong">Var. interanual</th><th>Estado</th></tr></thead><tbody id="commodityLatestBody"></tbody></table><div id="commodityLatestStatus" class="commodity-inline-status commodity-table-status is-visible">No hay últimos precios para mostrar.</div></div>
+            <div class="commodity-table-wrap"><table class="commodity-latest-table"><thead><tr><th>Commodity</th><th>Fuente</th><th>Mercado / plaza</th><th>Moneda</th><th>Unidad</th><th>Tipo</th><th>Período</th><th>Precio mediano</th><th>Observaciones</th><th id="commodityLatestVariationShort">Var. mensual</th><th id="commodityLatestVariationLong">Var. interanual</th><th>Estado</th><th id="commodityLatestConditionHeader" hidden>Condición / fuente</th></tr></thead><tbody id="commodityLatestBody"></tbody></table><div id="commodityLatestStatus" class="commodity-inline-status commodity-table-status is-visible">No hay últimos precios para mostrar.</div></div>
         </div>
 
         <div class="chart-card commodity-semaphore-card">
@@ -533,6 +548,7 @@
     </footer>
     </div>
 
-    <script src="app.js?v=commodities-daily-sio"></script>
+    <script src="mcba-prices.js?v=mcba-integration-v1"></script>
+    <script src="app.js?v=magyp-commodities-v1"></script>
 </body>
 </html>

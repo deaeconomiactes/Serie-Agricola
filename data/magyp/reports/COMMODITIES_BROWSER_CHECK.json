@@ -1,0 +1,198 @@
+{
+  "url": "http://127.0.0.1:8769",
+  "checks": [
+    {
+      "source": "sio",
+      "rows": 9,
+      "latest": 6,
+      "table": 6,
+      "semaphore": 6,
+      "trend": true,
+      "ranking": true,
+      "volume": true,
+      "condition_visible": false,
+      "status": "SIO Granos — operaciones informadas · 368 operaciones",
+      "note": "Fuente: SIO Granos. Operaciones informadas. Los precios cero se excluyen de las series. ARS y USD se analizan por separado.",
+      "label": "Volumen informado por commodity",
+      "units": [
+        "TN"
+      ],
+      "currencies": [
+        "ARS"
+      ]
+    },
+    {
+      "source": "local_mensual",
+      "rows": 343,
+      "latest": 5,
+      "table": 5,
+      "semaphore": 5,
+      "trend": true,
+      "ranking": true,
+      "volume": true,
+      "condition_visible": false,
+      "status": "Histórico local mensual — precios internos · 668 registros mensuales",
+      "note": "Fuente: Secretaría de Agricultura / Mercados Agropecuarios. Serie mensual de precios internos de principales granos en pesos por tonelada. No equivale a operaciones SIO, precios FOB/FAS ni precios de pizarra BCR.",
+      "label": "Observaciones por commodity",
+      "units": [
+        "TN"
+      ],
+      "currencies": [
+        "ARS"
+      ]
+    },
+    {
+      "source": "magyp_internal",
+      "rows": 44,
+      "latest": 5,
+      "table": 5,
+      "semaphore": 5,
+      "trend": true,
+      "ranking": true,
+      "volume": true,
+      "condition_visible": true,
+      "status": "Precio interno — MAGyP actualizado · 56 cotizaciones",
+      "note": "Precios internos mensuales publicados por MAGyP, atribuidos a BCBA, en ARS/TN por plaza. El histórico local permanece disponible por separado. Las medianas mensuales diarias cubren sólo días capturados, sin interpolar.",
+      "label": "Observaciones por referencia",
+      "units": [
+        "TN"
+      ],
+      "currencies": [
+        "ARS"
+      ]
+    },
+    {
+      "source": "magyp_board",
+      "rows": 4,
+      "latest": 4,
+      "table": 4,
+      "semaphore": 4,
+      "trend": true,
+      "ranking": true,
+      "volume": true,
+      "condition_visible": true,
+      "status": "Pizarra / Cámara — MAGyP · 4 cotizaciones",
+      "note": "Pizarra provisional por plaza en ARS/TN, sujeta a ajuste. Los ceros no se interpretan como precios. No equivale a operaciones SIO. Las medianas mensuales diarias cubren sólo días capturados, sin interpolar.",
+      "label": "Observaciones por referencia",
+      "units": [
+        "TN"
+      ],
+      "currencies": [
+        "ARS"
+      ]
+    },
+    {
+      "source": "magyp_fas",
+      "rows": 14,
+      "latest": 7,
+      "table": 7,
+      "semaphore": 7,
+      "trend": true,
+      "ranking": true,
+      "volume": true,
+      "condition_visible": true,
+      "status": "FAS teórico — MAGyP · 162 cotizaciones",
+      "note": "Paridad teórica por régimen D.E.C./D.E.R. ARS/TN corroborados para granos; aceites sin unidad/moneda identificadas. D.E.R. conserva su fecha histórica y no se presenta como vigente. Las medianas mensuales diarias cubren sólo días capturados, sin interpolar.",
+      "label": "Observaciones por referencia",
+      "units": [
+        "TN"
+      ],
+      "currencies": [
+        "ARS"
+      ]
+    },
+    {
+      "source": "magyp_fob",
+      "rows": 134,
+      "latest": 134,
+      "table": 134,
+      "semaphore": 10,
+      "trend": true,
+      "ranking": true,
+      "volume": true,
+      "condition_visible": true,
+      "status": "FOB oficial — MAGyP · 134 cotizaciones",
+      "note": "Posiciones textuales, circular y ventana de embarque de la API oficial. Producto, moneda, unidad y plaza no informados por la API: pendientes de diccionario. No se calcula un FOB único por producto. Las medianas mensuales diarias cubren sólo días capturados, sin interpolar.",
+      "label": "Observaciones por referencia",
+      "units": [
+        "Sin identificar"
+      ],
+      "currencies": [
+        "Sin identificar"
+      ]
+    },
+    {
+      "source": "magyp_futures",
+      "rows": 52,
+      "latest": 52,
+      "table": 52,
+      "semaphore": 10,
+      "trend": true,
+      "ranking": true,
+      "volume": true,
+      "condition_visible": true,
+      "status": "Futuros / cierre externo — MAGyP · 104 cotizaciones",
+      "note": "Cierres publicados de Chicago y Kansas en USD/TN por producto y vencimiento. No hay serie continua ni roll automático. Las cotizaciones físicas FOB de la misma página se excluyen. Las medianas mensuales diarias cubren sólo días capturados, sin interpolar.",
+      "label": "Observaciones por referencia",
+      "units": [
+        "TN"
+      ],
+      "currencies": [
+        "USD"
+      ]
+    }
+  ],
+  "console_errors": [],
+  "network_failures": [],
+  "condition_filter_preserves_grain": true,
+  "daily_checks": [
+    {
+      "source": "magyp_board",
+      "frequency": "diaria",
+      "rows": 4,
+      "latest": 4,
+      "date_max": "2026-10-07",
+      "exact_last_price": true,
+      "variation_header": "Var. 7 días",
+      "trend": true,
+      "table": 4
+    },
+    {
+      "source": "magyp_fas",
+      "frequency": "diaria",
+      "rows": 63,
+      "latest": 7,
+      "date_max": "2026-10-08",
+      "exact_last_price": true,
+      "variation_header": "Var. 7 días",
+      "trend": true,
+      "table": 7
+    },
+    {
+      "source": "magyp_fob",
+      "frequency": "diaria",
+      "rows": 134,
+      "latest": 134,
+      "date_max": "2026-10-08",
+      "exact_last_price": true,
+      "variation_header": "Var. 7 días",
+      "trend": true,
+      "table": 134
+    },
+    {
+      "source": "magyp_futures",
+      "frequency": "diaria",
+      "rows": 104,
+      "latest": 52,
+      "date_max": "2026-10-08",
+      "exact_last_price": true,
+      "variation_header": "Var. 7 días",
+      "trend": true,
+      "table": 52
+    }
+  ],
+  "app_sha256": "8d466090c335b54d9553baa5f2d3e38df28a548081a195316c7a9ce81072faf7",
+  "daily_console_errors": [],
+  "post_browser_changes": "Etiqueta UTC y rechazo de bundle de otra familia económica; verificados por sintaxis y 7 tests Node. No se repitió el navegador para esos dos cambios acotados.",
+  "final_app_sha256": "7601ed8dfa60b58ea5cf0fdbe0ae8bd633efbd8f09cf2a61821dd929d81626e6"
+}

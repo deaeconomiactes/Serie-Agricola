@@ -1,0 +1,620 @@
+{
+  "server": "http://127.0.0.1:8000",
+  "browser": "Chromium 145; agent-browser 0.38.2",
+  "final_smoke": {"daily_rows":6169,"year":["2025"],"all_daily_detail":true,"sources":["MAGYP_LAST_VALID"],"cache_corrupt_server_test":true,"cache_rows":10380,"monthly_semaphore_rows":20,"metric_label":"Precio publicado por kg","ranking_drawn":true},
+  "secondary_filters": {"passed": true, "package": "Caja", "quality": "Elegido", "rows": 1254},
+  "mixed_source_2026": {"passed": true, "rows": 61576, "series_labels": ["Legacy", "MAGyP"]},
+  "console_page_errors": [],
+  "checks": [
+    {
+      "name": "A - MCBA diario",
+      "passed": true,
+      "detail": "21 días de octubre 2025; último conjunto válido MAGyP",
+      "filters": {
+        "year": [
+          "2025"
+        ],
+        "mes": [
+          "TODOS"
+        ],
+        "rubro": [
+          "TODOS"
+        ],
+        "especie": [
+          "TODOS"
+        ],
+        "variedad": [
+          "TODOS"
+        ],
+        "mercado": [
+          "Mercado Central de Buenos Aires"
+        ],
+        "procedencia": [
+          "TODOS"
+        ],
+        "unidad": [
+          "TODOS"
+        ],
+        "envase": [
+          "TODOS"
+        ],
+        "calidadMCBA": [
+          "TODOS"
+        ],
+        "tamanoMCBA": [
+          "TODOS"
+        ],
+        "gradoMCBA": [
+          "TODOS"
+        ],
+        "unidadComparable": "comparables"
+      },
+      "frequency": "diaria",
+      "rows": 6169,
+      "sources": [
+        "MAGYP_LAST_VALID"
+      ],
+      "observation_levels": [
+        "detail"
+      ],
+      "kpi": "$ 2.396,8",
+      "semaphore_rows": 20
+    },
+    {
+      "name": "B - Producto",
+      "passed": true,
+      "detail": [
+        "TODOS",
+        "Cavendish",
+        "Nanika"
+      ],
+      "filters": {
+        "year": [
+          "2025"
+        ],
+        "mes": [
+          "TODOS"
+        ],
+        "rubro": [
+          "TODOS"
+        ],
+        "especie": [
+          "Banana"
+        ],
+        "variedad": [
+          "TODOS"
+        ],
+        "mercado": [
+          "Mercado Central de Buenos Aires"
+        ],
+        "procedencia": [
+          "TODOS"
+        ],
+        "unidad": [
+          "TODOS"
+        ],
+        "envase": [
+          "TODOS"
+        ],
+        "calidadMCBA": [
+          "TODOS"
+        ],
+        "tamanoMCBA": [
+          "TODOS"
+        ],
+        "gradoMCBA": [
+          "TODOS"
+        ],
+        "unidadComparable": "comparables"
+      },
+      "frequency": "diaria",
+      "rows": 168,
+      "sources": [
+        "MAGYP_LAST_VALID"
+      ],
+      "observation_levels": [
+        "detail"
+      ],
+      "kpi": "$ 1.560,5",
+      "semaphore_rows": 7
+    },
+    {
+      "name": "C - Variedad",
+      "passed": true,
+      "detail": [
+        "Bolivia",
+        "Colombia",
+        "Ecuador"
+      ],
+      "filters": {
+        "year": [
+          "2025"
+        ],
+        "mes": [
+          "TODOS"
+        ],
+        "rubro": [
+          "TODOS"
+        ],
+        "especie": [
+          "Banana"
+        ],
+        "variedad": [
+          "Cavendish"
+        ],
+        "mercado": [
+          "Mercado Central de Buenos Aires"
+        ],
+        "procedencia": [
+          "TODOS"
+        ],
+        "unidad": [
+          "TODOS"
+        ],
+        "envase": [
+          "TODOS"
+        ],
+        "calidadMCBA": [
+          "TODOS"
+        ],
+        "tamanoMCBA": [
+          "TODOS"
+        ],
+        "gradoMCBA": [
+          "TODOS"
+        ],
+        "unidadComparable": "comparables"
+      },
+      "frequency": "diaria",
+      "rows": 84,
+      "sources": [
+        "MAGYP_LAST_VALID"
+      ],
+      "observation_levels": [
+        "detail"
+      ],
+      "kpi": "$ 1.791,1",
+      "semaphore_rows": 3
+    },
+    {
+      "name": "D - Procedencia",
+      "passed": true,
+      "detail": "Origen conserva valor publicado sin alias semánticos",
+      "filters": {
+        "year": [
+          "2025"
+        ],
+        "mes": [
+          "TODOS"
+        ],
+        "rubro": [
+          "TODOS"
+        ],
+        "especie": [
+          "Banana"
+        ],
+        "variedad": [
+          "Cavendish"
+        ],
+        "mercado": [
+          "Mercado Central de Buenos Aires"
+        ],
+        "procedencia": [
+          "Ecuador"
+        ],
+        "unidad": [
+          "TODOS"
+        ],
+        "envase": [
+          "TODOS"
+        ],
+        "calidadMCBA": [
+          "TODOS"
+        ],
+        "tamanoMCBA": [
+          "TODOS"
+        ],
+        "gradoMCBA": [
+          "TODOS"
+        ],
+        "unidadComparable": "comparables"
+      },
+      "frequency": "diaria",
+      "rows": 42,
+      "sources": [
+        "MAGYP_LAST_VALID"
+      ],
+      "observation_levels": [
+        "detail"
+      ],
+      "kpi": "$ 1.890,5",
+      "semaphore_rows": 1
+    },
+    {
+      "name": "E - Mensual",
+      "passed": true,
+      "detail": "MCBA mensual: fuente legacy. Mensual oficial MAGyP pendiente de automatización. · Falló la última actualización; se conserva la última salida MAGyP válida.",
+      "filters": {
+        "year": [
+          "2025"
+        ],
+        "mes": [
+          "TODOS"
+        ],
+        "rubro": [
+          "TODOS"
+        ],
+        "especie": [
+          "Banana"
+        ],
+        "variedad": [
+          "Cavendish"
+        ],
+        "mercado": [
+          "Mercado Central de Buenos Aires"
+        ],
+        "procedencia": [
+          "Ecuador"
+        ],
+        "unidad": [
+          "TODOS"
+        ],
+        "envase": [
+          "TODOS"
+        ],
+        "calidadMCBA": [
+          "TODOS"
+        ],
+        "tamanoMCBA": [
+          "TODOS"
+        ],
+        "gradoMCBA": [
+          "TODOS"
+        ],
+        "unidadComparable": "comparables"
+      },
+      "frequency": "mensual",
+      "rows": 24,
+      "sources": [
+        "LEGACY"
+      ],
+      "observation_levels": [
+        null
+      ],
+      "kpi": "$ 1.528,1",
+      "semaphore_rows": 1
+    },
+    {
+      "name": "F - Corrientes",
+      "passed": true,
+      "detail": "Fuente y series legacy preservadas",
+      "filters": {
+        "year": [
+          "2025"
+        ],
+        "mes": [
+          "TODOS"
+        ],
+        "rubro": [
+          "TODOS"
+        ],
+        "especie": [
+          "TODOS"
+        ],
+        "variedad": [
+          "TODOS"
+        ],
+        "mercado": [
+          "Mercado de Corrientes"
+        ],
+        "procedencia": [
+          "TODOS"
+        ],
+        "unidad": [
+          "TODOS"
+        ],
+        "envase": [
+          "TODOS"
+        ],
+        "calidadMCBA": [
+          "TODOS"
+        ],
+        "tamanoMCBA": [
+          "TODOS"
+        ],
+        "gradoMCBA": [
+          "TODOS"
+        ],
+        "unidadComparable": "comparables"
+      },
+      "frequency": "mensual",
+      "rows": 29608,
+      "sources": [
+        "LEGACY"
+      ],
+      "observation_levels": [
+        null
+      ],
+      "kpi": "$ 1.542,4",
+      "semaphore_rows": 20
+    },
+    {
+      "name": "G - Rankings",
+      "passed": true,
+      "detail": "Ranking de especies por precio promedio",
+      "filters": {
+        "year": [
+          "2025"
+        ],
+        "mes": [
+          "TODOS"
+        ],
+        "rubro": [
+          "TODOS"
+        ],
+        "especie": [
+          "TODOS"
+        ],
+        "variedad": [
+          "TODOS"
+        ],
+        "mercado": [
+          "Mercado de Corrientes"
+        ],
+        "procedencia": [
+          "TODOS"
+        ],
+        "unidad": [
+          "TODOS"
+        ],
+        "envase": [
+          "TODOS"
+        ],
+        "calidadMCBA": [
+          "TODOS"
+        ],
+        "tamanoMCBA": [
+          "TODOS"
+        ],
+        "gradoMCBA": [
+          "TODOS"
+        ],
+        "unidadComparable": "comparables"
+      },
+      "frequency": "mensual",
+      "rows": 29608,
+      "sources": [
+        "LEGACY"
+      ],
+      "observation_levels": [
+        null
+      ],
+      "kpi": "$ 1.542,4",
+      "semaphore_rows": 20
+    },
+    {
+      "name": "H - Semáforo",
+      "passed": true,
+      "detail": "Semáforo mensual Corrientes preservado",
+      "filters": {
+        "year": [
+          "2025"
+        ],
+        "mes": [
+          "TODOS"
+        ],
+        "rubro": [
+          "TODOS"
+        ],
+        "especie": [
+          "TODOS"
+        ],
+        "variedad": [
+          "TODOS"
+        ],
+        "mercado": [
+          "Mercado de Corrientes"
+        ],
+        "procedencia": [
+          "TODOS"
+        ],
+        "unidad": [
+          "TODOS"
+        ],
+        "envase": [
+          "TODOS"
+        ],
+        "calidadMCBA": [
+          "TODOS"
+        ],
+        "tamanoMCBA": [
+          "TODOS"
+        ],
+        "gradoMCBA": [
+          "TODOS"
+        ],
+        "unidadComparable": "comparables"
+      },
+      "frequency": "mensual",
+      "rows": 29608,
+      "sources": [
+        "LEGACY"
+      ],
+      "observation_levels": [
+        null
+      ],
+      "kpi": "$ 1.542,4",
+      "semaphore_rows": 20
+    },
+    {
+      "name": "I - Cantidades",
+      "passed": true,
+      "detail": {
+        "rows": 38309,
+        "quantity": 49494
+      },
+      "filters": {
+        "year": [
+          "2025"
+        ],
+        "mes": [
+          "TODOS"
+        ],
+        "rubro": [
+          "TODOS"
+        ],
+        "especie": [
+          "TODOS"
+        ],
+        "variedad": [
+          "TODOS"
+        ],
+        "mercado": [
+          "Mercado de Corrientes"
+        ],
+        "procedencia": [
+          "TODOS"
+        ],
+        "unidad": [
+          "TODOS"
+        ],
+        "envase": [
+          "TODOS"
+        ],
+        "calidadMCBA": [
+          "TODOS"
+        ],
+        "tamanoMCBA": [
+          "TODOS"
+        ],
+        "gradoMCBA": [
+          "TODOS"
+        ],
+        "unidadComparable": "comparables"
+      },
+      "frequency": "mensual",
+      "rows": 29608,
+      "sources": [
+        "LEGACY"
+      ],
+      "observation_levels": [
+        null
+      ],
+      "kpi": "$ 1.542,4",
+      "semaphore_rows": 20
+    },
+    {
+      "name": "J - Commodities",
+      "passed": true,
+      "detail": {
+        "source": "sio",
+        "daily": 136,
+        "monthly": 19,
+        "products": "6"
+      },
+      "filters": {
+        "year": [
+          "2025"
+        ],
+        "mes": [
+          "TODOS"
+        ],
+        "rubro": [
+          "TODOS"
+        ],
+        "especie": [
+          "TODOS"
+        ],
+        "variedad": [
+          "TODOS"
+        ],
+        "mercado": [
+          "Mercado de Corrientes"
+        ],
+        "procedencia": [
+          "TODOS"
+        ],
+        "unidad": [
+          "TODOS"
+        ],
+        "envase": [
+          "TODOS"
+        ],
+        "calidadMCBA": [
+          "TODOS"
+        ],
+        "tamanoMCBA": [
+          "TODOS"
+        ],
+        "gradoMCBA": [
+          "TODOS"
+        ],
+        "unidadComparable": "comparables"
+      },
+      "frequency": "mensual",
+      "rows": 29608,
+      "sources": [
+        "LEGACY"
+      ],
+      "observation_levels": [
+        null
+      ],
+      "kpi": "$ 1.542,4",
+      "semaphore_rows": 20
+    },
+    {
+      "name": "K - Consola",
+      "passed": true,
+      "detail": "Sin page errors ni errores críticos de consola según agent-browser",
+      "filters": {
+        "year": [
+          "2025"
+        ],
+        "mes": [
+          "TODOS"
+        ],
+        "rubro": [
+          "TODOS"
+        ],
+        "especie": [
+          "TODOS"
+        ],
+        "variedad": [
+          "TODOS"
+        ],
+        "mercado": [
+          "Mercado de Corrientes"
+        ],
+        "procedencia": [
+          "TODOS"
+        ],
+        "unidad": [
+          "TODOS"
+        ],
+        "envase": [
+          "TODOS"
+        ],
+        "calidadMCBA": [
+          "TODOS"
+        ],
+        "tamanoMCBA": [
+          "TODOS"
+        ],
+        "gradoMCBA": [
+          "TODOS"
+        ],
+        "unidadComparable": "comparables"
+      },
+      "frequency": "mensual",
+      "rows": 29608,
+      "sources": [
+        "LEGACY"
+      ],
+      "observation_levels": [
+        null
+      ],
+      "kpi": "$ 1.542,4",
+      "semaphore_rows": 20
+    }
+  ]
+}
