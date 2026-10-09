@@ -134,6 +134,10 @@ def project(body,source,encoding='utf-8'):
     try:
         if source=='fob':
             obj=json.loads(body.decode('utf-8-sig'),object_pairs_hook=unique_json)
+            # Observed official no-publication response: exactly [], not a new row schema.
+            # Preserve the original structure; never accept a populated root array.
+            if isinstance(obj,list) and not obj:
+                return obj
             if not isinstance(obj,dict) or set(obj)!={'posts'} or not isinstance(obj['posts'],list):
                 raise Error('Schema FOB cambiado')
             required={'fecha','circular','posicion','precio','mesDesde','añoDesde','mesHasta','añoHasta'}
@@ -251,6 +255,8 @@ def parse_fas(obj):
 
 
 def parse_fob(obj,requested):
+    if obj==[] or obj=={'posts':[]}:
+        raise Error('FOB sin publicación para la fecha solicitada; respuesta vacía no publicable')
     out=[]
     for r in obj['posts']:
         try:
@@ -349,7 +355,7 @@ def fetch(source,requested,as_of,root):
             if columns!=list(zip(FAS_CODES,FAS_LABELS)): raise Error('Orden/etiquetas FAS cambiaron')
             obj['columns']=columns; dictionary_hash=digest(dictionary)
         except (HTTPError,URLError,OSError,UnicodeError): raise Error('Diccionario FAS no disponible')
-    if source=='fob' and obj['posts']==[] and as_of.weekday()>=5:
+    if source=='fob' and (obj==[] or obj=={'posts':[]}) and as_of.weekday()>=5:
         print('[VALIDATE] fob: fin de semana sin publicación; salida preservada')
         return None
     rows=parse(obj,source,as_of,requested)
