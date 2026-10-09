@@ -15,16 +15,18 @@ En la respuesta no vacía no cambió ningún campo: `fecha`, `circular`, `posici
 
 `project()` reconoce únicamente un array raíz vacío como representación FOB conocida y lo conserva, sin convertirlo ni aceptar arrays con registros. La validación exacta de los ocho campos y del objeto raíz `posts` permanece intacta para respuestas no vacías.
 
-`parse_fob()` distingue la ausencia de registros del schema desconocido. Tanto `[]` como `{"posts":[]}` generan `FOB sin publicación para la fecha solicitada; respuesta vacía no publicable`. En día hábil el proceso sigue fallando con código 1 y preserva el último CSV válido. La excepción existente de fin de semana se aplica ahora a ambas representaciones; no publica ni sobrescribe nada. No se agregó calendario de feriados ni backfill automático de otra fecha.
+`fetch()` clasifica tanto `[]` como `{"posts":[]}` como **NO_PUBLICATION**, en cualquier día. Guarda una captura RAW inmutable con `response.json` y manifest: `publication_status=NO_PUBLICATION`, `record_count=0`, fecha solicitada, timestamp UTC, HTTP, URL, parámetros y hashes de respuesta/proyección. Registra `[VALIDATE] fob NO_PUBLICATION fecha=...; última salida conservada` y termina esa familia sin publicar ni sobrescribir su CSV. El estado queda en los artefactos RAW de revisión ya previstos por el workflow; no se versionan esas capturas.
 
-Un schema desconocido sigue produciendo error, conserva la última salida y deja el workflow con código 1. La ejecución `--source all` continúa con las otras familias aunque FOB falle, conservando el resultado global fallido. Ningún parser de las otras familias, workflow, CSV ni archivo del dashboard se modificó.
+Las capturas NO_PUBLICATION se verifican nuevamente al recorrer RAW: integridad, schema vacío reconocido y conteo cero. No generan observaciones normalizadas ni impiden procesar futuras capturas válidas. `parse_fob()` continúa rechazando que una respuesta vacía se convierta en una serie de precios. No se agregó calendario de feriados ni backfill automático de otra fecha.
+
+Un schema desconocido/malformado sigue produciendo error, conserva la última salida y deja el workflow con código 1. La ejecución `--source all` continúa con las otras familias: NO_PUBLICATION permite código global 0 si las demás familias son válidas; ERROR mantiene código global 1. Ningún parser de las otras familias, workflow, CSV ni archivo del dashboard se modificó.
 
 ## Pruebas
 
 Cuatro fixtures livianos: schema legacy sintético, una fila publicada del día 8, array vacío observado el día 9 y schema desconocido sintético. No se versionó la respuesta completa ni capturas RAW.
 
-Cinco pruebas nuevas verifican compatibilidad y valores originales, representación vacía, rechazo de schemas desconocidos, conservación del último FOB en fin de semana y, con vacíos/schema desconocido en día hábil, publicación independiente de las otras cuatro familias con código global 1. Se mantienen las pruebas existentes de fechas, precios, duplicados y publicación atómica.
+Las pruebas verifican compatibilidad y valores originales, representación vacía, rechazo de schemas desconocidos, conservación del último FOB en fin de semana y publicación independiente de las otras cuatro familias. El test específico en día hábil comprueba `[]` → CSV anterior idéntico + log/manifest NO_PUBLICATION + código global 0. También cubre `posts` vacío; schema desconocido y HTML malformado mantienen código 1. Se comprueba que metadata NO_PUBLICATION no pueda ocultar precios, schema desconocido ni conteos incorrectos. Se mantienen las pruebas existentes de fechas, precios, duplicados y publicación atómica.
 
 Moneda y unidad continúan como `Sin identificar`; no se agregaron producto, NCM ni equivalencias de posición.
 
-Validación final: 23 tests Python de referencias y 20 tests frontend; `git diff --check`. Para verificar publicación real en Linux debe usarse una fecha con datos publicados; un vacío en día hábil continuará fallando de forma explícita.
+Validación final: 24 tests Python de referencias y 20 tests frontend; `git diff --check`. Para verificar una actualización real de FOB en Linux debe usarse una fecha con datos publicados; una respuesta vacía será NO_PUBLICATION y conservará el último FOB sin fallar por esa ausencia.

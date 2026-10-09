@@ -85,11 +85,29 @@ class ReferencesTests(unittest.TestCase):
                     opener.return_value.open.return_value=FobResponse(body)
                     r.run('fob',root,date(2026,10,10),'2026-10-10',True)
                 self.assertEqual(out.read_bytes(),prior)
-                self.assertFalse((root/'raw').exists())
+                folder=next((root/'raw'/'commodities'/'fob').iterdir())
+                manifest=json.loads((folder/'manifest.json').read_bytes())
+                self.assertEqual(manifest['publication_status'],'NO_PUBLICATION')
+                self.assertEqual(r.normalize(folder,root,date(2026,10,10)),[])
+                self.assertFalse((root/'normalized').exists())
+                # A later acquisition with real rows must replay past empty captures safely.
+                with patch.object(r,'build_opener') as opener:
+                    opener.return_value.open.return_value=FobResponse(r.encoded(fob()))
+                    r.run('fob',root,DAY,DAY.isoformat(),True)
+                rows=r.validate_bundle(out.read_bytes(),'fob')
+                observed=[row for row in rows if row['row_kind']=='observation']
+                self.assertEqual(len(observed),1)
+                self.assertEqual(observed[0]['price'],'290')
+                manifests=[json.loads(path.read_bytes()) for path in
+                    (root/'raw'/'commodities'/'fob').glob('*/manifest.json')]
+                self.assertEqual({m['publication_status'] for m in manifests},
+                    {'PUBLISHED','NO_PUBLICATION'})
 
-    def test_fob_failure_keeps_last_output_and_all_other_families_publish(self):
-        for body,diagnostic in [(b'[]','FOB sin publicación'),
-                ((FIXTURES/'fob_unknown.json').read_bytes(),'Schema FOB cambiado')]:
+    def test_fob_no_publication_success_and_unknown_schema_error_keep_output_and_other_families_publish(self):
+        for body,diagnostic,exit_code in [(b'[]','NO_PUBLICATION',0),
+                (r.encoded({'posts':[]}),'NO_PUBLICATION',0),
+                ((FIXTURES/'fob_unknown.json').read_bytes(),'Schema FOB cambiado',1),
+                (b'<html>Service error</html>','Respuesta no parseable',1)]:
             with self.subTest(body=body),tempfile.TemporaryDirectory() as temp:
                 root=Path(temp);out=root/'dashboard/commodities/fob.csv'
                 prior=r.bundle(enrich(r.parse(fob(),'fob',DAY,DAY.isoformat())),'fob')
@@ -108,13 +126,40 @@ class ReferencesTests(unittest.TestCase):
                         '--data-root',str(root),'--allow-web']),patch.object(r,'build_opener') as opener,\
                         patch.object(r,'run',side_effect=run),patch.object(r.time,'sleep'),redirect_stdout(logs):
                     opener.return_value.open.return_value=FobResponse(body)
-                    self.assertEqual(r.main(),1)
+                    self.assertEqual(r.main(),exit_code)
                 self.assertIn(diagnostic,logs.getvalue())
                 self.assertEqual(out.read_bytes(),prior)
                 for source in ['internal','board','fas','futures']:
                     self.assertIn('[PUBLISH] '+source,logs.getvalue())
                     r.validate_bundle((root/'dashboard/commodities'/f'{source}.csv').read_bytes(),source)
-                self.assertFalse((root/'raw'/'commodities'/'fob').exists())
+                if exit_code==0:
+                    folder=next((root/'raw'/'commodities'/'fob').iterdir())
+                    manifest=json.loads((folder/'manifest.json').read_bytes())
+                    self.assertEqual(manifest['publication_status'],'NO_PUBLICATION')
+                    self.assertEqual(manifest['requested_date'],'2026-10-09')
+                    self.assertEqual(manifest['status'],200)
+                    self.assertEqual(manifest['record_count'],0)
+                    payload=(folder/'response.json').read_bytes()
+                    self.assertEqual(json.loads(payload),json.loads(body))
+                    self.assertEqual(manifest['sha256'],r.digest(payload))
+                    self.assertEqual(manifest['response_sha256'],r.digest(body))
+                    self.assertEqual(r.normalize(folder,root,date(2026,10,9)),[])
+                else:
+                    self.assertFalse((root/'raw'/'commodities'/'fob').exists())
+
+    def test_fob_no_publication_metadata_cannot_hide_prices_or_unknown_schema(self):
+        for body,count in [(r.encoded(fob()),0),(b'{"data":[]}',0),(b'[]',1)]:
+            with self.subTest(body=body,count=count),tempfile.TemporaryDirectory() as temp:
+                root=Path(temp)
+                with patch.object(r,'build_opener') as opener:
+                    opener.return_value.open.return_value=FobResponse(b'[]')
+                    self.assertIsNone(r.fetch('fob','2026-10-09',date(2026,10,9),root))
+                folder=next((root/'raw'/'commodities'/'fob').iterdir())
+                manifest=json.loads((folder/'manifest.json').read_bytes())
+                manifest.update(sha256=r.digest(body),size_bytes=len(body),record_count=count)
+                (folder/'response.json').write_bytes(body)
+                (folder/'manifest.json').write_bytes(r.encoded(manifest))
+                with self.assertRaises(r.Error):r.normalize(folder,root,date(2026,10,9))
 
     def test_locale_decimals_and_missing_zero_distinct(self):
         self.assertEqual(r.number('342,300.00','us'),('342300.00','positive'))

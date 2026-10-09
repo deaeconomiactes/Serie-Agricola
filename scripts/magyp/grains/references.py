@@ -355,10 +355,8 @@ def fetch(source,requested,as_of,root):
             if columns!=list(zip(FAS_CODES,FAS_LABELS)): raise Error('Orden/etiquetas FAS cambiaron')
             obj['columns']=columns; dictionary_hash=digest(dictionary)
         except (HTTPError,URLError,OSError,UnicodeError): raise Error('Diccionario FAS no disponible')
-    if source=='fob' and (obj==[] or obj=={'posts':[]}) and as_of.weekday()>=5:
-        print('[VALIDATE] fob: fin de semana sin publicación; salida preservada')
-        return None
-    rows=parse(obj,source,as_of,requested)
+    no_publication=source=='fob' and (obj==[] or obj=={'posts':[]})
+    rows=[] if no_publication else parse(obj,source,as_of,requested)
     stamp=datetime.now(timezone.utc).isoformat().replace('+00:00','Z')
     capture=stamp.replace(':','').replace('.','')+'_'+uuid.uuid4().hex
     safe=encoded(obj)
@@ -369,6 +367,8 @@ def fetch(source,requested,as_of,root):
         'parser_version':VERSION,'schema_version':VERSION,'capture_id':capture,'record_count':len(rows),
         'raw_representation':'public_projection_json','private_state_stored':False,
         'dictionary_url':FAS_DICTIONARY_URL if source=='fas' else '', 'dictionary_sha256':dictionary_hash}
+    if source=='fob':
+        manifest['publication_status']='NO_PUBLICATION' if no_publication else 'PUBLISHED'
     folder=root/'raw'/'commodities'/source/capture
     folder.parent.mkdir(parents=True,exist_ok=True)
     stage=Path(tempfile.mkdtemp(prefix='.capture-',dir=folder.parent))
@@ -379,6 +379,9 @@ def fetch(source,requested,as_of,root):
         if stage.exists():
             for f in stage.iterdir(): f.unlink()
             stage.rmdir()
+    if no_publication:
+        print(f'[VALIDATE] fob NO_PUBLICATION fecha={requested}; última salida conservada')
+        return None
     print(f'[VALIDATE] {source} {len(rows)} celdas válidas')
     return folder
 
@@ -389,7 +392,15 @@ def normalize(folder,root,as_of):
         if (m['sha256']!=digest(payload) or m['size_bytes']!=len(payload) or m['status']!=200 or
                 m['schema_version']!=VERSION or m['parser_version']!=VERSION or m['capture_id']!=folder.name):
             raise Error('Integridad RAW inválida')
-        source=m['source']; rows=parse(json.loads(payload),source,date.fromisoformat(m['requested_date']),m['requested_date'])
+        source=m['source']
+        if source=='fob' and m.get('publication_status')=='NO_PUBLICATION':
+            obj=project(payload,'fob')
+            date.fromisoformat(m['requested_date'])
+            if m['record_count']!=0 or not (obj==[] or obj=={'posts':[]}):
+                raise Error('Metadata NO_PUBLICATION FOB inválida')
+            print('[NORMALIZE] fob NO_PUBLICATION; captura sin observaciones')
+            return []
+        rows=parse(json.loads(payload),source,date.fromisoformat(m['requested_date']),m['requested_date'])
         if len(rows)!=m['record_count']: raise Error('Conteo RAW inválido')
         for row in rows:
             row.update(capture_id=m['capture_id'],updated_at_utc=m['captured_at_utc'],raw_sha256=m['sha256'])
