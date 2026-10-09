@@ -33,6 +33,31 @@ test('initial MAGyP internal source and source switches set frequency and KPI se
         assert.ok(nodes.get('commodityMethodNote').textContent);
     }
 });
+
+test('hover tooltip stays compact with long source links and equal-price series',()=>{
+    const ctx=context();
+    ctx.sample={commodity:'SOJA',mercado:'Rosario',fuente:'MAGyP',moneda:'ARS',unidad:'TN',
+        tipo_precio:'Precio interno mensual',source_url:'https://www.magyp.gob.ar/'+ 'long-path/'.repeat(100),
+        updated_at_utc:'2026-10-09T14:33:00Z',variacion_mensual_pct:2.5};
+    const lines=JSON.parse(vm.runInContext('JSON.stringify(commodityTooltipLines(sample,466190.5,"2026-06","Precio de referencia"))',ctx));
+    assert.ok(lines.every(line=>line.length<=42));
+    assert.ok(lines.length<=9);
+    assert.ok(lines.some(line=>line.includes('ARS / TN')));
+    assert.ok(lines.some(line=>line.includes('MAGyP')));
+    assert.ok(lines.every(line=>!line.includes('https://')));
+    assert.equal(ctx.sample.source_url.length>500,true);
+    const options=vm.runInContext('commodityChartOptions()',ctx);
+    assert.equal(options.interaction.mode,'nearest');
+    assert.equal(options.plugins.tooltip.mode,'nearest');
+    assert.equal(options.plugins.tooltip.filter({},0),true);
+    assert.equal(options.plugins.tooltip.filter({},1),false);
+    vm.runInContext("commoditySource='magyp_fob';commodityFrequency='diaria'",ctx);
+    ctx.sample={...ctx.sample,condicion_comercial:'2026-10/2026-11',circular:'2076',moneda:'Sin identificar',unidad:'Sin identificar'};
+    const fob=JSON.parse(vm.runInContext('JSON.stringify(commodityTooltipLines(sample,290,"2026-10-08"))',ctx));
+    assert.ok(fob.some(line=>line.includes('2026-10/2026-11')));
+    assert.ok(fob.some(line=>line.includes('2076')));
+    assert.ok(fob.every(line=>line.length<=42));
+});
 test('every public reference bundle has all existing views and original grain',()=>{
     const ctx=context();
     for(const source of ['internal','board','fas','fob','futures']) {
