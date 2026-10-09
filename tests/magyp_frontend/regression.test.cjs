@@ -54,11 +54,11 @@ test('MCBA daily evolution and ranking label and separate MAGyP from uncovered l
     assert.equal(parsed.ranking.length,2);
     assert.ok(parsed.ranking.some(label=>label.includes('MAGyP')));
 });
-test('quantity and commodity functions/config remain exactly unchanged', () => {
+test('quantity functions and original commodity source configurations remain unchanged', () => {
     // Function boundaries include the full bodies, avoiding assertions about only signatures.
     const extract = (text,name) => text.slice(text.indexOf('function '+name+'('),text.indexOf('\nfunction ',text.indexOf('function '+name+'(')+1));
     for (const name of ['aggregateQuantityData','updateQuantityDashboard','updateKPIs','renderMonthlyChart',
-        'loadCommodityData','updateCommodityDashboard','getCommodityFilteredRows','renderCommodityTrend']) {
+        'updateCommodityDashboard','getCommodityFilteredRows']) {
         assert.ok(original.includes('function '+name+'('), name);
         assert.equal(extract(current,name),extract(original,name),name);
     }
