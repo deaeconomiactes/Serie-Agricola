@@ -2171,27 +2171,47 @@ function commodityUniqueSeriesLabels(items, options = {}) {
 
 function commodityTooltipLines(row, value, period, metricLabel = 'Precio mediano') {
     const source = row?.fuente || (COMMODITY_SOURCE_CONFIG[commoditySource]?.subtitle || 'Sin fuente');
-    return [
-        `Commodity: ${row?.commodity || 'Sin dato'}`,
-        `Mercado/plaza: ${commodityMarketLabel(row?.mercado)}`,
+    const reference = Boolean(COMMODITY_SOURCE_CONFIG[commoditySource]?.reference);
+    const daily = commodityFrequency === 'diaria';
+    const shortVariation = row?.variacion_mensual_pct ?? row?.variacion_7d_pct;
+    const longVariation = row?.variacion_interanual_pct ?? row?.variacion_30d_pct;
+    const priceUnit = metricLabel.startsWith('Precio') ? ` ${row?.moneda || 'Sin dato'} / ${row?.unidad || 'Sin dato'}` : '';
+    const lines = [
+        `${row?.commodity || 'Sin dato'} · ${commodityMarketLabel(row?.mercado)}`,
+        `${metricLabel}: ${formatNumber(value)}${priceUnit}`,
         `Fuente: ${source}`,
-        `Moneda: ${row?.moneda || 'Sin dato'}`,
-        `Unidad: ${row?.unidad || 'Sin dato'}`,
-        `Tipo de precio: ${row?.tipo_precio || 'Sin dato'}`,
-        ...(COMMODITY_SOURCE_CONFIG[commoditySource]?.reference ? [`Condición/posición: ${row?.condicion_comercial || 'Sin especificar'}`, `Circular: ${row?.circular || 'No aplica'}`, `Fuente original: ${row?.source_url || 'Sin enlace'}`, `Actualización: ${formatCommodityCapture(row?.updated_at_utc)}`] : []),
+        `Tipo: ${row?.tipo_precio || 'Sin dato'}`,
+        ...(row?.condicion_comercial && row.condicion_comercial !== 'Sin especificar' ? [`Condición: ${row.condicion_comercial}`] : []),
+        ...(row?.circular ? [`Circular: ${row.circular}`] : []),
         `Período: ${commodityPeriodLabel(period || commodityLatestDate(row))}`,
-        `${metricLabel}: ${formatNumber(value)}`,
-        `Var. mensual: ${commodityPercent(row?.variacion_mensual_pct ?? row?.variacion_7d_pct)}`,
-        `Var. interanual: ${commodityPercent(row?.variacion_interanual_pct ?? row?.variacion_30d_pct)}`
-    ].map(line => ` ${line}`);
+        ...(reference && row?.updated_at_utc ? [`Actualizado (UTC): ${formatCommodityCapture(row.updated_at_utc)}`] : []),
+        ...(Number.isFinite(commodityNumber(shortVariation)) ? [`Var. ${daily ? '7 días' : 'mensual'}: ${commodityPercent(shortVariation)}`] : []),
+        ...(Number.isFinite(commodityNumber(longVariation)) ? [`Var. ${daily ? '30 días' : 'interanual'}: ${commodityPercent(longVariation)}`] : [])
+    ];
+    // The full source link remains in the table. Wrap labels instead of widening the canvas tooltip.
+    return lines.flatMap(line => {
+        const wrapped = [];
+        let rest = String(line);
+        while (rest.length > 42) {
+            const space = rest.lastIndexOf(' ', 42);
+            const cut = space > 16 ? space : 42;
+            wrapped.push(rest.slice(0, cut).trim());
+            rest = rest.slice(cut).trim();
+        }
+        wrapped.push(rest);
+        return wrapped;
+    });
 }
 
 function commodityChartOptions(type = 'line') {
     const options = type === 'bar' ? defaultBarOptions(false) : defaultLineOptions();
-    options.plugins.tooltip = { ...tooltipConfig(), callbacks: { label: context => {
+    options.interaction = { intersect: false, mode: 'nearest' };
+    options.plugins.tooltip = { ...tooltipConfig(), mode: 'nearest', intersect: false, padding: 10,
+        filter: (_item, index) => index === 0,
+        callbacks: { label: context => {
         const value = context.chart.options.indexAxis === 'y' ? context.parsed.x : (Number.isFinite(context.parsed.y) ? context.parsed.y : context.parsed.x);
         const metadata = context.dataset.metadata?.[context.dataIndex];
-        if (metadata) return commodityTooltipLines(metadata, value, context.dataset.periods?.[context.dataIndex], context.dataset.tooltipMetric || 'Precio mediano');
+        if (metadata) return commodityTooltipLines(metadata, value, context.dataset.periods?.[context.dataIndex], context.dataset.tooltipMetric || (COMMODITY_SOURCE_CONFIG[commoditySource]?.reference ? 'Precio de referencia' : 'Precio mediano'));
         return ` ${context.dataset.label || context.label}: ${formatNumber(value)}`;
     } } };
     options.scales.y.ticks.callback = value => formatNumber(value);
