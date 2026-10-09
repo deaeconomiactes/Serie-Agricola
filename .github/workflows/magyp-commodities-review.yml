@@ -1,10 +1,13 @@
-name: Preparar referencias MAGyP para revisión
+name: Actualizar Commodities MAGyP
 on:
+  schedule:
+    # Lunes a viernes, 20:00 Argentina (UTC-3); Actions puede iniciar con demora.
+    - cron: '0 23 * * 1-5'
   workflow_dispatch:
     inputs:
       date:
-        description: 'Fecha ISO de control / consulta FOB (día publicado, YYYY-MM-DD)'
-        required: true
+        description: 'Fecha ISO de control / consulta FOB; vacío = hoy en Argentina'
+        required: false
       source:
         description: 'Familia independiente'
         type: choice
@@ -13,17 +16,20 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: magyp-commodities-review
+  group: magyp-commodities-update
   cancel-in-progress: false
 jobs:
-  review:
+  update:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: write
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          persist-credentials: false
+          persist-credentials: true
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
@@ -34,15 +40,63 @@ jobs:
       - name: Tests offline de referencias
         run: |
           python -m unittest discover -s tests/magyp_common -p test_references.py -v
+          python -m unittest discover -s tests/magyp_common -p test_publication.py -v
           node --test tests/magyp_frontend/commodities.test.cjs tests/magyp_frontend/regression.test.cjs tests/magyp_frontend/mcba.test.cjs
+      - name: Resolver fecha de consulta
+        env:
+          MANUAL_DATE: ${{ inputs.date }}
+        run: |
+          python - <<'PY'
+          import os
+          from datetime import date, datetime
+          from zoneinfo import ZoneInfo
+          requested = os.environ['MANUAL_DATE'].strip()
+          day = date.fromisoformat(requested) if requested else datetime.now(ZoneInfo('America/Argentina/Buenos_Aires')).date()
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as output:
+              output.write(f'REQUESTED_DATE={day.isoformat()}\n')
+          print(f'[FETCH] Fecha Argentina: {day.isoformat()}')
+          PY
       - name: Descargar, validar y preparar salidas
         env:
-          REQUESTED_DATE: ${{ inputs.date }}
-          SOURCE: ${{ inputs.source }}
+          SOURCE: ${{ inputs.source || 'all' }}
         run: python scripts/magyp/grains/references.py --source "$SOURCE" --date "$REQUESTED_DATE" --allow-web
       - name: Validar salidas generadas para el dashboard
-        run: node --test tests/magyp_frontend/commodities.test.cjs
-      - name: Evidencia y salidas para revisión (sin commit/push/deploy)
+        run: |
+          python scripts/magyp/grains/validate_publication.py
+          python -m unittest discover -s tests/magyp_common -p test_references.py -v
+          python -m unittest discover -s tests/magyp_common -p test_publication.py -v
+          node --test tests/magyp_frontend/commodities.test.cjs tests/magyp_frontend/regression.test.cjs tests/magyp_frontend/mcba.test.cjs
+          git diff --check
+      - name: Publicar únicamente CSV livianos en main
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -- data/magyp/dashboard/commodities/internal.csv \
+            data/magyp/dashboard/commodities/board.csv \
+            data/magyp/dashboard/commodities/fas.csv \
+            data/magyp/dashboard/commodities/fob.csv \
+            data/magyp/dashboard/commodities/futures.csv
+          python scripts/magyp/grains/validate_publication.py --check-staged
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo '[PUBLISH] Sin cambios en los cinco CSV; no se crea commit.'
+          else
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'chore: actualizar referencias Commodities MAGyP'
+            # Push sin force: si main avanzó, falla y conserva la publicación remota.
+            git push origin HEAD:refs/heads/main
+          fi
+      - name: Desplegar explícitamente el dashboard validado
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # workflow_dispatch sí dispara Actions con GITHUB_TOKEN; el push por sí solo no.
+          # También permite recuperar un despliegue anterior fallido aunque no haya CSV nuevos.
+          gh workflow run deploy.yml --ref main
+      - name: Evidencia RAW y salidas de la actualización
         if: always()
         uses: actions/upload-artifact@v7
         with:
