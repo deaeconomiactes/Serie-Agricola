@@ -44,6 +44,7 @@ test('hover tooltip stays compact with long source links and equal-price series'
     assert.ok(lines.length<=9);
     assert.ok(lines.some(line=>line.includes('ARS / TN')));
     assert.ok(lines.some(line=>line.includes('MAGyP')));
+    assert.ok(lines.includes('Fuente: MAGyP'));
     assert.ok(lines.every(line=>!line.includes('https://')));
     assert.equal(ctx.sample.source_url.length>500,true);
     const options=vm.runInContext('commodityChartOptions()',ctx);
@@ -57,6 +58,30 @@ test('hover tooltip stays compact with long source links and equal-price series'
     assert.ok(fob.some(line=>line.includes('2026-10/2026-11')));
     assert.ok(fob.some(line=>line.includes('2076')));
     assert.ok(fob.every(line=>line.length<=42));
+});
+
+test('multiple reference series request a selection; single-series values and missing-data placeholders remain',()=>{
+    const ctx=context();
+    const nodes=new Map();
+    ctx.document={getElementById(id){
+        if(!nodes.has(id))nodes.set(id,{value:'TODOS',textContent:''});
+        return nodes.get(id);
+    }};
+    ctx.input=fs.readFileSync('data/magyp/dashboard/commodities/internal.csv','utf8');
+    vm.runInContext(`commoditySource='magyp_internal';commodityFrequency='mensual';
+        commodityData=parseReferenceCommodityBundle(input);
+        updateCommodityKpis(commodityData.mensual,commodityData.ultimos);`,ctx);
+    for(const id of ['commodityKpiMedian','commodityKpiMonthlyVariation','commodityKpiYoYVariation']) {
+        assert.equal(nodes.get(id).textContent,'Seleccioná una serie');
+    }
+    const expected=vm.runInContext(`(() => {
+        const row=commodityData.ultimos[0];
+        updateCommodityKpis(commodityData.mensual.filter(item=>item.series_id===row.series_id),[row]);
+        return formatNumber(commodityLatestPrice(row));
+    })()`,ctx);
+    assert.equal(nodes.get('commodityKpiMedian').textContent,expected);
+    vm.runInContext('updateCommodityKpis([],[])',ctx);
+    assert.equal(nodes.get('commodityKpiMedian').textContent,'–');
 });
 test('every public reference bundle has all existing views and original grain',()=>{
     const ctx=context();

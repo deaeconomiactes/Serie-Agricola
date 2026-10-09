@@ -2327,9 +2327,10 @@ function updateCommodityKpis(rows, latestRows) {
     document.getElementById('commodityKpiYoYVariation').textContent = yoyValues.length ? commodityPercent(commodityNumericMedian(yoyValues)) : '–';
     document.getElementById('commodityKpiYoYVariationDetail').textContent = yoyValues.length ? `mediana de ${yoyValues.length} serie${yoyValues.length === 1 ? '' : 's'}` : 'sin dato comparable';
     if (multipleReferenceSeries) {
+        document.getElementById('commodityKpiMedian').textContent = 'Seleccioná una serie';
         document.getElementById('commodityKpiMedianUnit').textContent = 'Seleccioná una serie: producto, plaza y condición';
-        document.getElementById('commodityKpiMonthlyVariation').textContent = '–';
-        document.getElementById('commodityKpiYoYVariation').textContent = '–';
+        document.getElementById('commodityKpiMonthlyVariation').textContent = 'Seleccioná una serie';
+        document.getElementById('commodityKpiYoYVariation').textContent = 'Seleccioná una serie';
         document.getElementById('commodityKpiMonthlyVariationDetail').textContent = 'Ver variaciones por serie en tablas';
         document.getElementById('commodityKpiYoYVariationDetail').textContent = 'Ver variaciones por serie en tablas';
     }
