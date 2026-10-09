@@ -9,6 +9,30 @@ function context(code=current) {
     const ctx=vm.createContext({console:{error(){}},document:{addEventListener(){},getElementById(){return {value:'TODOS'};}}});
     vm.runInContext(code,ctx);return ctx;
 }
+
+test('initial MAGyP internal source and source switches set frequency and KPI semantics',()=>{
+    const ctx=context();
+    assert.equal(vm.runInContext('commoditySource',ctx),'magyp_internal');
+    const nodes=new Map();
+    ctx.document={getElementById(id){
+        if(!nodes.has(id))nodes.set(id,{value:'mensual',textContent:'',style:{},dataset:{},
+            querySelector(){return {disabled:false};}});
+        return nodes.get(id);
+    }};
+    vm.runInContext('initCommodityFilters=()=>{};updateCommoditySourceStatus=()=>{};updateCommodityDashboard=()=>{};',ctx);
+    const frequencies={magyp_internal:'mensual',magyp_board:'diaria',magyp_fas:'diaria',
+        magyp_fob:'diaria',magyp_futures:'diaria',sio:'mensual'};
+    for(const [source,frequency] of Object.entries(frequencies)) {
+        vm.runInContext(`setCommoditySource('${source}')`,ctx);
+        assert.equal(vm.runInContext('commodityFrequency',ctx),frequency);
+        assert.equal(nodes.get('commodityFilterSource').value,source);
+        assert.equal(nodes.get('commodityLatestCountHeader').textContent,source==='sio'?'Operaciones':'Observaciones');
+        assert.match(nodes.get('commodityKpiOperationsLabel').textContent,source==='sio'?/Operaciones/:/Observaciones/);
+        assert.equal(nodes.get('commodityKpiMonthlyLabel').textContent,frequency==='diaria'?'Variación a 7 días':'Variación mensual');
+        assert.ok(nodes.get('commoditySourceSubtitle').textContent);
+        assert.ok(nodes.get('commodityMethodNote').textContent);
+    }
+});
 test('every public reference bundle has all existing views and original grain',()=>{
     const ctx=context();
     for(const source of ['internal','board','fas','fob','futures']) {

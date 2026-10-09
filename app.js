@@ -34,7 +34,7 @@ const COMMODITY_SOURCE_CONFIG = {
 
 // Public reference prices share the module; each selector loads only its own family.
 const MAGYP_REFERENCE_CONFIG = {
-    magyp_internal: { label: 'Precio interno — MAGyP actualizado', file: 'internal.csv', monthlyOnly: true,
+    magyp_internal: { label: 'Precios internos MAGyP', file: 'internal.csv', monthlyOnly: true,
         note: 'Precios internos mensuales publicados por MAGyP, atribuidos a BCBA, en ARS/TN por plaza. El histórico local permanece disponible por separado.' },
     magyp_board: { label: 'Pizarra / Cámara — MAGyP', file: 'board.csv',
         note: 'Pizarra provisional por plaza en ARS/TN, sujeta a ajuste. Los ceros no se interpretan como precios. No equivale a operaciones SIO.' },
@@ -49,8 +49,9 @@ Object.entries(MAGYP_REFERENCE_CONFIG).forEach(([key, config]) => {
     COMMODITY_SOURCE_CONFIG[key] = { ...config, subtitle: config.label, reference: true,
         path: 'data/magyp/dashboard/commodities/', bundleFile: config.file,
         monthlyOnly: Boolean(config.monthlyOnly), operationsLabel: 'Observaciones con precio',
+        defaultFrequency: config.monthlyOnly ? 'mensual' : 'diaria',
         operationsUnit: 'cotizaciones positivas, sin volumen transado',
-        note: config.note + ' Las medianas mensuales diarias cubren sólo días capturados, sin interpolar.' };
+        note: config.note + (config.monthlyOnly ? '' : ' Las medianas mensuales diarias cubren sólo días capturados, sin interpolar.') };
 });
 
 // Canonical names used by filters, aggregations and chart data. The keys are
@@ -355,7 +356,7 @@ const selectedUnit = 'TN';
 let quantityFrequency = 'mensual';
 let priceFrequency = 'mensual';
 let commodityFrequency = 'mensual';
-let commoditySource = 'sio';
+let commoditySource = 'magyp_internal';
 const commodityDataBySource = {};
 let commodityData = { diario: [], mensual: [], ultimos: [], resumen: [], semaforo: [] };
 let commoditySelectedValues = [];
@@ -1682,10 +1683,23 @@ function updateCommoditySourcePresentation() {
     if (operationsLabel) operationsLabel.textContent = config.operationsLabel;
     const operationsUnit = document.getElementById('commodityKpiOperationsUnit');
     if (operationsUnit) operationsUnit.textContent = config.operationsUnit;
+    const daily = commodityFrequency === 'diaria';
+    const labels = {
+        commodityKpiMedianLabel: config.reference ? (daily ? 'Última cotización por serie' : 'Precio mensual por serie') : 'Mediana del último período',
+        commodityKpiMonthlyLabel: daily ? 'Variación a 7 días' : 'Variación mensual',
+        commodityKpiYoYLabel: daily ? 'Variación a 30 días' : 'Variación interanual',
+        commodityKpiProductsLabel: commoditySource === 'magyp_fob' ? 'Posiciones disponibles' : 'Commodities disponibles',
+        commodityLatestCountHeader: commoditySource === 'sio' ? 'Operaciones' : 'Observaciones',
+        commodityLatestPriceHeader: config.reference ? 'Precio de referencia' : 'Precio mediano'
+    };
+    Object.entries(labels).forEach(([id, text]) => {
+        const element = document.getElementById(id);
+        if (element) element.textContent = text;
+    });
     const latestVariationShort = document.getElementById('commodityLatestVariationShort');
     const latestVariationLong = document.getElementById('commodityLatestVariationLong');
-    if (latestVariationShort) latestVariationShort.textContent = config.monthlyOnly ? 'Var. mensual' : 'Var. 7 días';
-    if (latestVariationLong) latestVariationLong.textContent = config.monthlyOnly ? 'Var. interanual' : 'Var. 30 días';
+    if (latestVariationShort) latestVariationShort.textContent = daily ? 'Var. 7 días' : 'Var. mensual';
+    if (latestVariationLong) latestVariationLong.textContent = daily ? 'Var. 30 días' : 'Var. interanual';
     if (frequency) {
         const dailyOption = frequency.querySelector('option[value="diaria"]');
         if (dailyOption) dailyOption.disabled = Boolean(config.monthlyOnly);
@@ -1736,10 +1750,10 @@ function formatCommodityCapture(value) {
 }
 
 function setCommoditySource(sourceKey) {
-    commoditySource = COMMODITY_SOURCE_CONFIG[sourceKey] ? sourceKey : 'sio';
+    commoditySource = COMMODITY_SOURCE_CONFIG[sourceKey] ? sourceKey : 'magyp_internal';
     commodityData = commodityDataBySource[commoditySource] || emptyCommodityData();
     commoditySelectedValues = [];
-    commodityFrequency = 'mensual';
+    commodityFrequency = COMMODITY_SOURCE_CONFIG[commoditySource].defaultFrequency || 'mensual';
     ['commodityFilterCommodity', 'commodityFilterMarket', 'commodityFilterCurrency', 'commodityFilterUnit', 'commodityFilterType', 'commodityFilterCondition'].forEach(id => {
         const control = document.getElementById(id);
         if (control) control.dataset.initialized = 'false';
@@ -2013,7 +2027,9 @@ function initCommodityFilters() {
     const findByKey = (values, expected) => values.find(value => commodityNormalizedKey(value) === commodityNormalizedKey(expected));
     const currencyDefault = findByKey(currencies, 'ARS') || currencies[0] || 'TODOS';
     const unitDefault = findByKey(units, 'TN') || units[0] || 'TODOS';
-    const typeDefault = findByKey(typeValues, 'Precio interno mensual') || typeValues[0] || 'TODOS';
+    const typeDefault = (commoditySource === 'sio' ? findByKey(typeValues, 'Precio Hecho') :
+        commoditySource === 'magyp_fas' ? typeValues.find(value => value.includes('D.E.C.')) :
+        findByKey(typeValues, 'Precio interno mensual')) || typeValues[0] || 'TODOS';
     const rosario = markets.find(value => commodityNormalizedKey(commodityMarketLabel(value)) === 'rosario');
     const marketDefault = sourceConfig.monthlyOnly ? (rosario || markets[0] || 'TODOS') : 'TODOS';
     populateCommoditySelect('commodityFilterCommodity', optionRows.map(row => row.commodity), 'Todos', 'TODOS');
@@ -2021,6 +2037,16 @@ function initCommodityFilters() {
     populateCommoditySelect('commodityFilterCurrency', currencies, 'Todas', currencyDefault);
     populateCommoditySelect('commodityFilterUnit', units, 'Todas', unitDefault);
     populateCommoditySelect('commodityFilterType', typeValues, 'Todos', typeDefault);
+    const typeControl = document.getElementById('commodityFilterType');
+    const typeGroup = document.getElementById('commodityTypeGroup');
+    const typeApplicable = commoditySource === 'sio' || typeValues.length > 1;
+    if (typeControl) {
+        typeControl.disabled = !typeApplicable;
+        if (!typeApplicable) typeControl.value = 'TODOS';
+    }
+    if (typeGroup) { typeGroup.hidden = !typeApplicable; typeGroup.style.display = typeApplicable ? '' : 'none'; }
+    const typeLabel = document.getElementById('commodityTypeLabel');
+    if (typeLabel) typeLabel.textContent = commoditySource === 'magyp_fas' ? 'Régimen FAS' : 'Tipo de precio';
     populateCommoditySelect('commodityFilterCondition', optionRows.map(row => row.condicion_comercial), 'Todas', 'TODOS');
     const frequency = document.getElementById('commodityFilterFrequency');
     if (frequency) {
@@ -2031,6 +2057,7 @@ function initCommodityFilters() {
             frequency.addEventListener('change', () => {
                 commodityFrequency = frequency.value;
                 initCommodityFilters();
+                updateCommoditySourcePresentation();
                 updateCommodityDashboard();
             });
             frequency.dataset.commodityBound = 'true';
@@ -2400,9 +2427,11 @@ function updateCommodityChartHeadings() {
         if (shortVariation) shortVariation.textContent = commodityFrequency === 'diaria' ? 'Var. 7 días' : 'Var. mensual';
         if (longVariation) longVariation.textContent = commodityFrequency === 'diaria' ? 'Var. 30 días' : 'Var. interanual';
         if (trendTitle) trendTitle.textContent = `Referencia ${periodLabel} por serie`;
-        if (trendDesc) trendDesc.textContent = 'Cada serie conserva producto, plaza, moneda, unidad y condición. Meses diarios parciales: sólo días capturados.';
+        if (trendDesc) trendDesc.textContent = sourceConfig.monthlyOnly
+            ? 'Precios mensuales publicados por producto y plaza; cada serie conserva moneda y unidad.'
+            : 'Cada serie conserva posición o producto, plaza, moneda, unidad y condición. Meses diarios parciales: sólo días capturados.';
         if (volumeTitle) volumeTitle.textContent = 'Observaciones por referencia';
-        if (volumeDesc) volumeDesc.textContent = 'Cantidad de cotizaciones positivas; no es volumen de operaciones';
+        if (volumeDesc) volumeDesc.textContent = 'Cantidad de cotizaciones positivas publicadas';
         if (rankingDesc) rankingDesc.textContent = 'Última referencia por serie y condición; verificar fecha de cada fila';
     }
     if (sourceConfig.monthlyOnly) {
