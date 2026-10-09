@@ -34,12 +34,14 @@ jobs:
       - name: Tests offline de referencias
         run: |
           python -m unittest discover -s tests/magyp_common -p test_references.py -v
-          node --test tests/magyp_frontend/commodities.test.cjs
+          node --test tests/magyp_frontend/commodities.test.cjs tests/magyp_frontend/regression.test.cjs tests/magyp_frontend/mcba.test.cjs
       - name: Descargar, validar y preparar salidas
         env:
           REQUESTED_DATE: ${{ inputs.date }}
           SOURCE: ${{ inputs.source }}
         run: python scripts/magyp/grains/references.py --source "$SOURCE" --date "$REQUESTED_DATE" --allow-web
+      - name: Validar salidas generadas para el dashboard
+        run: node --test tests/magyp_frontend/commodities.test.cjs
       - name: Evidencia y salidas para revisión (sin commit/push/deploy)
         if: always()
         uses: actions/upload-artifact@v7

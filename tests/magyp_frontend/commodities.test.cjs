@@ -44,7 +44,12 @@ test('daily latest is the last closing observation, not the monthly median',()=>
         commodityData=parseReferenceCommodityBundle(input);
         JSON.stringify(getCommodityLatestRows())`,ctx));
     assert.ok(result.length);
-    assert.ok(result.every(row=>row.periodo_ultimo==='2026-10-08'));
+    const daily=JSON.parse(vm.runInContext('JSON.stringify(commodityData.diario)',ctx));
+    for(const row of result) {
+        const dates=daily.filter(item=>item.series_id===row.series_id&&Number(item.price)>0)
+            .map(item=>item.fecha).sort();
+        assert.equal(row.periodo_ultimo,dates.at(-1));
+    }
     assert.ok(result.every(row=>row.precio_mediana_ultimo_periodo===row.price));
     assert.ok(result.every(row=>row.variacion_mensual_pct===undefined));
 });
