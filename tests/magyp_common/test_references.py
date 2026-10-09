@@ -1,12 +1,27 @@
 import json
+import io
 import tempfile
 import unittest
 from datetime import date
 from pathlib import Path
+from contextlib import redirect_stdout
+from email.message import Message
 from unittest.mock import patch
 from scripts.magyp.grains import references as r
 
 DAY=date(2026,10,8)
+FIXTURES=Path(__file__).parent/'fixtures'
+
+
+class FobResponse:
+    status=200
+    headers=Message()
+    headers['Content-Type']='text/html; charset=UTF-8'
+
+    def __init__(self,body):self.body=body
+    def __enter__(self):return self
+    def __exit__(self,*args):pass
+    def read(self,limit):return self.body[:limit]
 
 
 def board(price='342,300.00'):
@@ -27,6 +42,125 @@ def enrich(rows,capture='c1',stamp='2026-10-09T12:00:00Z'):
 
 
 class ReferencesTests(unittest.TestCase):
+    def test_fob_legacy_and_current_published_fixtures_preserve_original_fields(self):
+        for name in ['fob_legacy.json','fob_current_published.json']:
+            body=(FIXTURES/name).read_bytes();original=json.loads(body)
+            projected=r.project(body,'fob')
+            self.assertEqual(projected,original)
+            row=r.parse(projected,'fob',DAY,DAY.isoformat())[0]
+            self.assertEqual(row['position_raw'],original['posts'][0]['posicion'])
+            self.assertEqual(row['price_raw'],str(original['posts'][0]['precio']))
+            self.assertEqual(row['circular'],original['posts'][0]['circular'])
+            self.assertEqual(row['moneda'],'Sin identificar')
+            self.assertEqual(row['unidad'],'Sin identificar')
+            self.assertNotIn('ncm',row)
+
+    def test_fob_current_empty_recognized_but_not_a_publishable_price_series(self):
+        body=(FIXTURES/'fob_current_empty.json').read_bytes()
+        self.assertEqual(r.project(body,'fob'),[])
+        for obj in [[],{'posts':[]}]:
+            with self.subTest(obj=obj),self.assertRaisesRegex(r.Error,'FOB sin publicación'):
+                r.parse(obj,'fob',date(2026,10,9),'2026-10-09')
+
+    def test_fob_unknown_schemas_still_rejected(self):
+        published=json.loads((FIXTURES/'fob_current_published.json').read_bytes())
+        unknown=[(FIXTURES/'fob_unknown.json').read_bytes(),r.encoded(published['posts']),
+                 r.encoded({'posts':None}),r.encoded({'posts':[],'extra':1})]
+        for change in ['extra','removed','renamed']:
+            obj=json.loads(r.encoded(published));row=obj['posts'][0]
+            if change=='extra':row['product']='unverified'
+            elif change=='removed':del row['precio']
+            else:row['price']=row.pop('precio')
+            unknown.append(r.encoded(obj))
+        for body in unknown:
+            with self.subTest(body=body),self.assertRaises(r.Error):r.project(body,'fob')
+
+    def test_fob_empty_weekend_preserves_last_valid_output_for_both_formats(self):
+        for body in [b'[]',r.encoded({'posts':[]})]:
+            with self.subTest(body=body),tempfile.TemporaryDirectory() as temp:
+                root=Path(temp);out=root/'dashboard/commodities/fob.csv'
+                prior=r.bundle(enrich(r.parse(fob(),'fob',DAY,DAY.isoformat())),'fob')
+                r.atomic(out,prior)
+                with patch.object(r,'build_opener') as opener:
+                    opener.return_value.open.return_value=FobResponse(body)
+                    r.run('fob',root,date(2026,10,10),'2026-10-10',True)
+                self.assertEqual(out.read_bytes(),prior)
+                folder=next((root/'raw'/'commodities'/'fob').iterdir())
+                manifest=json.loads((folder/'manifest.json').read_bytes())
+                self.assertEqual(manifest['publication_status'],'NO_PUBLICATION')
+                self.assertEqual(r.normalize(folder,root,date(2026,10,10)),[])
+                self.assertFalse((root/'normalized').exists())
+                # A later acquisition with real rows must replay past empty captures safely.
+                with patch.object(r,'build_opener') as opener:
+                    opener.return_value.open.return_value=FobResponse(r.encoded(fob()))
+                    r.run('fob',root,DAY,DAY.isoformat(),True)
+                rows=r.validate_bundle(out.read_bytes(),'fob')
+                observed=[row for row in rows if row['row_kind']=='observation']
+                self.assertEqual(len(observed),1)
+                self.assertEqual(observed[0]['price'],'290')
+                manifests=[json.loads(path.read_bytes()) for path in
+                    (root/'raw'/'commodities'/'fob').glob('*/manifest.json')]
+                self.assertEqual({m['publication_status'] for m in manifests},
+                    {'PUBLISHED','NO_PUBLICATION'})
+
+    def test_fob_no_publication_success_and_unknown_schema_error_keep_output_and_other_families_publish(self):
+        for body,diagnostic,exit_code in [(b'[]','NO_PUBLICATION',0),
+                (r.encoded({'posts':[]}),'NO_PUBLICATION',0),
+                ((FIXTURES/'fob_unknown.json').read_bytes(),'Schema FOB cambiado',1),
+                (b'<html>Service error</html>','Respuesta no parseable',1)]:
+            with self.subTest(body=body),tempfile.TemporaryDirectory() as temp:
+                root=Path(temp);out=root/'dashboard/commodities/fob.csv'
+                prior=r.bundle(enrich(r.parse(fob(),'fob',DAY,DAY.isoformat())),'fob')
+                r.atomic(out,prior)
+                # Valid independent snapshots: no network or changes to other family parsers.
+                for source in ['internal','board','fas','futures']:
+                    row=r.observation(source,'2026-10-08','Fixture','Fixture plaza',
+                        'Fixture reference','Sin identificar','Sin identificar','100','json')
+                    path=root/'normalized'/'commodities'/source/'fixture.json'
+                    r.atomic(path,r.encoded(enrich([row])))
+                real_run=r.run
+                def run(source,data_root,as_of,requested,allow_web):
+                    return real_run(source,data_root,as_of,requested,source=='fob')
+                logs=io.StringIO()
+                with patch('sys.argv',['references','--source','all','--date','2026-10-09',
+                        '--data-root',str(root),'--allow-web']),patch.object(r,'build_opener') as opener,\
+                        patch.object(r,'run',side_effect=run),patch.object(r.time,'sleep'),redirect_stdout(logs):
+                    opener.return_value.open.return_value=FobResponse(body)
+                    self.assertEqual(r.main(),exit_code)
+                self.assertIn(diagnostic,logs.getvalue())
+                self.assertEqual(out.read_bytes(),prior)
+                for source in ['internal','board','fas','futures']:
+                    self.assertIn('[PUBLISH] '+source,logs.getvalue())
+                    r.validate_bundle((root/'dashboard/commodities'/f'{source}.csv').read_bytes(),source)
+                if exit_code==0:
+                    folder=next((root/'raw'/'commodities'/'fob').iterdir())
+                    manifest=json.loads((folder/'manifest.json').read_bytes())
+                    self.assertEqual(manifest['publication_status'],'NO_PUBLICATION')
+                    self.assertEqual(manifest['requested_date'],'2026-10-09')
+                    self.assertEqual(manifest['status'],200)
+                    self.assertEqual(manifest['record_count'],0)
+                    payload=(folder/'response.json').read_bytes()
+                    self.assertEqual(json.loads(payload),json.loads(body))
+                    self.assertEqual(manifest['sha256'],r.digest(payload))
+                    self.assertEqual(manifest['response_sha256'],r.digest(body))
+                    self.assertEqual(r.normalize(folder,root,date(2026,10,9)),[])
+                else:
+                    self.assertFalse((root/'raw'/'commodities'/'fob').exists())
+
+    def test_fob_no_publication_metadata_cannot_hide_prices_or_unknown_schema(self):
+        for body,count in [(r.encoded(fob()),0),(b'{"data":[]}',0),(b'[]',1)]:
+            with self.subTest(body=body,count=count),tempfile.TemporaryDirectory() as temp:
+                root=Path(temp)
+                with patch.object(r,'build_opener') as opener:
+                    opener.return_value.open.return_value=FobResponse(b'[]')
+                    self.assertIsNone(r.fetch('fob','2026-10-09',date(2026,10,9),root))
+                folder=next((root/'raw'/'commodities'/'fob').iterdir())
+                manifest=json.loads((folder/'manifest.json').read_bytes())
+                manifest.update(sha256=r.digest(body),size_bytes=len(body),record_count=count)
+                (folder/'response.json').write_bytes(body)
+                (folder/'manifest.json').write_bytes(r.encoded(manifest))
+                with self.assertRaises(r.Error):r.normalize(folder,root,date(2026,10,9))
+
     def test_locale_decimals_and_missing_zero_distinct(self):
         self.assertEqual(r.number('342,300.00','us'),('342300.00','positive'))
         self.assertEqual(r.number('342.300,00','ar'),('342300.00','positive'))
