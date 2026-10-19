@@ -122,7 +122,7 @@ def publish_incremental(staging, target):
     return result
 
 
-def update(day, raw_root, published, allow_web=False, timeout=40, max_requests=80):
+def update(day, raw_root, published, allow_web=False, timeout=60, max_requests=80, browser_channel="auto"):
     date.fromisoformat(day)
     if not allow_web:
         raise PipelineError("Adquisición requiere --allow-web")
@@ -130,7 +130,7 @@ def update(day, raw_root, published, allow_web=False, timeout=40, max_requests=8
     if list((raw_root / "raw/mcba").glob("*/manifest.json")):
         raise PipelineError("Usar un directorio de captura vacío para esta actualización")
     try:
-        result = browser_fetch(day, day, timeout, max_requests, "chromium")
+        result = browser_fetch(day, day, timeout, max_requests, browser_channel)
         capture(result.payload, day, raw_root, "browser_automation", result.http_status, result.content_type,
             date_to=day, request_method=result.request_method, request_count=result.diagnostics["request_count"],
             acquisition_classification=result.classification)
@@ -158,6 +158,7 @@ def main():
     p.add_argument("--data-root", type=Path, required=True, help="Carpeta aislada fuera de Git")
     p.add_argument("--published-dir", type=Path, default=ROOT / "data/magyp/dashboard/mcba")
     p.add_argument("--allow-web", action="store_true")
+    p.add_argument("--browser-channel", choices=("auto", "msedge", "chromium"), default="auto")
     p.add_argument("--dry-run", action="store_true")
     a = p.parse_args()
     if a.dry_run:
@@ -165,7 +166,7 @@ def main():
         print("[FETCH] DRY-RUN: sin requests ni escrituras")
         return
     try:
-        update(a.date, a.data_root, a.published_dir, a.allow_web)
+        update(a.date, a.data_root, a.published_dir, a.allow_web, browser_channel=a.browser_channel)
     except Exception as error:
         print("[PUBLISH] ERROR " + (str(error) if isinstance(error, PipelineError) else type(error).__name__) +
               "; última salida válida conservada", file=sys.stderr)

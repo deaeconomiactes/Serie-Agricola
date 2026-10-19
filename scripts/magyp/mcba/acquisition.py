@@ -7,6 +7,7 @@ from __future__ import annotations
 import time
 import json
 import os
+import sys
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -16,6 +17,59 @@ from scripts.magyp.common.platform import PipelineError, official_url
 
 URL = "https://ssma.magyp.gob.ar/frutas.precios.aspx"
 MAX_FILE = 2_000_000
+
+
+def preferred_browser_channel():
+    """Use installed Edge on Windows; absence alone selects bundled Chromium."""
+    if sys.platform == 'win32':
+        for name in ('PROGRAMFILES(X86)', 'PROGRAMFILES', 'LOCALAPPDATA'):
+            root = os.environ.get(name)
+            if root and (Path(root) / 'Microsoft/Edge/Application/msedge.exe').is_file():
+                return 'msedge'
+    return 'chromium'
+
+
+def wait_for_genexus_controls(page, timeout):
+    """Wait for usable controls, re-resolving locators after an initial reload.
+
+    One shared deadline bounds readiness, including any navigation during rendering.
+    No element handles or load/networkidle readiness assumptions are retained.
+    """
+    deadline = time.monotonic() + timeout
+    navigation = [0]
+
+    def navigated(frame):
+        if frame == page.main_frame:
+            navigation[0] += 1
+
+    def remaining():
+        value = int((deadline - time.monotonic()) * 1000)
+        if value <= 0:
+            raise TimeoutError('GeneXus controls unavailable within deadline')
+        return value
+
+    page.on('framenavigated', navigated)
+    try:
+        while True:
+            revision = navigation[0]
+            try:
+                page.wait_for_load_state('domcontentloaded', timeout=remaining())
+                for selector in ('#GridContainerTbl', '#EXPORT', '#DDO_GRIDContainer_TF_1_btnGroupDrop'):
+                    page.locator(selector).wait_for(state='visible', timeout=remaining())
+                if not page.locator('#vDDO_FRUTAS_PRECIOS_FECHAAUXDATE').is_visible():
+                    page.locator('#DDO_GRIDContainer_TF_1_btnGroupDrop').click(timeout=remaining())
+                for selector in ('#vDDO_FRUTAS_PRECIOS_FECHAAUXDATE', '#vDDO_FRUTAS_PRECIOS_FECHAAUXDATETO'):
+                    page.locator(selector).wait_for(state='visible', timeout=remaining())
+                if revision == navigation[0]:
+                    return
+            except Exception as error:
+                # Inspect only fixed browser errors in memory; never log exception text.
+                reload_error = 'Execution context was destroyed' in str(error)
+                if revision == navigation[0] and not reload_error:
+                    raise
+            remaining()  # Reloads cannot extend the readiness deadline.
+    finally:
+        page.remove_listener('framenavigated', navigated)
 
 
 def validate_window(start, end):
@@ -106,14 +160,16 @@ def initial_error_type(error, status=None):
     return 'OTHER'
 
 
-def browser_fetch(start, end, timeout=25, max_requests=80, channel="msedge"):
+def browser_fetch(start, end, timeout=60, max_requests=80, channel="auto"):
     """At most three complete acquisitions, each with a fresh browser/session.
 
-    The request budget is shared across all attempts. Validation failures never retry.
+    Each complete session has its own bounded request budget (at most three budgets).
+    Validation failures never retry.
     """
+    channel = preferred_browser_channel() if channel == 'auto' else channel
     attempts, initial_attempts, previous_requests = [], [], []
     for number in range(1, 4):
-        remaining = max_requests - len(previous_requests)
+        remaining = max_requests
         started = time.monotonic()
 
         def record_attempt(diag, succeeded=False):
@@ -125,6 +181,7 @@ def browser_fetch(start, end, timeout=25, max_requests=80, channel="msedge"):
                       'error_type': None if succeeded else diag.get('error_type', 'OTHER'),
                       'duration_seconds': round(time.monotonic() - started, 3),
                       'http_status': diag.get('http_status'),
+                      'browser': 'chromium', 'browser_channel': channel,
                       'request_count': len(diag.get('requests', [])), 'requested_date': start}
             attempts.append(record)
             print('[FETCH] MCBA acquisition ' + json.dumps(record, sort_keys=True))
@@ -142,7 +199,7 @@ def browser_fetch(start, end, timeout=25, max_requests=80, channel="msedge"):
             transient = (kind in {'CONNECTION', 'HTTP_5XX'} or
                          (kind == 'TIMEOUT' and diag.get('acquisition_stage') in {
                              'initial_get', 'date_controls', 'filter_ajax', 'export_download'}))
-            if number < 3 and transient and len(requests) < max_requests:
+            if number < 3 and transient and len(diag.get('requests', [])) < max_requests:
                 # _browser_fetch_once has already closed its context/browser before this wait.
                 print(f'[FETCH] MCBA acquisition retry {number}/2; sesión cerrada; espera 10 segundos')
                 previous_requests = requests
@@ -157,7 +214,7 @@ def browser_fetch(start, end, timeout=25, max_requests=80, channel="msedge"):
         return result
 
 
-def _browser_fetch_once(start, end, timeout=25, max_requests=80, channel="msedge"):
+def _browser_fetch_once(start, end, timeout=60, max_requests=80, channel="msedge"):
     a, b = validate_window(start, end)
     if not 1 <= max_requests <= 120 or not 1 <= timeout <= 60:
         raise PipelineError("Límites de adquisición inválidos")
@@ -269,7 +326,7 @@ def _browser_fetch_once(start, end, timeout=25, max_requests=80, channel="msedge
         started = time.monotonic()
         try:
             try:
-                response = page.goto(URL, wait_until="load")
+                response = page.goto(URL, wait_until="domcontentloaded")
                 status = response.status if response and isinstance(response.status, int) else None
                 final_url = response.url if response and isinstance(response.url, str) else page.url
                 kind = None
@@ -294,11 +351,9 @@ def _browser_fetch_once(start, end, timeout=25, max_requests=80, channel="msedge
                 failure = PipelineError('GET inicial no exitoso: ' + initial['error_type'] +
                     ('; ' + initial['classification'] if 'classification' in initial else ''))
                 raise failure from None
-            protocol = describe_genexus(page.content())
             stage = "date_controls"
-            # GeneXus may finish rendering controls after the document load event.
-            page.locator("#DDO_GRIDContainer_TF_1_btnGroupDrop").wait_for(state="visible")
-            page.locator("#DDO_GRIDContainer_TF_1_btnGroupDrop").click()
+            wait_for_genexus_controls(page, timeout)
+            protocol = describe_genexus(page.content())
             page.locator("#vDDO_FRUTAS_PRECIOS_FECHAAUXDATE").fill(a.strftime("%d/%m/%Y"))
             page.locator("#vDDO_FRUTAS_PRECIOS_FECHAAUXDATETO").fill(b.strftime("%d/%m/%Y"))
             filtered = True
@@ -336,6 +391,7 @@ def _browser_fetch_once(start, end, timeout=25, max_requests=80, channel="msedge
                 raise PipelineError("Sin filas visibles filtradas; no exportar un histórico sin filtro")
             stage = "export_download"
             # GeneXus abre el export en otra página; escuchar descargas de todo el contexto.
+            page.locator("#EXPORT").wait_for(state="visible")
             page.locator("#EXPORT").click()
             deadline = time.monotonic() + timeout
             while not downloads and time.monotonic() < deadline and not errors:
@@ -361,10 +417,17 @@ def _browser_fetch_once(start, end, timeout=25, max_requests=80, channel="msedge
             payload = path.read_bytes()
             # Descargar en contexto efímero; no copiar archivos intermedios/formularios al repo.
             download.delete()
+            stage = "validate_xlsx"
+            # Reuse the existing parser unchanged; HTTP 200/download alone is not success.
+            from scripts.magyp.mcba.model import parse_export
+            records = parse_export(payload, start, end)
+            if not records:
+                raise PipelineError("Export sin filas válidas")
             return AcquisitionResult(payload, "BROWSER_AUTOMATION_REQUIRED", export_meta.get("status"),
                                      export_meta.get("content_type"), export_meta.get("method"),
                                      {"requests": network, "request_count": len(network),
                                       "http_status": export_meta.get('status'),
+                                      "xlsx_valid": True, "validated_rows": len(records),
                                       "browser_channel": channel, "browser_version": str(browser.version),
                                       "headless": True, "persistent_profile": False,
                                       "export_response": export_meta,

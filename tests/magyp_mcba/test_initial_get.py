@@ -47,6 +47,7 @@ class InitialGetTests(unittest.TestCase):
         page.fixture_download = download
         def locator(selector):
             item = MagicMock()
+            item.is_visible.return_value = False
             if selector.startswith('#GridContainerTbl'): item.all.return_value = [tr]
             if selector == '#EXPORT': item.click.side_effect = lambda: handlers['download'](download)
             return item
@@ -86,6 +87,21 @@ class InitialGetTests(unittest.TestCase):
             self.assertNotIn('private-state', json.dumps(result.diagnostics))
             sessions[0][1].cookies.assert_not_called()
 
+    def test_auto_channel_launches_selected_engine_and_validates_xlsx(self):
+        for channel in ('msedge', 'chromium'):
+            with self.subTest(channel=channel), self.scenario([200]) as (sessions, _, sleep, logs), \
+                    patch('scripts.magyp.mcba.acquisition.preferred_browser_channel', return_value=channel):
+                result = browser_fetch(DAY, DAY)
+                launch = sys.modules['playwright.sync_api'].sync_playwright.return_value.__enter__.return_value.chromium.launch
+                launch.assert_called_once_with(**({'headless': True, 'channel': 'msedge'}
+                                                  if channel == 'msedge' else {'headless': True}))
+                sessions[0][2].set_default_navigation_timeout.assert_called_once_with(60000)
+                sessions[0][2].set_default_timeout.assert_called_once_with(60000)
+                self.assertTrue(result.diagnostics['xlsx_valid'])
+                self.assertEqual(result.diagnostics['validated_rows'], 1)
+                self.assertEqual(result.diagnostics['acquisition_attempts'][0]['browser_channel'], channel)
+                sleep.assert_not_called()
+
     def assert_retry_succeeds(self, first):
         with self.scenario([first, 200]) as (sessions, audit, sleep, logs):
             result = browser_fetch(DAY, DAY, channel='chromium')
@@ -96,7 +112,7 @@ class InitialGetTests(unittest.TestCase):
             self.assertEqual(result.diagnostics['request_count'], 2)
             for browser, context, page in sessions:
                 browser.close.assert_called_once(); context.close.assert_called_once()
-                page.goto.assert_called_once_with(URL, wait_until='load')
+                page.goto.assert_called_once_with(URL, wait_until='domcontentloaded')
             self.assertNotIn('private-session', logs.getvalue())
 
     def test_timeout_then_success_clean_session(self):
@@ -146,7 +162,7 @@ class InitialGetTests(unittest.TestCase):
             sleep.assert_called_once_with(10)
             for browser, context, page in sessions:
                 browser.close.assert_called_once(); context.close.assert_called_once()
-                page.goto.assert_called_once_with(URL, wait_until='load')
+                page.goto.assert_called_once_with(URL, wait_until='domcontentloaded')
             self.assertNotIn('SECRET', logs.getvalue() + json.dumps(result.diagnostics))
 
     def test_date_controls_timeout_then_new_session_success(self):
@@ -200,6 +216,7 @@ class InitialGetTests(unittest.TestCase):
             self.assertTrue(all((target / name).read_bytes() == body for name, body in before.items()))
             status = json.loads((target / 'MCBA_MAGYP_UPDATE_STATUS.json').read_bytes())
             self.assertEqual(status['source_status'], 'MAGYP_LAST_VALID')
+            self.assertNotIn('"acquisition_stage": "completed"', logs.getvalue())
 
     def test_third_complete_attempt_can_succeed(self):
         with self.scenario([TimeoutError(), 200, 200]) as (sessions, audit, sleep, logs):
@@ -241,13 +258,32 @@ class InitialGetTests(unittest.TestCase):
             with self.assertRaises(PipelineError): browser_fetch(DAY, DAY, channel='chromium')
             sleep.assert_not_called()
 
-    def test_retry_never_exceeds_total_request_budget(self):
+    def test_retry_does_not_repeat_exhausted_session_budget(self):
         with self.scenario([500]) as (_, _, sleep, logs):
             with self.assertRaises(PipelineError) as error:
                 browser_fetch(DAY, DAY, max_requests=1, channel='chromium')
             self.assertEqual(error.exception.diagnostics['request_count'], 1)
             self.assertFalse(error.exception.diagnostics['retry_performed'])
             sleep.assert_not_called()
+
+    def test_clean_session_has_full_budget_after_transient_controls_failure(self):
+        with self.scenario([200, 200]) as (sessions, audit, sleep, logs):
+            for _, context, page in sessions:
+                original = page.goto.side_effect
+                def goto(*args, _original=original, _context=context, **kwargs):
+                    response = _original(*args, **kwargs)
+                    for _ in range(2):
+                        route = MagicMock()
+                        route.request = SimpleNamespace(url=URL, method='GET', resource_type='document')
+                        _context.route.call_args.args[1](route)
+                        route.continue_.assert_called_once()
+                    return response
+                page.goto.side_effect = goto
+            self.fail_control(sessions[0][2], '#DDO_GRIDContainer_TF_1_btnGroupDrop', TimeoutError())
+            result = browser_fetch(DAY, DAY, max_requests=4, channel='chromium')
+            self.assertEqual(result.diagnostics['request_count'], 6)
+            self.assertEqual([a['request_count'] for a in result.diagnostics['acquisition_attempts']], [3, 3])
+            sleep.assert_called_once_with(10)
 
     def test_403_401_blocked_404_429_and_redirect_never_retry(self):
         for status in [403, 401, 404, 429]:

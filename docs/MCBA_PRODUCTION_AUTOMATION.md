@@ -10,8 +10,8 @@ echo "MCBA_CAPTURE_ROOT=$RUNNER_TEMP/mcba-capture" >> "$GITHUB_ENV"
 
 ## Flujo productivo
 
-1. Checkout con historia para regresiones; Python 3.12, Node 24 y dependencias Chromium fijadas.
-2. Tests offline, una captura MAGyP del día solicitado, validación, normalización, analytical y construcción incremental del bundle diario. Sin backfill ni retries.
+1. Checkout con historia para regresiones; Python 3.12, Node 24 y Playwright fijado. En Windows se prefiere Microsoft Edge instalado (channel=msedge); Chromium se instala en temporales solamente si Edge no existe en las rutas estándar de instalación para la cuenta del runner.
+2. Tests offline, una captura MAGyP del día solicitado, validación, normalización, analytical y construcción incremental del bundle diario. Sin backfill; hasta tres adquisiciones completas ante fallos transitorios, con sesiones limpias y 10 segundos entre intentos.
 3. Guardia `validate_production_mcba.py`: hashes del conjunto, contrato de las filas, cuatro CSV obligatorios, marcador, estado, fecha solicitada y timestamp UTC; máximo 10 MiB por archivo. El mensual previo puede figurar en el marcador para compatibilidad, pero nunca se agrega a la publicación incremental.
 4. Repetir tests MCBA/frontend y `git diff --check` con las salidas resultantes.
 5. Sólo en main, commit/push sin force de un allowlist cerrado. Una ejecución en rama de revisión genera artefactos y no publica.
@@ -44,6 +44,16 @@ MAGyP sigue siendo el principal diario MCBA. El fallback/histórico legacy y el 
 
 ## Activación
 
-Después del merge revisado, ejecutar `update-magyp-mcba.yml` manualmente con un día ISO y comprobar tanto la captura como `deploy.yml`. En la rama de revisión también puede hacerse smoke sin publicar. El schedule diario queda comentado, listo para activar sólo tras el smoke exitoso en GitHub/Linux: `0 23 * * *` (aproximadamente 20:00 Argentina). No se habilitó automáticamente.
+Después del merge revisado, ejecutar `update-magyp-mcba.yml` manualmente con un día ISO y comprobar tanto la captura como `deploy.yml`. En la rama de revisión también puede hacerse smoke sin publicar. El schedule diario queda comentado, listo para activar sólo tras el smoke exitoso en GitHub/Windows self-hosted: `0 23 * * *` (aproximadamente 20:00 Argentina). No se habilitó automáticamente.
 
-Validación local: tests completos `tests/magyp_mcba`, suites frontend existentes, guardia sobre bundle real sin mutarlo, actionlint y `git diff --check`. No confundir esas pruebas con una captura real Linux satisfactoria.
+Validación local: tests completos `tests/magyp_mcba`, suites frontend existentes, guardia sobre bundle real sin mutarlo, actionlint y `git diff --check`. No confundir esas pruebas con una captura real del runner satisfactoria.
+
+## Adquisición Edge / GeneXus
+
+El canal se selecciona una sola vez y se registra en cada intento. No se cambia de navegador ante un 401/403/404 ni se intenta eludir bloqueos. El workflow conserva PowerShell 7 y los labels self-hosted, windows, serie-agricola.
+
+La navegación espera domcontentloaded, con límite de 60 segundos. Luego una espera funcional con presupuesto de 60 segundos localiza grilla, export y filtro; abre el filtro y espera Desde/Hasta. Si GeneXus recarga, espera el DOM nuevo y vuelve a localizar los controles dentro del mismo presupuesto. No retiene ElementHandles ni presupone que HTTP 200 signifique página usable. Las acciones y la espera de exportación usan timeout de 60 segundos.
+
+Antes de registrar completed, el XLSX descargado debe pasar el parser existente, con schema, filas y fechas correctas. Se reutiliza ese parser sin modificarlo. Las salidas productivas y MAGYP_LAST_VALID mantienen sus reglas existentes.
+
+Prueba real local Windows/Edge del 2026-10-19: fecha solicitada 2026-10-05, HTTP 200, 370 filas validadas, 63 requests, 57,219 segundos, primer intento. RAW fuera del repositorio; sin publicación ni deploy. El presupuesto es de 80 requests por intento (máximo 240 en tres sesiones), para que la carga completa no deje sin presupuesto al siguiente intento. Esta prueba no sustituye la ejecución manual del workflow en la cuenta del servicio del runner.
