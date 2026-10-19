@@ -13,7 +13,7 @@ name: MAGyP MCBA - productivo Windows self-hosted manual
 # Labels requeridos: self-hosted, windows, serie-agricola. El registro x64 agrega x64 además.
 # Verificar que figure Idle/Online y que la cuenta del runner pueda acceder al repo, GitHub/PyPI,
 # descargas de Playwright y https://ssma.magyp.gob.ar/frutas.precios.aspx de forma autorizada.
-# El job instala requirements-browser.txt en venv y Chromium en temporales; no necesita Edge ni sesiones guardadas.
+# El job usa Microsoft Edge instalado; sólo instala Chromium temporal si Edge está ausente.
 # El piloto sigue siendo sólo diagnóstico manual: un smoke GitHub-hosted no acredita acceso a MAGyP.
 
 on:
@@ -23,7 +23,7 @@ on:
   workflow_dispatch:
     inputs:
       requested_date:
-        description: Un día ISO YYYY-MM-DD, sin backfill ni retry automático
+        description: Un día ISO YYYY-MM-DD, hasta tres adquisiciones completas, sin backfill
         required: true
         type: string
 
@@ -87,11 +87,15 @@ jobs:
           (Split-Path $bash) | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           python -m venv (Join-Path $root 'venv')
           (Join-Path $root 'venv/Scripts') | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-      - name: Dependencias fijadas y Chromium
+      - name: Dependencias fijadas y Edge preferido (Chromium sólo si falta Edge)
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
           python -m pip install -r scripts/magyp/requirements-browser.txt
-          python -m playwright install chromium
+          $channel = python -c "from scripts.magyp.mcba.acquisition import preferred_browser_channel; print(preferred_browser_channel())"
+          if ($channel -notin @('msedge', 'chromium')) { throw 'Canal de navegador inválido' }
+          if ($channel -eq 'chromium') { python -m playwright install chromium }
+          "MCBA_BROWSER_CHANNEL=$channel" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Output "[FETCH] MCBA browser=chromium channel=$channel"
       - name: Tests offline antes de la captura
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
@@ -106,6 +110,7 @@ jobs:
         run: >-
           python scripts/magyp/mcba/update_mcba_dashboard.py
           --date "$env:MCBA_DATE" --data-root "$env:MCBA_CAPTURE_ROOT" --allow-web
+          --browser-channel "$env:MCBA_BROWSER_CHANNEL"
       - name: Validar bundle final
         env:
           CAPTURE_OUTCOME: ${{ steps.capture.outcome }}

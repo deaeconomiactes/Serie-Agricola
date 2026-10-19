@@ -14,7 +14,7 @@ Sólo se conserva la URL estable conocida; queries, credenciales y paths inesper
 
 Ante HTTP 401/403 en GitHub Actions: **GITHUB_RUNNER_ACCESS_BLOCKED**, sin retry, sin bypass. Mantiene navegador/UA, allowlist, HTTPS y validaciones existentes. No se rotan IPs, proxies ni identificaciones.
 
-La política actual opera sobre la **adquisición completa**, desde initial_get hasta descarga del XLSX. Permite **hasta 3 intentos por fecha**, sin retries internos adicionales. Cada intento cierra contexto y browser antes de esperar **10 segundos** y abrir una sesión limpia. Se espera que el control de fechas GeneXus esté visible antes de usarlo. El presupuesto de requests sigue siendo global entre los tres intentos.
+La política actual opera sobre la **adquisición completa**, desde initial_get hasta descarga del XLSX. Permite **hasta 3 intentos por fecha**, sin retries internos adicionales. Cada intento cierra contexto y browser antes de esperar **10 segundos** y abrir una sesión limpia. Se espera que el control de fechas GeneXus esté visible antes de usarlo. Cada intento completo tiene su propio presupuesto de requests (80 en producción, hasta 240 en tres intentos); se registra también el total. Una sesión que agota su presupuesto no se reintenta.
 
 Sólo se reintentan TIMEOUT en initial_get, date_controls (incluida la espera de respuesta al aplicar fechas) o export_download, CONNECTION y HTTP 5xx. No hay retry para 401/403/404/429, DNS, navegación abortada, redirect inesperado, schema/XLSX inválido ni fecha incorrecta. El timeout verificando las fechas devueltas en filtered_grid tampoco se trata como transitorio: no se presupone que una grilla fuera de rango sea correcta.
 
@@ -24,6 +24,6 @@ No cambia frontend, parser XLSX, normalización, analytical, publicación/Git, d
 
 ## Pruebas
 
-Mocks del protocolo real verifican initial_get timeout/conexión/500 seguido de éxito, date_controls y export/download timeout seguidos de éxito con nueva sesión, tercer intento exitoso y tres fallos sin cuarto intento. Comprueban cierre → espera → nueva sesión, presupuesto global, registros por intento y redacción de datos privados. Casos de 401/403/404/429, DNS, navegación abortada, redirect/schema/XLSX inválidos y fecha incorrecta no reintentan. Pruebas integradas de tres timeouts, 403 y XLSX inválido confirman CSV idénticos y MAGYP_LAST_VALID.
+Mocks del protocolo real verifican initial_get timeout/conexión/500 seguido de éxito, date_controls y export/download timeout seguidos de éxito con nueva sesión, tercer intento exitoso y tres fallos sin cuarto intento. Comprueban cierre → espera → nueva sesión, presupuesto por sesión, registros por intento y redacción de datos privados. Casos de 401/403/404/429, DNS, navegación abortada, redirect/schema/XLSX inválidos y fecha incorrecta no reintentan. Pruebas integradas de tres timeouts, 403 y XLSX inválido confirman CSV idénticos y MAGYP_LAST_VALID.
 
 No se hicieron nuevos requests al sitio MCBA para eludir/reprobar el bloqueo. La causa se obtuvo del artefacto real de Actions. Una prueba mock satisfactoria no equivale a adquisición real Linux exitosa.
