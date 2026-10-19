@@ -29,13 +29,13 @@ def fixture_capture(start,end,records):
 
 
 class Phase3Tests(unittest.TestCase):
-    def test_chromium_uses_bundled_engine_no_edge_and_timeout_cleanup(self):
+    def test_chromium_uses_bundled_engine_no_edge_and_navigation_abort_cleanup(self):
         fake=MagicMock()
         browser=fake.return_value.__enter__.return_value.chromium.launch.return_value
         probe,context=MagicMock(),MagicMock()
         probe.new_page.return_value.evaluate.return_value='HeadlessChrome'
         browser.new_context.side_effect=[probe,context]
-        context.new_page.return_value.goto.side_effect=TimeoutError('private-session-url')
+        context.new_page.return_value.goto.side_effect=RuntimeError('net::ERR_ABORTED private-session-url')
         with patch.dict(sys.modules,{'playwright':MagicMock(),
                'playwright.sync_api':SimpleNamespace(sync_playwright=fake)}):
             with self.assertRaises(PipelineError) as error:
