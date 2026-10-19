@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: magyp-mcba-production
+  group: serie-agricola-data-writer
   cancel-in-progress: false
 
 jobs:
@@ -48,6 +48,7 @@ jobs:
         run: |
           python -m unittest discover -s tests/magyp_common -v
           python -m unittest discover -s tests/magyp_mcba -v
+          python -m unittest discover -s tests/ci -v
           node --test tests/magyp_frontend/*.test.cjs
       - name: Captura, normalización, analytical y publicación local validada
         id: capture
@@ -93,7 +94,8 @@ jobs:
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git commit -m 'chore: actualizar MCBA MAGyP y estado de fuente'
-            git push origin HEAD:refs/heads/main
+            mkdir -p "$MCBA_CAPTURE_ROOT/reports"
+            bash scripts/ci/push_data_main.sh 2>&1 | tee "$MCBA_CAPTURE_ROOT/reports/MCBA_PUBLICATION.log"
           fi
       - name: Desplegar Pages explícitamente desde main
         if: github.ref == 'refs/heads/main'
@@ -132,6 +134,7 @@ jobs:
           if-no-files-found: ignore
           path: |
             ${{ runner.temp }}/mcba-capture/reports/MCBA_INTEGRATION_ATTEMPT.json
+            ${{ runner.temp }}/mcba-capture/reports/MCBA_PUBLICATION.log
             data/magyp/dashboard/mcba/MCBA_MAGYP_UPDATE_STATUS.json
       - name: Marcar fallo de adquisición aunque el último válido se conserve
         if: ${{ steps.capture.outcome == 'failure' }}

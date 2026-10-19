@@ -34,7 +34,11 @@ Todos bajo `data/magyp/dashboard/mcba/`. RAW XLSX/manifests quedan fuera de Git 
 
 El actualizador existente conserva los CSV y registra `MAGYP_LAST_VALID`. El workflow captura el resultado sin abortar prematuramente para validar el bundle previo y ejecutar regresiones. Si ese fallback está íntegro, sólo permite stage/commit de `MCBA_MAGYP_UPDATE_STATUS.json` y un despliegue explícito del estado. Nunca commitea CSV nuevos tras una captura fallida. Al final marca la ejecución como fallida para que el problema sea visible.
 
-Si no existe bundle válido, hay corrupción, falla un test o no puede validarse la metadata, no se commitea ni despliega. Un push concurrente incompatible también falla sin force y conserva el remoto. No se aceptan archivos vacíos para sustituir fuentes.
+Si no existe bundle válido, hay corrupción, falla un test o no puede validarse la metadata, no se commitea ni despliega. No se aceptan archivos vacíos para sustituir fuentes.
+
+MCBA, Commodities MAGyP y SIO comparten `concurrency.group: serie-agricola-data-writer`, con `cancel-in-progress: false`. Los escritores coordinados no se ejecutan simultáneamente; GitHub puede reemplazar una ejecución pendiente por otra del mismo grupo, por lo que no se promete una cola FIFO sin pérdidas.
+
+Después del commit MCBA, `scripts/ci/push_data_main.sh` hace fetch de main, rebase sobre origin/main y push sin force. Si el push falla y un segundo fetch confirma que main avanzó de forma compatible, permite exactamente un retry rebase/push. Si el remoto no avanzó, hay conflicto, reescritura del remoto o falla el segundo push, termina con error. Un rebase conflictivo se aborta, con rerere deshabilitado y sin autostash ni resolución automática. Conserva el commit candidato y los artifacts; el log público del intento se agrega al artefacto diagnóstico. Pages sigue despachándose sólo después de que la publicación haya terminado exitosamente.
 
 MAGyP sigue siendo el principal diario MCBA. El fallback/histórico legacy y el mensual legacy conservan su comportamiento. No se modifican la lógica económica, frontend, Corrientes, Cantidades ni Commodities.
 

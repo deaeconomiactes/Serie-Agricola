@@ -150,6 +150,7 @@ Thumbs.db
 # Piloto canónico MAGyP: scripts/tests y salidas livianas; RAW/bases completas locales.
 !scripts/magyp/**/*.py
 !tests/magyp_common/**/*.py
+!tests/ci/*.py
 !tests/magyp_mcba/**/*.py
 !tests/magyp_frontend/
 !tests/magyp_frontend/*.cjs

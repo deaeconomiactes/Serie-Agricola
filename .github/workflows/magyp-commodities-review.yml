@@ -16,7 +16,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: magyp-commodities-update
+  group: serie-agricola-data-writer
   cancel-in-progress: false
 jobs:
   update:
