@@ -23,7 +23,7 @@ MAX_FILE = 2_000_000
 
 
 def connectivity_precheck(timeout=15):
-    """One public GET, no cookies/session persistence or redirects; fail before browsers."""
+    """Diagnostic GET: only an explicit 401/403/404 may prevent browser acquisition."""
     started = time.monotonic()
     result = {'dns_resolves': False, 'tcp_connected': False, 'https_connected': False,
               'http_status': None, 'duration_seconds': None}
@@ -52,11 +52,17 @@ def connectivity_precheck(timeout=15):
         if connection is not None:
             connection.close()
         result['duration_seconds'] = round(time.monotonic() - started, 3)
+    status = result['http_status']
+    blocked = status in {401, 403, 404}
+    result['classification'] = ('PRECHECK_BLOCKED' if blocked else
+        'PRECHECK_OK' if status == 200 else
+        'PRECHECK_TRANSIENT' if status is not None and 500 <= status <= 599 else
+        'PRECHECK_INCONCLUSIVE')
     print('[PRECHECK] MCBA ' + json.dumps(result, sort_keys=True), flush=True)
-    if result['http_status'] != 200:
-        failure = PipelineError('PRECHECK MCBA no exitoso; no se inicia Playwright')
+    if blocked:
+        failure = PipelineError(f'PRECHECK HTTP {status} explícito; no se inicia Playwright')
         failure.diagnostics = {'acquisition_stage': 'precheck',
-                               'error_type': 'PRECHECK_UNAVAILABLE', 'precheck': result,
+                               'error_type': f'HTTP_{status}', 'precheck': result,
                                'acquisition_attempts': [], 'request_count': 1}
         raise failure
     return result
@@ -494,7 +500,14 @@ def _browser_fetch_once(start, end, timeout=60, max_requests=80, channel="msedge
             stage = "validate_xlsx"
             # Reuse the existing parser unchanged; HTTP 200/download alone is not success.
             from scripts.magyp.mcba.model import parse_export
-            records = parse_export(payload, start, end)
+            try:
+                records = parse_export(payload, start, end)
+            except PipelineError as exc:
+                # Only the parser's confirmed known-header/zero-row export is absence.
+                # HTML, wrong schema, wrong dates and invalid XLSX remain integrity errors.
+                if str(exc) == "Exportación vacía; ausencia de publicación no demostrada":
+                    stage_error = 'NO_PUBLICATION'
+                raise
             if not records:
                 raise PipelineError("Export sin filas válidas")
             return AcquisitionResult(payload, "BROWSER_AUTOMATION_REQUIRED", export_meta.get("status"),

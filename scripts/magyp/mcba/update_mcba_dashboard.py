@@ -4,6 +4,7 @@ import argparse
 import csv
 import io
 import json
+import os
 import sys
 from collections import Counter
 from datetime import date, datetime
@@ -152,6 +153,57 @@ def update(day, raw_root, published, allow_web=False, timeout=60, max_requests=8
         raise
 
 
+def run_productive(day, raw_root, published, allow_web=False, browser_channel="auto"):
+    """Availability is an operational outcome; integrity failures remain fatal."""
+    previous = []
+    outcome = "PIPELINE_ERROR"
+    error = None
+    try:
+        date.fromisoformat(day)
+        if (published / "_SUCCESS.json").exists() or any(published.glob("MCBA_MAGYP_*.csv")):
+            previous = read_bundle(published)
+        if any(r["date"] == day for r in previous):
+            outcome = "NO_OP_ALREADY_CURRENT"
+        else:
+            try:
+                update(day, raw_root, published, allow_web, browser_channel=browser_channel)
+                outcome = "UPDATED"
+            except Exception as exc:
+                diag = getattr(exc, "diagnostics", {})
+                kind = diag.get("error_type")
+                stage = diag.get("acquisition_stage")
+                if kind == "NO_PUBLICATION":
+                    outcome = "NO_PUBLICATION"
+                elif stage != "validate_xlsx" and kind in {
+                    "TIMEOUT", "CONNECTION", "HTTP_5XX", "HTTP_401", "HTTP_403", "HTTP_404",
+                    "HTTP_429", "NAVIGATION_NO_RESPONSE"}:
+                    outcome = "SOURCE_UNAVAILABLE"
+                else:
+                    raise
+    except Exception as exc:
+        error = exc
+    rows = read_bundle(published) if outcome == "UPDATED" else previous
+    state = {"result": outcome, "source": "MAGyP",
+        "source_url": "https://ssma.magyp.gob.ar/frutas.precios.aspx",
+        "source_status": "MAGYP" if outcome == "UPDATED" else "MAGYP_LAST_VALID",
+        "requested_date": day, "attempted_at": utc_now(),
+        "last_observation_date": max((r["date"] for r in rows), default=None),
+        "last_successful_update": max((r["capture_timestamp"] for r in rows), default=None)}
+    atomic_write(raw_root / "reports/MCBA_RUN_STATUS.json",
+                 (json.dumps(state, indent=2) + "\n").encode())
+    if outcome == "UPDATED":
+        atomic_write(published / "MCBA_MAGYP_UPDATE_STATUS.json",
+                     (json.dumps(state, indent=2) + "\n").encode())
+    print(f"[PUBLISH] {outcome}; última observación={state['last_observation_date']}; "
+          f"última actualización exitosa={state['last_successful_update']}")
+    if os.environ.get("GITHUB_OUTPUT"):
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as stream:
+            stream.write(f"result={outcome}\n")
+    if error is not None:
+        raise error
+    return state
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--date", required=True)
@@ -166,7 +218,7 @@ def main():
         print("[FETCH] DRY-RUN: sin requests ni escrituras")
         return
     try:
-        update(a.date, a.data_root, a.published_dir, a.allow_web, browser_channel=a.browser_channel)
+        run_productive(a.date, a.data_root, a.published_dir, a.allow_web, browser_channel=a.browser_channel)
     except Exception as error:
         print("[PUBLISH] ERROR " + (str(error) if isinstance(error, PipelineError) else type(error).__name__) +
               "; última salida válida conservada", file=sys.stderr)
