@@ -5,6 +5,8 @@ sin evadir validaciones, sin HAR/traces/storage_state ni persistencia de sesión
 """
 from __future__ import annotations
 import time
+import json
+import os
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -70,7 +72,77 @@ def select_fetcher(start, end, strategy="auto", browser=None, http=None):
     return (browser or browser_fetch)(start, end)
 
 
+def safe_initial_url(value):
+    """Only the stable public endpoint is retained; never session paths or query values."""
+    if not isinstance(value, str):
+        return None
+    try:
+        p = urlsplit(value)
+        if p.scheme not in {'http', 'https'}:
+            return '<redacted-url>'
+        host = 'ssma.magyp.gob.ar' if p.hostname == 'ssma.magyp.gob.ar' else '<unexpected-host>'
+        path = '/frutas.precios.aspx' if p.path.lower() == '/frutas.precios.aspx' else '/<redacted-path>'
+        return p.scheme + '://' + host + path
+    except ValueError:
+        return '<redacted-url>'
+
+
+def initial_error_type(error, status=None):
+    if status is not None and status != 200:
+        return 'HTTP_5XX' if 500 <= status <= 599 else f'HTTP_{status}'
+    # Inspect messages only for fixed network codes; never persist exception text/URLs.
+    text = str(error)
+    if type(error).__name__ == 'TimeoutError' or 'net::ERR_TIMED_OUT' in text:
+        return 'TIMEOUT'
+    if 'ERR_NAME_NOT_RESOLVED' in text or 'getaddrinfo' in text:
+        return 'DNS'
+    if isinstance(error, (ConnectionError,)) or any(code in text for code in (
+            'ERR_CONNECTION_', 'ERR_NETWORK_CHANGED', 'ERR_INTERNET_DISCONNECTED')):
+        return 'CONNECTION'
+    if 'ERR_ABORTED' in text:
+        return 'NAVIGATION_ABORTED'
+    if 'ERR_TOO_MANY_REDIRECTS' in text:
+        return 'UNEXPECTED_REDIRECT'
+    return 'OTHER'
+
+
 def browser_fetch(start, end, timeout=25, max_requests=80, channel="msedge"):
+    """At most one clean-session retry, exclusively for a transient initial GET."""
+    attempts, previous_requests = [], []
+    for number in (1, 2):
+        remaining = max_requests - len(previous_requests)
+        try:
+            result = _browser_fetch_once(start, end, timeout, remaining, channel)
+        except PipelineError as error:
+            diag = getattr(error, 'diagnostics', {})
+            record = diag.get('initial_get')
+            if record:
+                attempts.append({**record, 'attempt': number})
+                print('[FETCH] MCBA initial_get ' + json.dumps(attempts[-1], sort_keys=True))
+            requests = previous_requests + diag.get('requests', [])
+            error.diagnostics = {**diag, 'initial_get_attempts': attempts,
+                                 'retry_performed': number == 2,
+                                 'request_count': len(requests), 'requests': requests}
+            transient = (diag.get('acquisition_stage') == 'initial_get' and
+                         diag.get('error_type') in {'TIMEOUT', 'CONNECTION', 'HTTP_5XX'})
+            if number == 1 and transient and len(requests) < max_requests:
+                # _browser_fetch_once has already closed its context/browser before this wait.
+                print('[FETCH] MCBA initial_get retry 1/1; sesión cerrada; espera 10 segundos')
+                previous_requests = requests
+                time.sleep(10)
+                continue
+            raise
+        record = result.diagnostics.get('initial_get')
+        if record:
+            attempts.append({**record, 'attempt': number})
+            print('[FETCH] MCBA initial_get ' + json.dumps(attempts[-1], sort_keys=True))
+        requests = previous_requests + result.diagnostics.get('requests', [])
+        result.diagnostics.update(initial_get_attempts=attempts, retry_performed=number == 2,
+                                  requests=requests, request_count=len(requests))
+        return result
+
+
+def _browser_fetch_once(start, end, timeout=25, max_requests=80, channel="msedge"):
     a, b = validate_window(start, end)
     if not 1 <= max_requests <= 120 or not 1 <= timeout <= 60:
         raise PipelineError("Límites de adquisición inválidos")
@@ -87,8 +159,8 @@ def browser_fetch(start, end, timeout=25, max_requests=80, channel="msedge"):
     downloads = []
     inspected_rows = []
     protocol = {}
-    cookie_names = []
     stage = "initial_get"
+    initial = {}
     # Perfil/contexto no persistente, sin certificados ignorados ni almacenamiento de estado.
     with sync_playwright() as p:
         options = {"headless": True}
@@ -115,6 +187,8 @@ def browser_fetch(start, end, timeout=25, max_requests=80, channel="msedge"):
             try:
                 official_url(request.url)
             except (PipelineError, ValueError):
+                if request.resource_type == 'document':
+                    errors.append('unexpected_redirect')
                 route.abort()
                 return
             if request.resource_type in {"image", "font", "media"}:
@@ -163,12 +237,42 @@ def browser_fetch(start, end, timeout=25, max_requests=80, channel="msedge"):
         page.on("download", lambda d: downloads.append(d))
         context.on("page", lambda new_page: (new_page.on("download", lambda d: downloads.append(d)),
                                               new_page.on("response", on_response)))
+        def initial_record(error_type, status, final_url):
+            return {'acquisition_stage': 'initial_get', 'error_type': error_type,
+                    'http_status': status, 'final_url': safe_initial_url(final_url),
+                    'duration_seconds': round(time.monotonic() - started, 3),
+                    'request_count': len(network), 'browser': 'chromium',
+                    'browser_channel': channel, 'requested_date': start}
+
+        started = time.monotonic()
         try:
-            response = page.goto(URL, wait_until="load")
-            if not response or response.status != 200:
-                raise PipelineError("GET inicial no exitoso")
+            try:
+                response = page.goto(URL, wait_until="load")
+                status = response.status if response and isinstance(response.status, int) else None
+                final_url = response.url if response and isinstance(response.url, str) else page.url
+                kind = None
+                if not response:
+                    kind = 'NAVIGATION_NO_RESPONSE'
+                elif status != 200:
+                    kind = initial_error_type(None, status)
+                elif isinstance(final_url, str) and safe_initial_url(final_url) != URL:
+                    kind = 'UNEXPECTED_REDIRECT'
+                initial = initial_record(kind, status, final_url)
+                if kind:
+                    raise PipelineError('GET inicial no exitoso: ' + kind)
+            except Exception as error:
+                if not initial:
+                    status = next((item['status'] for item in reversed(network)
+                                   if item['endpoint'] == URL and isinstance(item['status'], int)), None)
+                    kind = 'UNEXPECTED_REDIRECT' if 'unexpected_redirect' in errors else initial_error_type(error, status)
+                    initial = initial_record(kind, status, page.url)
+                if initial['http_status'] in {401, 403}:
+                    initial['classification'] = ('GITHUB_RUNNER_ACCESS_BLOCKED'
+                        if os.environ.get('GITHUB_ACTIONS') == 'true' else 'HTTP_ACCESS_BLOCKED')
+                failure = PipelineError('GET inicial no exitoso: ' + initial['error_type'] +
+                    ('; ' + initial['classification'] if 'classification' in initial else ''))
+                raise failure from None
             protocol = describe_genexus(page.content())
-            cookie_names = sorted(c["name"] for c in context.cookies())
             stage = "date_controls"
             page.locator("#DDO_GRIDContainer_TF_1_btnGroupDrop").click()
             page.locator("#vDDO_FRUTAS_PRECIOS_FECHAAUXDATE").fill(a.strftime("%d/%m/%Y"))
@@ -228,17 +332,28 @@ def browser_fetch(start, end, timeout=25, max_requests=80, channel="msedge"):
                                       "browser_channel": channel, "browser_version": str(browser.version),
                                       "headless": True, "persistent_profile": False,
                                       "export_response": export_meta,
-                                      "protocol": protocol, "cookie_names_only": cookie_names,
+                                      "protocol": protocol, "initial_get": initial,
                                       "visible_grid_rows": inspected_rows}, inspected_rows)
         except PipelineError as e:
             e.diagnostics = {"stage": stage, "requests": network, "errors": errors, "protocol": protocol}
+            if stage == 'initial_get':
+                # Keep only fixed public metadata, without GXState, cookie names or session paths.
+                safe_requests = [{k: (safe_initial_url(v) if k == 'endpoint' else v)
+                                  for k, v in item.items() if k in {'sequence','method','endpoint','status','stage'}}
+                                 for item in network]
+                e.diagnostics = {'stage': stage, **initial, 'initial_get': initial,
+                                 'requests': safe_requests, 'errors': errors}
+            elif initial:
+                e.diagnostics['initial_get'] = initial
             raise
         except Exception as e:
             # Evitar repr de Playwright: puede contener URL cifrada, cookies o estado privado.
             failure = PipelineError("Adquisición navegador falló en " + stage + ": " + type(e).__name__)
             failure.diagnostics = {"stage": stage, "requests": network, "errors": errors,
-                                   "protocol": protocol}
+                                   "protocol": protocol, "initial_get": initial}
             raise failure from None
         finally:
-            context.close()
-            browser.close()
+            try:
+                context.close()
+            finally:
+                browser.close()
