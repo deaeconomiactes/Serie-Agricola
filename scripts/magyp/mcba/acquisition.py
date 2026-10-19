@@ -107,37 +107,52 @@ def initial_error_type(error, status=None):
 
 
 def browser_fetch(start, end, timeout=25, max_requests=80, channel="msedge"):
-    """At most one clean-session retry, exclusively for a transient initial GET."""
-    attempts, previous_requests = [], []
-    for number in (1, 2):
+    """At most three complete acquisitions, each with a fresh browser/session.
+
+    The request budget is shared across all attempts. Validation failures never retry.
+    """
+    attempts, initial_attempts, previous_requests = [], [], []
+    for number in range(1, 4):
         remaining = max_requests - len(previous_requests)
+        started = time.monotonic()
+
+        def record_attempt(diag, succeeded=False):
+            initial = diag.get('initial_get')
+            if initial:
+                initial_attempts.append({**initial, 'attempt': number})
+            record = {'attempt': number,
+                      'acquisition_stage': 'completed' if succeeded else diag.get('acquisition_stage', 'session_setup'),
+                      'error_type': None if succeeded else diag.get('error_type', 'OTHER'),
+                      'duration_seconds': round(time.monotonic() - started, 3),
+                      'http_status': diag.get('http_status'),
+                      'request_count': len(diag.get('requests', [])), 'requested_date': start}
+            attempts.append(record)
+            print('[FETCH] MCBA acquisition ' + json.dumps(record, sort_keys=True))
+
         try:
             result = _browser_fetch_once(start, end, timeout, remaining, channel)
         except PipelineError as error:
             diag = getattr(error, 'diagnostics', {})
-            record = diag.get('initial_get')
-            if record:
-                attempts.append({**record, 'attempt': number})
-                print('[FETCH] MCBA initial_get ' + json.dumps(attempts[-1], sort_keys=True))
+            record_attempt(diag)
             requests = previous_requests + diag.get('requests', [])
-            error.diagnostics = {**diag, 'initial_get_attempts': attempts,
-                                 'retry_performed': number == 2,
+            error.diagnostics = {**diag, 'initial_get_attempts': initial_attempts,
+                                 'acquisition_attempts': attempts, 'retry_performed': number > 1,
                                  'request_count': len(requests), 'requests': requests}
-            transient = (diag.get('acquisition_stage') == 'initial_get' and
-                         diag.get('error_type') in {'TIMEOUT', 'CONNECTION', 'HTTP_5XX'})
-            if number == 1 and transient and len(requests) < max_requests:
+            kind = diag.get('error_type')
+            transient = (kind in {'CONNECTION', 'HTTP_5XX'} or
+                         (kind == 'TIMEOUT' and diag.get('acquisition_stage') in {
+                             'initial_get', 'date_controls', 'filter_ajax', 'export_download'}))
+            if number < 3 and transient and len(requests) < max_requests:
                 # _browser_fetch_once has already closed its context/browser before this wait.
-                print('[FETCH] MCBA initial_get retry 1/1; sesión cerrada; espera 10 segundos')
+                print(f'[FETCH] MCBA acquisition retry {number}/2; sesión cerrada; espera 10 segundos')
                 previous_requests = requests
                 time.sleep(10)
                 continue
             raise
-        record = result.diagnostics.get('initial_get')
-        if record:
-            attempts.append({**record, 'attempt': number})
-            print('[FETCH] MCBA initial_get ' + json.dumps(attempts[-1], sort_keys=True))
+        record_attempt(result.diagnostics, succeeded=True)
         requests = previous_requests + result.diagnostics.get('requests', [])
-        result.diagnostics.update(initial_get_attempts=attempts, retry_performed=number == 2,
+        result.diagnostics.update(initial_get_attempts=initial_attempts, acquisition_attempts=attempts,
+                                  retry_performed=number > 1,
                                   requests=requests, request_count=len(requests))
         return result
 
@@ -161,6 +176,8 @@ def _browser_fetch_once(start, end, timeout=25, max_requests=80, channel="msedge
     protocol = {}
     stage = "initial_get"
     initial = {}
+    stage_error = None
+    stage_status = None
     # Perfil/contexto no persistente, sin certificados ignorados ni almacenamiento de estado.
     with sync_playwright() as p:
         options = {"headless": True}
@@ -219,10 +236,15 @@ def _browser_fetch_once(start, end, timeout=25, max_requests=80, channel="msedge
             route.continue_()
 
         def on_response(response):
+            nonlocal stage_error, stage_status
             for item in reversed(network):
                 if item["endpoint"] == public_endpoint(response.url) and item["status"] is None:
                     item["status"] = response.status
                     break
+            if response.status >= 400 and response.request.resource_type in {'document', 'xhr', 'fetch'}:
+                stage_status = response.status
+                stage_error = initial_error_type(None, stage_status)
+                errors.append('http_error')
             if response.headers.get("content-disposition", "").lower().find("attachment") >= 0 or \
                     urlsplit(response.url).path.lower().endswith(".xlsx"):
                 declared_size = response.headers.get("content-length")
@@ -274,6 +296,8 @@ def _browser_fetch_once(start, end, timeout=25, max_requests=80, channel="msedge
                 raise failure from None
             protocol = describe_genexus(page.content())
             stage = "date_controls"
+            # GeneXus may finish rendering controls after the document load event.
+            page.locator("#DDO_GRIDContainer_TF_1_btnGroupDrop").wait_for(state="visible")
             page.locator("#DDO_GRIDContainer_TF_1_btnGroupDrop").click()
             page.locator("#vDDO_FRUTAS_PRECIOS_FECHAAUXDATE").fill(a.strftime("%d/%m/%Y"))
             page.locator("#vDDO_FRUTAS_PRECIOS_FECHAAUXDATETO").fill(b.strftime("%d/%m/%Y"))
@@ -285,6 +309,8 @@ def _browser_fetch_once(start, end, timeout=25, max_requests=80, channel="msedge
                 page.locator("#search_DDO_GRIDContainer_TF_1").click()
             filter_response = filtering.value
             if filter_response.status != 200:
+                stage_status = filter_response.status
+                stage_error = initial_error_type(None, stage_status)
                 raise PipelineError("Filtro GeneXus no exitoso")
             stage = "filtered_grid"
             page.wait_for_function("([start,end]) => {const t=document.querySelector('#GridContainerTbl'); "
@@ -314,11 +340,20 @@ def _browser_fetch_once(start, end, timeout=25, max_requests=80, channel="msedge
             deadline = time.monotonic() + timeout
             while not downloads and time.monotonic() < deadline and not errors:
                 page.wait_for_timeout(100)
+            stage_status = export_meta.get('status', stage_status)
+            if stage_status is not None and stage_status != 200:
+                stage_error = initial_error_type(None, stage_status)
+                raise PipelineError("Export HTTP no exitoso: " + stage_error)
             if not downloads:
+                if not errors:
+                    stage_error = 'TIMEOUT'
                 raise PipelineError("Export no generó descarga dentro del límite")
             download = downloads[0]
             failure = download.failure()
             if failure:
+                kind = initial_error_type(RuntimeError(failure))
+                if kind in {'TIMEOUT', 'CONNECTION'}:
+                    stage_error = kind
                 raise PipelineError("Descarga de export fallida")
             path = Path(download.path())
             if path.stat().st_size > MAX_FILE or errors:
@@ -329,13 +364,17 @@ def _browser_fetch_once(start, end, timeout=25, max_requests=80, channel="msedge
             return AcquisitionResult(payload, "BROWSER_AUTOMATION_REQUIRED", export_meta.get("status"),
                                      export_meta.get("content_type"), export_meta.get("method"),
                                      {"requests": network, "request_count": len(network),
+                                      "http_status": export_meta.get('status'),
                                       "browser_channel": channel, "browser_version": str(browser.version),
                                       "headless": True, "persistent_profile": False,
                                       "export_response": export_meta,
                                       "protocol": protocol, "initial_get": initial,
                                       "visible_grid_rows": inspected_rows}, inspected_rows)
         except PipelineError as e:
-            e.diagnostics = {"stage": stage, "requests": network, "errors": errors, "protocol": protocol}
+            e.diagnostics = {"stage": stage, "acquisition_stage": stage,
+                             "error_type": stage_error or 'VALIDATION_ERROR',
+                             "http_status": stage_status,
+                             "requests": network, "errors": errors, "protocol": protocol}
             if stage == 'initial_get':
                 # Keep only fixed public metadata, without GXState, cookie names or session paths.
                 safe_requests = [{k: (safe_initial_url(v) if k == 'endpoint' else v)
@@ -349,7 +388,10 @@ def _browser_fetch_once(start, end, timeout=25, max_requests=80, channel="msedge
         except Exception as e:
             # Evitar repr de Playwright: puede contener URL cifrada, cookies o estado privado.
             failure = PipelineError("Adquisición navegador falló en " + stage + ": " + type(e).__name__)
-            failure.diagnostics = {"stage": stage, "requests": network, "errors": errors,
+            failure.diagnostics = {"stage": stage, "acquisition_stage": stage,
+                                   "error_type": stage_error or initial_error_type(e),
+                                   "http_status": stage_status,
+                                   "requests": network, "errors": errors,
                                    "protocol": protocol, "initial_get": initial}
             raise failure from None
         finally:

@@ -44,6 +44,7 @@ class InitialGetTests(unittest.TestCase):
             'Elegido', 'GRANDE', '', '0,00', '1.500,00']
         path = folder / f'export-{number}.xlsx'; path.write_bytes(export([row()]))
         download = MagicMock(); download.path.return_value = str(path); download.failure.return_value = None
+        page.fixture_download = download
         def locator(selector):
             item = MagicMock()
             if selector.startswith('#GridContainerTbl'): item.all.return_value = [tr]
@@ -107,15 +108,138 @@ class InitialGetTests(unittest.TestCase):
     def test_connection_then_success_clean_session(self):
         self.assert_retry_succeeds(ConnectionResetError('private-session'))
 
-    def test_second_failure_is_visible_and_never_third_attempt(self):
-        with self.scenario([500, TimeoutError('private-session')]) as (_, audit, sleep, logs):
+    def test_three_failures_are_visible_and_never_fourth_attempt(self):
+        with self.scenario([500, TimeoutError('private-session'), 503]) as (sessions, audit, sleep, logs):
             with self.assertRaises(PipelineError) as error:
                 browser_fetch(DAY, DAY, channel='chromium')
+            self.assertEqual(sleep.call_count, 2)
+            self.assertEqual(error.exception.diagnostics['error_type'], 'HTTP_5XX')
+            self.assertEqual(len(error.exception.diagnostics['initial_get_attempts']), 3)
+            self.assertEqual(error.exception.diagnostics['request_count'], 3)
+            self.assertEqual(audit[-2:], [('context_closed', 3), ('browser_closed', 3)])
+            self.assertEqual([a['attempt'] for a in error.exception.diagnostics['acquisition_attempts']], [1, 2, 3])
+            for browser, context, page in sessions:
+                browser.close.assert_called_once(); context.close.assert_called_once()
+
+    def fail_control(self, page, selector, error):
+        original = page.locator.side_effect
+        def locator(value):
+            item = original(value)
+            if value == selector:
+                item.click.side_effect = error
+            return item
+        page.locator.side_effect = locator
+
+    def assert_later_timeout_restarts_session(self, selector, stage):
+        with self.scenario([200, 200]) as (sessions, audit, sleep, logs):
+            self.fail_control(sessions[0][2], selector, TimeoutError('private-session GXState=SECRET'))
+            result = browser_fetch(DAY, DAY, channel='chromium')
+            attempts = result.diagnostics['acquisition_attempts']
+            self.assertEqual([a['acquisition_stage'] for a in attempts], [stage, 'completed'])
+            self.assertEqual([a['error_type'] for a in attempts], ['TIMEOUT', None])
+            self.assertEqual([a['request_count'] for a in attempts], [1, 1])
+            for a in attempts:
+                self.assertEqual(a['requested_date'], DAY)
+                self.assertIn('http_status', a)
+                self.assertGreaterEqual(a['duration_seconds'], 0)
+            self.assertEqual(audit[:3], [('context_closed', 1), ('browser_closed', 1), ('sleep', 10)])
             sleep.assert_called_once_with(10)
-            self.assertEqual(error.exception.diagnostics['error_type'], 'TIMEOUT')
-            self.assertEqual(len(error.exception.diagnostics['initial_get_attempts']), 2)
-            self.assertEqual(error.exception.diagnostics['request_count'], 2)
-            self.assertEqual(audit[-2:], [('context_closed', 2), ('browser_closed', 2)])
+            for browser, context, page in sessions:
+                browser.close.assert_called_once(); context.close.assert_called_once()
+                page.goto.assert_called_once_with(URL, wait_until='load')
+            self.assertNotIn('SECRET', logs.getvalue() + json.dumps(result.diagnostics))
+
+    def test_date_controls_timeout_then_new_session_success(self):
+        self.assert_later_timeout_restarts_session('#DDO_GRIDContainer_TF_1_btnGroupDrop', 'date_controls')
+
+    def test_export_timeout_then_new_session_success(self):
+        self.assert_later_timeout_restarts_session('#EXPORT', 'export_download')
+
+    def test_download_timeout_then_new_session_success(self):
+        with self.scenario([200, 200]) as (sessions, audit, sleep, logs):
+            sessions[0][2].fixture_download.path.side_effect = TimeoutError('SECRET')
+            result = browser_fetch(DAY, DAY, channel='chromium')
+            self.assertEqual(result.diagnostics['acquisition_attempts'][0]['acquisition_stage'], 'export_download')
+            self.assertEqual(result.diagnostics['acquisition_attempts'][0]['error_type'], 'TIMEOUT')
+            sleep.assert_called_once_with(10)
+
+    def test_export_http_error_classification_and_retry_policy(self):
+        for status in (401, 403, 404, 503):
+            with self.subTest(status=status), self.scenario([200, 200] if status == 503 else [200]) as (sessions, _, sleep, logs):
+                page = sessions[0][2]
+                response = SimpleNamespace(status=status, url=URL, headers={},
+                                           request=SimpleNamespace(resource_type='document', method='GET'))
+                original = page.locator.side_effect
+                def locator(value):
+                    item = original(value)
+                    if value == '#EXPORT':
+                        on_response = next(call.args[1] for call in page.on.call_args_list if call.args[0] == 'response')
+                        item.click.side_effect = lambda: on_response(response)
+                    return item
+                page.locator.side_effect = locator
+                if status == 503:
+                    result = browser_fetch(DAY, DAY, channel='chromium')
+                    record = result.diagnostics['acquisition_attempts'][0]
+                    sleep.assert_called_once_with(10)
+                else:
+                    with self.assertRaises(PipelineError) as caught:
+                        browser_fetch(DAY, DAY, channel='chromium')
+                    record = caught.exception.diagnostics['acquisition_attempts'][0]
+                    sleep.assert_not_called()
+                self.assertEqual(record['http_status'], status)
+                self.assertEqual(record['error_type'], 'HTTP_5XX' if status == 503 else f'HTTP_{status}')
+
+    def test_invalid_xlsx_never_retries_and_preserves_last_valid(self):
+        with tempfile.TemporaryDirectory() as temp, self.scenario([200]) as (sessions, _, sleep, logs):
+            Path(sessions[0][2].fixture_download.path.return_value).write_bytes(b'invalid XLSX')
+            target, capture_root = Path(temp) / 'published', Path(temp) / 'capture'
+            publish_bundle(target, outputs_for(daily()), len(daily()))
+            before = {path.name: path.read_bytes() for path in target.iterdir()}
+            with self.assertRaises(PipelineError): update(DAY, capture_root, target, True)
+            sleep.assert_not_called()
+            self.assertTrue(all((target / name).read_bytes() == body for name, body in before.items()))
+            status = json.loads((target / 'MCBA_MAGYP_UPDATE_STATUS.json').read_bytes())
+            self.assertEqual(status['source_status'], 'MAGYP_LAST_VALID')
+
+    def test_third_complete_attempt_can_succeed(self):
+        with self.scenario([TimeoutError(), 200, 200]) as (sessions, audit, sleep, logs):
+            self.fail_control(sessions[1][2], '#EXPORT', TimeoutError())
+            result = browser_fetch(DAY, DAY, channel='chromium')
+            self.assertTrue(result.payload.startswith(b'PK'))
+            self.assertEqual(sleep.call_count, 2)
+            self.assertEqual([a['acquisition_stage'] for a in result.diagnostics['acquisition_attempts']],
+                             ['initial_get', 'export_download', 'completed'])
+
+    def test_three_transient_failures_preserve_last_valid(self):
+        with tempfile.TemporaryDirectory() as temp, self.scenario([200, 200, 200]) as (sessions, audit, sleep, logs):
+            for _, _, page in sessions:
+                self.fail_control(page, '#DDO_GRIDContainer_TF_1_btnGroupDrop', TimeoutError('SECRET'))
+            target, capture_root = Path(temp) / 'published', Path(temp) / 'capture'
+            publish_bundle(target, outputs_for(daily()), len(daily()))
+            before = {path.name: path.read_bytes() for path in target.iterdir()}
+            with self.assertRaises(PipelineError): update(DAY, capture_root, target, True)
+            self.assertTrue(all((target / name).read_bytes() == body for name, body in before.items()))
+            status = json.loads((target / 'MCBA_MAGYP_UPDATE_STATUS.json').read_bytes())
+            self.assertEqual(status['source_status'], 'MAGYP_LAST_VALID')
+            diag = json.loads((capture_root / 'reports/MCBA_INTEGRATION_ATTEMPT.json').read_bytes())
+            attempts = diag['diagnostics']['acquisition_attempts']
+            self.assertEqual(len(attempts), 3)
+            self.assertTrue(all(a['error_type'] == 'TIMEOUT' and a['acquisition_stage'] == 'date_controls'
+                                for a in attempts))
+            self.assertEqual(sleep.call_count, 2)
+            self.assertNotIn('SECRET', json.dumps(diag))
+
+    def test_wrong_grid_date_never_retries(self):
+        with self.scenario([200]) as (sessions, _, sleep, logs):
+            original = sessions[0][2].locator.side_effect
+            def locator(value):
+                item = original(value)
+                if value.startswith('#GridContainerTbl'):
+                    item.all.return_value[0].locator.return_value.all_text_contents.return_value[0] = '25/08/2026'
+                return item
+            sessions[0][2].locator.side_effect = locator
+            with self.assertRaises(PipelineError): browser_fetch(DAY, DAY, channel='chromium')
+            sleep.assert_not_called()
 
     def test_retry_never_exceeds_total_request_budget(self):
         with self.scenario([500]) as (_, _, sleep, logs):
