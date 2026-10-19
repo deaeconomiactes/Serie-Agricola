@@ -8,6 +8,9 @@ import time
 import json
 import os
 import sys
+import socket
+import http.client
+import getpass
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -17,6 +20,70 @@ from scripts.magyp.common.platform import PipelineError, official_url
 
 URL = "https://ssma.magyp.gob.ar/frutas.precios.aspx"
 MAX_FILE = 2_000_000
+
+
+def connectivity_precheck(timeout=15):
+    """Diagnostic GET: only an explicit 401/403/404 may prevent browser acquisition."""
+    started = time.monotonic()
+    result = {'dns_resolves': False, 'tcp_connected': False, 'https_connected': False,
+              'http_status': None, 'duration_seconds': None}
+    connection = None
+    try:
+        host = urlsplit(URL).hostname
+        socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)
+        result['dns_resolves'] = True
+        connection = http.client.HTTPSConnection(host, timeout=timeout)
+        tcp_connect = connection._create_connection
+        def tracked_tcp(*args, **kwargs):
+            transport = tcp_connect(*args, **kwargs)
+            result['tcp_connected'] = True
+            return transport
+        connection._create_connection = tracked_tcp
+        connection.connect()  # Default verified TLS; never ignore certificates.
+        result['https_connected'] = True
+        connection.request('GET', urlsplit(URL).path,
+                           headers={'User-Agent': 'SerieAgricola-MAGyP-MCBA-Precheck/1.0',
+                                    'Connection': 'close'})
+        result['http_status'] = connection.getresponse().status
+    except (OSError, http.client.HTTPException):
+        # No response bodies, Set-Cookie, IPs, proxy values or exception text are retained.
+        pass
+    finally:
+        if connection is not None:
+            connection.close()
+        result['duration_seconds'] = round(time.monotonic() - started, 3)
+    status = result['http_status']
+    blocked = status in {401, 403, 404}
+    result['classification'] = ('PRECHECK_BLOCKED' if blocked else
+        'PRECHECK_OK' if status == 200 else
+        'PRECHECK_TRANSIENT' if status is not None and 500 <= status <= 599 else
+        'PRECHECK_INCONCLUSIVE')
+    print('[PRECHECK] MCBA ' + json.dumps(result, sort_keys=True), flush=True)
+    if blocked:
+        failure = PipelineError(f'PRECHECK HTTP {status} explícito; no se inicia Playwright')
+        failure.diagnostics = {'acquisition_stage': 'precheck',
+                               'error_type': f'HTTP_{status}', 'precheck': result,
+                               'acquisition_attempts': [], 'request_count': 1}
+        raise failure
+    return result
+
+
+def navigation_snapshot(page, status, request_count):
+    """Only public state/booleans, never DOM contents or input/session values."""
+    state = {}
+    try:
+        state = page.evaluate("() => ({ready_state: document.readyState, "
+            "date_from_exists: !!document.querySelector('#vDDO_FRUTAS_PRECIOS_FECHAAUXDATE'), "
+            "date_to_exists: !!document.querySelector('#vDDO_FRUTAS_PRECIOS_FECHAAUXDATETO')})")
+    except Exception:
+        pass  # A navigation can destroy the old document; readiness remains explicit below.
+    state = state if isinstance(state, dict) else {}
+    return {'http_status': status, 'ready_state': state.get('ready_state')
+            if state.get('ready_state') in {'loading', 'interactive', 'complete'} else None,
+            'final_url': safe_initial_url(page.url),
+            'date_from_exists': state.get('date_from_exists') is True,
+            'date_to_exists': state.get('date_to_exists') is True,
+            'request_count': request_count}
 
 
 def preferred_browser_channel():
@@ -167,6 +234,12 @@ def browser_fetch(start, end, timeout=60, max_requests=80, channel="auto"):
     Validation failures never retry.
     """
     channel = preferred_browser_channel() if channel == 'auto' else channel
+    validate_window(start, end)
+    precheck = connectivity_precheck()
+    print('[ACQUISITION_CONTEXT] MCBA ' + json.dumps({
+        'windows_user': getpass.getuser(), 'runner_name': os.environ.get('RUNNER_NAME'),
+        'github_actions': os.environ.get('GITHUB_ACTIONS') == 'true',
+        'browser_channel': channel}, sort_keys=True), flush=True)
     attempts, initial_attempts, previous_requests = [], [], []
     for number in range(1, 4):
         remaining = max_requests
@@ -192,7 +265,7 @@ def browser_fetch(start, end, timeout=60, max_requests=80, channel="auto"):
             diag = getattr(error, 'diagnostics', {})
             record_attempt(diag)
             requests = previous_requests + diag.get('requests', [])
-            error.diagnostics = {**diag, 'initial_get_attempts': initial_attempts,
+            error.diagnostics = {**diag, 'precheck': precheck, 'initial_get_attempts': initial_attempts,
                                  'acquisition_attempts': attempts, 'retry_performed': number > 1,
                                  'request_count': len(requests), 'requests': requests}
             kind = diag.get('error_type')
@@ -208,7 +281,7 @@ def browser_fetch(start, end, timeout=60, max_requests=80, channel="auto"):
             raise
         record_attempt(result.diagnostics, succeeded=True)
         requests = previous_requests + result.diagnostics.get('requests', [])
-        result.diagnostics.update(initial_get_attempts=initial_attempts, acquisition_attempts=attempts,
+        result.diagnostics.update(precheck=precheck, initial_get_attempts=initial_attempts, acquisition_attempts=attempts,
                                   retry_performed=number > 1,
                                   requests=requests, request_count=len(requests))
         return result
@@ -235,6 +308,7 @@ def _browser_fetch_once(start, end, timeout=60, max_requests=80, channel="msedge
     initial = {}
     stage_error = None
     stage_status = None
+    navigation = {}
     # Perfil/contexto no persistente, sin certificados ignorados ni almacenamiento de estado.
     with sync_playwright() as p:
         options = {"headless": True}
@@ -326,7 +400,9 @@ def _browser_fetch_once(start, end, timeout=60, max_requests=80, channel="msedge
         started = time.monotonic()
         try:
             try:
-                response = page.goto(URL, wait_until="domcontentloaded")
+                # Commit establishes the document response, without waiting for scripts/resources.
+                # GeneXus readiness is validated separately through explicit controls below.
+                response = page.goto(URL, wait_until="commit")
                 status = response.status if response and isinstance(response.status, int) else None
                 final_url = response.url if response and isinstance(response.url, str) else page.url
                 kind = None
@@ -337,6 +413,8 @@ def _browser_fetch_once(start, end, timeout=60, max_requests=80, channel="msedge
                 elif isinstance(final_url, str) and safe_initial_url(final_url) != URL:
                     kind = 'UNEXPECTED_REDIRECT'
                 initial = initial_record(kind, status, final_url)
+                navigation = navigation_snapshot(page, status, len(network))
+                print('[NAVIGATION] MCBA ' + json.dumps(navigation, sort_keys=True), flush=True)
                 if kind:
                     raise PipelineError('GET inicial no exitoso: ' + kind)
             except Exception as error:
@@ -345,6 +423,8 @@ def _browser_fetch_once(start, end, timeout=60, max_requests=80, channel="msedge
                                    if item['endpoint'] == URL and isinstance(item['status'], int)), None)
                     kind = 'UNEXPECTED_REDIRECT' if 'unexpected_redirect' in errors else initial_error_type(error, status)
                     initial = initial_record(kind, status, page.url)
+                    navigation = navigation_snapshot(page, status, len(network))
+                    print('[NAVIGATION] MCBA ' + json.dumps(navigation, sort_keys=True), flush=True)
                 if initial['http_status'] in {401, 403}:
                     initial['classification'] = ('GITHUB_RUNNER_ACCESS_BLOCKED'
                         if os.environ.get('GITHUB_ACTIONS') == 'true' else 'HTTP_ACCESS_BLOCKED')
@@ -420,7 +500,14 @@ def _browser_fetch_once(start, end, timeout=60, max_requests=80, channel="msedge
             stage = "validate_xlsx"
             # Reuse the existing parser unchanged; HTTP 200/download alone is not success.
             from scripts.magyp.mcba.model import parse_export
-            records = parse_export(payload, start, end)
+            try:
+                records = parse_export(payload, start, end)
+            except PipelineError as exc:
+                # Only the parser's confirmed known-header/zero-row export is absence.
+                # HTML, wrong schema, wrong dates and invalid XLSX remain integrity errors.
+                if str(exc) == "Exportación vacía; ausencia de publicación no demostrada":
+                    stage_error = 'NO_PUBLICATION'
+                raise
             if not records:
                 raise PipelineError("Export sin filas válidas")
             return AcquisitionResult(payload, "BROWSER_AUTOMATION_REQUIRED", export_meta.get("status"),
@@ -432,9 +519,10 @@ def _browser_fetch_once(start, end, timeout=60, max_requests=80, channel="msedge
                                       "headless": True, "persistent_profile": False,
                                       "export_response": export_meta,
                                       "protocol": protocol, "initial_get": initial,
+                                      "navigation": navigation,
                                       "visible_grid_rows": inspected_rows}, inspected_rows)
         except PipelineError as e:
-            e.diagnostics = {"stage": stage, "acquisition_stage": stage,
+            e.diagnostics = {"stage": stage, "acquisition_stage": stage, "navigation": navigation,
                              "error_type": stage_error or 'VALIDATION_ERROR',
                              "http_status": stage_status,
                              "requests": network, "errors": errors, "protocol": protocol}
@@ -444,14 +532,14 @@ def _browser_fetch_once(start, end, timeout=60, max_requests=80, channel="msedge
                                   for k, v in item.items() if k in {'sequence','method','endpoint','status','stage'}}
                                  for item in network]
                 e.diagnostics = {'stage': stage, **initial, 'initial_get': initial,
-                                 'requests': safe_requests, 'errors': errors}
+                                 'navigation': navigation, 'requests': safe_requests, 'errors': errors}
             elif initial:
                 e.diagnostics['initial_get'] = initial
             raise
         except Exception as e:
             # Evitar repr de Playwright: puede contener URL cifrada, cookies o estado privado.
             failure = PipelineError("Adquisición navegador falló en " + stage + ": " + type(e).__name__)
-            failure.diagnostics = {"stage": stage, "acquisition_stage": stage,
+            failure.diagnostics = {"stage": stage, "acquisition_stage": stage, "navigation": navigation,
                                    "error_type": stage_error or initial_error_type(e),
                                    "http_status": stage_status,
                                    "requests": network, "errors": errors,

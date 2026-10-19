@@ -89,7 +89,8 @@ class Phase2Tests(unittest.TestCase):
             page.locator.side_effect = locator
             fake = MagicMock()
             fake.return_value.__enter__.return_value.chromium.launch.return_value = browser
-            with patch.dict(sys.modules, {"playwright": MagicMock(),
+            with patch("scripts.magyp.mcba.acquisition.connectivity_precheck", return_value={"http_status": 200}), \
+                    patch.dict(sys.modules, {"playwright": MagicMock(),
                                            "playwright.sync_api": SimpleNamespace(sync_playwright=fake)}):
                 result = browser_fetch(DAY, DAY)
             self.assertEqual(result.payload, path.read_bytes())

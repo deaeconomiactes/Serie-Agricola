@@ -62,7 +62,8 @@ class InitialGetTests(unittest.TestCase):
             fake = MagicMock()
             fake.return_value.__enter__.return_value.chromium.launch.side_effect = [s[0] for s in sessions]
             logs = StringIO()
-            with patch.dict(sys.modules, {'playwright': MagicMock(),
+            with patch('scripts.magyp.mcba.acquisition.connectivity_precheck', return_value={'http_status': 200}), \
+                    patch.dict(sys.modules, {'playwright': MagicMock(),
                     'playwright.sync_api': SimpleNamespace(sync_playwright=fake)}),\
                     patch.dict('os.environ', {'GITHUB_ACTIONS': 'true'}),\
                     patch('scripts.magyp.mcba.acquisition.time.sleep',
@@ -112,7 +113,7 @@ class InitialGetTests(unittest.TestCase):
             self.assertEqual(result.diagnostics['request_count'], 2)
             for browser, context, page in sessions:
                 browser.close.assert_called_once(); context.close.assert_called_once()
-                page.goto.assert_called_once_with(URL, wait_until='domcontentloaded')
+                page.goto.assert_called_once_with(URL, wait_until='commit')
             self.assertNotIn('private-session', logs.getvalue())
 
     def test_timeout_then_success_clean_session(self):
@@ -162,7 +163,7 @@ class InitialGetTests(unittest.TestCase):
             sleep.assert_called_once_with(10)
             for browser, context, page in sessions:
                 browser.close.assert_called_once(); context.close.assert_called_once()
-                page.goto.assert_called_once_with(URL, wait_until='domcontentloaded')
+                page.goto.assert_called_once_with(URL, wait_until='commit')
             self.assertNotIn('SECRET', logs.getvalue() + json.dumps(result.diagnostics))
 
     def test_date_controls_timeout_then_new_session_success(self):

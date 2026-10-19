@@ -36,7 +36,8 @@ class Phase3Tests(unittest.TestCase):
         probe.new_page.return_value.evaluate.return_value='HeadlessChrome'
         browser.new_context.side_effect=[probe,context]
         context.new_page.return_value.goto.side_effect=RuntimeError('net::ERR_ABORTED private-session-url')
-        with patch.dict(sys.modules,{'playwright':MagicMock(),
+        with patch("scripts.magyp.mcba.acquisition.connectivity_precheck", return_value={"http_status": 200}), \
+                patch.dict(sys.modules,{'playwright':MagicMock(),
                'playwright.sync_api':SimpleNamespace(sync_playwright=fake)}):
             with self.assertRaises(PipelineError) as error:
                 browser_fetch(DAY,DAY,timeout=5,channel='chromium')
