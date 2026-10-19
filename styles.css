@@ -354,3 +354,11 @@ button, select { font: inherit; }
     .chart-header { padding: 17px 16px 0; } .chart-body, .chart-body-donut { height: 285px; min-height: 285px; padding: 14px 16px 17px; } .chart-card-main .chart-body, .price-chart-card.full-width .chart-body { height: 330px; min-height: 330px; } .chart-body-heatmap { height: auto; min-height: 300px; }
     .prices-section { padding-top: 24px; } .prices-title { font-size: 1.2rem; } .price-accumulated-summary { align-items: flex-start; flex-wrap: wrap; }
 }
+
+/* Compact source metadata; also reusable by other modules. */
+.source-update-status { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:.35rem .65rem; margin:.45rem 0; color:var(--text-muted); font-size:.76rem; line-height:1.5; }
+.source-update-status[hidden] { display:none; }
+.source-update-status__badge { border:1px solid currentColor; border-radius:999px; padding:.08rem .55rem; font-weight:600; }
+.source-update-status--success .source-update-status__badge { color:#54dba1; }
+.source-update-status--warning .source-update-status__badge { color:#f4c36a; }
+.source-update-status--error .source-update-status__badge { color:#ff9191; }

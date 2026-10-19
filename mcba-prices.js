@@ -130,8 +130,10 @@
             const bundle = { daily, summary, marker: JSON.parse(markerText) };
             const result = await verifyBundle(bundle);
             await cache('write', bundle);
-            const lastValid = JSON.parse(updateText).source_status === 'MAGYP_LAST_VALID';
-            return { ...result, status: lastValid ? 'MAGYP_LAST_VALID' : 'MAGYP',
+            let updateMetadata = {};
+            try { updateMetadata = JSON.parse(updateText) || {}; } catch (_) { /* Metadata does not invalidate verified prices. */ }
+            const lastValid = updateMetadata.source_status === 'MAGYP_LAST_VALID';
+            return { ...result, updateMetadata, status: lastValid ? 'MAGYP_LAST_VALID' : 'MAGYP',
                 warning: lastValid ? 'Falló la última actualización; se conserva la última salida MAGyP válida.' : '' };
         } catch (error) {
             const previous = await cache('read');
