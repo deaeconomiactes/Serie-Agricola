@@ -372,6 +372,7 @@
                 <div class="filter-group"><label for="priceFilterGrado">Grado</label><select id="priceFilterGrado" class="filter-select"><option value="TODOS">Todos</option></select></div>
             </div>
         </details>
+        <div id="mcbaUpdateStatus" class="source-update-status" role="status" aria-live="polite" hidden></div>
         <div id="priceSourceStatus" class="price-inline-status" role="status" aria-live="polite"></div>
 
         <div id="priceStatus" class="price-status" role="status" aria-live="polite"></div>
@@ -549,7 +550,8 @@
     </footer>
     </div>
 
-    <script src="mcba-prices.js?v=mcba-integration-v1"></script>
+    <script src="update-status.js?v=1"></script>
+    <script src="mcba-prices.js?v=mcba-status-v2"></script>
     <script src="app.js?v=magyp-commodities-v1"></script>
 </body>
 </html>

@@ -342,6 +342,7 @@ let validPriceData = [];
 let legacyPriceData = [];
 let magypPriceData = [];
 let magypPriceInfo = null;
+let magypUpdateMetadata = null;
 let magypPriceWarning = '';
 let futurePriceData = [];
 let filteredPriceData = [];
@@ -563,7 +564,8 @@ async function loadPriceData() {
     const magyp = await MCBAPrices.load();
     magypPriceData = MCBAPrices.adapt(magyp.rows, MONTHS_FULL, magyp.status, formatLabel);
     magypPriceInfo = magyp.info;
-    magypPriceWarning = magyp.warning;
+    magypUpdateMetadata = magyp.updateMetadata || null;
+    magypPriceWarning = SourceUpdateStatus.describe(magypUpdateMetadata, magypPriceInfo || {}) ? '' : magyp.warning;
     rawPriceData = legacyPriceData.concat(magypPriceData);
     console.warn('Valores inválidos de planilla excluidos o normalizados:', spreadsheetInvalidCount);
     const dateSplit = filterFutureDates(rawPriceData);
@@ -1071,6 +1073,8 @@ function updatePriceSourceStatus() {
     if (!node) return;
     const filters = getPriceFilters();
     const selected = isAllSelected(filters.mercado) || filters.mercado.includes(MCBAPrices.MCBA);
+    SourceUpdateStatus.render(document.getElementById('mcbaUpdateStatus'),
+        magypUpdateMetadata, magypPriceInfo || {}, selected && priceFrequency === 'diaria' && magypPriceInfo !== null);
     const mcba = filteredPriceData.filter(row => row.mercado === MCBAPrices.MCBA);
     const sources = new Set(mcba.map(row => row.source_status));
     const parts = [];
