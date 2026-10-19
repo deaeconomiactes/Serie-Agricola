@@ -1,7 +1,23 @@
-name: MAGyP MCBA - actualización productiva manual
+name: MAGyP MCBA - productivo Windows self-hosted manual
+
+# Configuración del host (fuera del repositorio, sin credenciales en archivos del proyecto):
+# Windows 11 x64 / Windows Server 2022 x64, PowerShell 7.4+, Git for Windows con Bash,
+# Python 3.12 x64 y GitHub CLI (gh) en PATH para la cuenta que ejecuta el runner.
+# Node 24 se prepara con setup-node; la cuenta necesita escritura en su tool cache.
+# Reiniciar terminal/servicio tras instalar herramientas para actualizar PATH.
+# Usar Actions Runner actualizado; registrar desde Settings > Actions > Runners > New self-hosted runner.
+# Elegir Windows x64, descargar/verificar el paquete según la UI oficial y ejecutar, en C:\actions-runner:
+# .\config.cmd --url https://github.com/deaeconomiactes/Serie-Agricola --name serie-agricola-windows --labels serie-agricola --work _work
+# Introducir el token efímero de registro sólo en el prompt; no guardarlo en scripts, Git ni logs.
+# .\run.cmd  (mantener activo; para servicio, configurar desde la UI oficial con la misma cuenta del host).
+# Labels requeridos: self-hosted, windows, serie-agricola. El registro x64 agrega x64 además.
+# Verificar que figure Idle/Online y que la cuenta del runner pueda acceder al repo, GitHub/PyPI,
+# descargas de Playwright y https://ssma.magyp.gob.ar/frutas.precios.aspx de forma autorizada.
+# El job instala requirements-browser.txt en venv y Chromium en temporales; no necesita Edge ni sesiones guardadas.
+# El piloto sigue siendo sólo diagnóstico manual: un smoke GitHub-hosted no acredita acceso a MAGyP.
 
 on:
-  # Activar sólo después del smoke manual exitoso en GitHub/Linux:
+  # No activar hasta validar manualmente adquisición y publicación en este runner Windows:
   # schedule:
   #   - cron: '0 23 * * *' # Diario, aproximadamente 20:00 Argentina.
   workflow_dispatch:
@@ -20,42 +36,76 @@ concurrency:
 
 jobs:
   prepare:
-    runs-on: ubuntu-24.04
+    runs-on:
+      - self-hosted
+      - windows
+      - serie-agricola
+    defaults:
+      run:
+        shell: pwsh
     timeout-minutes: 15
     permissions:
       contents: write
       actions: write
     env:
       MCBA_DATE: ${{ inputs.requested_date }}
+      # Mantener LF en el helper Bash sin alterar la configuración global del host.
+      GIT_CONFIG_COUNT: '1'
+      GIT_CONFIG_KEY_0: core.autocrlf
+      GIT_CONFIG_VALUE_0: 'false'
     steps:
       - uses: actions/checkout@v6
         with:
-          persist-credentials: true
+          persist-credentials: false
           fetch-depth: 0 # Tests de regresión comparan contra 5fb5987.
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
-      - name: Directorio de captura temporal en runtime
-        run: echo "MCBA_CAPTURE_ROOT=$RUNNER_TEMP/mcba-capture" >> "$GITHUB_ENV"
+      - name: Preparar temporales y herramientas Windows en runtime
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          if ($PSVersionTable.PSVersion -lt [version]'7.4') { throw 'Se requiere PowerShell 7.4 o posterior' }
+          foreach ($tool in @('git', 'gh', 'python', 'node')) { Get-Command $tool -ErrorAction Stop | Out-Null }
+          python -c "import sys; assert sys.version_info[:2] == (3, 12)"
+          $gitRoot = Split-Path (Split-Path (Get-Command git).Source)
+          $bashCandidates = @((Join-Path $gitRoot 'bin/bash.exe'), (Join-Path (Split-Path $gitRoot) 'bin/bash.exe'))
+          $bash = $bashCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+          if (!$bash) { throw 'Se requiere Bash de Git for Windows; no usar WSL' }
+          $base = [IO.Path]::GetFullPath($env:RUNNER_TEMP).TrimEnd('\', '/')
+          $root = [IO.Path]::GetFullPath((Join-Path $base "mcba-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"))
+          if (!$root.StartsWith($base + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Temporal fuera de RUNNER_TEMP' }
+          if (Test-Path -LiteralPath $root) { throw 'El temporal de esta ejecución ya existe' }
+          New-Item -ItemType Directory -Path $root, (Join-Path $root 'tmp') | Out-Null
+          $values = @{
+            MCBA_JOB_ROOT = $root
+            MCBA_CAPTURE_ROOT = (Join-Path $root 'capture').Replace('\', '/')
+            PLAYWRIGHT_BROWSERS_PATH = Join-Path $root 'browsers'
+            TEMP = Join-Path $root 'tmp'
+            TMP = Join-Path $root 'tmp'
+          }
+          foreach ($key in $values.Keys) { "$key=$($values[$key])" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append }
+          (Split-Path $bash) | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          python -m venv (Join-Path $root 'venv')
+          (Join-Path $root 'venv/Scripts') | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - name: Dependencias fijadas y Chromium
         run: |
+          $PSNativeCommandUseErrorActionPreference = $true
           python -m pip install -r scripts/magyp/requirements-browser.txt
-          python -m playwright install --with-deps chromium
+          python -m playwright install chromium
       - name: Tests offline antes de la captura
         run: |
+          $PSNativeCommandUseErrorActionPreference = $true
           python -m unittest discover -s tests/magyp_common -v
           python -m unittest discover -s tests/magyp_mcba -v
           python -m unittest discover -s tests/ci -v
-          node --test tests/magyp_frontend/*.test.cjs
+          $frontendTests = @(Get-ChildItem -LiteralPath tests/magyp_frontend -Filter '*.test.cjs' | ForEach-Object FullName)
+          node --test @frontendTests
       - name: Captura, normalización, analytical y publicación local validada
         id: capture
         continue-on-error: true
         run: >-
           python scripts/magyp/mcba/update_mcba_dashboard.py
-          --date "$MCBA_DATE" --data-root "$MCBA_CAPTURE_ROOT" --allow-web
+          --date "$env:MCBA_DATE" --data-root "$env:MCBA_CAPTURE_ROOT" --allow-web
       - name: Validar bundle final
         env:
           CAPTURE_OUTCOME: ${{ steps.capture.outcome }}
@@ -71,6 +121,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         env:
           CAPTURE_OUTCOME: ${{ steps.capture.outcome }}
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
@@ -94,6 +145,13 @@ jobs:
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git commit -m 'chore: actualizar MCBA MAGyP y estado de fuente'
+            # Autenticación efímera por entorno: nunca escribir tokens en Git config.
+            header=$(python -c 'import base64, os; print(base64.b64encode(("x-access-token:" + os.environ["GH_TOKEN"]).encode()).decode())')
+            echo "::add-mask::$header"
+            export GIT_CONFIG_COUNT=2
+            export GIT_CONFIG_KEY_1=http.https://github.com/.extraheader
+            export GIT_CONFIG_VALUE_1="AUTHORIZATION: basic $header"
+            trap 'unset GH_TOKEN GIT_CONFIG_VALUE_1 header' EXIT
             mkdir -p "$MCBA_CAPTURE_ROOT/reports"
             bash scripts/ci/push_data_main.sh 2>&1 | tee "$MCBA_CAPTURE_ROOT/reports/MCBA_PUBLICATION.log"
           fi
@@ -116,28 +174,38 @@ jobs:
             data/magyp/dashboard/mcba/MCBA_MAGYP_UPDATE_STATUS.json
             data/magyp/dashboard/mcba/_SUCCESS.json
       - name: Respaldo RAW sin estado de sesión, separado de Pages
-        if: ${{ always() }}
+        if: ${{ always() && env.MCBA_CAPTURE_ROOT != '' }}
         uses: actions/upload-artifact@v5
         with:
           name: mcba-raw-audit
           retention-days: 90
           if-no-files-found: ignore
           path: |
-            ${{ runner.temp }}/mcba-capture/raw/mcba/**/manifest.json
-            ${{ runner.temp }}/mcba-capture/raw/mcba/**/response.xlsx
+            ${{ env.MCBA_CAPTURE_ROOT }}/raw/mcba/**/manifest.json
+            ${{ env.MCBA_CAPTURE_ROOT }}/raw/mcba/**/response.xlsx
       - name: Resultado público del intento
-        if: ${{ always() }}
+        if: ${{ always() && env.MCBA_CAPTURE_ROOT != '' }}
         uses: actions/upload-artifact@v5
         with:
           name: mcba-update-diagnostics
           retention-days: 14
           if-no-files-found: ignore
           path: |
-            ${{ runner.temp }}/mcba-capture/reports/MCBA_INTEGRATION_ATTEMPT.json
-            ${{ runner.temp }}/mcba-capture/reports/MCBA_PUBLICATION.log
+            ${{ env.MCBA_CAPTURE_ROOT }}/reports/MCBA_INTEGRATION_ATTEMPT.json
+            ${{ env.MCBA_CAPTURE_ROOT }}/reports/MCBA_PUBLICATION.log
             data/magyp/dashboard/mcba/MCBA_MAGYP_UPDATE_STATUS.json
       - name: Marcar fallo de adquisición aunque el último válido se conserve
         if: ${{ steps.capture.outcome == 'failure' }}
         run: |
           echo '[FETCH] ERROR MCBA; última salida preservada. Consultar diagnóstico MAGYP_LAST_VALID.'
           exit 1
+      - name: Limpiar exclusivamente temporales aislados de esta ejecución
+        if: ${{ always() }}
+        run: |
+          if (!$env:MCBA_JOB_ROOT -or !(Test-Path -LiteralPath $env:MCBA_JOB_ROOT)) { exit 0 }
+          $base = [IO.Path]::GetFullPath($env:RUNNER_TEMP).TrimEnd('\', '/')
+          $expected = [IO.Path]::GetFullPath((Join-Path $base "mcba-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"))
+          $target = (Resolve-Path -LiteralPath $env:MCBA_JOB_ROOT).ProviderPath
+          if ($target -ne $expected -or !$target.StartsWith($base + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'No limpiar fuera del temporal autorizado' }
+          if ((Get-Item -LiteralPath $target).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'No limpiar un enlace/junction' }
+          Remove-Item -LiteralPath $target -Recurse -Force -ErrorAction Stop
