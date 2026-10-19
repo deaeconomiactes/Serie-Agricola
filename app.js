@@ -34,7 +34,7 @@ const COMMODITY_SOURCE_CONFIG = {
 
 // Public reference prices share the module; each selector loads only its own family.
 const MAGYP_REFERENCE_CONFIG = {
-    magyp_internal: { label: 'Precios internos MAGyP', file: 'internal.csv', monthlyOnly: true,
+    magyp_internal: { label: 'Precio interno mensual — MAGyP', file: 'internal.csv', monthlyOnly: true,
         note: 'Precios internos mensuales publicados por MAGyP, atribuidos a BCBA, en ARS/TN por plaza. El histórico local permanece disponible por separado.' },
     magyp_board: { label: 'Pizarra / Cámara — MAGyP', file: 'board.csv',
         note: 'Pizarra provisional por plaza en ARS/TN, sujeta a ajuste. Los ceros no se interpretan como precios. No equivale a operaciones SIO.' },
@@ -43,7 +43,7 @@ const MAGYP_REFERENCE_CONFIG = {
     magyp_fob: { label: 'FOB oficial — MAGyP', file: 'fob.csv',
         note: 'Posiciones textuales, circular y ventana de embarque de la API oficial. Producto, moneda, unidad y plaza no informados por la API: pendientes de diccionario. No se calcula un FOB único por producto.' },
     magyp_futures: { label: 'Futuros / cierre externo — MAGyP', file: 'futures.csv',
-        note: 'Cierres publicados de Chicago y Kansas en USD/TN por producto y vencimiento. No hay serie continua ni roll automático. Las cotizaciones físicas FOB de la misma página se excluyen.' }
+        note: 'Cierres publicados de Chicago y Kansas en USD/TN por producto y vencimiento. La fecha de cotización es la observación del precio; Vencimiento / Posición identifica el contrato y no es una fecha de observación. No hay serie continua ni roll automático. Las cotizaciones físicas FOB de la misma página se excluyen.' }
 };
 Object.entries(MAGYP_REFERENCE_CONFIG).forEach(([key, config]) => {
     COMMODITY_SOURCE_CONFIG[key] = { ...config, subtitle: config.label, reference: true,
@@ -1678,6 +1678,12 @@ function updateCommoditySourcePresentation() {
     if (conditionGroup) { conditionGroup.hidden = !config.reference; conditionGroup.style.display = config.reference ? '' : 'none'; }
     const conditionHeader = document.getElementById('commodityLatestConditionHeader');
     if (conditionHeader) conditionHeader.hidden = !config.reference;
+    const futures = commoditySource === 'magyp_futures';
+    const conditionLabel = document.getElementById('commodityConditionLabel');
+    if (conditionLabel) conditionLabel.textContent = futures ? 'Vencimiento / Posición' : 'Condición / posición';
+    if (conditionHeader) conditionHeader.textContent = futures ? 'Vencimiento / Posición' : 'Condición / fuente';
+    const periodHeader = document.getElementById('commodityLatestPeriodHeader');
+    if (periodHeader) periodHeader.textContent = futures ? 'Cotización' : 'Período';
     if (note) note.textContent = config.note;
     const operationsLabel = document.getElementById('commodityKpiOperationsLabel');
     if (operationsLabel) operationsLabel.textContent = config.operationsLabel;
@@ -1702,7 +1708,10 @@ function updateCommoditySourcePresentation() {
     if (latestVariationLong) latestVariationLong.textContent = daily ? 'Var. 30 días' : 'Var. interanual';
     if (frequency) {
         const dailyOption = frequency.querySelector('option[value="diaria"]');
-        if (dailyOption) dailyOption.disabled = Boolean(config.monthlyOnly);
+        if (dailyOption) {
+            dailyOption.disabled = Boolean(config.monthlyOnly);
+            dailyOption.hidden = Boolean(config.monthlyOnly);
+        }
         if (config.monthlyOnly && frequency.value === 'diaria') {
             frequency.value = 'mensual';
             commodityFrequency = 'mensual';
@@ -2003,7 +2012,9 @@ function populateCommoditySelect(id, values, allLabel, defaultValue) {
     const previous = initialized ? select.value : '';
     select.innerHTML = `<option value="TODOS">${allLabel}</option>`;
     unique.forEach(value => {
-        const option = new Option(id === 'commodityFilterMarket' ? commodityMarketLabel(value) : value, value);
+        const label = id === 'commodityFilterMarket' ? commodityMarketLabel(value)
+            : id === 'commodityFilterCondition' ? commodityPositionLabel(value) : value;
+        const option = new Option(label, value);
         select.appendChild(option);
     });
     const preferred = initialized && (commodityIsAll(previous) || unique.includes(previous)) ? previous : defaultValue;
@@ -2145,9 +2156,18 @@ function commoditySeriesContext() {
     };
 }
 
+function commodityPositionLabel(value) {
+    const raw = String(value || '');
+    if (commoditySource !== 'magyp_futures') return raw;
+    const months = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+    const match = raw.match(/^([A-Z]{3})(\d{4})$/);
+    const month = match ? months.indexOf(match[1]) : -1;
+    return month >= 0 ? `${MONTHS_FULL[month]} ${match[2]} (${raw})` : raw;
+}
+
 function commoditySeriesLabel(row, options = {}) {
     const label = options.marketMode ? commodityMarketLabel(row.mercado) : (row.commodity || 'Sin commodity');
-    if (COMMODITY_SOURCE_CONFIG[commoditySource]?.reference && row.condicion_comercial) return `${label} · ${row.condicion_comercial}${row.circular ? ' · circular ' + row.circular : ''}`;
+    if (COMMODITY_SOURCE_CONFIG[commoditySource]?.reference && row.condicion_comercial) return `${label} · ${commoditySource === 'magyp_futures' ? 'Vencimiento: ' : ''}${commodityPositionLabel(row.condicion_comercial)}${row.circular ? ' · circular ' + row.circular : ''}`;
     if (options.includeCondition && row.condicion_comercial && row.condicion_comercial !== 'Sin especificar') return `${label} (${row.condicion_comercial})`;
     return label;
 }
@@ -2181,9 +2201,9 @@ function commodityTooltipLines(row, value, period, metricLabel = 'Precio mediano
         `${metricLabel}: ${formatNumber(value)}${priceUnit}`,
         `Fuente: ${source}`,
         `Tipo: ${row?.tipo_precio || 'Sin dato'}`,
-        ...(row?.condicion_comercial && row.condicion_comercial !== 'Sin especificar' ? [`Condición: ${row.condicion_comercial}`] : []),
+        ...(row?.condicion_comercial && row.condicion_comercial !== 'Sin especificar' ? [`${commoditySource === 'magyp_futures' ? 'Vencimiento / Posición' : 'Condición'}: ${commodityPositionLabel(row.condicion_comercial)}`] : []),
         ...(row?.circular ? [`Circular: ${row.circular}`] : []),
-        `Período: ${commodityPeriodLabel(period || commodityLatestDate(row))}`,
+        `${commoditySource === 'magyp_futures' ? 'Cotización' : 'Período'}: ${commodityPeriodLabel(commoditySource === 'magyp_futures' ? row?.fecha || row?.fecha_ultima || period : period || commodityLatestDate(row))}`,
         ...(reference && row?.updated_at_utc ? [`Actualizado (UTC): ${formatCommodityCapture(row.updated_at_utc)}`] : []),
         ...(Number.isFinite(commodityNumber(shortVariation)) ? [`Var. ${daily ? '7 días' : 'mensual'}: ${commodityPercent(shortVariation)}`] : []),
         ...(Number.isFinite(commodityNumber(longVariation)) ? [`Var. ${daily ? '30 días' : 'interanual'}: ${commodityPercent(longVariation)}`] : [])
@@ -2398,7 +2418,7 @@ function renderCommodityLatest(latestRows) {
     status.classList.remove('is-visible');
     body.innerHTML = [...latestRows].sort((a, b) => `${a.commodity}|${a.mercado}|${a.moneda}|${a.tipo_precio}`.localeCompare(`${b.commodity}|${b.mercado}|${b.moneda}|${b.tipo_precio}`)).map(row => {
         const state = row.estado || 'Sin dato';
-        return `<tr><td>${escapeHtml(row.commodity)}</td><td>${escapeHtml(commoditySourceShort(row))}</td><td>${escapeHtml(commodityMarketLabel(row.mercado))}</td><td>${escapeHtml(row.moneda)}</td><td>${escapeHtml(row.unidad)}</td><td>${escapeHtml(row.tipo_precio)}</td><td>${escapeHtml(commodityPeriodLabel(commodityLatestDate(row)))}</td><td>${formatNumber(commodityLatestPrice(row))}</td><td>${formatNumber(commodityNumber(row.operaciones_ultimo_periodo ?? row.operaciones_ultimo_dia))}</td><td>${commodityPercent(row.variacion_mensual_pct ?? row.variacion_7d_pct)}</td><td>${commodityPercent(row.variacion_interanual_pct ?? row.variacion_30d_pct)}</td><td><span class="commodity-state ${commodityStateClass(state)}">${escapeHtml(state)}</span></td><td${COMMODITY_SOURCE_CONFIG[commoditySource]?.reference ? '' : ' hidden'}>${escapeHtml(row.condicion_comercial || '')}${row.circular ? ' · Circular ' + escapeHtml(row.circular) : ''}${row.source_url ? ' · <a href="' + escapeHtml(row.source_url) + '" target="_blank" rel="noopener">Fuente</a>' : ''}</td></tr>`;
+        return `<tr><td>${escapeHtml(row.commodity)}</td><td>${escapeHtml(commoditySourceShort(row))}</td><td>${escapeHtml(commodityMarketLabel(row.mercado))}</td><td>${escapeHtml(row.moneda)}</td><td>${escapeHtml(row.unidad)}</td><td>${escapeHtml(row.tipo_precio)}</td><td>${escapeHtml(commodityPeriodLabel(commodityLatestDate(row)))}</td><td>${formatNumber(commodityLatestPrice(row))}</td><td>${formatNumber(commodityNumber(row.operaciones_ultimo_periodo ?? row.operaciones_ultimo_dia))}</td><td>${commodityPercent(row.variacion_mensual_pct ?? row.variacion_7d_pct)}</td><td>${commodityPercent(row.variacion_interanual_pct ?? row.variacion_30d_pct)}</td><td><span class="commodity-state ${commodityStateClass(state)}">${escapeHtml(state)}</span></td><td${COMMODITY_SOURCE_CONFIG[commoditySource]?.reference ? '' : ' hidden'}>${escapeHtml(commodityPositionLabel(row.condicion_comercial))}${row.circular ? ' · Circular ' + escapeHtml(row.circular) : ''}${row.source_url ? ' · <a href="' + escapeHtml(row.source_url) + '" target="_blank" rel="noopener">Fuente</a>' : ''}</td></tr>`;
     }).join('');
 }
 

@@ -34,6 +34,33 @@ test('initial MAGyP internal source and source switches set frequency and KPI se
     }
 });
 
+test('futures observation dates remain separate from May 2027 contract maturity',()=>{
+    const ctx=context();
+    const nodes=new Map();
+    ctx.document={getElementById(id){
+        if(!nodes.has(id))nodes.set(id,{value:'mensual',textContent:'',style:{},querySelector(){return this.daily||(this.daily={});}});
+        return nodes.get(id);
+    }};
+    ctx.sample={commodity:'SOJA',mercado:'CHICAGO',fuente:'MAGyP',moneda:'USD',unidad:'TN',tipo_precio:'Futuro / cierre',
+        fecha:'2026-10-09',periodo_ym:'2026-10',periodo_ultimo:'2026-10-09',fecha_ultima:'2026-10-09',
+        condicion_comercial:'MAY2027',position_raw:'MAY2027',shipment_window:'2027-05',series_id:'one',
+        price:400,precio_mediana:400,precio_mediana_ultimo_periodo:400,operaciones:1};
+    vm.runInContext("commoditySource='magyp_futures';commodityFrequency='diaria';updateCommoditySourcePresentation();updateCommodityKpis([sample],[sample]);",ctx);
+    assert.equal(nodes.get('commodityKpiUpdate').textContent,'09/10/2026');
+    assert.equal(nodes.get('commodityConditionLabel').textContent,'Vencimiento / Posición');
+    assert.equal(nodes.get('commodityLatestPeriodHeader').textContent,'Cotización');
+    assert.equal(vm.runInContext('commodityPeriodValue(sample)',ctx),'2026-10-09');
+    assert.equal(vm.runInContext('commodityLatestDate(sample)',ctx),'2026-10-09');
+    assert.match(vm.runInContext('commoditySeriesLabel(sample)',ctx),/Vencimiento: Mayo 2027 \(MAY2027\)/);
+    const lines=JSON.parse(vm.runInContext('JSON.stringify(commodityTooltipLines(sample,400,"2026-10-09"))',ctx));
+    assert.ok(lines.includes('Cotización: 09/10/2026'));
+    assert.ok(lines.join(' ').includes('Mayo 2027 (MAY2027)'));
+    vm.runInContext("commoditySource='magyp_internal';commodityFrequency='mensual';updateCommoditySourcePresentation();",ctx);
+    const daily=nodes.get('commodityFilterFrequency').daily;
+    assert.equal(daily.disabled,true);assert.equal(daily.hidden,true);
+    assert.equal(nodes.get('commoditySourceSubtitle').textContent,'Precio interno mensual — MAGyP');
+});
+
 test('hover tooltip stays compact with long source links and equal-price series',()=>{
     const ctx=context();
     ctx.sample={commodity:'SOJA',mercado:'Rosario',fuente:'MAGyP',moneda:'ARS',unidad:'TN',
