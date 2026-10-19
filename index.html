@@ -446,7 +446,7 @@
             <div>
                 <span class="section-eyebrow">Fuente operativa independiente</span>
                 <h2 class="commodities-title">Commodities agrícolas</h2>
-                <p id="commoditySourceSubtitle" class="commodities-subtitle">Precios internos MAGyP</p>
+                <p id="commoditySourceSubtitle" class="commodities-subtitle">Precio interno mensual — MAGyP</p>
                 <p id="commodityDataFreshness" class="commodity-data-freshness" role="status" aria-live="polite"></p>
                 <p id="commodityDataLastOperation" class="commodity-data-meta" role="status" aria-live="polite"></p>
                 <p id="commodityDataOperationRange" class="commodity-data-meta" role="status" aria-live="polite"></p>
@@ -460,7 +460,7 @@
             <div class="filter-group">
                 <label class="filter-label" for="commodityFilterSource">Tipo de referencia / Fuente</label>
                 <select id="commodityFilterSource" class="filter-select">
-                    <option value="magyp_internal" selected>Precios internos MAGyP</option>
+                    <option value="magyp_internal" selected>Precio interno mensual — MAGyP</option>
                     <option value="sio">SIO Granos — operaciones informadas</option>
                     <option value="local_mensual">Histórico local mensual — precios internos</option>
                 </select>
@@ -492,7 +492,7 @@
                 <select id="commodityFilterType" class="filter-select"><option value="TODOS">Todos</option></select>
             </div>
             <div class="filter-group" id="commodityConditionGroup" hidden>
-                <label class="filter-label" for="commodityFilterCondition">Condición / posición</label>
+                <label class="filter-label" id="commodityConditionLabel" for="commodityFilterCondition">Condición / posición</label>
                 <select id="commodityFilterCondition" class="filter-select"><option value="TODOS">Todas</option></select>
             </div>
             <div class="filter-group">
@@ -531,7 +531,7 @@
 
         <div class="chart-card commodity-latest-card commodity-latest-featured">
             <div class="chart-header"><h2 class="chart-title" id="commodityLatestTitle">Últimos precios por serie</h2><p class="chart-desc" id="commodityLatestDesc">Precio mediano del último período disponible, con plaza y fuente visibles</p></div>
-            <div class="commodity-table-wrap"><table class="commodity-latest-table"><thead><tr><th>Commodity</th><th>Fuente</th><th>Mercado / plaza</th><th>Moneda</th><th>Unidad</th><th>Tipo</th><th>Período</th><th id="commodityLatestPriceHeader">Precio de referencia</th><th id="commodityLatestCountHeader">Observaciones</th><th id="commodityLatestVariationShort">Var. mensual</th><th id="commodityLatestVariationLong">Var. interanual</th><th>Estado</th><th id="commodityLatestConditionHeader" hidden>Condición / fuente</th></tr></thead><tbody id="commodityLatestBody"></tbody></table><div id="commodityLatestStatus" class="commodity-inline-status commodity-table-status is-visible">No hay últimos precios para mostrar.</div></div>
+            <div class="commodity-table-wrap"><table class="commodity-latest-table"><thead><tr><th>Commodity</th><th>Fuente</th><th>Mercado / plaza</th><th>Moneda</th><th>Unidad</th><th>Tipo</th><th id="commodityLatestPeriodHeader">Período</th><th id="commodityLatestPriceHeader">Precio de referencia</th><th id="commodityLatestCountHeader">Observaciones</th><th id="commodityLatestVariationShort">Var. mensual</th><th id="commodityLatestVariationLong">Var. interanual</th><th>Estado</th><th id="commodityLatestConditionHeader" hidden>Condición / fuente</th></tr></thead><tbody id="commodityLatestBody"></tbody></table><div id="commodityLatestStatus" class="commodity-inline-status commodity-table-status is-visible">No hay últimos precios para mostrar.</div></div>
         </div>
 
         <div class="chart-card commodity-semaphore-card">
