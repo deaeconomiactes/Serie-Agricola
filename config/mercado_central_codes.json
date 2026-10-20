@@ -1,0 +1,48 @@
+{
+  "evidence_url": "https://mercadocentral.gob.ar/img/Precios-referentes.jpg",
+  "evidence_sha256": "056e48c50208bf24964f88e89351bb297631f8e7445995b9ed3aa0df7a4b2380",
+  "policy": "Only explicit codes printed in the official reference; unknown codes preserved unchanged.",
+  "package": {
+    "AP": "ARGEN-POOL",
+    "AT": "ATADO",
+    "BA": "BANDEJA",
+    "BO": "BOLSA",
+    "CA": "CAJA",
+    "CJ": "CAJON",
+    "CT": "CAJA/TELESCOP",
+    "GR": "GRANEL",
+    "IF": "IFCO",
+    "JA": "JAULA",
+    "MA": "MARK 4",
+    "PE": "PERDIDO",
+    "PL": "PLAFOM",
+    "PQ": "PAQUETE",
+    "RT": "RISTRA 100",
+    "SM": "SAN MARTIN",
+    "ST": "STANDART",
+    "SU": "SUDAFRICANO",
+    "TO": "TORITO",
+    "TT": "TORO"
+  },
+  "quality": {
+    "1A": "Primera",
+    "2A": "Segunda",
+    "3A": "Tercera",
+    "SP": "Superior",
+    "EL": "Elegido",
+    "CL": "Comercial",
+    "CN": "Común",
+    "EC": "Económico"
+  },
+  "grade": {
+    "INV": "Invernaculo",
+    "TRA": "Tratado",
+    "CEP": "Cepillado",
+    "LAV": "Lavado",
+    "ATM": "Atmósfera",
+    "PRE": "Preenfriado",
+    "MAD": "Maduro",
+    "SF": "Smart Fresh",
+    "CAM": "Cámara Frío"
+  }
+}

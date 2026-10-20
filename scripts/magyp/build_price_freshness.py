@@ -87,8 +87,18 @@ def build(root=ROOT,mcba_status=None,sio_status=None):
         future=sum(d>today for d in dates)
         dates=[d for d in dates if d<=today]
         if future: note+=f' {future} filas futuras excluidas del indicador, igual que en el dashboard; originales conservados.'
-        add(key,'Legacy',market,'mensual' if key=='mcba_monthly' else 'según planilla',max(dates,default=None),None,False,None,note,sorted({r.get('moneda') or 'Sin identificar' for r in subset}),
-            sorted({r.get('unidad_precio_observado') or r.get('unidad') or 'Sin identificar' for r in subset}))
+        if key=='mcba_monthly' and (root/'data/mercado_central/dashboard/mcba/_SUCCESS.json').exists():
+            from scripts.mercado_central.update_mcba_monthly import read_published as central_read
+            monthly=central_read(root/'data/mercado_central')
+            state=read_json(root/'data/mercado_central/dashboard/mcba/UPDATE_STATUS.json',{})
+            add(key,'Mercado Central de Buenos Aires',market,'mensual derivada de observaciones diarias',
+                max(r['last_observation_date'] for r in monthly),max(r['capture_timestamp'] for r in monthly),True,
+                'update-mcba-monthly-central.yml',
+                'Media mensual de modales diarios por serie y días observados; no es promedio mensual oficial MAGyP. Legacy en períodos/categorías sin cobertura.',
+                ['ARS'],['kg'],state)
+        else:
+            add(key,'Legacy',market,'mensual' if key=='mcba_monthly' else 'según planilla',max(dates,default=None),None,False,None,note,sorted({r.get('moneda') or 'Sin identificar' for r in subset}),
+                sorted({r.get('unidad_precio_observado') or r.get('unidad') or 'Sin identificar' for r in subset}))
     local=read_csv(root/'data/commodities_local_mensual/dashboard/COMMODITIES_LOCAL_MENSUAL_DASHBOARD_RESUMEN.csv')[0]
     add('local_mensual','Legacy precios internos','plazas informadas','mensual',local.get('fecha_max'),None,False,None,
         'Histórico local mensual disponible por separado; sin reemplazar MAGyP.',
