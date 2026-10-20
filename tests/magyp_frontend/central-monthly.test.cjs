@@ -42,7 +42,7 @@ test('coverage by month/category preserves legacy holes and Corrientes without f
 });
 test('source load failure is explicit legacy fallback; never substitutes daily MAGyP for monthly',async()=>{
  const previous=global.fetch;global.fetch=async()=>{throw Error('offline');};
- try {const result=await monthly.load();assert.deepEqual(result.rows,[]);assert.match(result.warning,/legacy/);}
+ try {const result=await monthly.load();assert.deepEqual(result.rows,[]);assert.match(result.warning,/histórico validado/); assert.doesNotMatch(result.warning,/legacy|fallback|pipeline/i);}
  finally{global.fetch=previous;}
 });
 test('module routes daily MAGyP and monthly Central separately; annual remains legacy',()=>{
@@ -57,4 +57,41 @@ test('module routes daily MAGyP and monthly Central separately; annual remains l
  assert.equal(vm.runInContext("getPriceSourceRows('diaria')[0].data_source",context),'MAGYP');
  assert.equal(vm.runInContext("getPriceSourceRows('mensual')[0].data_source",context),'MERCADO_CENTRAL');
  assert.equal(vm.runInContext("getPriceSourceRows('anual')[0].data_source",context),'LEGACY');
+});
+
+test('official-only monthly selection is one homogeneous series without technical source split',()=>{
+ const context=vm.createContext({console,document:{addEventListener(){}},MCBAPrices,MCBAMonthly:monthly});
+ vm.runInContext(fs.readFileSync('app.js','utf8'),context);
+ const result=JSON.parse(vm.runInContext(`JSON.stringify((()=>{
+   const base={mercado:MCBAPrices.MCBA,especie:'Manzana',variedad:'Red',procedencia:'Río Negro',
+     data_source:'MERCADO_CENTRAL',precioObservado:100,precioKgEstimado:100,confianzaConversion:'Alta'};
+   return preparePriceEvolutionData([{...base,fecha:'2026-01-01'}, {...base,fecha:'2026-02-01'}],
+     'mensual',{especie:['TODOS']});
+ })())`,context));
+ assert.equal(result.series.length,1);
+ assert.ok(!result.splitDimensions.includes('data_source'));
+ assert.doesNotMatch(result.series[0].label,/legacy|fallback|pipeline/i);
+});
+
+test('MCBA monthly metadata describes selected coverage and does not label historical years current',()=>{
+ const nodes={};
+ const node=id=>nodes[id]||(nodes[id]={value:id==='priceFilterMercado'?MCBAPrices.MCBA:'TODOS',
+   classList:{toggle(){}},ownerDocument:{createElement:()=>({})},replaceChildren(){this.children=[];},
+   append(...items){this.children.push(...items);}});
+ const context=vm.createContext({console,document:{addEventListener(){},getElementById:node},
+   MCBAPrices,MCBAMonthly:monthly,SourceUpdateStatus:require('../../update-status.js')});
+ vm.runInContext(fs.readFileSync('app.js','utf8'),context);
+ vm.runInContext(`priceFrequency='mensual';
+   const base={mercado:MCBAPrices.MCBA,rubro:'Frutas',especie:'Manzana',precioObservado:100};
+   filteredPriceData=[{...base,fecha:'2024-01-01',data_source:'LEGACY',source_status:'LEGACY'}];
+   priceFreshnessBySource.mcba_monthly={status:'UPDATED',last_observation_date:'2026-10-19'};
+   updatePriceSourceStatus();`,context);
+ assert.match(nodes.mcbaMonthlyUpdateStatus.children[0].textContent,/Fuente estática/);
+ assert.doesNotMatch(nodes.priceSourceStatus.textContent,/legacy|fallback|pipeline/i);
+ assert.match(nodes.priceSourceStatus.textContent,/Fuente: Mercado Central de Buenos Aires/);
+ vm.runInContext(`filteredPriceData=[{...base,fecha:'2026-10-01',data_source:'MERCADO_CENTRAL',source_status:'MERCADO_CENTRAL'}];updatePriceSourceStatus();`,context);
+ assert.match(nodes.mcbaMonthlyUpdateStatus.children[0].textContent,/Actualizado/);
+ assert.doesNotMatch(nodes.mcbaMonthlyUpdateStatus.title,/pipeline/i);
+ assert.match(nodes.priceSourceStatus.textContent,/Agregación mensual derivada/);
+ assert.match(nodes.priceSourceStatus.textContent,/Último período:/);
 });

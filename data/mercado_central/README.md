@@ -20,5 +20,13 @@ La integración de lectura del navegador está en `mcba-monthly.js`.
 
 Guía completa: [MCBA_MERCADO_CENTRAL_MONTHLY.md](../../docs/MCBA_MERCADO_CENTRAL_MONTHLY.md).
 
+Histórico y cutover: [MCBA_HISTORICAL_COVERAGE.md](../../docs/MCBA_HISTORICAL_COVERAGE.md).
+`reports/MCBA_HISTORY_DISCOVERY.json` conserva evidencia de índices oficiales y
+`reports/MCBA_HISTORY_INVENTORY.json`/`.csv` comparan cobertura por año. El candidato
+2017–2018 en USD se archiva en `raw/history/` y `normalized/history/`, excluidos de
+Git y del runtime ARS. Los scripts `discover_history.py` y `audit_history.py` están
+en el mismo directorio de scripts de la fuente. No se retira el archivo mensual
+de 2024–2025: falta un reemplazo suficiente y comparable.
+
 No guardar aquí copias manuales, temporales, credenciales ni archivos extraídos
 que no pertenezcan a las planillas de precios autorizadas.

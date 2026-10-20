@@ -50,7 +50,7 @@ test('MCBA daily evolution and ranking label and separate MAGyP from uncovered l
     const parsed = JSON.parse(result);
     assert.equal(parsed.evolution.length,2);
     assert.ok(parsed.evolution.some(r=>r.label==='MAGyP'));
-    assert.ok(parsed.evolution.some(r=>r.label==='Legacy'));
+    assert.ok(parsed.evolution.some(r=>r.label==='Archivo histórico MCBA'));
     assert.equal(parsed.ranking.length,2);
     assert.ok(parsed.ranking.some(label=>label.includes('MAGyP')));
 });
