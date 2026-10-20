@@ -1,1 +1,6 @@
+# XLSX: versión fijada compartida con MCBA MAGyP.
+-r ../magyp/requirements.txt
+# Dependencia transitiva de openpyxl, fijada para reproducir este workflow.
+et-xmlfile==2.0.0
+# XLS BIFF diario publicado dentro de los ZIP Mercado Central.
 xlrd==2.0.2
