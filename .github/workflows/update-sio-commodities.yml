@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: serie-agricola-data-writer
@@ -19,6 +20,8 @@ jobs:
     steps:
       - name: Descargar repositorio
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Configurar Python
         uses: actions/setup-python@v5
@@ -34,15 +37,20 @@ jobs:
           echo "Fecha de corrida UTC: $(date -u '+%Y-%m-%d %H:%M:%S')"
 
       - name: Capturar snapshot latest
-        run: python explorar_sio_granos.py --update-latest --allow-web --save-response
+        id: capture
+        continue-on-error: true
+        run: python explorar_sio_granos.py --update-latest --allow-web --save-response 2>&1 | tee "$RUNNER_TEMP/sio-capture.log"
 
       - name: Integrar snapshot e histórico liviano
+        if: steps.capture.outcome == 'success'
         run: python integrar_commodities_sio.py
 
       - name: Auditar resultado
+        if: steps.capture.outcome == 'success'
         run: python auditar_commodities_sio.py
 
       - name: Validar actualización dashboard si existe
+        if: steps.capture.outcome == 'success'
         shell: bash
         run: |
           if [ -f validar_actualizacion_sio_dashboard.py ]; then
@@ -52,12 +60,17 @@ jobs:
           fi
 
       - name: Regenerar archivos dashboard-ready
+        if: steps.capture.outcome == 'success'
         run: python preparar_commodities_dashboard.py
 
+      - name: Consolidar frescura transaccional
+        if: steps.capture.outcome == 'success'
+        run: python scripts/magyp/build_price_freshness.py --sio-status UPDATED
       - name: Publicar sólo salidas livianas
+        if: steps.capture.outcome == 'success'
         shell: bash
         run: |
-          git add data/commodities_sio/dashboard/*.csv \
+          git add data/magyp/reports/PRICE_FRESHNESS_STATUS.json data/commodities_sio/dashboard/*.csv \
             data/commodities_sio/reports/REPORTE_ACTUALIZACION_DIARIA_SIO.md \
             data/commodities_sio/reports/RESUMEN_ACTUALIDAD_COMMODITIES_SIO.csv
           echo "Archivos candidatos a publicar:"
@@ -70,3 +83,31 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "chore: actualizar snapshot diario SIO"
           git push
+
+      - name: Conservar datos e informar captura SIO fallida
+        if: steps.capture.outcome == 'failure'
+        run: |
+          python - <<'PY'
+          import os, subprocess, sys
+          from pathlib import Path
+          log=Path(os.environ['RUNNER_TEMP'])/'sio-capture.log'
+          text=log.read_text(encoding='utf-8',errors='replace')
+          status='SOURCE_UNAVAILABLE' if 'No se pudo actualizar SIO:' in text else 'PIPELINE_ERROR'
+          subprocess.run([sys.executable,'scripts/magyp/build_price_freshness.py','--sio-status',status],check=True)
+          with open(os.environ['GITHUB_ENV'],'a') as output: output.write('SIO_RESULT='+status+'\n')
+          PY
+      - name: Publicar sólo metadata de fallo SIO
+        id: publish_fallback
+        if: steps.capture.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/ci/publish_price_freshness.sh
+      - name: Desplegar explícitamente dashboard SIO
+        if: steps.capture.outcome == 'success' || steps.publish_fallback.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main
+
+      - name: Error visible de datos o código SIO
+        if: env.SIO_RESULT == 'PIPELINE_ERROR'
+        run: exit 1

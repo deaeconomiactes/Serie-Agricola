@@ -341,7 +341,10 @@ def fetch(source,requested,as_of,root):
         with build_opener(NoRedirect()).open(Request(url,headers={'User-Agent':'Serie-Agricola references/1.0'}),timeout=20) as response:
             body=response.read(MAX_BYTES+1); status=response.status
             ctype=response.headers.get('Content-Type','');encoding=response.headers.get_content_charset() or 'utf-8'
-    except (HTTPError,URLError,OSError): raise Error('Servicio HTTP no disponible; última salida preservada')
+    except (HTTPError,URLError,OSError) as exc:
+        error=Error('Servicio HTTP no disponible; última salida preservada')
+        error.source_unavailable=True
+        raise error from exc
     print(f'[FETCH] {source} HTTP {status}')
     if status!=200 or len(body)>MAX_BYTES: raise Error('Status/tamaño inválido')
     obj=project(body,source,encoding)
@@ -354,7 +357,10 @@ def fetch(source,requested,as_of,root):
             columns=re.findall(r'addSingleLineEdit\("[^"\n]+",\d+,"v(TP|MA|CEBC|CEBF|SOR|SO|GI|AS|AG)","([^"\n]+)"',dictionary.decode('utf-8'))
             if columns!=list(zip(FAS_CODES,FAS_LABELS)): raise Error('Orden/etiquetas FAS cambiaron')
             obj['columns']=columns; dictionary_hash=digest(dictionary)
-        except (HTTPError,URLError,OSError,UnicodeError): raise Error('Diccionario FAS no disponible')
+        except (HTTPError,URLError,OSError) as exc:
+            error=Error('Diccionario FAS no disponible');error.source_unavailable=True
+            raise error from exc
+        except UnicodeError: raise Error('Diccionario FAS inválido')
     no_publication=source=='fob' and (obj==[] or obj=={'posts':[]})
     rows=[] if no_publication else parse(obj,source,as_of,requested)
     stamp=datetime.now(timezone.utc).isoformat().replace('+00:00','Z')
@@ -530,7 +536,7 @@ def validate_bundle(body,source):
 
 def run(source,root,as_of,requested,allow_web=False):
     with lock(root):
-        if allow_web and fetch(source,requested,as_of,root) is None: return
+        if allow_web and fetch(source,requested,as_of,root) is None: return 'NO_PUBLICATION'
         folders=sorted((root/'raw'/'commodities'/source).glob('*'))
         for folder in folders:
             if folder.is_dir() and not folder.name.startswith('.'):
@@ -539,6 +545,7 @@ def run(source,root,as_of,requested,allow_web=False):
         body=bundle(rows,source)
         atomic(root/'dashboard'/'commodities'/(source+'.csv'),body)
         print(f'[PUBLISH] {source} actualizado; {sum(r["value_status"]=="positive" for r in rows)} precios positivos')
+        return 'UPDATED'
 
 
 def main():
@@ -553,11 +560,19 @@ def main():
     sources=list(SOURCES) if args.source=='all' else [args.source]
     failed=False
     for i,source in enumerate(sources):
-        try:run(source,args.data_root,args.date,args.date.isoformat(),args.allow_web)
+        status='PIPELINE_ERROR'
+        try:status=run(source,args.data_root,args.date,args.date.isoformat(),args.allow_web)
         except Error as error:
             print(f'[VALIDATE] {source}: {error}; última salida conservada');failed=True
+            status=('SOURCE_UNAVAILABLE' if getattr(error,'source_unavailable',False) else
+                    'LAST_VALID' if str(error)=='Fuente sin publicación reciente' else 'PIPELINE_ERROR')
         except (OSError,ValueError,TypeError,KeyError):
             print(f'[VALIDATE] {source}: integridad/archivo inválido; última salida conservada');failed=True
+        except Exception:
+            print(f'[VALIDATE] {source}: error interno; última salida conservada');failed=True
+        state_path=args.data_root/'reports'/f'PRICE_STATE_{source}.json'
+        atomic(state_path,encoded({'status':status,'requested_date':args.date.isoformat(),
+            'attempted_at':datetime.now(timezone.utc).isoformat()}))
         if args.allow_web and i<len(sources)-1:time.sleep(1.5)
     return 1 if failed else 0
 

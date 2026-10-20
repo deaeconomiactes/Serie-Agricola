@@ -114,6 +114,13 @@ jobs:
           python scripts/magyp/mcba/update_mcba_dashboard.py
           --date "$env:MCBA_DATE" --data-root "$env:MCBA_CAPTURE_ROOT" --allow-web
           --browser-channel "$env:MCBA_BROWSER_CHANNEL"
+      - name: Consolidar estado del intento MCBA
+        id: freshness
+        if: always() && steps.capture.outcome != 'skipped'
+        run: |
+          $statusPath = Join-Path $env:MCBA_CAPTURE_ROOT 'reports/MCBA_RUN_STATUS.json'
+          if (!(Test-Path -LiteralPath $statusPath)) { throw 'Falta resultado explícito MCBA; no inferir estado' }
+          python scripts/magyp/build_price_freshness.py --mcba-status "$statusPath"
       - name: Validar bundle final
         if: steps.capture.outputs.result == 'UPDATED'
         env:
@@ -127,6 +134,7 @@ jobs:
           node --test tests/magyp_frontend/*.test.cjs
           git diff --check
       - name: Publicar exclusivamente salidas MCBA validadas
+        id: publish_data
         if: github.ref == 'refs/heads/main' && steps.capture.outputs.result == 'UPDATED' && steps.capture.outcome == 'success'
         env:
           CAPTURE_OUTCOME: ${{ steps.capture.outcome }}
@@ -164,8 +172,15 @@ jobs:
             mkdir -p "$MCBA_CAPTURE_ROOT/reports"
             bash scripts/ci/push_data_main.sh 2>&1 | tee "$MCBA_CAPTURE_ROOT/reports/MCBA_PUBLICATION.log"
           fi
+      - name: Publicar metadata de disponibilidad, sin tocar CSV
+        id: publish_freshness
+        if: always() && github.ref == 'refs/heads/main' && steps.freshness.outcome == 'success' && (steps.capture.outputs.result != 'UPDATED' || steps.publish_data.outcome == 'success')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: bash scripts/ci/publish_price_freshness.sh
       - name: Desplegar Pages explícitamente desde main
-        if: github.ref == 'refs/heads/main' && steps.capture.outputs.result == 'UPDATED' && steps.capture.outcome == 'success'
+        if: always() && github.ref == 'refs/heads/main' && (steps.publish_freshness.outputs.changed == 'true' || (steps.capture.outputs.result == 'UPDATED' && steps.capture.outcome == 'success' && steps.publish_freshness.outcome == 'success'))
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run deploy.yml --ref main
@@ -181,6 +196,7 @@ jobs:
             data/magyp/dashboard/mcba/MCBA_MAGYP_LATEST.csv
             data/magyp/dashboard/mcba/MCBA_MAGYP_SUMMARY.csv
             data/magyp/dashboard/mcba/MCBA_MAGYP_UPDATE_STATUS.json
+            data/magyp/reports/PRICE_FRESHNESS_STATUS.json
             data/magyp/dashboard/mcba/_SUCCESS.json
       - name: Respaldo RAW sin estado de sesión, separado de Pages
         if: ${{ always() && env.MCBA_CAPTURE_ROOT != '' }}

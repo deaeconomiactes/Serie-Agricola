@@ -57,9 +57,13 @@ jobs:
           print(f'[FETCH] Fecha Argentina: {day.isoformat()}')
           PY
       - name: Descargar, validar y preparar salidas
+        id: references
+        continue-on-error: true
         env:
           SOURCE: ${{ inputs.source || 'all' }}
         run: python scripts/magyp/grains/references.py --source "$SOURCE" --date "$REQUESTED_DATE" --allow-web
+      - name: Consolidar estado real por familia
+        run: python scripts/magyp/build_price_freshness.py
       - name: Validar salidas generadas para el dashboard
         run: |
           python scripts/magyp/grains/validate_publication.py
@@ -76,7 +80,8 @@ jobs:
             data/magyp/dashboard/commodities/board.csv \
             data/magyp/dashboard/commodities/fas.csv \
             data/magyp/dashboard/commodities/fob.csv \
-            data/magyp/dashboard/commodities/futures.csv
+            data/magyp/dashboard/commodities/futures.csv \
+            data/magyp/reports/PRICE_FRESHNESS_STATUS.json
           python scripts/magyp/grains/validate_publication.py --check-staged
           git diff --cached --check
           if git diff --cached --quiet; then
@@ -86,7 +91,7 @@ jobs:
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git commit -m 'chore: actualizar referencias Commodities MAGyP'
             # Push sin force: si main avanzó, falla y conserva la publicación remota.
-            git push origin HEAD:refs/heads/main
+            bash scripts/ci/push_data_main.sh
           fi
       - name: Desplegar explícitamente el dashboard validado
         if: github.ref == 'refs/heads/main'
@@ -107,3 +112,17 @@ jobs:
             data/magyp/normalized/commodities/
             data/magyp/analytical/commodities/
             data/magyp/dashboard/commodities/
+            data/magyp/reports/PRICE_FRESHNESS_STATUS.json
+            data/magyp/reports/PRICE_STATE_*.json
+
+      - name: Error visible sólo para fallo de integridad del pipeline
+        if: steps.references.outcome == 'failure'
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          states=[json.loads(p.read_text()) for p in Path('data/magyp/reports').glob('PRICE_STATE_*.json')]
+          if not states or any(r['status']=='PIPELINE_ERROR' for r in states):
+              raise SystemExit('PIPELINE_ERROR: revisar metadata; últimas salidas válidas conservadas')
+          print('Fuentes con último válido conservado: ' + ', '.join(sorted({r['status'] for r in states})))
+          PY

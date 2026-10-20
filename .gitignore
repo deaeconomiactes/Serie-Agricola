@@ -167,3 +167,6 @@ data/magyp/analytical/**
 !data/magyp/analytical/**/.gitkeep
 !data/magyp/dashboard/**/*.csv
 !data/magyp/reports/*.csv
+
+# Operational attempt sidecars are consolidated into PRICE_FRESHNESS_STATUS.json.
+data/magyp/reports/PRICE_STATE_*.json

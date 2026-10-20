@@ -343,6 +343,7 @@ let legacyPriceData = [];
 let magypPriceData = [];
 let magypPriceInfo = null;
 let magypUpdateMetadata = null;
+let priceFreshnessBySource = {};
 let magypPriceWarning = '';
 let futurePriceData = [];
 let filteredPriceData = [];
@@ -368,6 +369,7 @@ document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
     showLoading();
+    priceFreshnessBySource = await SourceUpdateStatus.loadFreshness();
     wireModuleTabs();
     initMultiSelectControls();
     try {
@@ -1074,7 +1076,11 @@ function updatePriceSourceStatus() {
     const filters = getPriceFilters();
     const selected = isAllSelected(filters.mercado) || filters.mercado.includes(MCBAPrices.MCBA);
     SourceUpdateStatus.render(document.getElementById('mcbaUpdateStatus'),
-        magypUpdateMetadata, magypPriceInfo || {}, selected && priceFrequency === 'diaria' && magypPriceInfo !== null);
+        priceFreshnessBySource.mcba || magypUpdateMetadata, magypPriceInfo || {}, selected && priceFrequency === 'diaria' && magypPriceInfo !== null, {sourceLabel:'MCBA', showDates:true});
+    SourceUpdateStatus.render(document.getElementById('mcbaMonthlyUpdateStatus'), priceFreshnessBySource.mcba_monthly, {},
+        selected && priceFrequency !== 'diaria', {sourceLabel:'MCBA mensual', showDates:true});
+    SourceUpdateStatus.render(document.getElementById('corrientesUpdateStatus'), priceFreshnessBySource.corrientes, {},
+        isAllSelected(filters.mercado) || filters.mercado.includes('Mercado de Corrientes'), {sourceLabel:'Corrientes', showDates:true});
     const mcba = filteredPriceData.filter(row => row.mercado === MCBAPrices.MCBA);
     const sources = new Set(mcba.map(row => row.source_status));
     const parts = [];
@@ -1732,7 +1738,8 @@ function updateCommoditySourceStatus() {
     const fallback = summary.modo === 'legacy_fallback';
     setCommodityDataStatus(count ? `${fallback ? 'Respaldo histórico local: MAGyP no disponible' : sampleMode ? 'Muestra de respaldo' : config.label} · ${formatNumber(count)} ${label}` : `${config.label} · Sin datos disponibles`, count ? (sampleMode ? 'sample' : 'ready') : '');
     const freshness = document.getElementById('commodityDataFreshness');
-    const updateState = commodityUpdateMetadata(summary);
+    const updateState = priceFreshnessBySource[commoditySource] || (commoditySource === 'local_mensual'
+        ? {...commodityUpdateMetadata(summary), status:'STATIC'} : commodityUpdateMetadata(summary));
     SourceUpdateStatus.render(document.getElementById('commodityUpdateStatus'), updateState,
         {date_max: summary.fecha_max, updated_at: summary.fecha_actualizacion_dashboard || summary.fecha_actualizacion},
         Boolean(count || updateState.status), {sourceLabel: 'Commodities', showDates: true, showUnknown: true});

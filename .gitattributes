@@ -1,3 +1,7 @@
 # Hashes publicados deben ser idénticos en Windows, Linux y GitHub Pages.
 data/magyp/dashboard/**/*.csv text eol=lf
 data/magyp/dashboard/**/*.json text eol=lf
+
+# Dashboard-ready SIO CSV use deterministic line endings across runners.
+data/commodities_sio/dashboard/*.csv text eol=lf
+data/commodities_sio/reports/RESUMEN_ACTUALIDAD_COMMODITIES_SIO.csv text eol=lf
