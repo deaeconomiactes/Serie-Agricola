@@ -39,7 +39,7 @@
    const [body,marker]=await Promise.all([get(FILE),get('_SUCCESS.json')]);
    const rows=await verify(body,JSON.parse(marker));
    return {rows,warning:''};
-  } catch(_) {return {rows:[],warning:'Vista mensual Mercado Central no disponible; se mantiene legacy.'};}
+  } catch(_) {return {rows:[],warning:'Publicación mensual Mercado Central no disponible; se conserva el histórico validado.'};}
  }
  function adapt(rows,months,label=value=>value||'') {
   return rows.map(r=>({...r,fecha:r.date,year:Number(r.date.slice(0,4)),month:Number(r.date.slice(5,7)),

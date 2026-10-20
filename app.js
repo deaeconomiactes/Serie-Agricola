@@ -1082,13 +1082,17 @@ function updatePriceSourceStatus() {
     const filters = getPriceFilters();
     const selected = isAllSelected(filters.mercado) || filters.mercado.includes(MCBAPrices.MCBA);
     SourceUpdateStatus.render(document.getElementById('mcbaUpdateStatus'),
-        priceFreshnessBySource.mcba || magypUpdateMetadata, magypPriceInfo || {}, selected && priceFrequency === 'diaria' && magypPriceInfo !== null, {sourceLabel:'MCBA', showDates:true});
-    SourceUpdateStatus.render(document.getElementById('mcbaMonthlyUpdateStatus'), priceFreshnessBySource.mcba_monthly, {},
-        selected && priceFrequency === 'mensual', {sourceLabel:'MCBA mensual', showDates:true});
+        priceFreshnessBySource.mcba || magypUpdateMetadata, magypPriceInfo || {}, selected && priceFrequency === 'diaria' && magypPriceInfo !== null, {sourceLabel:'MCBA', showDates:true, stateOrigin:'la fuente'});
     SourceUpdateStatus.render(document.getElementById('corrientesUpdateStatus'), priceFreshnessBySource.corrientes, {},
         isAllSelected(filters.mercado) || filters.mercado.includes('Mercado de Corrientes'), {sourceLabel:'Corrientes', showDates:true});
     const mcba = filteredPriceData.filter(row => row.mercado === MCBAPrices.MCBA);
     const sources = new Set(mcba.map(row => row.source_status));
+    const monthlyOfficial = sources.has('MERCADO_CENTRAL');
+    const monthlyState = monthlyOfficial ? priceFreshnessBySource.mcba_monthly : {
+        status: 'STATIC', last_observation_date: mcba.map(row => row.fecha).sort().at(-1)
+    };
+    SourceUpdateStatus.render(document.getElementById('mcbaMonthlyUpdateStatus'), monthlyState, {},
+        selected && priceFrequency === 'mensual' && mcba.length > 0, {sourceLabel:'MCBA mensual', showDates:true, stateOrigin:'la fuente'});
     const parts = [];
     if (selected) {
         if (sources.has('MAGYP') || sources.has('MAGYP_LAST_VALID')) {
@@ -1096,15 +1100,20 @@ function updatePriceSourceStatus() {
             if (magypPriceInfo?.updated_at) parts.push('Última captura válida: ' +
                 new Date(magypPriceInfo.updated_at).toLocaleString('es-AR'));
         }
-        if (priceFrequency === 'mensual' && mcbaMonthlyData.length)
-            parts.push('MCBA mensual: Mercado Central · media derivada de precios modales diarios por serie, sólo días observados; legacy en períodos sin cobertura. No es mensual oficial MAGyP.');
-        else if (priceFrequency !== 'diaria') parts.push('MCBA ' + priceFrequency + ': fuente legacy. Mensual oficial MAGyP pendiente de automatización.');
+        if (priceFrequency === 'mensual' && mcba.length) {
+            const periods = [...new Set(mcba.map(row => row.fecha.slice(0,7)))].sort();
+            parts.push('Fuente: Mercado Central de Buenos Aires');
+            parts.push('Cobertura: ' + formatPeriodLabel(periods[0], 'mensual') + ' – ' + formatPeriodLabel(periods.at(-1), 'mensual'));
+            parts.push('Último período: ' + formatPeriodLabel(periods.at(-1), 'mensual'));
+            if (monthlyOfficial) parts.push('Agregación mensual derivada de observaciones diarias oficiales; sólo días observados');
+            if (sources.has('LEGACY')) parts.push('Archivo histórico mensual; publicación de origen conservada');
+        } else if (priceFrequency === 'anual') parts.push('MCBA: archivo histórico; metodología de origen conservada');
         if (priceFrequency === 'mensual' && mcbaMonthlyWarning) parts.push(mcbaMonthlyWarning);
-        else if (sources.has('LEGACY')) parts.push('Respaldo legacy en fechas sin cobertura MAGyP.');
+        else if (priceFrequency === 'diaria' && sources.has('LEGACY')) parts.push('Archivo histórico en fechas sin publicación MAGyP disponible');
         if (hasMixedMCBASources(mcba)) parts.push('Evolución y ranking separados por fuente; los KPIs resumen la selección.');
         if (magypPriceWarning && priceFrequency === 'diaria') parts.push(magypPriceWarning);
         if (!mcba.length && priceFrequency === 'diaria' && !magypPriceWarning)
-            parts.push('Sin detalle MCBA para esta selección. No se completan productos ausentes con legacy en fechas cubiertas por MAGyP.');
+            parts.push('Sin detalle MCBA para esta selección en la publicación disponible.');
     }
     node.textContent = parts.join(' · ');
     node.classList.toggle('is-visible', Boolean(node.textContent));
@@ -1143,7 +1152,7 @@ function getPriceDimensionValue(row, dimension) {
 }
 
 function formatPriceDimensionValue(row, dimension) {
-    if (dimension === 'data_source') return row.data_source === 'MAGYP' ? 'MAGyP' : row.data_source === 'MERCADO_CENTRAL' ? 'Mercado Central (mensual derivada)' : 'Legacy';
+    if (dimension === 'data_source') return row.data_source === 'MAGYP' ? 'MAGyP' : row.data_source === 'MERCADO_CENTRAL' ? 'Mercado Central (mensual derivada)' : row.mercado === MCBAPrices.MCBA ? 'Archivo histórico MCBA' : 'Legacy';
     return formatLabel(getPriceDimensionValue(row, dimension));
 }
 
@@ -1611,7 +1620,10 @@ function renderPriceCharts() {
     const monthlyNote = document.getElementById('priceMonthlySourceNote');
     if (monthlyNote) {
         const show = isAllSelected(filters.mercado) || filters.mercado.includes(MCBAPrices.MCBA);
-        monthlyNote.textContent = show ? 'MCBA: semáforo mensual con fuente legacy; los precios diarios MAGyP no se usan para reconstruir el mensual oficial.' : '';
+        const official = monthlyRows.some(row => row.mercado === MCBAPrices.MCBA && row.data_source === 'MERCADO_CENTRAL');
+        monthlyNote.textContent = show ? (official
+            ? 'MCBA: agregación mensual derivada de observaciones diarias oficiales del Mercado Central; archivo histórico en períodos anteriores sin cobertura.'
+            : 'MCBA: publicación mensual del archivo histórico. Los precios diarios MAGyP no se utilizan para reconstruirla.') : '';
         monthlyNote.hidden = !show;
     }
 }

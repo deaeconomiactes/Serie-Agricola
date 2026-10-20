@@ -177,6 +177,7 @@ data/mercado_central/raw/
 data/mercado_central/normalized/
 data/mercado_central/analytical/
 !data/mercado_central/dashboard/**/*.csv
+!data/mercado_central/reports/*.csv
 
 !mcba-monthly.js
 

@@ -143,7 +143,7 @@
                 catch (_) { /* Corrupt cache is not used. */ }
             }
             return { rows: [], info: null, status: 'LEGACY',
-                warning: 'MAGyP no disponible y sin copia válida local. No se puede verificar cobertura diaria; el respaldo legacy sigue disponible en frecuencia mensual.' };
+                warning: 'MAGyP no disponible y sin copia válida local. No se puede verificar cobertura diaria; el archivo histórico sigue disponible en frecuencia mensual.' };
         }
     }
     const api = { MCBA, BASE, parseCSV, validate, adapt, route, verifyBundle, load };

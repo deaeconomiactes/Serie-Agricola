@@ -1,0 +1,371 @@
+{
+  "schema_version": "mcba-history-discovery-v1",
+  "captured_at_utc": "2026-10-20T14:05:40.892180Z",
+  "capture_id": "2026-10-20T140540892180Z",
+  "request_count": 9,
+  "requests": [
+    {
+      "url": "https://www.mercadocentral.gob.ar/informaci%C3%B3n/precios-mayoristas",
+      "kind": "current_price_index",
+      "discovered_from": "official_price_page",
+      "captured_at_utc": "2026-10-20T14:05:40.892180Z",
+      "http_status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "duration_seconds": 2.532,
+      "size_bytes": 32023,
+      "sha256": "84d568403c8daafc49d7dd38d52cf273a87e7dc4cce3516c19613e24aa68d1dc",
+      "error_type": null,
+      "links": [
+        "https://www.mercadocentral.gob.ar/",
+        "https://www.mercadocentral.gob.ar/paginas/el-mercado",
+        "https://www.mercadocentral.gob.ar/paginas/%C2%BFqu%C3%A9-es-el-mercado-central",
+        "https://www.mercadocentral.gob.ar/paginas/el-mercado-en-n%C3%BAmeros",
+        "https://www.mercadocentral.gob.ar/paginas/nuestros-valores",
+        "https://www.mercadocentral.gob.ar/paginas/autoridades-del-mercado",
+        "https://www.mercadocentral.gob.ar/paginas/mapa-del-mercado",
+        "https://www.mercadocentral.gob.ar/paginas/calendario-de-feriados-2026",
+        "https://www.mercadocentral.gob.ar/paginas/c%C3%B3mo-llegar-al-mercado",
+        "https://www.mercadocentral.gob.ar/paginas/horarios-del-mercado",
+        "https://www.mercadocentral.gob.ar/paginas/informaci%C3%B3n-al-productor",
+        "https://www.mercadocentral.gob.ar/informaci%C3%B3n/precios-mayoristas",
+        "https://www.mercadocentral.gob.ar/paginas/centro-m%C3%A9dico",
+        "https://www.mercadocentral.gob.ar/paginas/servicios-de-emergencia",
+        "https://www.mercadocentral.gob.ar/paginas/an%C3%A1lisis-de-laboratorio-para-terceros",
+        "https://www.mercadocentral.gob.ar/paginas/operadores-activos",
+        "https://mercadocentral.gob.ar/informaci%C3%B3n/precios-mayoristas/",
+        "https://www.mercadocentral.gob.ar/paginas/nuestra-funci%C3%B3n",
+        "https://www.mercadocentral.gob.ar/calidad/publicaciones-tecnicas",
+        "https://www.mercadocentral.gob.ar/paginas/inspecci%C3%B3n-de-frutas-y-hortalizas",
+        "https://www.mercadocentral.gob.ar/calidad/laboratorios",
+        "https://www.mercadocentral.gob.ar/paginas/curso-de-manipuladores-de-alimentos-%C2%A1inscribite",
+        "https://www.mercadocentral.gob.ar/paginas/productos-importados-certificados-por-senasa",
+        "https://www.mercadocentral.gob.ar/prensa/actividades",
+        "https://www.mercadocentral.gob.ar/prensa/capacitaci%C3%B3n",
+        "https://www.mercadocentral.gob.ar/albums",
+        "https://www.mercadocentral.gob.ar/paginas/fm-mercado",
+        "https://www.mercadocentral.gob.ar/prensa/noticias",
+        "https://www.mercadocentral.gob.ar/paginas/programa-de-beneficios-para-los-empleados",
+        "https://www.mercadocentral.gob.ar/paginas/revista-digital",
+        "https://www.mercadocentral.gob.ar/transparencia",
+        "https://www.mercadocentral.gob.ar/paginas/mercado-abierto",
+        "https://www.mercadocentral.gob.ar/paginas/registro-de-proveedores",
+        "https://www.mercadocentral.gob.ar/cambio-de-espacios",
+        "https://www.mercadocentral.gob.ar/transparencia/licitaciones-contrataciones-y-concursos-de-precios",
+        "https://www.mercadocentral.gob.ar/paginas/adjudicaci%C3%B3n-de-espacios",
+        "https://www.mercadocentral.gob.ar/paginas/avisos-oficiales",
+        "https://www.mercadocentral.gob.ar/paginas/registro-de-juicios",
+        "https://www.mercadocentral.gob.ar/paginas/reglamento-feria-minorista",
+        "https://www.mercadocentral.gob.ar/paginas/reglamento-de-condiciones-de-higiene-y-seguridad-seg%C3%BAn-actividad",
+        "https://www.mercadocentral.gob.ar/paginas/reglamento-de-faltas",
+        "https://www.mercadocentral.gob.ar/paginas/reglamento-del-registro-p%C3%BAblico-permanente-para-la-prestaci%C3%B3n-del-servicio-de-descarga",
+        "https://www.mercadocentral.gob.ar/paginas/transparencia",
+        "https://www.mercadocentral.gob.ar/contacto",
+        "https://www.mercadocentral.gob.ar/paginas/acci%C3%B3n-comunitaria-0",
+        "https://www.mercadocentral.gob.ar/paginas/acci%C3%B3n-comunitaria",
+        "https://www.mercadocentral.gob.ar/paginas/inscripci%C3%B3n",
+        "https://www.mercadocentral.gob.ar/paginas/registro-de-donaciones-voluntarias",
+        "http://mercadocentral.gob.ar/radio.html",
+        "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS-MAYO-2026.zip",
+        "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_ABRIL2026_0.zip",
+        "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_MARZO-2026.zip",
+        "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_FEBRERO-26_0.zip",
+        "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS%20%20ENERO-26_0.zip",
+        "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTA_JUNIO_2026_0.zip",
+        "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_JULIO_26.zip",
+        "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTRAS_AGOSTO-26_0.zip",
+        "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_SEPTIEMBRE_26_0.zip",
+        "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_OCTUBRE_26.zip",
+        "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZAS-MAYO-2026.zip",
+        "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZAS_ABRIL2026.zip",
+        "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZAS_MARZO-2026_0.zip",
+        "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZAS_FEBRERO-26.zip",
+        "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZAS%20ENERO-26_0.zip",
+        "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA-JUNIO-2026.zip",
+        "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA_JULIO_26_1.zip",
+        "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA_%20AGOSTO_26.zip",
+        "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA_SEPTIENBRE_26_0.zip",
+        "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA_OCTUBRE_26.zip",
+        "https://www.facebook.com/Corporaci%C3%B3n-Mercado-Central-de-Buenos-Aires-792567550881607",
+        "https://twitter.com/cmercadocentral",
+        "https://www.youtube.com/channel/UCAJm9NMTzDC0zJ180RSXy5A",
+        "https://www.instagram.com/cmercadocentral/",
+        "http://www.casarosada.gob.ar/",
+        "https://www.argentina.gob.ar/",
+        "http://www.buenosaires.gob.ar/",
+        "http://www.gba.gob.ar/",
+        "https://www.argentina.gob.ar/economia",
+        "https://www.mercadocentral.gob.ar/paginas/pol%C3%ADtica-de-privacidad",
+        "https://www.mercadocentral.gob.ar/paginas/t%C3%A9rminos-y-condiciones",
+        "https://www.mercadocentral.gob.ar/paginas/sobre-esta-web",
+        "http://www.wuwm.org"
+      ]
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/",
+      "kind": "confirmed_archive_directory",
+      "discovered_from": "https://www.mercadocentral.gob.ar/informaci%C3%B3n/precios-mayoristas",
+      "captured_at_utc": "2026-10-20T14:05:40.892180Z",
+      "http_status": 403,
+      "content_type": "",
+      "duration_seconds": 4.11,
+      "size_bytes": 0,
+      "sha256": null,
+      "error_type": "HTTP_ERROR"
+    },
+    {
+      "url": "https://www.mercadocentral.gob.ar/sitemap.xml",
+      "kind": "sitemap_index",
+      "discovered_from": "standard_official_sitemap",
+      "captured_at_utc": "2026-10-20T14:05:40.892180Z",
+      "http_status": 200,
+      "content_type": "text/xml; charset=utf-8",
+      "duration_seconds": 0.125,
+      "size_bytes": 430,
+      "sha256": "07aa6bceef617afe05fdf57bdf8a79e2b5287ccdd6456c56673d6e641eff4383",
+      "error_type": null,
+      "links": [
+        "https://mercadocentral.gob.ar/sitemap.xml?page=1",
+        "https://mercadocentral.gob.ar/sitemap.xml?page=2"
+      ]
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sitemap.xml?page=1",
+      "kind": "sitemap",
+      "discovered_from": "https://www.mercadocentral.gob.ar/sitemap.xml",
+      "captured_at_utc": "2026-10-20T14:05:40.892180Z",
+      "http_status": 200,
+      "content_type": "text/xml; charset=utf-8",
+      "duration_seconds": 0.297,
+      "size_bytes": 826965,
+      "sha256": "bb51b2c57d998c8ea1a27f9a3fbcb238ff446fb528e6c1cf21d9cdb0787c453a",
+      "error_type": null,
+      "url_count": 4993
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sitemap.xml?page=2",
+      "kind": "sitemap",
+      "discovered_from": "https://www.mercadocentral.gob.ar/sitemap.xml",
+      "captured_at_utc": "2026-10-20T14:05:40.892180Z",
+      "http_status": 200,
+      "content_type": "text/xml; charset=utf-8",
+      "duration_seconds": 0.141,
+      "size_bytes": 37774,
+      "sha256": "d9ab0df9dea400bb31676ef36dcd0b563542e7c4251c94f713beb07ffbacd522",
+      "error_type": null,
+      "url_count": 223
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-abril-2024",
+      "kind": "historical_publication_sample",
+      "discovered_from": "https://www.mercadocentral.gob.ar/sitemap.xml",
+      "captured_at_utc": "2026-10-20T14:05:40.892180Z",
+      "http_status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "duration_seconds": 0.406,
+      "size_bytes": 27091,
+      "sha256": "b9d3fcc6d292ddf81595e6d40c4c413660d150cf7ef10e9d630eb606a23b4dc3",
+      "error_type": null,
+      "links": [
+        "https://mercadocentral.gob.ar/sites/default/files/docs/Informe_monitoreo-04-2024.pdf"
+      ]
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/news/relevamiento-de-precios-mayoristas-del-110222",
+      "kind": "historical_publication_sample",
+      "discovered_from": "https://www.mercadocentral.gob.ar/sitemap.xml",
+      "captured_at_utc": "2026-10-20T14:05:40.892180Z",
+      "http_status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "duration_seconds": 0.437,
+      "size_bytes": 29628,
+      "sha256": "bdffa88bade6afc3e50dff440fc7196f1672f8ec50674a87ee9c2f8ea0d2a6f3",
+      "error_type": null,
+      "links": [
+        "http://mercadocentral.gob.ar/img/compromiso/CMCBA-Precios-Compromiso-11-02-2022.png"
+      ]
+    },
+    {
+      "url": "https://datos.magyp.gob.ar/dataset/precios-mayoristas-frutas-hortalizas/archivo/6dce1e87-7988-4eaf-b0e1-b3abbb3964da",
+      "kind": "official_usd_catalog",
+      "discovered_from": "official_dataset_catalog",
+      "captured_at_utc": "2026-10-20T14:05:40.892180Z",
+      "http_status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "duration_seconds": 4.422,
+      "size_bytes": 49731,
+      "sha256": "c0176a01408a93cd156367bafa17c0ac1e11c4f35c78dcfaa7640f91c131d991",
+      "error_type": null,
+      "links": [
+        "https://datos.magyp.gob.ar/dataset/8b4d6a1f-753d-4707-9085-bdcbbc47f00b/resource/6dce1e87-7988-4eaf-b0e1-b3abbb3964da/download/precios-fyh-mercadocentral-bsas-arg-2017-2c2018-.csv"
+      ]
+    },
+    {
+      "url": "https://datos.magyp.gob.ar/dataset/8b4d6a1f-753d-4707-9085-bdcbbc47f00b/resource/6dce1e87-7988-4eaf-b0e1-b3abbb3964da/download/precios-fyh-mercadocentral-bsas-arg-2017-2c2018-.csv",
+      "kind": "usd_historical_csv",
+      "discovered_from": "https://datos.magyp.gob.ar/dataset/precios-mayoristas-frutas-hortalizas/archivo/6dce1e87-7988-4eaf-b0e1-b3abbb3964da",
+      "captured_at_utc": "2026-10-20T14:05:40.892180Z",
+      "http_status": 200,
+      "content_type": "text/csv",
+      "duration_seconds": 0.172,
+      "size_bytes": 87218,
+      "sha256": "41ba2d42e22083446c957d27d5a545f7f47a63e9db1feeead57d5f7cd02e7657",
+      "error_type": null,
+      "raw_file": "usd_history.csv",
+      "encoding": "cp1252"
+    }
+  ],
+  "current_zip_publications": [
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS%20%20ENERO-26_0.zip",
+      "name": "FRUTAS  ENERO-26_0.zip",
+      "period": "2026-01",
+      "type": "Frutas"
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZAS%20ENERO-26_0.zip",
+      "name": "HORTALIZAS ENERO-26_0.zip",
+      "period": "2026-01",
+      "type": "Hortalizas"
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_FEBRERO-26_0.zip",
+      "name": "FRUTAS_FEBRERO-26_0.zip",
+      "period": "2026-02",
+      "type": "Frutas"
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZAS_FEBRERO-26.zip",
+      "name": "HORTALIZAS_FEBRERO-26.zip",
+      "period": "2026-02",
+      "type": "Hortalizas"
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_MARZO-2026.zip",
+      "name": "FRUTAS_MARZO-2026.zip",
+      "period": "2026-03",
+      "type": "Frutas"
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZAS_MARZO-2026_0.zip",
+      "name": "HORTALIZAS_MARZO-2026_0.zip",
+      "period": "2026-03",
+      "type": "Hortalizas"
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_ABRIL2026_0.zip",
+      "name": "FRUTAS_ABRIL2026_0.zip",
+      "period": "2026-04",
+      "type": "Frutas"
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZAS_ABRIL2026.zip",
+      "name": "HORTALIZAS_ABRIL2026.zip",
+      "period": "2026-04",
+      "type": "Hortalizas"
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS-MAYO-2026.zip",
+      "name": "FRUTAS-MAYO-2026.zip",
+      "period": "2026-05",
+      "type": "Frutas"
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZAS-MAYO-2026.zip",
+      "name": "HORTALIZAS-MAYO-2026.zip",
+      "period": "2026-05",
+      "type": "Hortalizas"
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTA_JUNIO_2026_0.zip",
+      "name": "FRUTA_JUNIO_2026_0.zip",
+      "period": "2026-06",
+      "type": "Frutas"
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA-JUNIO-2026.zip",
+      "name": "HORTALIZA-JUNIO-2026.zip",
+      "period": "2026-06",
+      "type": "Hortalizas"
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_JULIO_26.zip",
+      "name": "FRUTAS_JULIO_26.zip",
+      "period": "2026-07",
+      "type": "Frutas"
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA_JULIO_26_1.zip",
+      "name": "HORTALIZA_JULIO_26_1.zip",
+      "period": "2026-07",
+      "type": "Hortalizas"
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTRAS_AGOSTO-26_0.zip",
+      "name": "FRUTRAS_AGOSTO-26_0.zip",
+      "period": "2026-08",
+      "type": "Frutas"
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA_%20AGOSTO_26.zip",
+      "name": "HORTALIZA_ AGOSTO_26.zip",
+      "period": "2026-08",
+      "type": "Hortalizas"
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_SEPTIEMBRE_26_0.zip",
+      "name": "FRUTAS_SEPTIEMBRE_26_0.zip",
+      "period": "2026-09",
+      "type": "Frutas"
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA_SEPTIENBRE_26_0.zip",
+      "name": "HORTALIZA_SEPTIENBRE_26_0.zip",
+      "period": "2026-09",
+      "type": "Hortalizas"
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_OCTUBRE_26.zip",
+      "name": "FRUTAS_OCTUBRE_26.zip",
+      "period": "2026-10",
+      "type": "Frutas"
+    },
+    {
+      "url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA_OCTUBRE_26.zip",
+      "name": "HORTALIZA_OCTUBRE_26.zip",
+      "period": "2026-10",
+      "type": "Hortalizas"
+    }
+  ],
+  "historical_report_pages": [
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-abril-2024",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-mayo-2024",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-junio-2024",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-julio-2024",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-agosto-2024",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-septiembre-2024",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-octubre-2024",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-noviembre-2024",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-diciembre-2024",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-enero-2025",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-febrero-2025",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-marzo-2025",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-abril-2025",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-mayo-2025",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-junio-2025",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-julio-2025",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-agosto-2025",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-septiembre-2025",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-octubre-2025",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-noviembre-2025",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-diciembre-2025",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-enero-2026",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-febrero-2026",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-marzo-2026",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-abril-2026",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-mayo-2026",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-junio-2026",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-julio-2026",
+    "https://mercadocentral.gob.ar/publicaciones/informe-monitoreo-federal-agosto-2026"
+  ],
+  "scope": "Índices y muestras oficiales; sin enumerar archivos ni afirmar inexistencia global de históricos"
+}
