@@ -343,6 +343,8 @@ let legacyPriceData = [];
 let magypPriceData = [];
 let magypPriceInfo = null;
 let magypUpdateMetadata = null;
+let mcbaMonthlyData = [];
+let mcbaMonthlyWarning = '';
 let priceFreshnessBySource = {};
 let magypPriceWarning = '';
 let futurePriceData = [];
@@ -470,7 +472,7 @@ function updatePriceFrequencyOptions() {
     if (!scopedRows.some(row => row.fechaPrecision !== 'mensual')) allowed.delete('diaria');
     const mcbaSelected = isAllSelected(getSelectedValues('priceFilterMercado'))
         || getSelectedValues('priceFilterMercado').includes(MCBAPrices.MCBA);
-    if (mcbaSelected && frequencySource.some(row => row.data_source === 'MAGYP')) allowed.add('diaria');
+    if (mcbaSelected && validPriceData.some(row => row.mercado === MCBAPrices.MCBA && row.data_source === 'MAGYP')) allowed.add('diaria');
     if (!hasSpecificSpecies && !mcbaSelected) allowed.delete('diaria');
     [...select.options].forEach(option => { option.disabled = !allowed.has(option.value); });
     priceFrequency = allowed.has(priceFrequency) ? priceFrequency : (allowed.has('mensual') ? 'mensual' : [...allowed][0]);
@@ -568,7 +570,10 @@ async function loadPriceData() {
     magypPriceInfo = magyp.info;
     magypUpdateMetadata = magyp.updateMetadata || null;
     magypPriceWarning = SourceUpdateStatus.describe(magypUpdateMetadata, magypPriceInfo || {}) ? '' : magyp.warning;
-    rawPriceData = legacyPriceData.concat(magypPriceData);
+    const monthly = await MCBAMonthly.load();
+    mcbaMonthlyData = MCBAMonthly.adapt(monthly.rows, MONTHS_FULL, formatLabel);
+    mcbaMonthlyWarning = monthly.warning;
+    rawPriceData = legacyPriceData.concat(magypPriceData, mcbaMonthlyData);
     console.warn('Valores inválidos de planilla excluidos o normalizados:', spreadsheetInvalidCount);
     const dateSplit = filterFutureDates(rawPriceData);
     futurePriceData = dateSplit.futureRows;
@@ -1013,7 +1018,8 @@ function getPriceSourceRows(frequency = priceFrequency) {
     const legacy = validPriceData.filter(row => row.data_source === 'LEGACY');
     const magyp = validPriceData.filter(row => row.data_source === 'MAGYP');
     const routed = MCBAPrices.route(legacy, magyp, frequency, magypPriceInfo !== null);
-    return routed;
+    return frequency === 'mensual' && mcbaMonthlyData.length
+        ? MCBAMonthly.route(routed, validPriceData.filter(row => row.data_source === 'MERCADO_CENTRAL')) : routed;
 }
 
 function getFilteredPriceData({ applyFrequencyPrecision = true, frequency = priceFrequency } = {}) {
@@ -1078,7 +1084,7 @@ function updatePriceSourceStatus() {
     SourceUpdateStatus.render(document.getElementById('mcbaUpdateStatus'),
         priceFreshnessBySource.mcba || magypUpdateMetadata, magypPriceInfo || {}, selected && priceFrequency === 'diaria' && magypPriceInfo !== null, {sourceLabel:'MCBA', showDates:true});
     SourceUpdateStatus.render(document.getElementById('mcbaMonthlyUpdateStatus'), priceFreshnessBySource.mcba_monthly, {},
-        selected && priceFrequency !== 'diaria', {sourceLabel:'MCBA mensual', showDates:true});
+        selected && priceFrequency === 'mensual', {sourceLabel:'MCBA mensual', showDates:true});
     SourceUpdateStatus.render(document.getElementById('corrientesUpdateStatus'), priceFreshnessBySource.corrientes, {},
         isAllSelected(filters.mercado) || filters.mercado.includes('Mercado de Corrientes'), {sourceLabel:'Corrientes', showDates:true});
     const mcba = filteredPriceData.filter(row => row.mercado === MCBAPrices.MCBA);
@@ -1090,7 +1096,10 @@ function updatePriceSourceStatus() {
             if (magypPriceInfo?.updated_at) parts.push('Última captura válida: ' +
                 new Date(magypPriceInfo.updated_at).toLocaleString('es-AR'));
         }
-        if (priceFrequency !== 'diaria') parts.push('MCBA ' + priceFrequency + ': fuente legacy. Mensual oficial MAGyP pendiente de automatización.');
+        if (priceFrequency === 'mensual' && mcbaMonthlyData.length)
+            parts.push('MCBA mensual: Mercado Central · media derivada de precios modales diarios por serie, sólo días observados; legacy en períodos sin cobertura. No es mensual oficial MAGyP.');
+        else if (priceFrequency !== 'diaria') parts.push('MCBA ' + priceFrequency + ': fuente legacy. Mensual oficial MAGyP pendiente de automatización.');
+        if (priceFrequency === 'mensual' && mcbaMonthlyWarning) parts.push(mcbaMonthlyWarning);
         else if (sources.has('LEGACY')) parts.push('Respaldo legacy en fechas sin cobertura MAGyP.');
         if (hasMixedMCBASources(mcba)) parts.push('Evolución y ranking separados por fuente; los KPIs resumen la selección.');
         if (magypPriceWarning && priceFrequency === 'diaria') parts.push(magypPriceWarning);
@@ -1134,7 +1143,7 @@ function getPriceDimensionValue(row, dimension) {
 }
 
 function formatPriceDimensionValue(row, dimension) {
-    if (dimension === 'data_source') return row.data_source === 'MAGYP' ? 'MAGyP' : 'Legacy';
+    if (dimension === 'data_source') return row.data_source === 'MAGYP' ? 'MAGyP' : row.data_source === 'MERCADO_CENTRAL' ? 'Mercado Central (mensual derivada)' : 'Legacy';
     return formatLabel(getPriceDimensionValue(row, dimension));
 }
 
@@ -1333,7 +1342,7 @@ function preparePriceEvolutionData(data, frequency, filters = getPriceFilters())
 
 function hasMixedMCBASources(data) {
     const sources = new Set(data.filter(row => row.mercado === MCBAPrices.MCBA).map(row => row.data_source));
-    return sources.has('MAGYP') && sources.has('LEGACY');
+    return sources.size > 1 && (sources.has('MAGYP') || sources.has('MERCADO_CENTRAL'));
 }
 
 function preparePriceRankingData(data, analysisLevel = 'general', filters = getPriceFilters()) {

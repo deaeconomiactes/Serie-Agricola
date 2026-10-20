@@ -5,3 +5,6 @@ data/magyp/dashboard/**/*.json text eol=lf
 # Dashboard-ready SIO CSV use deterministic line endings across runners.
 data/commodities_sio/dashboard/*.csv text eol=lf
 data/commodities_sio/reports/RESUMEN_ACTUALIDAD_COMMODITIES_SIO.csv text eol=lf
+
+data/mercado_central/dashboard/**/*.csv text eol=lf
+data/mercado_central/dashboard/**/*.json text eol=lf

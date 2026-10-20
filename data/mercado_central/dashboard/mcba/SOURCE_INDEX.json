@@ -1,0 +1,26 @@
+{
+  "fingerprints": {
+    "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS%20%20ENERO-26_0.zip": "2e6429324ea0e7353b88a082db0086059cc47653f376290dc54b68bf15ff2452",
+    "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS-MAYO-2026.zip": "e6595c02ab6423cfbc7639b005f62ec581e165dc5f7b02e40d9b021f4a37f4c7",
+    "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_ABRIL2026_0.zip": "a5368ed93d9122b4789b63d4513dca71689a6074ae44f246a09c13f49db9b982",
+    "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_FEBRERO-26_0.zip": "2826fc0fb64d089220e3d9cd199f53e322e324500c74fe16570ec7d02fed68e1",
+    "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_JULIO_26.zip": "45cc008ae84f37f48364c5fb9f15356da0080812a7baaba30e2f11ce1e1c4b62",
+    "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_MARZO-2026.zip": "79b9b5837c53849f5279d9d34c701c24cf875987ff0288c59b1401af93227d77",
+    "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_OCTUBRE_26.zip": "37a226be0d5984e07da55b08d9c1dee170f9a23df6a8685bf120ce11a37563a2",
+    "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_SEPTIEMBRE_26_0.zip": "309d5aef8307426cfa49d70c7c9fdc52ad2932435949c11bbddb8c9201c3a292",
+    "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTA_JUNIO_2026_0.zip": "156451bf65c5355ad82e03ce400310edc2fc60a24746ad346ea5e9891298f9ba",
+    "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTRAS_AGOSTO-26_0.zip": "bdfe66537128721e0d675c8af01142bfcc6a3c4069a90b48098d532a4f4eccfa",
+    "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA-JUNIO-2026.zip": "a4fe1270717b7fb831646ba4015c9ca034c5c9720394ed24fefe2930a9819afb",
+    "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZAS%20ENERO-26_0.zip": "370e402d046ccdfa3e43e0b4edd87b82144511fcaaded13489ef2b83670dac37",
+    "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZAS-MAYO-2026.zip": "1ec5bbe49fd7b946cf13dbc564053e25a608eed0896a8ec8b847a1270c3eae67",
+    "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZAS_ABRIL2026.zip": "efbc0517393f25b98d4147ee11def53d6018a7558ece136090b0cdcc5992326a",
+    "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZAS_FEBRERO-26.zip": "21ef774ac0e71a67164e9080bb7825b3d23d30d4f11284482d870da231a9930b",
+    "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZAS_MARZO-2026_0.zip": "9ec912cb708b9609f9c1100e2dea7de700b68b343508668d92eaa67f5ce525e2",
+    "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA_%20AGOSTO_26.zip": "e66fba777a434127299dd8b9a4b3841c9062dcefe7eaf0ba453555518bf15d94",
+    "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA_JULIO_26_1.zip": "882c539464b07c7da8d0b5a21a68529e550b8b958c50aab62aa4470c89bf3ea1",
+    "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA_OCTUBRE_26.zip": "69cd50ba4fb99538909cf77060439ba6d1e31915379d7a7953ec308fd634f936",
+    "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA_SEPTIENBRE_26_0.zip": "f979ea7edb4a40123c89d7e270e33b8938d6aeb359c1f5a17f029372395a6a8a"
+  },
+  "parser_version": "mcba-central-biff2-v1",
+  "schema_version": "mcba-central-monthly-v1"
+}

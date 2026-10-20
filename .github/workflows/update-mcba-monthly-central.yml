@@ -1,0 +1,128 @@
+name: Actualizar MCBA mensual derivado - Mercado Central
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: 'Año publicado; vacío = año actual en Argentina'
+        required: false
+  schedule:
+    # Una revisión por día hábil: 12:15 Argentina. Sin browser ni runner propio.
+    - cron: '15 15 * * 1-5'
+permissions:
+  contents: read
+concurrency:
+  group: serie-agricola-data-writer
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Dependencia XLS BIFF fijada
+        run: python -m pip install -r scripts/mercado_central/requirements.txt
+      - name: Tests offline de la nueva fuente y del frontend
+        run: |
+          python -m unittest discover -s tests/mercado_central -v
+          node --test tests/magyp_frontend/*.test.cjs
+      - name: Resolver año y fecha civil argentina
+        env:
+          MANUAL_YEAR: ${{ inputs.year }}
+        run: |
+          python - <<'PY'
+          import os
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          today=datetime.now(ZoneInfo('America/Argentina/Buenos_Aires')).date()
+          year=int(os.environ['MANUAL_YEAR']) if os.environ['MANUAL_YEAR'].strip() else today.year
+          if not 2026<=year<=today.year: raise SystemExit('Año fuera del período autorizado')
+          with open(os.environ['GITHUB_ENV'],'a') as f:
+              f.write(f'MCBA_CENTRAL_YEAR={year}\nMCBA_CENTRAL_DATE={today.isoformat()}\n')
+          PY
+      - name: Descubrir ZIP oficiales y generar vista mensual derivada
+        id: acquisition
+        continue-on-error: true
+        run: python scripts/mercado_central/update_mcba_monthly.py --year "$MCBA_CENTRAL_YEAR" --as-of "$MCBA_CENTRAL_DATE" --allow-web
+      - name: Validar última publicación y actualizar frescura
+        run: |
+          python -c "from pathlib import Path; from scripts.mercado_central.update_mcba_monthly import read_published; read_published(Path('data/mercado_central'))"
+          python scripts/magyp/build_price_freshness.py
+          python - <<'PY'
+          import json,subprocess,sys
+          from pathlib import Path
+          status=json.loads(Path('data/mercado_central/dashboard/mcba/UPDATE_STATUS.json').read_text())
+          if status['status']=='UPDATED':
+              subprocess.run([sys.executable,'scripts/mercado_central/validate_mcba_monthly.py'],check=True)
+          print('MCBA MERCADO CENTRAL STATUS:',status['status'])
+          print('Último dato:',status['last_observation_date'])
+          print('Actualización exitosa:',status['last_successful_update'])
+          PY
+          python -m unittest discover -s tests/mercado_central -v
+          node --test tests/magyp_frontend/*.test.cjs
+          git diff --check
+      - name: Publicar sólo allowlist liviano
+        id: publication
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -- data/mercado_central/dashboard/mcba/MCBA_MC_MONTHLY_DERIVED.csv \
+            data/mercado_central/dashboard/mcba/_SUCCESS.json \
+            data/mercado_central/dashboard/mcba/UPDATE_STATUS.json \
+            data/mercado_central/dashboard/mcba/SOURCE_INDEX.json \
+            data/mercado_central/reports/MCBA_MONTHLY_VALIDATION.json \
+            data/magyp/reports/PRICE_FRESHNESS_STATUS.json
+          python - <<'PY'
+          import subprocess
+          allowed={
+            'data/mercado_central/dashboard/mcba/'+name for name in
+            ['MCBA_MC_MONTHLY_DERIVED.csv','_SUCCESS.json','UPDATE_STATUS.json','SOURCE_INDEX.json']}
+          allowed.update(['data/mercado_central/reports/MCBA_MONTHLY_VALIDATION.json','data/magyp/reports/PRICE_FRESHNESS_STATUS.json'])
+          changed=subprocess.check_output(['git','diff','--cached','--name-only','-z']).decode().strip('\0')
+          if changed and not set(changed.split('\0')).issubset(allowed): raise SystemExit('Fuera de allowlist')
+          PY
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+          else
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'chore: actualizar mensual derivado MCBA Mercado Central'
+            bash scripts/ci/push_data_main.sh
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Deploy explícito tras publicación válida
+        if: github.ref == 'refs/heads/main' && steps.publication.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main
+      - name: Metadata y diagnósticos, sin RAW ni adjuntos de los ZIP
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcba-central-monthly-status
+          path: |
+            data/mercado_central/dashboard/mcba/UPDATE_STATUS.json
+            data/mercado_central/reports/MCBA_MONTHLY_VALIDATION.json
+          if-no-files-found: ignore
+      - name: Error visible de integridad; CSV previo conservado
+        if: steps.acquisition.outcome == 'failure'
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path('data/mercado_central/dashboard/mcba/UPDATE_STATUS.json').read_text())
+          if s['status']=='PIPELINE_ERROR': raise SystemExit('PIPELINE_ERROR: último válido conservado')
+          print(s['status'])
+          PY

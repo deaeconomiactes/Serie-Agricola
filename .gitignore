@@ -170,3 +170,15 @@ data/magyp/analytical/**
 
 # Operational attempt sidecars are consolidated into PRICE_FRESHNESS_STATUS.json.
 data/magyp/reports/PRICE_STATE_*.json
+
+# Mercado Central original archives and full processing layers are not published.
+!scripts/mercado_central/*.py
+data/mercado_central/raw/
+data/mercado_central/normalized/
+data/mercado_central/analytical/
+!data/mercado_central/dashboard/**/*.csv
+
+!mcba-monthly.js
+
+!tests/mercado_central/
+!tests/mercado_central/*.py

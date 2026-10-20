@@ -178,23 +178,23 @@
     },
     {
       "source_family": "mcba_monthly",
-      "source": "Legacy",
+      "source": "Mercado Central de Buenos Aires",
       "market": "Mercado Central de Buenos Aires",
-      "frequency": "mensual",
-      "last_observation_date": "2025-12-01",
-      "last_successful_update": null,
-      "status": "STATIC",
-      "automatic_update": false,
-      "workflow": null,
-      "notes": "Mensual legacy; no se deriva del diario MAGyP.",
+      "frequency": "mensual derivada de observaciones diarias",
+      "last_observation_date": "2026-10-19",
+      "last_successful_update": "2026-10-20T12:49:39.330608Z",
+      "status": "UPDATED",
+      "automatic_update": true,
+      "workflow": "update-mcba-monthly-central.yml",
+      "notes": "Media mensual de modales diarios por serie y días observados; no es promedio mensual oficial MAGyP. Legacy en períodos/categorías sin cobertura.",
       "currency": [
         "ARS"
       ],
       "unit": [
-        "$/kg"
+        "kg"
       ],
-      "requested_date": null,
-      "attempted_at": null,
+      "requested_date": "2026-10-20",
+      "attempted_at": "2026-10-20T13:02:41.431560Z",
       "diagnostic_note": null,
       "evidence": null
     },
