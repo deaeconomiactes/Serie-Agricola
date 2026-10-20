@@ -65,7 +65,7 @@ def build(root=ROOT,mcba_status=None,sio_status=None):
         state=read_json(root/f'data/magyp/reports/PRICE_STATE_{file}.json',{})
         add(family,'MAGyP',values('mercado'),frequency,day,stamp,True,'magyp-commodities-review.yml',
             'Familia independiente; sin interpolación. D.E.R. sólo histórico.' if file=='fas' else 'Familia independiente; sin interpolación.',values('moneda'),values('unidad'),state)
-    from scripts.magyp.mcba.update_mcba_dashboard import read_bundle
+    from scripts.magyp.mcba.published_bundle import read_bundle
     read_bundle(root/'data/magyp/dashboard/mcba')
     summary=read_csv(root/'data/magyp/dashboard/mcba/MCBA_MAGYP_SUMMARY.csv',',')[0]
     state=mcba_status or read_json(root/'data/magyp/dashboard/mcba/MCBA_MAGYP_UPDATE_STATUS.json',{})

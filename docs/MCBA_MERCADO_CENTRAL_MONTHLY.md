@@ -65,6 +65,12 @@ python scripts/mercado_central/validate_mcba_monthly.py
 python scripts/magyp/build_price_freshness.py
 ```
 
+El workflow instala únicamente `scripts/mercado_central/requirements.txt`: conserva
+`xlrd==2.0.2` para XLS BIFF e incluye el requirements común de MAGyP, donde
+`openpyxl==3.1.5` está fijado para XLSX. El reporte de frescura lee y valida el
+bundle diario mediante `scripts/magyp/mcba/published_bundle.py`, sin importar el
+actualizador diario, los parsers Excel ni el navegador.
+
 Para reproducir desde RAW local sin red, sustituir `--allow-web` por `--replay`.
 Si no cambia el contenido de los ZIP ni la versión del parser, el resultado es
 `NO_OP_ALREADY_CURRENT`. Toda modificación futura de las reglas de normalización
