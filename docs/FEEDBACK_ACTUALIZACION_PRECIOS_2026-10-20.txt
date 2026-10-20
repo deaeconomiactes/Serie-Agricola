@@ -1,0 +1,105 @@
+PROYECTO SERIE AGRÍCOLA
+FEEDBACK — ACTUALIZACIÓN DE PRECIOS
+Fecha: 20/10/2026
+
+RESULTADO
+Se actualizaron localmente los precios disponibles y se preparó la publicación automática de sus estados.
+No se hizo commit, push, merge ni deploy.
+
+ESTADO POR FUENTE
+Las capturas indicadas están en UTC, excepto SIO, cuya metadata no declara zona horaria.
+
+MCBA MAGyP
+- Último dato: 05/10/2026.
+- Última captura exitosa: 06/10/2026 13:34 UTC.
+- Frecuencia: diaria cuando publica.
+- Automatización: sí, runner Windows self-hosted con Edge.
+- Estado: SOURCE_UNAVAILABLE.
+- Bloqueo: la corrida real consultó el 20/10 y terminó en timeout de grilla GeneXus.
+- Se conservaron los CSV válidos. No se modificó la adquisición Edge.
+
+Mercado de Corrientes legacy
+- Último dato utilizable: 25/08/2026.
+- Última actualización exitosa: no informada.
+- Frecuencia: según planilla.
+- Automatización: no; actualización manual.
+- Estado: STATIC / Fuente estática.
+- Se conservaron los originales. Las fechas futuras se excluyen del indicador, igual que en el dashboard.
+
+Precio interno mensual MAGyP
+- Último dato: septiembre de 2026.
+- Última captura exitosa: 20/10/2026 11:32 UTC.
+- Frecuencia: mensual.
+- Automatización: sí.
+- Estado: UPDATED.
+
+Pizarra / Cámara MAGyP
+- Último dato: 16/10/2026.
+- Última captura exitosa: 20/10/2026 11:32 UTC.
+- Frecuencia: diaria cuando publica.
+- Automatización: sí.
+- Estado: UPDATED.
+
+FAS D.E.C.
+- Último dato: 19/10/2026.
+- Última captura exitosa: 20/10/2026 11:32 UTC.
+- Frecuencia: diaria cuando publica.
+- Automatización: sí.
+- Estado: UPDATED.
+- FAS D.E.R. permanece como histórico y no determina la frescura de D.E.C.
+
+FOB oficial MAGyP
+- Último dato: 19/10/2026.
+- Última captura exitosa con publicación válida: 20/10/2026 01:32 UTC.
+- Frecuencia: diaria cuando publica.
+- Automatización: sí.
+- Estado: NO_PUBLICATION.
+- La consulta real del 20/10 respondió sin publicación; se conservó el dato del 19/10.
+- Moneda y unidad permanecen como Sin identificar.
+
+Futuros externos MAGyP
+- Último dato: 19/10/2026.
+- Última captura exitosa: 20/10/2026 11:32 UTC.
+- Frecuencia: diaria cuando publica.
+- Automatización: sí.
+- Estado: UPDATED.
+- Fecha de observación y vencimiento del contrato permanecen separados.
+
+SIO Granos
+- Último dato: 20/10/2026.
+- Última captura exitosa: 20/10/2026 08:33, hora de origen sin zona declarada.
+- Frecuencia: snapshot diario de operaciones transaccionales.
+- Automatización: sí.
+- Estado: UPDATED.
+- Se incorporó un snapshot nuevo y se preparó deploy explícito después de publicar.
+- No se reconstruyeron contratos ni se cambió la semántica transaccional.
+
+MCBA mensual legacy
+- Último período disponible: diciembre de 2025.
+- Estado: STATIC / Fuente estática.
+- Se mantiene separado del diario MAGyP; no se deriva silenciosamente del diario.
+
+Histórico local mensual de granos
+- Último período disponible: agosto de 2026.
+- Estado: STATIC / Fuente estática.
+- Permanece disponible por separado de las referencias MAGyP.
+
+DASHBOARD Y REPORTE
+- Los indicadores usan estados explícitos; no infieren error por antigüedad calendario.
+- Se preservaron filtros, KPIs, gráficos, rankings, semáforos y tablas.
+- Reporte único: data/magyp/reports/PRICE_FRESHNESS_STATUS.json.
+- Incluye fuente, mercado, frecuencia, última observación, actualización exitosa, estado, automatización, workflow, moneda, unidad y notas.
+- Documentación: docs/PRICE_FRESHNESS.md.
+
+VALIDACIONES
+- 48 tests Python comunes: correctos.
+- 105 tests MCBA: correctos.
+- 42 tests frontend: correctos.
+- 6 tests CI: correctos.
+- actionlint: correcto.
+- git diff --check: correcto.
+
+LÍMITE DE LA ENTREGA
+Las consultas de referencias MAGyP y SIO fueron reales. Para MCBA se verificó la corrida productiva existente; no se lanzó otra adquisición Edge.
+Los workflows modificados se validaron localmente y quedan pendientes de integración y ejecución remota.
+Los nuevos datos e indicadores locales todavía no fueron desplegados al dashboard publicado.

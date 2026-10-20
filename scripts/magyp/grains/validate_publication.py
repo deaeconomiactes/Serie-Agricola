@@ -1,5 +1,6 @@
 """Guardia de publicación: sólo cinco CSV de dashboard, válidos y livianos."""
 import argparse
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -18,10 +19,14 @@ def validate_outputs(root, max_bytes=MAX_DASHBOARD_BYTES):
         if not path.is_file() or path.is_symlink() or not 0 < path.stat().st_size <= max_bytes:
             raise r.Error('Output ausente, vacío o demasiado pesado; publicación rechazada')
         r.validate_bundle(path.read_bytes(), source)
+    report=root/'reports/PRICE_FRESHNESS_STATUS.json'
+    if report.exists():
+        from scripts.magyp.build_price_freshness import validate_report
+        validate_report(json.loads(report.read_text(encoding='utf-8')))
 
 
 def validate_staged_paths(paths):
-    if not set(paths).issubset(PUBLICATION_FILES):
+    if not set(paths).issubset((*PUBLICATION_FILES, 'data/magyp/reports/PRICE_FRESHNESS_STATUS.json')):
         raise r.Error('Archivo fuera del allowlist dashboard; publicación rechazada')
 
 
@@ -37,7 +42,7 @@ def main():
             validate_staged_paths(paths.decode('utf-8').rstrip('\0').split('\0') if paths else [])
         print('[VALIDATE] Cinco CSV dashboard válidos; publicación limitada al allowlist')
         return 0
-    except (r.Error, OSError, UnicodeError, subprocess.CalledProcessError):
+    except (r.Error, OSError, UnicodeError, ValueError, KeyError, TypeError, subprocess.CalledProcessError):
         print('[VALIDATE] Publicación rechazada; conservar última versión publicada')
         return 1
 

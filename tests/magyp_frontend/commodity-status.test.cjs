@@ -20,8 +20,8 @@ for(const [status,label,tone] of [
  assert.equal(node.hidden,false);
  assert.equal(node.className,'source-update-status source-update-status--'+tone);
  assert.equal(node.children[0].textContent,'Commodities · '+label);
- assert.match(node.children[1].textContent,/Último dato disponible: 09\/10\/2026/);
- assert.match(node.children[1].textContent,/Última actualización exitosa: 10\/10\/2026 10:00/);
+ assert.match(node.children[1].textContent,/Último dato: 09\/10\/2026/);
+ assert.match(node.children[1].textContent,/Actualización exitosa: 10\/10\/2026 10:00/);
 });
 test('missing acquisition status remains neutral; economic estado and dates never imply success',()=>{
  const value=metadata({estado:'UPDATED',fecha_max:'2026-10-09',fecha_actualizacion_dashboard:'2026-10-10T13:00:00Z'});

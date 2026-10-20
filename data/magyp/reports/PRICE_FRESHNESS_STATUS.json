@@ -1,0 +1,247 @@
+{
+  "schema_version": "price-freshness-v1",
+  "sources": [
+    {
+      "source_family": "magyp_internal",
+      "source": "MAGyP",
+      "market": [
+        "B.BLANCA",
+        "CORDOBA",
+        "DARSENA",
+        "QUEQUEN",
+        "ROSARIO"
+      ],
+      "frequency": "mensual",
+      "last_observation_date": "2026-09-01",
+      "last_successful_update": "2026-10-20T11:32:18.740643Z",
+      "status": "UPDATED",
+      "automatic_update": true,
+      "workflow": "magyp-commodities-review.yml",
+      "notes": "Familia independiente; sin interpolación.",
+      "currency": [
+        "ARS"
+      ],
+      "unit": [
+        "TN"
+      ],
+      "requested_date": "2026-10-20",
+      "attempted_at": "2026-10-20T11:32:19.105533+00:00",
+      "diagnostic_note": null,
+      "evidence": null
+    },
+    {
+      "source_family": "magyp_board",
+      "source": "MAGyP",
+      "market": [
+        "BAHIA BLANCA",
+        "BUENOS AIRES",
+        "CORDOBA",
+        "QUEQUEN",
+        "ROSARIO"
+      ],
+      "frequency": "diaria",
+      "last_observation_date": "2026-10-16",
+      "last_successful_update": "2026-10-20T11:32:20.859851Z",
+      "status": "UPDATED",
+      "automatic_update": true,
+      "workflow": "magyp-commodities-review.yml",
+      "notes": "Familia independiente; sin interpolación.",
+      "currency": [
+        "ARS"
+      ],
+      "unit": [
+        "TN"
+      ],
+      "requested_date": "2026-10-20",
+      "attempted_at": "2026-10-20T11:32:21.108314+00:00",
+      "diagnostic_note": null,
+      "evidence": null
+    },
+    {
+      "source_family": "magyp_fas",
+      "source": "MAGyP",
+      "market": [
+        "Argentina / paridad teórica"
+      ],
+      "frequency": "diaria cuando publica",
+      "last_observation_date": "2026-10-19",
+      "last_successful_update": "2026-10-20T11:32:23.482637Z",
+      "status": "UPDATED",
+      "automatic_update": true,
+      "workflow": "magyp-commodities-review.yml",
+      "notes": "Familia independiente; sin interpolación. D.E.R. sólo histórico.",
+      "currency": [
+        "ARS",
+        "Sin identificar"
+      ],
+      "unit": [
+        "Sin identificar",
+        "TN"
+      ],
+      "requested_date": "2026-10-20",
+      "attempted_at": "2026-10-20T11:32:24.013865+00:00",
+      "diagnostic_note": null,
+      "evidence": null
+    },
+    {
+      "source_family": "magyp_fob",
+      "source": "MAGyP",
+      "market": [
+        "FOB oficial / plaza no informada"
+      ],
+      "frequency": "diaria cuando publica",
+      "last_observation_date": "2026-10-19",
+      "last_successful_update": "2026-10-20T01:32:28.616278Z",
+      "status": "NO_PUBLICATION",
+      "automatic_update": true,
+      "workflow": "magyp-commodities-review.yml",
+      "notes": "Familia independiente; sin interpolación.",
+      "currency": [
+        "Sin identificar"
+      ],
+      "unit": [
+        "Sin identificar"
+      ],
+      "requested_date": "2026-10-20",
+      "attempted_at": "2026-10-20T11:32:25.737719+00:00",
+      "diagnostic_note": null,
+      "evidence": null
+    },
+    {
+      "source_family": "magyp_futures",
+      "source": "MAGyP",
+      "market": [
+        "CHICAGO",
+        "KANSAS"
+      ],
+      "frequency": "diaria cuando publica",
+      "last_observation_date": "2026-10-19",
+      "last_successful_update": "2026-10-20T11:32:27.525057Z",
+      "status": "UPDATED",
+      "automatic_update": true,
+      "workflow": "magyp-commodities-review.yml",
+      "notes": "Familia independiente; sin interpolación.",
+      "currency": [
+        "USD"
+      ],
+      "unit": [
+        "TN"
+      ],
+      "requested_date": "2026-10-20",
+      "attempted_at": "2026-10-20T11:32:28.176323+00:00",
+      "diagnostic_note": null,
+      "evidence": null
+    },
+    {
+      "source_family": "mcba",
+      "source": "MAGyP",
+      "market": "Mercado Central de Buenos Aires",
+      "frequency": "diaria cuando publica",
+      "last_observation_date": "2026-10-05",
+      "last_successful_update": "2026-10-06T13:34:47.388718Z",
+      "status": "SOURCE_UNAVAILABLE",
+      "automatic_update": true,
+      "workflow": "update-magyp-mcba.yml",
+      "notes": "Edge Windows; fecha civil argentina; último bundle válido ante indisponibilidad. Corrida real 39354603566: filtered_grid TIMEOUT; CSV conservados. https://github.com/deaeconomiactes/Serie-Agricola/actions/runs/39354603566",
+      "currency": [
+        "ARS"
+      ],
+      "unit": [
+        "kg"
+      ],
+      "requested_date": "2026-10-20",
+      "attempted_at": "2026-10-20T11:16:43.3651466Z",
+      "diagnostic_note": "Corrida real 39354603566: filtered_grid TIMEOUT; CSV conservados. https://github.com/deaeconomiactes/Serie-Agricola/actions/runs/39354603566",
+      "evidence": "https://github.com/deaeconomiactes/Serie-Agricola/actions/runs/39354603566"
+    },
+    {
+      "source_family": "corrientes",
+      "source": "Legacy",
+      "market": "Mercado de Corrientes",
+      "frequency": "según planilla",
+      "last_observation_date": "2026-08-25",
+      "last_successful_update": null,
+      "status": "STATIC",
+      "automatic_update": false,
+      "workflow": null,
+      "notes": "Fuente legacy principal, actualización manual. 115 filas futuras excluidas del indicador, igual que en el dashboard; originales conservados.",
+      "currency": [
+        "Sin identificar"
+      ],
+      "unit": [
+        "$/bulto"
+      ],
+      "requested_date": null,
+      "attempted_at": null,
+      "diagnostic_note": null,
+      "evidence": null
+    },
+    {
+      "source_family": "mcba_monthly",
+      "source": "Legacy",
+      "market": "Mercado Central de Buenos Aires",
+      "frequency": "mensual",
+      "last_observation_date": "2025-12-01",
+      "last_successful_update": null,
+      "status": "STATIC",
+      "automatic_update": false,
+      "workflow": null,
+      "notes": "Mensual legacy; no se deriva del diario MAGyP.",
+      "currency": [
+        "ARS"
+      ],
+      "unit": [
+        "$/kg"
+      ],
+      "requested_date": null,
+      "attempted_at": null,
+      "diagnostic_note": null,
+      "evidence": null
+    },
+    {
+      "source_family": "local_mensual",
+      "source": "Legacy precios internos",
+      "market": "plazas informadas",
+      "frequency": "mensual",
+      "last_observation_date": "2026-08-01",
+      "last_successful_update": null,
+      "status": "STATIC",
+      "automatic_update": false,
+      "workflow": null,
+      "notes": "Histórico local mensual disponible por separado; sin reemplazar MAGyP.",
+      "currency": [
+        "ARS"
+      ],
+      "unit": [
+        "TN"
+      ],
+      "requested_date": null,
+      "attempted_at": null,
+      "diagnostic_note": null,
+      "evidence": null
+    },
+    {
+      "source_family": "sio",
+      "source": "SIO Granos / Secretaría de Agricultura",
+      "market": "plazas informadas",
+      "frequency": "transaccional / snapshot diario",
+      "last_observation_date": "2026-10-20",
+      "last_successful_update": "2026-10-20T08:33:40",
+      "status": "UPDATED",
+      "automatic_update": true,
+      "workflow": "update-sio-commodities.yml",
+      "notes": "Operaciones transaccionales; snapshot reciente, no reconstrucción de contratos.",
+      "currency": [
+        "ARS",
+        "USD"
+      ],
+      "unit": [
+        "TN"
+      ],
+      "requested_date": null,
+      "attempted_at": "2026-10-20T11:35:27.849811+00:00",
+      "diagnostic_note": null,
+      "evidence": null
+    }
+  ]
+}
