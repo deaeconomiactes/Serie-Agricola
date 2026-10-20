@@ -1732,6 +1732,10 @@ function updateCommoditySourceStatus() {
     const fallback = summary.modo === 'legacy_fallback';
     setCommodityDataStatus(count ? `${fallback ? 'Respaldo histórico local: MAGyP no disponible' : sampleMode ? 'Muestra de respaldo' : config.label} · ${formatNumber(count)} ${label}` : `${config.label} · Sin datos disponibles`, count ? (sampleMode ? 'sample' : 'ready') : '');
     const freshness = document.getElementById('commodityDataFreshness');
+    const updateState = commodityUpdateMetadata(summary);
+    SourceUpdateStatus.render(document.getElementById('commodityUpdateStatus'), updateState,
+        {date_max: summary.fecha_max, updated_at: summary.fecha_actualizacion_dashboard || summary.fecha_actualizacion},
+        Boolean(count || updateState.status), {sourceLabel: 'Commodities', showDates: true, showUnknown: true});
     const lastOperation = document.getElementById('commodityDataLastOperation');
     const operationRange = document.getElementById('commodityDataOperationRange');
     if (freshness) {
@@ -1752,6 +1756,16 @@ function updateCommoditySourceStatus() {
         const maxDate = formatCommodityCapture(summary.fecha_max_operacion_sio || summary.fecha_max);
         operationRange.textContent = visible ? `Rango de operaciones: ${minDate} — ${maxDate}` : '';
     }
+}
+
+function commodityUpdateMetadata(summary) {
+    // Economic traffic-light `estado` is deliberately not an acquisition status.
+    return {
+        status: summary.status || summary.result || summary.source_status || summary.update_status,
+        requested_date: summary.requested_date,
+        last_valid_date: summary.last_valid_date || summary.last_observation_date || summary.fecha_max_operacion_sio || summary.fecha_max,
+        last_successful_update: summary.last_successful_update || summary.fecha_actualizacion_dashboard || summary.fecha_actualizacion
+    };
 }
 
 function formatCommodityCapture(value) {

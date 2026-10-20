@@ -362,3 +362,7 @@ button, select { font: inherit; }
 .source-update-status--success .source-update-status__badge { color:#54dba1; }
 .source-update-status--warning .source-update-status__badge { color:#f4c36a; }
 .source-update-status--error .source-update-status__badge { color:#ff9191; }
+
+.commodity-update-meta { display:flex; align-items:baseline; flex-wrap:wrap; gap:.25rem .75rem; }
+.commodity-update-meta .source-update-status { justify-content:flex-start; margin:.2rem 0; }
+.source-update-status--neutral .source-update-status__badge { color:var(--text-muted); }
