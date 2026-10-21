@@ -136,13 +136,15 @@ es **668/668 cubiertos, cero diferencias de precio**. Se aplican sólo alias de
 mayúsculas/acentos y el prefijo conocido de plaza; no se convierte ninguna unidad.
 
 El índice autoriza `can_retire_legacy=true` sólo con cobertura completa y precios
-comparados iguales. El navegador activa el retiro únicamente después de validar
-y cargar el histórico: comprobar sólo el índice no alcanza. En ese caso no se
-solicitan los CSV estáticos ni se ofrece su selector. Los archivos
-originales se conservan como evidencia y por compatibilidad de auditoría; no se
-borran. Si falla el índice, el shard, su hash o el diccionario, se mantiene el
-acceso al archivo mensual separado y la contingencia existente, sin rellenar celdas de una vista oficial
-ya validada tras aplicar filtros. SIO conserva exactamente su circuito separado.
+comparados iguales. Tras aprobar el cutover final, el archivo manual deja de ser
+una fuente del frontend: no tiene carga, selector ni contingencia automática.
+Si falla el histórico se conserva el bundle corriente oficial válido; si tampoco
+está disponible, se informa la ausencia de datos sin reactivar el archivo manual.
+Los originales se conservan en `data/commodities_local_mensual/` para auditoría,
+pero `scripts/ci/prepare_pages.py` los excluye del paquete de GitHub Pages.
+El reporte de frescura conserva su registro de auditoría con `runtime_active=false`
+y ya no necesita leer sus CSV durante la actualización productiva. SIO conserva
+exactamente su circuito separado.
 
 El único histórico local mensual comparado corresponde a internos. No reemplaza
 Pizarra, FAS, FOB o futuros; el reemplazo para esas familias no es aplicable.

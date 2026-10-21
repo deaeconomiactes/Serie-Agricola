@@ -125,7 +125,15 @@ def build(root=ROOT,mcba_status=None,sio_status=None):
         else:
             add(key,'Legacy',market,'mensual' if key=='mcba_monthly' else 'según planilla',max(dates,default=None),None,False,None,note,sorted({r.get('moneda') or 'Sin identificar' for r in subset}),
                 sorted({r.get('unidad_precio_observado') or r.get('unidad') or 'Sin identificar' for r in subset}))
-    local=read_csv(root/'data/commodities_local_mensual/dashboard/COMMODITIES_LOCAL_MENSUAL_DASHBOARD_RESUMEN.csv')[0]
+    cutover=read_json(root/'data/magyp/dashboard/commodities/history/index.json',{}).get('families',{}).get('internal',{}).get('legacy_comparison',{})
+    if cutover.get('can_retire_legacy'):
+        # Audit-only metadata: production no longer reads manual price CSVs.
+        archive=prior.get('local_mensual',{})
+        local={'fecha_max':archive.get('last_observation_date'),
+            'monedas':'|'.join(archive.get('currency') or ['ARS']),
+            'unidades':'|'.join(archive.get('unit') or ['TN'])}
+    else:
+        local=read_csv(root/'data/commodities_local_mensual/dashboard/COMMODITIES_LOCAL_MENSUAL_DASHBOARD_RESUMEN.csv')[0]
     add('local_mensual','Legacy precios internos','plazas informadas','mensual',local.get('fecha_max'),None,False,None,
         'Histórico local mensual disponible por separado; sin reemplazar MAGyP.',
         local.get('monedas','Sin identificar').split('|'),local.get('unidades','Sin identificar').split('|'),{'status':'STATIC'})

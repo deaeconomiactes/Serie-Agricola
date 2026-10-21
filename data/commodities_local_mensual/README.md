@@ -1,5 +1,9 @@
 # Commodities locales mensuales
 
+> Archivo conservado para auditoría. El cutover a Precio interno MAGyP oficial
+> cubre 668/668 registros comparados; esta carpeta ya no participa en el frontend
+> ni se incluye en GitHub Pages. Ver `docs/COMMODITIES_CUTOVER.md`.
+
 ## Propósito
 
 Esta carpeta prepara una fuente histórica mensual de precios de commodities agrícolas argentinos, priorizando la publicación oficial de Secretaría de Agricultura / Mercados Agropecuarios **“Evolución de Precios Internos de los Principales Granos”**.
