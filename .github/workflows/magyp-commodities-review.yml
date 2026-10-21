@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       date:
-        description: 'Fecha ISO de control / consulta FOB; vacío = hoy en Argentina'
+        description: 'Fecha ISO de consulta FOB; vacío = hoy en Argentina. Las otras fuentes consultan su publicación corriente'
         required: false
       source:
         description: 'Familia independiente'
@@ -51,17 +51,19 @@ jobs:
           from datetime import date, datetime
           from zoneinfo import ZoneInfo
           requested = os.environ['MANUAL_DATE'].strip()
-          day = date.fromisoformat(requested) if requested else datetime.now(ZoneInfo('America/Argentina/Buenos_Aires')).date()
+          control = datetime.now(ZoneInfo('America/Argentina/Buenos_Aires')).date()
+          day = date.fromisoformat(requested) if requested else control
           with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as output:
               output.write(f'REQUESTED_DATE={day.isoformat()}\n')
-          print(f'[FETCH] Fecha Argentina: {day.isoformat()}')
+              output.write(f'CONTROL_DATE={control.isoformat()}\n')
+          print(f'[FETCH] Consulta FOB: {day.isoformat()}; control fuentes corrientes: {control.isoformat()}')
           PY
       - name: Descargar, validar y preparar salidas
         id: references
         continue-on-error: true
         env:
           SOURCE: ${{ inputs.source || 'all' }}
-        run: python scripts/magyp/grains/references.py --source "$SOURCE" --date "$REQUESTED_DATE" --allow-web
+        run: python scripts/magyp/grains/references.py --source "$SOURCE" --date "$REQUESTED_DATE" --as-of "$CONTROL_DATE" --allow-web
       - name: Consolidar estado real por familia
         run: python scripts/magyp/build_price_freshness.py
       - name: Validar salidas generadas para el dashboard

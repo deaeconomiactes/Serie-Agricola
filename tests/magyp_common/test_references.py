@@ -42,6 +42,60 @@ def enrich(rows,capture='c1',stamp='2026-10-09T12:00:00Z'):
 
 
 class ReferencesTests(unittest.TestCase):
+    def test_historical_fob_query_does_not_set_current_family_validation_clock(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            with patch('sys.argv',['references','--source','all','--date','2026-10-08',
+                    '--as-of','2026-10-21','--data-root',temp]),patch.object(r,'run',return_value='UPDATED') as run:
+                self.assertEqual(r.main(),0)
+            for call in run.call_args_list:
+                source,_,control,requested,_=call.args
+                self.assertEqual(requested,'2026-10-08')
+                self.assertEqual(control,date(2026,10,8) if source=='fob' else date(2026,10,21))
+                state=json.loads((root/'reports'/f'PRICE_STATE_{source}.json').read_bytes())
+                self.assertEqual(state['status'],'UPDATED')
+                self.assertEqual(state['validation_date'],control.isoformat())
+
+    def test_current_capture_replays_its_validation_date_with_older_requested_date(self):
+        obj=board()
+        html=obj['text']+'<table>'+''.join('<tr>'+''.join('<td>'+v+'</td>' for v in row)+'</tr>' for row in obj['rows'])+'</table>'
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            with patch.object(r,'build_opener') as opener:
+                opener.return_value.open.return_value=FobResponse(html.encode())
+                folder=r.fetch('board','2026-09-25',DAY,root)
+            manifest=json.loads((folder/'manifest.json').read_bytes())
+            self.assertEqual(manifest['requested_date'],'2026-09-25')
+            self.assertEqual(manifest['validation_date'],DAY.isoformat())
+            # Neither an older query date nor a later replay date changes validation.
+            self.assertEqual(len(r.normalize(folder,root,date(2027,1,1))),30)
+
+    def test_older_manifest_without_validation_date_remains_compatible(self):
+        obj=board()
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);folder=root/'raw/commodities/board/old';folder.mkdir(parents=True)
+            payload=r.encoded(obj)
+            manifest=dict(source='board',sha256=r.digest(payload),size_bytes=len(payload),status=200,
+                schema_version=r.VERSION,parser_version=r.VERSION,capture_id='old',record_count=30,
+                requested_date=DAY.isoformat(),captured_at_utc='2026-10-08T12:00:00Z')
+            (folder/'response.json').write_bytes(payload);(folder/'manifest.json').write_bytes(r.encoded(manifest))
+            self.assertEqual(len(r.normalize(folder,root,date(2027,1,1))),30)
+
+    def test_true_future_observation_keeps_pipeline_error_and_previous_output(self):
+        obj=board()
+        html=obj['text']+'<table>'+''.join('<tr>'+''.join('<td>'+v+'</td>' for v in row)+'</tr>' for row in obj['rows'])+'</table>'
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);out=root/'dashboard/commodities/board.csv'
+            prior=r.bundle(enrich(r.parse(obj,'board',DAY)),'board');r.atomic(out,prior)
+            with patch('sys.argv',['references','--source','board','--date','2026-09-25',
+                    '--as-of','2026-10-06','--data-root',temp,'--allow-web']),patch.object(r,'build_opener') as opener:
+                opener.return_value.open.return_value=FobResponse(html.encode())
+                self.assertEqual(r.main(),1)
+            state=json.loads((root/'reports/PRICE_STATE_board.json').read_bytes())
+            self.assertEqual(state['status'],'PIPELINE_ERROR')
+            self.assertEqual(state['diagnostic_note'],'Observación futura')
+            self.assertEqual(out.read_bytes(),prior)
+
     def test_fob_legacy_and_current_published_fixtures_preserve_original_fields(self):
         for name in ['fob_legacy.json','fob_current_published.json']:
             body=(FIXTURES/name).read_bytes();original=json.loads(body)
