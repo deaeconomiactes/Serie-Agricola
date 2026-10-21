@@ -9,8 +9,12 @@ Commodities agrícolas es un módulo separado de las cantidades y los precios ma
 ## Cómo trabajar
 
 - Antes de editar, identifica el pipeline y la documentación que corresponden a la tarea. Lee sólo las guías pertinentes; no es necesario releer todo el repositorio para cambios acotados.
-- El agente raíz conserva la responsabilidad de definir el alcance, asignar un único responsable por subtarea, integrar cambios y hacer la validación final.
-- Delega sólo trabajo independiente que se beneficie de un especialista. Evita que dos agentes editen los mismos archivos a la vez. Los roles de lectura no modifican archivos.
+- El agente raíz conserva la responsabilidad de definir el alcance y los criterios de aceptación, integrar cambios y comunicar el resultado. Una tarea pequeña y bien acotada puede resolverse directamente sin delegación.
+- Delega sólo trabajo independiente que se beneficie de un especialista. Antes de delegar, indica objetivo, alcance, archivos bajo responsabilidad, restricciones y resultado esperado. Asigna un único responsable de edición por archivo y evita solapamientos.
+- Usa `explorer` para mapear código y flujos existentes cuando la tarea lo requiera; `researcher` para verificar fuentes externas y documentación oficial; `worker` para una implementación acotada; y `reviewer` para revisar cambios relevantes de arquitectura, fuentes, transformaciones o integridad de datos.
+- Las investigaciones independientes pueden correr en paralelo. La implementación debe tener propiedad de archivos clara. El agente raíz integra las entregas, revisa el diff completo y confirma las comprobaciones pertinentes antes de cerrar la tarea.
+- Los subagentes heredan los permisos de la sesión principal: el perfil del agente no crea un entorno aislado ni garantiza acceso de sólo lectura. Elige los permisos de la sesión antes de delegar; si una exploración o revisión debe ser técnicamente de sólo lectura, usa una sesión principal de sólo lectura.
+- El modelo de `.codex/config.toml` es el default del agente raíz; una selección manual en Codex cambia el modelo principal de esa tarea. Los perfiles personalizados conservan el modelo que declaran. Estas instrucciones orientan la delegación, pero no obligan a iniciar subagentes en cada tarea.
 - No implementes una API cuando la tarea sea investigar o preparar arquitectura. Distingue hechos verificados, hipótesis y cuestiones pendientes.
 - En una implementación, añade o actualiza verificaciones específicas para las transformaciones y ejecuta las comprobaciones pertinentes antes de integrar.
 

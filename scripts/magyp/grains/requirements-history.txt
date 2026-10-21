@@ -1,0 +1,4 @@
+-r ../requirements.txt
+et-xmlfile==2.0.0
+# FAS export requires the separately pinned ../requirements-browser.txt and Edge.
+# All other history acquisition and build steps use HTTP/stdlib + openpyxl.

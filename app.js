@@ -35,15 +35,15 @@ const COMMODITY_SOURCE_CONFIG = {
 // Public reference prices share the module; each selector loads only its own family.
 const MAGYP_REFERENCE_CONFIG = {
     magyp_internal: { label: 'Precio interno mensual — MAGyP', file: 'internal.csv', monthlyOnly: true,
-        note: 'Precios internos mensuales publicados por MAGyP, atribuidos a BCBA, en ARS/TN por plaza. El histórico local permanece disponible por separado.' },
+        note: 'Precios internos mensuales publicados por MAGyP en ARS/TN por plaza. Histórico oficial desde 1996; se conservan las etiquetas y la trazabilidad de cada publicación.' },
     magyp_board: { label: 'Pizarra / Cámara — MAGyP', file: 'board.csv',
         note: 'Pizarra provisional por plaza en ARS/TN, sujeta a ajuste. Los ceros no se interpretan como precios. No equivale a operaciones SIO.' },
     magyp_fas: { label: 'FAS teórico — MAGyP', file: 'fas.csv',
         note: 'Paridad teórica por régimen D.E.C./D.E.R. ARS/TN corroborados para granos; aceites sin unidad/moneda identificadas. D.E.R. conserva su fecha histórica y no se presenta como vigente.' },
     magyp_fob: { label: 'FOB oficial — MAGyP', file: 'fob.csv',
-        note: 'Posiciones textuales, circular y ventana de embarque de la API oficial. Producto, moneda, unidad y plaza no informados por la API: pendientes de diccionario. No se calcula un FOB único por producto.' },
-    magyp_futures: { label: 'Futuros / cierre externo — MAGyP', file: 'futures.csv',
-        note: 'Cierres publicados de Chicago y Kansas en USD/TN por producto y vencimiento. La fecha de cotización es la observación del precio; Vencimiento / Posición identifica el contrato y no es una fecha de observación. No hay serie continua ni roll automático. Las cotizaciones físicas FOB de la misma página se excluyen.' }
+        note: 'API MAGyP: posición textual, circular y embarque; moneda/unidad sin identificar. Histórico SSPM: series descriptivas en USD/TN con índice calendario, que no confirma fecha de publicación MAGyP. Son referencias separadas, sin equivalencias entre posiciones y productos.' },
+    magyp_futures: { label: 'Futuros externos — MAGyP', file: 'futures.csv',
+        note: 'Chicago y Kansas en USD/TN por producto y vencimiento. Las matrices históricas publicadas se distinguen de los cierres actuales mediante Tipo de precio. La fecha de cotización es la observación; Vencimiento / Posición identifica el contrato. No hay serie continua ni roll automático.' }
 };
 Object.entries(MAGYP_REFERENCE_CONFIG).forEach(([key, config]) => {
     COMMODITY_SOURCE_CONFIG[key] = { ...config, subtitle: config.label, reference: true,
@@ -364,6 +364,11 @@ let commoditySource = 'magyp_internal';
 const commodityDataBySource = {};
 let commodityData = { diario: [], mensual: [], ultimos: [], resumen: [], semaforo: [] };
 let commoditySelectedValues = [];
+const commodityCurrentData = {};
+const commodityHistoryMetadata = {};
+let commodityLegacyRetired = false;
+let commodityHistoryYear = 'TODOS';
+let commodityHistoryRequest = 0;
 const commodityCharts = { trend: null, ranking: null, volume: null };
 
 // ─── Boot ───────────────────────────────────────────────────────────────
@@ -1647,9 +1652,27 @@ function emptyCommodityData() {
 async function loadCommoditySource(sourceKey) {
     const config = COMMODITY_SOURCE_CONFIG[sourceKey];
     if (config.reference) {
-        const response = await fetch(`${config.path}${config.bundleFile}`);
-        if (!response.ok) throw new Error(`Referencia MAGyP: HTTP ${response.status}`);
-        return parseReferenceCommodityBundle(await response.text(), sourceKey);
+        let current = emptyCommodityData();
+        let currentError;
+        try {
+            const response = await fetch(`${config.path}${config.bundleFile}`);
+            if (!response.ok) throw new Error(`Referencia MAGyP: HTTP ${response.status}`);
+            current = parseReferenceCommodityBundle(await response.text(), sourceKey);
+        } catch (error) { currentError = error; }
+        commodityCurrentData[sourceKey] = current;
+        const family = sourceKey.replace('magyp_', '');
+        if (sourceKey === 'magyp_internal') commodityLegacyRetired = false;
+        if (typeof CommodityHistory !== 'undefined') {
+            try {
+                const entry = await CommodityHistory.metadata(family);
+                const result = await CommodityHistory.assemble(family, current, null, parseCommodityCSV);
+                commodityHistoryMetadata[sourceKey] = entry;
+                if (sourceKey === 'magyp_internal') commodityLegacyRetired = entry.legacy_comparison?.can_retire_legacy === true;
+                return result;
+            } catch (error) { delete commodityHistoryMetadata[sourceKey];console.error(`Histórico ${family}:`, error); }
+        }
+        if (currentError) throw currentError;
+        return current;
     }
     const entries = await Promise.all(Object.entries(config.files).map(async ([key, file]) => {
         if (!file) return [key, []];
@@ -1685,16 +1708,17 @@ function parseReferenceCommodityBundle(text, sourceKey) {
         }
     }
     if (!result.mensual.length || !result.ultimos.length || !result.semaforo.length) throw new Error('Referencia MAGyP sin vistas');
+    Object.defineProperty(result, '_observations', {value: observations});
     return result;
 }
 
 function initCommoditySourceFilter() {
     const select = document.getElementById('commodityFilterSource');
     if (!select) return;
-    select.innerHTML = Object.entries(COMMODITY_SOURCE_CONFIG).map(([value, config]) => `<option value="${value}">${escapeHtml(config.label)}</option>`).join('');
+    select.innerHTML = Object.entries(COMMODITY_SOURCE_CONFIG).filter(([key]) => key !== 'local_mensual' || !commodityLegacyRetired).map(([value, config]) => `<option value="${value}">${escapeHtml(config.label)}</option>`).join('');
     select.value = commoditySource;
     if (!select.dataset.commodityBound) {
-        select.addEventListener('change', () => setCommoditySource(select.value));
+        select.addEventListener('change', () => selectCommoditySource(select.value));
         select.dataset.commodityBound = 'true';
     }
 }
@@ -1716,6 +1740,12 @@ function updateCommoditySourcePresentation() {
     const periodHeader = document.getElementById('commodityLatestPeriodHeader');
     if (periodHeader) periodHeader.textContent = futures ? 'Cotización' : 'Período';
     if (note) note.textContent = config.note;
+    const historyCoverage = document.getElementById('commodityHistoryCoverage');
+    if (historyCoverage) {
+        const summary = commodityData.resumen[0] || {};
+        historyCoverage.hidden = !commodityHistoryMetadata[commoditySource];
+        historyCoverage.textContent = historyCoverage.hidden ? '' : `Cobertura de precios: ${formatCommodityCapture(summary.fecha_min)} — ${formatCommodityCapture(summary.fecha_max)} · Fuente: MAGyP${commoditySource === 'magyp_fob' ? ' / SSPM (histórico separado)' : ''}`;
+    }
     const operationsLabel = document.getElementById('commodityKpiOperationsLabel');
     if (operationsLabel) operationsLabel.textContent = config.operationsLabel;
     const operationsUnit = document.getElementById('commodityKpiOperationsUnit');
@@ -1759,8 +1789,11 @@ function updateCommoditySourceStatus() {
     const fallback = summary.modo === 'legacy_fallback';
     setCommodityDataStatus(count ? `${fallback ? 'Respaldo histórico local: MAGyP no disponible' : sampleMode ? 'Muestra de respaldo' : config.label} · ${formatNumber(count)} ${label}` : `${config.label} · Sin datos disponibles`, count ? (sampleMode ? 'sample' : 'ready') : '');
     const freshness = document.getElementById('commodityDataFreshness');
-    const updateState = priceFreshnessBySource[commoditySource] || (commoditySource === 'local_mensual'
+    const pipelineState = priceFreshnessBySource[commoditySource] || (commoditySource === 'local_mensual'
         ? {...commodityUpdateMetadata(summary), status:'STATIC'} : commodityUpdateMetadata(summary));
+    const updateState = commodityHistoryMetadata[commoditySource]
+        ? {...pipelineState, last_valid_date:summary.fecha_max || pipelineState.last_valid_date || pipelineState.last_observation_date}
+        : pipelineState;
     SourceUpdateStatus.render(document.getElementById('commodityUpdateStatus'), updateState,
         {date_max: summary.fecha_max, updated_at: summary.fecha_actualizacion_dashboard || summary.fecha_actualizacion},
         Boolean(count || updateState.status), {sourceLabel: 'Commodities', showDates: true, showUnknown: true});
@@ -1822,22 +1855,90 @@ function setCommoditySource(sourceKey) {
 }
 
 async function loadCommodityData() {
-    await Promise.all(Object.keys(COMMODITY_SOURCE_CONFIG).map(async sourceKey => {
+    async function loadSource(sourceKey) {
         try {
             commodityDataBySource[sourceKey] = await loadCommoditySource(sourceKey);
         } catch (error) {
             console.error(`Error loading ${sourceKey} commodity dashboard CSV:`, error);
             commodityDataBySource[sourceKey] = emptyCommodityData();
-            if (sourceKey === 'magyp_internal') {
+            if (sourceKey === 'magyp_internal' && !commodityLegacyRetired) {
                 try {
                     commodityDataBySource[sourceKey] = await loadCommoditySource('local_mensual');
                     commodityDataBySource[sourceKey].resumen = commodityDataBySource[sourceKey].resumen.map(row => ({ ...row, modo: 'legacy_fallback' }));
                 } catch (_) { /* Keep the independent legacy selector and other sources available. */ }
             }
         }
-    }));
+    }
+    // El cutover sólo se decide después de validar la descarga real del histórico.
+    await loadSource('magyp_internal');
+    await Promise.all(Object.keys(COMMODITY_SOURCE_CONFIG).filter(key => key !== 'magyp_internal' &&
+        (key !== 'local_mensual' || !commodityLegacyRetired)).map(loadSource));
     initCommoditySourceFilter();
-    setCommoditySource(commoditySource);
+    await selectCommoditySource(commoditySource);
+}
+
+async function selectCommoditySource(sourceKey) {
+    const request = ++commodityHistoryRequest;
+    const data = commodityDataBySource[sourceKey] || emptyCommodityData();
+    const daily = COMMODITY_SOURCE_CONFIG[sourceKey]?.defaultFrequency === 'diaria';
+    const years = data.mensual.map(row => row.periodo_ym.slice(0,4)).sort();
+    commodityHistoryYear = daily ? (years.at(-1) || 'TODOS') : 'TODOS';
+    if (daily) {
+        try { await loadCommodityHistoryYear(sourceKey, commodityHistoryYear); }
+        catch (_) { /* Los bundles corrientes y el histórico mensual ya validados siguen disponibles. */ }
+    }
+    if (request !== commodityHistoryRequest) return;
+    setCommoditySource(sourceKey);
+    initCommodityHistoryYear();
+}
+
+async function loadCommodityHistoryYear(sourceKey, year) {
+    const entry = commodityHistoryMetadata[sourceKey];
+    if (!entry || typeof CommodityHistory === 'undefined') return;
+    const family = sourceKey.replace('magyp_', '');
+    try {
+        const current = commodityCurrentData[sourceKey] || emptyCommodityData();
+        commodityDataBySource[sourceKey] = await CommodityHistory.assemble(family, current, year, parseCommodityCSV);
+    } catch (error) {
+        console.error('Histórico conservado; carga no válida:', error);
+        throw error;
+    }
+}
+
+function initCommodityHistoryYear() {
+    const control = document.getElementById('commodityFilterHistoryYear');
+    const group = document.getElementById('commodityHistoryYearGroup');
+    const entry = commodityHistoryMetadata[commoditySource];
+    if (group) group.hidden = !entry;
+    if (!control || !entry) return;
+    const years = [...new Set(commodityData.mensual.map(row => row.periodo_ym.slice(0,4)))].sort().reverse();
+    control.innerHTML = (commodityFrequency === 'mensual' ? '<option value="TODOS">Todos</option>' : '') + years.map(year => `<option value="${year}">${year}</option>`).join('');
+    if (commodityFrequency === 'diaria' && commodityHistoryYear === 'TODOS') commodityHistoryYear = years[0];
+    control.value = commodityHistoryYear;
+    if (!control.dataset.commodityBound) {
+        control.addEventListener('change', async () => {
+            const previous = commodityHistoryYear;
+            const source = commoditySource;
+            const request = ++commodityHistoryRequest;
+            control.disabled = true;
+            try {
+                await loadCommodityHistoryYear(source, control.value);
+                if (request !== commodityHistoryRequest) return;
+                commodityHistoryYear = control.value;
+                commodityData = commodityDataBySource[source];
+                initCommodityFilters();updateCommodityDashboard();
+            } catch (_) {
+                control.value = previous;
+                setCommodityDataStatus('No se pudo cargar ese período; se conserva la vista anterior.', 'error');
+            } finally { control.disabled = false; }
+        });
+        control.dataset.commodityBound = 'true';
+    }
+}
+
+function commodityHistoryYearMatches(row) {
+    return !commodityHistoryMetadata[commoditySource] || commodityHistoryYear === 'TODOS' ||
+        String(row.fecha || row.periodo_ym || '').slice(0,4) === commodityHistoryYear;
 }
 
 function parseCommodityCSV(text) {
@@ -2075,7 +2176,7 @@ function populateCommoditySelect(id, values, allLabel, defaultValue) {
 
 function initCommodityFilters() {
     const primaryRows = commodityFrequency === 'diaria' ? commodityData.diario : commodityData.mensual;
-    const optionRows = [...primaryRows, ...commodityData.ultimos];
+    const optionRows = [...primaryRows, ...commodityData.ultimos].filter(commodityHistoryYearMatches);
     const currencies = [...new Set(optionRows.map(row => row.moneda).filter(Boolean))];
     const units = [...new Set(optionRows.map(row => row.unidad).filter(Boolean))];
     const markets = [...new Set(optionRows.map(commodityMarketValue).filter(Boolean))];
@@ -2113,6 +2214,18 @@ function initCommodityFilters() {
         if (!frequency.dataset.commodityBound) {
             frequency.addEventListener('change', () => {
                 commodityFrequency = frequency.value;
+                initCommodityHistoryYear();
+                if (commodityFrequency === 'diaria' && commodityHistoryMetadata[commoditySource]) {
+                    const source = commoditySource;
+                    const request = ++commodityHistoryRequest;
+                    loadCommodityHistoryYear(source, commodityHistoryYear).then(() => {
+                        if (request !== commodityHistoryRequest || source !== commoditySource) return;
+                        commodityData = commodityDataBySource[commoditySource];
+                        initCommodityFilters();updateCommodityDashboard();
+                    }).catch(() => {
+                        if (request === commodityHistoryRequest && source === commoditySource) setCommodityDataStatus('No se pudo cargar el período diario.', 'error');
+                    });
+                }
                 initCommodityFilters();
                 updateCommoditySourcePresentation();
                 updateCommodityDashboard();
@@ -2123,7 +2236,7 @@ function initCommodityFilters() {
 }
 
 function commodityRowMatches(row) {
-    return [['commodityFilterCommodity', 'commodity'], ['commodityFilterMarket', 'mercado'], ['commodityFilterCurrency', 'moneda'], ['commodityFilterUnit', 'unidad'], ['commodityFilterType', 'tipo_precio'], ['commodityFilterCondition', 'condicion_comercial']].every(([filterId, field]) => {
+    return commodityHistoryYearMatches(row) && [['commodityFilterCommodity', 'commodity'], ['commodityFilterMarket', 'mercado'], ['commodityFilterCurrency', 'moneda'], ['commodityFilterUnit', 'unidad'], ['commodityFilterType', 'tipo_precio'], ['commodityFilterCondition', 'condicion_comercial']].every(([filterId, field]) => {
         if (filterId === 'commodityFilterCondition' && !COMMODITY_SOURCE_CONFIG[commoditySource]?.reference) return true;
         const selected = commodityFilterValues(filterId);
         const rowValue = field === 'mercado' ? commodityMarketValue(row) : String(row[field] || '');
@@ -2140,9 +2253,17 @@ function getCommodityFilteredRows() {
 }
 
 function getCommodityLatestRows() {
+    if (commodityHistoryMetadata[commoditySource] && commodityFrequency === 'mensual') {
+        const latest = new Map();
+        getCommodityFilteredRows().forEach(row => {
+            if (!latest.has(row.series_id) || latest.get(row.series_id).periodo_ym < row.periodo_ym) latest.set(row.series_id, row);
+        });
+        return [...latest.values()].map(row => ({...row,periodo_ultimo:row.periodo_ym,fecha_ultima:row.fecha,
+            precio_mediana_ultimo_periodo:row.precio_mediana,operaciones_ultimo_periodo:row.operaciones}));
+    }
     if (COMMODITY_SOURCE_CONFIG[commoditySource]?.reference && commodityFrequency === 'diaria') {
         const latest = new Map();
-        commodityData.diario.filter(commodityRowMatches).forEach(row => {
+        commodityData.diario.filter(commodityRowMatches).filter(commodityHistoryYearMatches).forEach(row => {
             if (!(commodityNumber(row.precio_mediana) > 0)) return;
             const previous = latest.get(row.series_id);
             if (!previous || row.fecha > previous.fecha) latest.set(row.series_id, row);
