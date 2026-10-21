@@ -54,7 +54,7 @@ test('MCBA daily evolution and ranking label and separate MAGyP from uncovered l
     assert.equal(parsed.ranking.length,2);
     assert.ok(parsed.ranking.some(label=>label.includes('MAGyP')));
 });
-test('quantity functions and original commodity source configurations remain unchanged', () => {
+test('quantity functions and SIO source configuration remain unchanged after internal-price cutover', () => {
     // Function boundaries include the full bodies, avoiding assertions about only signatures.
     const extract = (text,name) => text.slice(text.indexOf('function '+name+'('),text.indexOf('\nfunction ',text.indexOf('function '+name+'(')+1));
     for (const name of ['aggregateQuantityData','updateQuantityDashboard','updateKPIs','renderMonthlyChart',
@@ -62,6 +62,8 @@ test('quantity functions and original commodity source configurations remain unc
         assert.ok(original.includes('function '+name+'('), name);
         assert.equal(extract(current,name),extract(original,name),name);
     }
-    const config = text => text.slice(text.indexOf('const COMMODITY_SOURCE_CONFIG'),text.indexOf('const COMMODITY_SOURCE_CONFIG')+1200);
-    assert.equal(config(current),config(original));
+    const before=context(original,false),after=context(current,false);
+    assert.equal(vm.runInContext('JSON.stringify(COMMODITY_SOURCE_CONFIG.sio)',before),
+        vm.runInContext('JSON.stringify(COMMODITY_SOURCE_CONFIG.sio)',after));
+    assert.equal(vm.runInContext("Object.hasOwn(COMMODITY_SOURCE_CONFIG,'local_mensual')",after),false);
 });

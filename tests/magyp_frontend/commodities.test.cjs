@@ -173,15 +173,17 @@ test('all preexisting controls/canvases remain in HTML',()=>{
     for(const id of ids(old))assert.ok(existing.has(id),id);
     assert.ok(html.includes('Tipo de referencia / Fuente'));
 });
-test('internal download failure uses independent legacy fallback',async()=>{
+test('official download failure never reactivates retired manual prices; SIO remains independent',async()=>{
     const ctx=context();
+    const requests=[];
     ctx.fetch=async url=>{
+        requests.push(url);
         if(url.includes('data/magyp/'))return {ok:false,status:503};
         return {ok:true,text:async()=>fs.readFileSync(url,'utf8')};
     };
     vm.runInContext(`initCommoditySourceFilter=()=>{};setCommoditySource=()=>{};`,ctx);
     await vm.runInContext('loadCommodityData()',ctx);
-    assert.equal(vm.runInContext('commodityDataBySource.magyp_internal.resumen[0].modo',ctx),'legacy_fallback');
-    assert.ok(vm.runInContext('commodityDataBySource.magyp_internal.mensual.length',ctx)>0);
+    assert.equal(vm.runInContext('commodityDataBySource.magyp_internal.mensual.length',ctx),0);
+    assert.equal(requests.some(url=>url.includes('commodities_local_mensual')),false);
     assert.ok(vm.runInContext('commodityDataBySource.sio.diario.length',ctx)>0);
 });

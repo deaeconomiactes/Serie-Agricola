@@ -38,10 +38,15 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
+      - name: Preparar sitio sin archivo manual de precios internos retirado
+        env:
+          PAGES_DESTINATION: ${{ runner.temp }}/serie-agricola-pages
+        run: python scripts/ci/prepare_pages.py --destination "$PAGES_DESTINATION"
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: ${{ runner.temp }}/serie-agricola-pages
 
       - name: Deploy to GitHub Pages
         id: deployment

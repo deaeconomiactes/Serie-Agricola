@@ -74,17 +74,16 @@ test('corrupt history cannot replace a validated current bundle',async()=>{
     await assert.rejects(vm.runInContext("CommodityHistory.load('internal','mensual',null,parseCommodityCSV)",ctx));
     const result=await vm.runInContext("loadCommoditySource('magyp_internal')",ctx);
     assert.ok(result.mensual.length>0);assert.ok(result.resumen[0].fecha_max.startsWith('2026'));
-    assert.equal(vm.runInContext('commodityLegacyRetired',ctx),false);
 });
 
-test('bad historical shard keeps static history accessible and does not authorize retirement',async()=>{
+test('bad historical shard keeps validated official current data without reactivating retired static prices',async()=>{
     const {ctx,requests}=context(true);
     vm.runInContext(`initCommoditySourceFilter=()=>{};setCommoditySource=()=>{};
         const realLoad=loadCommoditySource;loadCommoditySource=async key=>key==='sio'?emptyCommodityData():realLoad(key);`,ctx);
     await vm.runInContext('loadCommodityData()',ctx);
-    assert.equal(vm.runInContext('commodityLegacyRetired',ctx),false);
-    assert.ok(requests.some(url=>url.includes('commodities_local_mensual')));
-    assert.ok(vm.runInContext("commodityDataBySource.local_mensual.mensual.some(row=>row.periodo_ym==='2020-01')",ctx));
+    assert.equal(requests.filter(url=>url.includes('commodities_local_mensual')).length,0);
+    assert.equal(vm.runInContext("Object.hasOwn(commodityDataBySource,'local_mensual')",ctx),false);
+    assert.ok(vm.runInContext('commodityDataBySource.magyp_internal.mensual.length',ctx)>0);
 });
 
 test('daily zero revises one day before monthly median; successor variations and lineage update',()=>{
@@ -159,7 +158,7 @@ test('complete official cutover does not fetch the retired static monthly datase
         const realLoad=loadCommoditySource;
         loadCommoditySource=async key=>key==='sio'?emptyCommodityData():realLoad(key);`,ctx);
     await vm.runInContext('loadCommodityData()',ctx);
-    assert.equal(vm.runInContext('commodityLegacyRetired',ctx),true);
+    assert.equal(vm.runInContext("Object.hasOwn(COMMODITY_SOURCE_CONFIG,'local_mensual')",ctx),false);
     assert.equal(requests.filter(url=>url.includes('commodities_local_mensual')).length,0);
     assert.ok(vm.runInContext('commodityDataBySource.magyp_internal.mensual.length',ctx)>4000);
     assert.equal(vm.runInContext("commodityDataBySource.magyp_internal.mensual.filter(row=>row.periodo_ym==='2020-01' && row.commodity==='SOJA' && row.mercado==='ROSARIO').length",ctx),1);
