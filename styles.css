@@ -243,6 +243,7 @@ button, select { font: inherit; }
 .commodity-price-scope { margin: -4px 0 16px; color: var(--text-primary); font-size: .76rem; font-weight: 700; letter-spacing: .01em; }
 .commodity-filters { position: relative; z-index: 50; margin-bottom: 16px; padding: 18px 20px; }
 .commodity-filters .filter-group { position: relative; z-index: 1; }
+.commodity-filters .filter-group:has(.commodity-multi-select.is-open) { z-index: 1100; }
 .commodity-multi-select { position: relative; z-index: 20; min-width: 0; }
 .commodity-multi-select.is-open { z-index: 1100; }
 .commodity-multi-trigger { display: flex; width: 100%; min-height: 38px; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 11px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-panel); color: var(--text-primary); cursor: pointer; font: inherit; font-size: .78rem; text-align: left; transition: border-color .15s ease, box-shadow .15s ease, background .15s ease; }
