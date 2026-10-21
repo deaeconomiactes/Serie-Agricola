@@ -142,16 +142,16 @@
       "status": "SOURCE_UNAVAILABLE",
       "automatic_update": true,
       "workflow": "update-magyp-mcba.yml",
-      "notes": "Edge Windows; fecha civil argentina; último bundle válido ante indisponibilidad. Corrida real 39354603566: filtered_grid TIMEOUT; CSV conservados. https://github.com/deaeconomiactes/Serie-Agricola/actions/runs/39354603566",
+      "notes": "Edge Windows; fecha civil argentina; último bundle válido ante indisponibilidad.",
       "currency": [
         "ARS"
       ],
       "unit": [
         "kg"
       ],
-      "requested_date": "2026-10-20",
-      "attempted_at": "2026-10-20T11:16:43.3651466Z",
-      "diagnostic_note": "Corrida real 39354603566: filtered_grid TIMEOUT; CSV conservados. https://github.com/deaeconomiactes/Serie-Agricola/actions/runs/39354603566",
+      "requested_date": "2026-10-21",
+      "attempted_at": "2026-10-21T11:10:33.309827Z",
+      "diagnostic_note": null,
       "evidence": "https://github.com/deaeconomiactes/Serie-Agricola/actions/runs/39354603566"
     },
     {
