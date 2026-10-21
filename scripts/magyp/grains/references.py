@@ -368,6 +368,7 @@ def fetch(source,requested,as_of,root):
     safe=encoded(obj)
     manifest={'source':source,'source_family':'commodity_reference_price','url':url,'method':'GET',
         'public_parameters':{'Fecha':requested} if source=='fob' else {},'requested_date':requested,
+        'validation_date':as_of.isoformat(),
         'captured_at_utc':stamp,'status':status,'content_type':ctype,'encoding':encoding,
         'response_size_bytes':len(body),'response_sha256':digest(body),'sha256':digest(safe),'size_bytes':len(safe),
         'parser_version':VERSION,'schema_version':VERSION,'capture_id':capture,'record_count':len(rows),
@@ -406,7 +407,9 @@ def normalize(folder,root,as_of):
                 raise Error('Metadata NO_PUBLICATION FOB inválida')
             print('[NORMALIZE] fob NO_PUBLICATION; captura sin observaciones')
             return []
-        rows=parse(json.loads(payload),source,date.fromisoformat(m['requested_date']),m['requested_date'])
+        # Replay against the original validation clock, not a historical FOB query
+        # date or today's clock. Older manifests retain their original semantics.
+        rows=parse(json.loads(payload),source,date.fromisoformat(m.get('validation_date',m['requested_date'])),m['requested_date'])
         if len(rows)!=m['record_count']: raise Error('Conteo RAW inválido')
         for row in rows:
             row.update(capture_id=m['capture_id'],updated_at_utc=m['captured_at_utc'],raw_sha256=m['sha256'])
@@ -552,6 +555,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--source',choices=list(SOURCES)+['all'],default='all')
     p.add_argument('--date',type=date.fromisoformat,required=True,help='Fecha ISO de control y fecha solicitada FOB')
+    p.add_argument('--as-of',type=date.fromisoformat,help='Fecha de control para fuentes corrientes; por defecto --date. FOB conserva su fecha de consulta')
     p.add_argument('--data-root',type=Path,default=ROOT/'data'/'magyp')
     p.add_argument('--allow-web',action='store_true')
     p.add_argument('--dry-run',action='store_true')
@@ -561,18 +565,26 @@ def main():
     failed=False
     for i,source in enumerate(sources):
         status='PIPELINE_ERROR'
-        try:status=run(source,args.data_root,args.date,args.date.isoformat(),args.allow_web)
+        validation_date=args.date if source=='fob' else (args.as_of or args.date)
+        diagnostic=None
+        try:status=run(source,args.data_root,validation_date,args.date.isoformat(),args.allow_web)
         except Error as error:
+            diagnostic=str(error)
             print(f'[VALIDATE] {source}: {error}; última salida conservada');failed=True
             status=('SOURCE_UNAVAILABLE' if getattr(error,'source_unavailable',False) else
                     'LAST_VALID' if str(error)=='Fuente sin publicación reciente' else 'PIPELINE_ERROR')
         except (OSError,ValueError,TypeError,KeyError):
+            diagnostic='Integridad/archivo inválido'
             print(f'[VALIDATE] {source}: integridad/archivo inválido; última salida conservada');failed=True
         except Exception:
+            diagnostic='Error interno'
             print(f'[VALIDATE] {source}: error interno; última salida conservada');failed=True
         state_path=args.data_root/'reports'/f'PRICE_STATE_{source}.json'
         atomic(state_path,encoded({'status':status,'requested_date':args.date.isoformat(),
+            'validation_date':validation_date.isoformat(),'diagnostic_note':diagnostic,
             'attempted_at':datetime.now(timezone.utc).isoformat()}))
+        print(f'[STATE] {source} {status} requested={args.date} validation={validation_date}' +
+            (f' reason={diagnostic}' if diagnostic else ''))
         if args.allow_web and i<len(sources)-1:time.sleep(1.5)
     return 1 if failed else 0
 
