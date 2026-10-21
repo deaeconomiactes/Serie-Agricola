@@ -33,6 +33,32 @@ def validate_report(report):
             datetime.fromisoformat(row['last_successful_update'].replace('Z','+00:00'))
     return report
 
+
+def add_commodities_history(report,root):
+    """Cobertura histórica explícita; no altera fuentes ajenas a Commodities."""
+    catalog=read_json(root/'data/magyp/dashboard/commodities/history/index.json',{})
+    if not catalog:return report
+    if catalog.get('schema_version')!='magyp-history-v1':raise ValueError('Unknown commodities history schema')
+    for row in report['sources']:
+        family=row['source_family'].removeprefix('magyp_')
+        entry=catalog.get('families',{}).get(family) if row['source_family'].startswith('magyp_') else None
+        if entry:
+            coverage=entry['coverage']
+            row['historical_coverage']={k:coverage[k] for k in ('oldest_verified_date','latest_verified_date','positive_rows',
+                'monthly_rows','products','markets','currency','unit','coverage_status','last_successful_capture')}
+            row['effective_sources']=['MAGyP / SSPM series 358.1; separate from position API'] if family=='fob' else ['MAGyP official historical publications','MAGyP current publication']
+            row['history_automation']='Reproducible CLI; periodic current-family workflow remains independent'
+            row['historical_coverage']['status']='VALIDATED_BACKFILL'
+            # El éxito de un archivo histórico no acredita éxito del workflow actual.
+            row['effective_data_last_observation_date']=max(row.get('last_observation_date') or '',coverage['latest_verified_date'])
+            row['effective_data_last_capture']=max(row.get('last_successful_update') or '',coverage['last_successful_capture'])
+        if row['source_family']=='local_mensual':
+            cutover=catalog.get('families',{}).get('internal',{}).get('legacy_comparison',{})
+            row['runtime_active']=not cutover.get('can_retire_legacy',False)
+            if not row['runtime_active']:
+                row['notes']=f"Retirado del runtime habitual: {cutover['covered_rows']}/{cutover['legacy_rows']} observaciones cubiertas y comparadas con publicaciones oficiales. Original conservado para auditoría."
+    return report
+
 def build(root=ROOT,mcba_status=None,sio_status=None):
     old=read_json(root/REPORT,{'sources':[]})
     prior={r['source_family']:r for r in old['sources']}
@@ -107,7 +133,7 @@ def build(root=ROOT,mcba_status=None,sio_status=None):
     state={'status':sio_status,'attempted_at':datetime.now(timezone.utc).isoformat()} if sio_status else {}
     add('sio',sio.get('fuente','SIO Granos'),'plazas informadas','transaccional / snapshot diario',sio.get('fecha_max'),sio.get('fecha_ultima_captura_sio'),True,
         'update-sio-commodities.yml','Operaciones transaccionales; snapshot reciente, no reconstrucción de contratos.',sio.get('monedas','').split('|'),sio.get('unidades','').split('|'),state)
-    report={'schema_version':'price-freshness-v1','sources':records}
+    report=add_commodities_history({'schema_version':'price-freshness-v1','sources':records},root)
     validate_report(report)
     atomic_write(root/REPORT,(json.dumps(report,ensure_ascii=False,indent=2)+'\n').encode())
     return report
@@ -117,8 +143,14 @@ def main():
     p.add_argument('--root',type=Path,default=ROOT)
     p.add_argument('--mcba-status',type=Path)
     p.add_argument('--sio-status',choices=sorted(STATES))
+    p.add_argument('--commodities-history-only',action='store_true',help='Enriquece el reporte publicado sin recalcular otros módulos')
     a=p.parse_args()
-    report=build(a.root,read_json(a.mcba_status) if a.mcba_status else None,a.sio_status)
+    if a.commodities_history_only:
+        report=add_commodities_history(validate_report(read_json(a.root/REPORT)),a.root)
+        validate_report(report)
+        atomic_write(a.root/REPORT,(json.dumps(report,ensure_ascii=False,indent=2)+'\n').encode())
+    else:
+        report=build(a.root,read_json(a.mcba_status) if a.mcba_status else None,a.sio_status)
     for r in report['sources']:
         print(f"[FRESHNESS] {r['source_family']} {r['status']} last={r['last_observation_date']} updated={r['last_successful_update']}")
 if __name__=='__main__': main()

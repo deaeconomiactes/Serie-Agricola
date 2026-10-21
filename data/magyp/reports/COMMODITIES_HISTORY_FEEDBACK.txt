@@ -1,0 +1,71 @@
+HISTÓRICO OFICIAL DE PRECIOS COMMODITIES
+
+Implementado localmente. No implica publicación ni despliegue.
+Cada familia, moneda, unidad, plaza y vencimiento permanece separado.
+
+Pizarra / Cámara
+  Cobertura verificada: 2018-01-02 a 2026-10-19
+  Precios positivos: 13,108; filas normalizadas: 63,330; filas mensuales: 1,023
+  Productos (6): CEBADA FORRAJERA, GIRASOL, MAIZ, SOJA, SORGO, TRIGO PAN
+  Plazas (5): BAHIA BLANCA, BUENOS AIRES, CORDOBA, QUEQUEN, ROSARIO
+  Moneda: ARS; unidad: TN
+  Frecuencia: diaria cuando publica; mensual derivada
+  Archivos aceptados: 2111; apartados/no disponibles/sin publicación: 17
+  Automatización: CLI reproducible; actualización corriente existente independiente.
+
+FAS D.E.C.
+  Cobertura verificada: 2007-01-16 a 2026-10-20
+  Precios positivos: 32,536; filas normalizadas: 43,191; filas mensuales: 1,615
+  Productos (9): Ac.Girasol, Ac.Soja, Cebada C., Cebada F., Girasol, Maíz, Soja, Sorgo, Trigo Pan
+  Plazas (1): Argentina / paridad teórica
+  Moneda: ARS, Sin identificar; unidad: Sin identificar, TN
+  Frecuencia: diaria cuando publica; mensual derivada
+  Archivos aceptados: 1; apartados/no disponibles/sin publicación: 0
+  Automatización: CLI reproducible; actualización corriente existente independiente.
+
+FOB oficial / serie SSPM
+  Cobertura verificada: 1993-01-04 a 2025-01-21
+  Precios positivos: 588,553; filas normalizadas: 678,948; filas mensuales: 19,363
+  Productos (58): Aceite de Girasol, Los Demás, Refinado a granel, Aceite de Girasol, Los Demás, Refinado en tambores de mas de 200 litros, Aceite de Girasol, a granel, Aceite de cacahuete o maní, a granel, Aceite de soja, a granel, Algodón s/cardar ni peinar simplemente desmotado, Algodón Grado B, Algodón s/cardar ni peinar simplemente desmotado, Algodón Grado C, Algodón s/cardar ni peinar simplemente desmotado, Algodón Grado C 1/2, Algodón s/cardar ni peinar simplemente desmotado, Algodón Grado D 1/2 Long. 27,0 mm (1 1/16), Algodón s/cardar ni peinar simplemente desmotado, Algodón Grado D Long. 27,0 mm (1 1/16), Algodón s/cardar ni peinar simplemente desmotado, Algodón Grado E Long. 26,2 mm (1 1/32), Algodón s/cardar ni peinar simplemente desmotado, Algodón Grado F Long. 26,2 mm (1 1/32), Arroz, Arroz Semiblanqueado o blanqueado incluso pulido o glaseado, - no parbolizado, contenido grano quebrado < o = al 10%, Arroz, Arroz Semiblanqueado o blanqueado incluso pulido o glaseado, - no parbolizado, contenido grano quebrado > al 10%, Arroz, Arroz Semiblanqueado o blanqueado incluso pulido o glaseado. Los demás no parbolizados., - Contenido grano quebrado < o = al 10%, Arroz, Arroz Semiblanqueado o blanqueado incluso pulido o glaseado. Los demás no parbolizados., - Contenido grano quebrado > al 10%, Arroz, Arroz descascarillado (arroz cargo o arroz pardo), Los demás. No parbolizado, Arvejas, Enteras, Arvejas, Partidas, Cacahuate o maní, Cacahuate o maní confitería y/o tostadero, Cacahuate o maní, Los Demás, A granel con hasta un 15 % embolsado, Cacahuate o maní, Los Demás, Más del 15 % embolsado, Cacahuate o maní, Maní partido, Cebada, (no) Cervecera, A granel con hasta un 15 % embolsado, Cebada, Cervecera, A granel con hasta un 15 % embolsado, Cebada, Cervecera, Más del 15 % embolsado, Cebada, Cervecera, en granel Más del 15 % embolsado, Garbanzos, Enteros, Garbanzos, Partidos, Habas de soja, Los Demás, A granel con hasta un 15 % embolsado, Habas de soja, Los Demás, Más del 15 % embolsado, Harina de trigo, Harina de trigo, Malta cervecera, Malta de cebada cervecera, Maíz, Flint o Plata, A granel con hasta un 15 % embolsado, Maíz, Flint o Plata, Más del 15 % embolsado, Maíz, Los demás. En grano., A granel con hasta un 15 % embolsado, Maíz, Los demás. En grano., Más del 15 % embolsado, Maíz, Maíz Pisingallo, A granel con hasta un 15 % embolsado, Maíz, Maíz Pisingallo, Más del 15 % embolsado, Porotos, Blancos Alubias, Ovales, En Envases mayores de 20 Kg., Porotos, Blancos, Alubias, En Envases mayores de 20 Kg. desde 191 y hasta 220 gramos cada 100 gramos, Porotos, Blancos, Alubias, En Envases mayores de 20 Kg. desde 221 gramos por cada 100 gramos, Porotos, Blancos, Alubias, En Envases mayores de 20 Kg. hasta 190 gramos por cada 100 gramos, Porotos, Colorados, En Envases mayores de 20 Kg., Porotos, Negros, En Envases mayores de 20 Kg., Semilla de Girasol. Unicamente para industria, Los Demás, A granel con hasta un 15 % embolsado, Semilla de Girasol. Unicamente para industria, Los Demás, Girasol, tipo confitería, Semilla de Girasol. Unicamente para industria, Los Demás, Más del 15 % embolsado, Sorgo granífero, Los Demás, A granel con hasta un 15 % embolsado, Sorgo granífero, Los Demás, Más del 15 % embolsado, Tortas, "Expellers", "Pellets" y Harina de soja, "Pellets", Harinas de tortas, Tortas, "Expellers", "Pellets" y Harina de soja, "Pellets", de harina de extracción, Tortas, "Expellers", "Pellets" y Harinas de girasol, "Pellets", de harina de extracción, Tortas, "Expellers", "Pellets" y Harinas de girasol, "Pellets", integral, Tortas, "Expellers", "Pellets" y Harinas de girasol, Harinas de tortas, Tortas, "Expellers", "Pellets" y Harinas de girasol, Tortas, Trigo Pan, Trigo Pan, A granel con hasta un 15 % embolsado, Trigo Pan, Trigo Pan, Más del 15 % embolsado
+  Plazas (1): FOB oficial / serie SSPM
+  Moneda: USD; unidad: TN
+  Frecuencia: índice calendario diario; mensual derivada
+  Archivos aceptados: 1; apartados/no disponibles/sin publicación: 0
+  Automatización: CLI reproducible; actualización corriente existente independiente.
+
+Futuros externos
+  Cobertura verificada: 1995-01-02 a 2026-10-20
+  Precios positivos: 439,865; filas normalizadas: 475,196; filas mensuales: 22,060
+  Productos (7): ACEITE DE SOJA, AVENA, HARINA DE SOJA, MAIZ, SOJA, TRIGO, TRIGO PAN
+  Plazas (2): CHICAGO, KANSAS
+  Moneda: USD; unidad: TN
+  Frecuencia: diaria cuando publica; mensual derivada
+  Archivos aceptados: 811; apartados/no disponibles/sin publicación: 86
+  Automatización: CLI reproducible; actualización corriente existente independiente.
+
+Precio interno MAGyP
+  Cobertura verificada: 1996-01-01 a 2026-09-01
+  Precios positivos: 4,292; filas normalizadas: 9,150; filas mensuales: 4,292
+  Productos (7): CEBADA FORRAJERA, GIRASOL, LINO, MAIZ, SOJA, SORGO, TRIGO
+  Plazas (5): B.BLANCA, CORDOBA, DARSENA, QUEQUEN, ROSARIO
+  Moneda: ARS; unidad: TN
+  Frecuencia: mensual publicada
+  Archivos aceptados: 9; apartados/no disponibles/sin publicación: 0
+  Automatización: CLI reproducible; actualización corriente existente independiente.
+
+Histórico local mensual: 668/668 filas cubiertas; huecos: 0; necesario: 0.0%.
+Retiro de carga estática habitual autorizado por validación: True. Originales conservados para auditoría.
+El histórico local es de internos: no reemplaza FAS, FOB, Pizarra ni futuros.
+
+Limitaciones:
+- FOB SSPM finaliza el 21/01/2025. Su índice calendario incluye fines de semana publicados; no confirma fecha de emisión MAGyP.
+- La API FOB corriente sigue separada: posición/circular/embarque y moneda/unidad sin identificar.
+- Futuros: matrices históricas y cierres diarios son tipos distintos; no existe roll automático.
+- FAS: aceites sin moneda/unidad identificadas. D.E.R. mantiene sólo su circuito histórico existente.
+- Internos mensual es publicado; las otras vistas mensuales son medianas derivadas, sin interpolar.
+- Archivos con fechas o precios conflictivos no se corrigen por inferencia. Ver rejected_files en inventario JSON.
+- No se afirma cobertura completa de ruedas/días no publicados. No se calcula porcentaje de huecos sin calendario oficial.
+- Detalle diario cargado por año; mensual permite toda la historia. Filtros, KPIs, gráficos y tablas conservados.
+
+Documentación: docs/MAGYP_COMMODITIES_HISTORY.md
+Evidencia: COMMODITIES_HISTORY_INVENTORY.json/csv, COMMODITIES_HISTORY_LEGACY_COMPARISON.json y catálogo de enlaces.

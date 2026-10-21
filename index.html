@@ -456,10 +456,11 @@
                 </div>
                 <p id="commodityDataLastOperation" class="commodity-data-meta" role="status" aria-live="polite"></p>
                 <p id="commodityDataOperationRange" class="commodity-data-meta" role="status" aria-live="polite"></p>
+                <p id="commodityHistoryCoverage" class="commodity-data-meta" hidden></p>
             </div>
             <span id="commodityDataStatus" class="commodity-data-status" role="status" aria-live="polite">Cargando datos…</span>
         </div>
-        <p id="commodityMethodNote" class="method-note methodology-note commodity-method-note">Precios internos mensuales publicados por MAGyP, en ARS/TN por plaza. El histórico local permanece disponible por separado.</p>
+        <p id="commodityMethodNote" class="method-note methodology-note commodity-method-note">Precios internos mensuales publicados por MAGyP, en ARS/TN por plaza, con histórico oficial desde 1996.</p>
         <p id="commodityPriceScope" class="commodity-price-scope">Precios mensuales en la moneda y unidad seleccionadas · referencias por serie</p>
 
         <div class="commodity-filters filters-card filters-grid" aria-label="Filtros de commodities agrícolas">
@@ -507,6 +508,11 @@
                     <option value="mensual" selected>Mensual</option>
                     <option value="diaria">Diaria</option>
                 </select>
+            </div>
+            <div class="filter-group" id="commodityHistoryYearGroup" hidden>
+                <label class="filter-label" for="commodityFilterHistoryYear">Año de cotización</label>
+                <select id="commodityFilterHistoryYear" class="filter-select"><option value="TODOS">Todos</option></select>
+                <p class="commodity-filter-hint">Mensual: historia completa. Diaria: detalle por año.</p>
             </div>
         </div>
 
@@ -558,6 +564,7 @@
     <script src="mcba-monthly.js?v=1"></script>
     <script src="update-status.js?v=1"></script>
     <script src="mcba-prices.js?v=mcba-status-v2"></script>
-    <script src="app.js?v=magyp-commodities-v1"></script>
+    <script src="commodity-history.js?v=1"></script>
+    <script src="app.js?v=magyp-commodities-history-v1"></script>
 </body>
 </html>

@@ -27,7 +27,45 @@
       "requested_date": "2026-10-20",
       "attempted_at": "2026-10-20T11:32:19.105533+00:00",
       "diagnostic_note": null,
-      "evidence": null
+      "evidence": null,
+      "historical_coverage": {
+        "oldest_verified_date": "1996-01-01",
+        "latest_verified_date": "2026-09-01",
+        "positive_rows": 4292,
+        "monthly_rows": 4292,
+        "products": [
+          "CEBADA FORRAJERA",
+          "GIRASOL",
+          "LINO",
+          "MAIZ",
+          "SOJA",
+          "SORGO",
+          "TRIGO"
+        ],
+        "markets": [
+          "B.BLANCA",
+          "CORDOBA",
+          "DARSENA",
+          "QUEQUEN",
+          "ROSARIO"
+        ],
+        "currency": [
+          "ARS"
+        ],
+        "unit": [
+          "TN"
+        ],
+        "coverage_status": "VERIFIED_WITH_GAPS",
+        "last_successful_capture": "2026-10-21T11:30:01.804838+00:00",
+        "status": "VALIDATED_BACKFILL"
+      },
+      "effective_sources": [
+        "MAGyP official historical publications",
+        "MAGyP current publication"
+      ],
+      "history_automation": "Reproducible CLI; periodic current-family workflow remains independent",
+      "effective_data_last_observation_date": "2026-09-01",
+      "effective_data_last_capture": "2026-10-21T11:30:01.804838+00:00"
     },
     {
       "source_family": "magyp_board",
@@ -55,7 +93,44 @@
       "requested_date": "2026-10-20",
       "attempted_at": "2026-10-20T11:32:21.108314+00:00",
       "diagnostic_note": null,
-      "evidence": null
+      "evidence": null,
+      "historical_coverage": {
+        "oldest_verified_date": "2018-01-02",
+        "latest_verified_date": "2026-10-19",
+        "positive_rows": 13108,
+        "monthly_rows": 1023,
+        "products": [
+          "CEBADA FORRAJERA",
+          "GIRASOL",
+          "MAIZ",
+          "SOJA",
+          "SORGO",
+          "TRIGO PAN"
+        ],
+        "markets": [
+          "BAHIA BLANCA",
+          "BUENOS AIRES",
+          "CORDOBA",
+          "QUEQUEN",
+          "ROSARIO"
+        ],
+        "currency": [
+          "ARS"
+        ],
+        "unit": [
+          "TN"
+        ],
+        "coverage_status": "VERIFIED_WITH_GAPS",
+        "last_successful_capture": "2026-10-21T11:45:51.597983+00:00",
+        "status": "VALIDATED_BACKFILL"
+      },
+      "effective_sources": [
+        "MAGyP official historical publications",
+        "MAGyP current publication"
+      ],
+      "history_automation": "Reproducible CLI; periodic current-family workflow remains independent",
+      "effective_data_last_observation_date": "2026-10-19",
+      "effective_data_last_capture": "2026-10-21T11:45:51.597983+00:00"
     },
     {
       "source_family": "magyp_fas",
@@ -81,7 +156,45 @@
       "requested_date": "2026-10-20",
       "attempted_at": "2026-10-20T11:32:24.013865+00:00",
       "diagnostic_note": null,
-      "evidence": null
+      "evidence": null,
+      "historical_coverage": {
+        "oldest_verified_date": "2007-01-16",
+        "latest_verified_date": "2026-10-20",
+        "positive_rows": 32536,
+        "monthly_rows": 1615,
+        "products": [
+          "Ac.Girasol",
+          "Ac.Soja",
+          "Cebada C.",
+          "Cebada F.",
+          "Girasol",
+          "Maíz",
+          "Soja",
+          "Sorgo",
+          "Trigo Pan"
+        ],
+        "markets": [
+          "Argentina / paridad teórica"
+        ],
+        "currency": [
+          "ARS",
+          "Sin identificar"
+        ],
+        "unit": [
+          "Sin identificar",
+          "TN"
+        ],
+        "coverage_status": "VERIFIED_WITH_GAPS",
+        "last_successful_capture": "2026-10-21T11:17:59.309328+00:00",
+        "status": "VALIDATED_BACKFILL"
+      },
+      "effective_sources": [
+        "MAGyP official historical publications",
+        "MAGyP current publication"
+      ],
+      "history_automation": "Reproducible CLI; periodic current-family workflow remains independent",
+      "effective_data_last_observation_date": "2026-10-20",
+      "effective_data_last_capture": "2026-10-21T11:17:59.309328+00:00"
     },
     {
       "source_family": "magyp_fob",
@@ -105,7 +218,91 @@
       "requested_date": "2026-10-20",
       "attempted_at": "2026-10-20T11:32:25.737719+00:00",
       "diagnostic_note": null,
-      "evidence": null
+      "evidence": null,
+      "historical_coverage": {
+        "oldest_verified_date": "1993-01-04",
+        "latest_verified_date": "2025-01-21",
+        "positive_rows": 588553,
+        "monthly_rows": 19363,
+        "products": [
+          "Aceite de Girasol, Los Demás, Refinado a granel",
+          "Aceite de Girasol, Los Demás, Refinado en tambores de mas de 200 litros",
+          "Aceite de Girasol, a granel",
+          "Aceite de cacahuete o maní, a granel",
+          "Aceite de soja, a granel",
+          "Algodón s/cardar ni peinar simplemente desmotado, Algodón Grado B",
+          "Algodón s/cardar ni peinar simplemente desmotado, Algodón Grado C",
+          "Algodón s/cardar ni peinar simplemente desmotado, Algodón Grado C 1/2",
+          "Algodón s/cardar ni peinar simplemente desmotado, Algodón Grado D 1/2 Long. 27,0 mm (1 1/16)",
+          "Algodón s/cardar ni peinar simplemente desmotado, Algodón Grado D Long. 27,0 mm (1 1/16)",
+          "Algodón s/cardar ni peinar simplemente desmotado, Algodón Grado E Long. 26,2 mm (1 1/32)",
+          "Algodón s/cardar ni peinar simplemente desmotado, Algodón Grado F Long. 26,2 mm (1 1/32)",
+          "Arroz, Arroz Semiblanqueado o blanqueado incluso pulido o glaseado, - no parbolizado, contenido grano quebrado < o = al 10%",
+          "Arroz, Arroz Semiblanqueado o blanqueado incluso pulido o glaseado, - no parbolizado, contenido grano quebrado > al 10%",
+          "Arroz, Arroz Semiblanqueado o blanqueado incluso pulido o glaseado. Los demás no parbolizados., - Contenido grano quebrado < o = al 10%",
+          "Arroz, Arroz Semiblanqueado o blanqueado incluso pulido o glaseado. Los demás no parbolizados., - Contenido grano quebrado > al 10%",
+          "Arroz, Arroz descascarillado (arroz cargo o arroz pardo), Los demás. No parbolizado",
+          "Arvejas, Enteras",
+          "Arvejas, Partidas",
+          "Cacahuate o maní, Cacahuate o maní confitería y/o tostadero",
+          "Cacahuate o maní, Los Demás, A granel con hasta un 15 % embolsado",
+          "Cacahuate o maní, Los Demás, Más del 15 % embolsado",
+          "Cacahuate o maní, Maní partido",
+          "Cebada, (no) Cervecera, A granel con hasta un 15 % embolsado",
+          "Cebada, Cervecera, A granel con hasta un 15 % embolsado",
+          "Cebada, Cervecera, Más del 15 % embolsado",
+          "Cebada, Cervecera, en granel Más del 15 % embolsado",
+          "Garbanzos, Enteros",
+          "Garbanzos, Partidos",
+          "Habas de soja, Los Demás, A granel con hasta un 15 % embolsado",
+          "Habas de soja, Los Demás, Más del 15 % embolsado",
+          "Harina de trigo, Harina de trigo",
+          "Malta cervecera, Malta de cebada cervecera",
+          "Maíz, Flint o Plata, A granel con hasta un 15 % embolsado",
+          "Maíz, Flint o Plata, Más del 15 % embolsado",
+          "Maíz, Los demás. En grano., A granel con hasta un 15 % embolsado",
+          "Maíz, Los demás. En grano., Más del 15 % embolsado",
+          "Maíz, Maíz Pisingallo, A granel con hasta un 15 % embolsado",
+          "Maíz, Maíz Pisingallo, Más del 15 % embolsado",
+          "Porotos, Blancos Alubias, Ovales, En Envases mayores de 20 Kg.",
+          "Porotos, Blancos, Alubias, En Envases mayores de 20 Kg. desde 191 y hasta 220 gramos cada 100 gramos",
+          "Porotos, Blancos, Alubias, En Envases mayores de 20 Kg. desde 221 gramos por cada 100 gramos",
+          "Porotos, Blancos, Alubias, En Envases mayores de 20 Kg. hasta 190 gramos por cada 100 gramos",
+          "Porotos, Colorados, En Envases mayores de 20 Kg.",
+          "Porotos, Negros, En Envases mayores de 20 Kg.",
+          "Semilla de Girasol. Unicamente para industria, Los Demás, A granel con hasta un 15 % embolsado",
+          "Semilla de Girasol. Unicamente para industria, Los Demás, Girasol, tipo confitería",
+          "Semilla de Girasol. Unicamente para industria, Los Demás, Más del 15 % embolsado",
+          "Sorgo granífero, Los Demás, A granel con hasta un 15 % embolsado",
+          "Sorgo granífero, Los Demás, Más del 15 % embolsado",
+          "Tortas, \"Expellers\", \"Pellets\" y Harina de soja, \"Pellets\", Harinas de tortas",
+          "Tortas, \"Expellers\", \"Pellets\" y Harina de soja, \"Pellets\", de harina de extracción",
+          "Tortas, \"Expellers\", \"Pellets\" y Harinas de girasol, \"Pellets\", de harina de extracción",
+          "Tortas, \"Expellers\", \"Pellets\" y Harinas de girasol, \"Pellets\", integral",
+          "Tortas, \"Expellers\", \"Pellets\" y Harinas de girasol, Harinas de tortas",
+          "Tortas, \"Expellers\", \"Pellets\" y Harinas de girasol, Tortas",
+          "Trigo Pan, Trigo Pan, A granel con hasta un 15 % embolsado",
+          "Trigo Pan, Trigo Pan, Más del 15 % embolsado"
+        ],
+        "markets": [
+          "FOB oficial / serie SSPM"
+        ],
+        "currency": [
+          "USD"
+        ],
+        "unit": [
+          "TN"
+        ],
+        "coverage_status": "VERIFIED_WITH_GAPS",
+        "last_successful_capture": "2026-10-21T11:17:20.651762+00:00",
+        "status": "VALIDATED_BACKFILL"
+      },
+      "effective_sources": [
+        "MAGyP / SSPM series 358.1; separate from position API"
+      ],
+      "history_automation": "Reproducible CLI; periodic current-family workflow remains independent",
+      "effective_data_last_observation_date": "2026-10-19",
+      "effective_data_last_capture": "2026-10-21T11:17:20.651762+00:00"
     },
     {
       "source_family": "magyp_futures",
@@ -130,7 +327,42 @@
       "requested_date": "2026-10-20",
       "attempted_at": "2026-10-20T11:32:28.176323+00:00",
       "diagnostic_note": null,
-      "evidence": null
+      "evidence": null,
+      "historical_coverage": {
+        "oldest_verified_date": "1995-01-02",
+        "latest_verified_date": "2026-10-20",
+        "positive_rows": 439865,
+        "monthly_rows": 22060,
+        "products": [
+          "ACEITE DE SOJA",
+          "AVENA",
+          "HARINA DE SOJA",
+          "MAIZ",
+          "SOJA",
+          "TRIGO",
+          "TRIGO PAN"
+        ],
+        "markets": [
+          "CHICAGO",
+          "KANSAS"
+        ],
+        "currency": [
+          "USD"
+        ],
+        "unit": [
+          "TN"
+        ],
+        "coverage_status": "VERIFIED_WITH_GAPS",
+        "last_successful_capture": "2026-10-21T12:49:17.545294+00:00",
+        "status": "VALIDATED_BACKFILL"
+      },
+      "effective_sources": [
+        "MAGyP official historical publications",
+        "MAGyP current publication"
+      ],
+      "history_automation": "Reproducible CLI; periodic current-family workflow remains independent",
+      "effective_data_last_observation_date": "2026-10-20",
+      "effective_data_last_capture": "2026-10-21T12:49:17.545294+00:00"
     },
     {
       "source_family": "mcba",
@@ -208,7 +440,7 @@
       "status": "STATIC",
       "automatic_update": false,
       "workflow": null,
-      "notes": "Histórico local mensual disponible por separado; sin reemplazar MAGyP.",
+      "notes": "Retirado del runtime habitual: 668/668 observaciones cubiertas y comparadas con publicaciones oficiales. Original conservado para auditoría.",
       "currency": [
         "ARS"
       ],
@@ -218,7 +450,8 @@
       "requested_date": null,
       "attempted_at": null,
       "diagnostic_note": null,
-      "evidence": null
+      "evidence": null,
+      "runtime_active": false
     },
     {
       "source_family": "sio",
