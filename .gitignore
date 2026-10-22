@@ -150,6 +150,15 @@ Thumbs.db
 # Piloto canónico MAGyP: scripts/tests y salidas livianas; RAW/bases completas locales.
 !scripts/magyp/**/*.py
 !scripts/ci/prepare_pages.py
+!scripts/carnes/*.py
+!tests/carnes/*.py
+
+# Carnes: immutable originals/full layers remain outside Git and the frontend.
+data/carnes/raw/
+data/carnes/normalized/
+data/carnes/analytical/
+!data/carnes/dashboard/*.csv.gz
+!data/carnes/reports/*.csv
 !tests/magyp_common/**/*.py
 !tests/ci/*.py
 !tests/magyp_mcba/**/*.py
