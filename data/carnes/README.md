@@ -1,6 +1,7 @@
-# Carnes — plataforma oficial, sin frontend definitivo
+# Carnes — plataforma oficial y módulo visual
 
 - [Documentación y metodología](../../docs/CARNES_DATA_PLATFORM.md)
+- [UI: filtros, métricas, carga diferida y validación](../../docs/CARNES_UI_IMPLEMENTATION.md)
 - [Inventario CSV](reports/CARNES_SOURCE_INVENTORY.csv) / [JSON](reports/CARNES_SOURCE_INVENTORY.json)
 - [Estado por fuente](reports/CARNES_UPDATE_STATUS.json)
 - [Validación y cantidades verificadas](reports/CARNES_VALIDATION_REPORT.json)

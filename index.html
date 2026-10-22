@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-    <link rel="stylesheet" href="styles.css?v=commodities-daily-sio">
+    <link rel="stylesheet" href="styles.css?v=carnes-v1">
 </head>
 <body>
     <div class="app-shell">
@@ -51,6 +51,7 @@
         <button class="module-tab is-active" type="button" data-module="quantityView" aria-controls="quantityView" aria-selected="true">Cantidades transadas</button>
         <button class="module-tab" type="button" data-module="priceView" aria-controls="priceView" aria-selected="false">Precios mayoristas</button>
         <button class="module-tab" type="button" data-module="commodityView" aria-controls="commodityView" aria-selected="false">Commodities agrícolas</button>
+        <button class="module-tab" type="button" data-module="carnesView" aria-controls="carnesView" aria-selected="false">Carnes</button>
     </nav>
 
     <div id="quantityView" class="module-view module-panel is-active">
@@ -553,6 +554,13 @@
     </section>
     </div>
 
+    <div id="carnesView" class="module-view module-panel">
+        <section class="prices-section" aria-labelledby="carnesTitle">
+            <div class="prices-heading"><h2 id="carnesTitle" class="prices-title">Carnes</h2></div>
+            <div id="carnesRoot" aria-live="polite"><p class="prices-subtitle">Faena, producción y peso medio bovinos · fuentes oficiales</p></div>
+        </section>
+    </div>
+
     <!-- Footer -->
     <footer class="footer">
         <p>Tránsito y Comercialización Frutihortícola · Serie 2024-2025</p>
@@ -564,6 +572,6 @@
     <script src="update-status.js?v=1"></script>
     <script src="mcba-prices.js?v=mcba-status-v2"></script>
     <script src="commodity-history.js?v=1"></script>
-    <script src="app.js?v=commodities-cutover-v2"></script>
+    <script src="app.js?v=carnes-v1"></script>
 </body>
 </html>

@@ -35,6 +35,45 @@ button, select { font: inherit; }
 ::-webkit-scrollbar-track { background: var(--bg-secondary); }
 ::-webkit-scrollbar-thumb { background: #486078; border-radius: 99px; }
 
+/* Carnes: isolated additions to the existing institutional components. */
+body:has(#carnesView.is-active) .header-summary,
+body:has(#carnesView.is-active) #headerSubtitle { display: none; }
+#carnesView [hidden] { display: none !important; }
+#carnesView .carnes-metadata { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin: 12px 0 18px; color: var(--text-secondary); font-size: .76rem; }
+#carnesView a { color: var(--accent-blue); overflow-wrap: anywhere; }
+#carnesView .carnes-state { border: 1px solid var(--border-color); border-radius: 20px; padding: 4px 10px; font-weight: 700; white-space: normal; }
+#carnesView .carnes-state--success { color: var(--accent-green); background: var(--accent-green-soft); }
+#carnesView .carnes-state--warning { color: var(--accent-amber); background: #d7b36a15; }
+#carnesView .carnes-state--error { color: #f3a0a8; background: #cc7f8620; }
+#carnesView .carnes-state--neutral { color: var(--text-secondary); }
+#carnesView .carnes-notice { margin: 10px 0; color: var(--accent-amber); font-size: .82rem; }
+#carnesView .carnes-notice:empty { display: none; }
+#carnesView .carnes-method { margin: 14px 0 18px; max-width: 100%; font-size: .78rem; }
+#carnesView .carnes-kpis { margin-bottom: 20px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+#carnesView .kpi-value { font-size: 1.25rem; line-height: 1.35; overflow-wrap: anywhere; }
+#carnesView .kpi-unit { font-size: .74rem; color: var(--text-secondary); }
+#carnesView .carnes-chart { position: relative; flex: 0 0 auto; height: 330px; min-height: 0; padding: 18px; }
+#carnesView .carnes-breakdown { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 430px), 1fr)); gap: 20px; margin: 20px 0; }
+#carnesView .carnes-breakdown:not(:has(> .chart-card:not([hidden]))) { display: none; }
+#carnesView .carnes-breakdown .carnes-chart { height: 540px; }
+#carnesView .carnes-empty { padding: 22px; color: var(--text-muted); }
+#carnesView .carnes-records { margin: 20px 0; padding: 20px; }
+#carnesView .carnes-table-wrap { max-width: 100%; overflow-x: auto; margin: 14px 0; }
+#carnesView .carnes-table { width: 100%; border-collapse: collapse; font-size: .75rem; text-align: left; }
+#carnesView .carnes-table th { color: var(--text-muted); font-weight: 700; }
+#carnesView .carnes-table td, #carnesView .carnes-table th { padding: 10px; border-bottom: 1px solid var(--border-soft); vertical-align: top; }
+#carnesView .carnes-table td:nth-child(3) { white-space: nowrap; font-variant-numeric: tabular-nums; }
+#carnesView .carnes-table details { max-width: 320px; overflow-wrap: anywhere; }
+#carnesView .carnes-export { align-self: flex-start; width: auto; min-height: 34px; padding: 5px 12px; cursor: pointer; font-size: .75rem; background-image: none; }
+#carnesView .carnes-history { margin: 22px 0; }
+#carnesView .carnes-history > summary { padding: 20px; font-weight: 700; cursor: pointer; }
+#carnesView .carnes-history-content { padding: 0 20px 20px; }
+#carnesView .carnes-history-content > .chart-card { margin-top: 18px; }
+#carnesView .filter-select:focus-visible, #carnesView summary:focus-visible, #carnesView a:focus-visible { outline: 2px solid var(--accent-green); outline-offset: 3px; }
+#carnesView .filter-select:disabled { opacity: .65; cursor: default; }
+@media (max-width: 1050px) { #carnesView .carnes-filters, #carnesView .carnes-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { #carnesView .carnes-filters, #carnesView .carnes-kpis, #carnesView .carnes-history-content .filters-grid { grid-template-columns: 1fr; } #carnesView .carnes-records { padding: 12px; } }
+
 /* Header */
 .app-shell { min-height: 100vh; }
 .header { background: #142131; border-bottom: 1px solid var(--border-color); }
