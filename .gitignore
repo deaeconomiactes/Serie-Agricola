@@ -151,7 +151,9 @@ Thumbs.db
 !scripts/magyp/**/*.py
 !scripts/ci/prepare_pages.py
 !scripts/carnes/*.py
+!carnes.js
 !tests/carnes/*.py
+!tests/carnes/fixtures/ui/*.csv.gz
 
 # Carnes: immutable originals/full layers remain outside Git and the frontend.
 data/carnes/raw/

@@ -523,9 +523,31 @@ function wireModuleTabs() {
                 tab.setAttribute('aria-selected', String(active));
             });
             document.querySelectorAll('.module-view').forEach(view => view.classList.toggle('is-active', view.id === button.dataset.module));
+            if (button.dataset.module === 'carnesView') loadCarnesModule();
             window.dispatchEvent(new Event('resize'));
         });
     });
+}
+
+let carnesModulePromise = null;
+function loadCarnesModule() {
+    if (!carnesModulePromise) {
+        carnesModulePromise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'carnes.js?v=1';
+            script.onload = () => resolve(window.Carnes.mount(document.getElementById('carnesRoot')));
+            script.onerror = () => { script.remove(); reject(new Error('No se pudo cargar Carnes.')); };
+            document.head.append(script);
+        }).catch(error => {
+            carnesModulePromise = null;
+            const node = document.getElementById('carnesRoot');
+            node.replaceChildren();
+            const message = document.createElement('p'); message.textContent = error.message;
+            const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Reintentar';
+            retry.addEventListener('click', loadCarnesModule); node.append(message, retry);
+        });
+    }
+    return carnesModulePromise;
 }
 
 // ─── Independent wholesale prices module ───────────────────────────────
