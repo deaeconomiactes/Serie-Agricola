@@ -1,0 +1,156 @@
+{
+  "review_date": "2026-10-22",
+  "schema_version": "carnes-v1",
+  "source_files": 13,
+  "normalized_rows": 485234,
+  "observed_rows": 398063,
+  "dashboard_rows": 11836,
+  "dashboard_shards": 343,
+  "dashboard_compressed_bytes": 1425456,
+  "largest_shard_bytes": 60795,
+  "checks": {
+    "carnes_tests": 29,
+    "common_python_regressions": 74,
+    "frontend_regressions": 63,
+    "public_shards": "PASS"
+  },
+  "limitations": [
+    "No definitive frontend or scheduler activated",
+    "Current livestock-price unit/method validation pending",
+    "Integrated export series ends 2019-08; current NCM export automation not verified",
+    "SSPM bird headcount scale excluded from prepared output",
+    "2019 conflicting aggregate header and 2020 conflicting establishment cells quarantined"
+  ],
+  "sources": {
+    "magyp_indicators_archive": {
+      "first_observation": "1998-01-01",
+      "last_observation": "2019-08-01",
+      "rows": 2600,
+      "observed_rows": 2600,
+      "dashboard_rows": 2600,
+      "last_successful_capture": "2026-10-22T11:21:14.092415Z",
+      "raw_sha256": "80113f2bdc7da9c005f7eb10350dc810f19f970b1cc7231eabebdb3a7d7880ff",
+      "source_lifecycle": "HISTORICAL_ENDED"
+    },
+    "magyp_production_current": {
+      "first_observation": "2026-01-01",
+      "last_observation": "2026-09-01",
+      "rows": 515,
+      "observed_rows": 425,
+      "dashboard_rows": 515,
+      "last_successful_capture": "2026-10-22T11:21:15.221844Z",
+      "raw_sha256": "f6979b4f415cd03df58daa1fcefa2a967f865abac51d5ef094ea90ba56f08c8d",
+      "source_lifecycle": "CURRENT_PUBLICATION"
+    },
+    "magyp_slaughter_2018": {
+      "first_observation": "2018-01-01",
+      "last_observation": "2018-12-01",
+      "rows": 10330,
+      "observed_rows": 9211,
+      "dashboard_rows": 502,
+      "last_successful_capture": "2026-10-22T11:21:16.418177Z",
+      "raw_sha256": "5589800c47e899a3873cc9028e7f49e7ae0535b7bc321ca3022a0579bc144a45",
+      "source_lifecycle": "PUBLISHED_ANNUAL_ARCHIVE"
+    },
+    "magyp_slaughter_2019": {
+      "first_observation": "2019-01-01",
+      "last_observation": "2019-12-01",
+      "rows": 56963,
+      "observed_rows": 44333,
+      "dashboard_rows": 702,
+      "last_successful_capture": "2026-10-22T11:21:17.698693Z",
+      "raw_sha256": "6c6db04d51415f992b0d29d5b3dd76a54e09b2c37e19dc2e0ea4d9faf7966b8a",
+      "source_lifecycle": "PUBLISHED_ANNUAL_ARCHIVE"
+    },
+    "magyp_slaughter_2020": {
+      "first_observation": "2020-01-01",
+      "last_observation": "2020-12-01",
+      "rows": 58564,
+      "observed_rows": 46823,
+      "dashboard_rows": 584,
+      "last_successful_capture": "2026-10-22T11:21:19.183895Z",
+      "raw_sha256": "2d2cd643e25b1e2cb66ee01052f4e7cc80b621fa2bf3df6557e7fb34731bf350",
+      "source_lifecycle": "PUBLISHED_ANNUAL_ARCHIVE"
+    },
+    "magyp_slaughter_2021": {
+      "first_observation": "2021-01-01",
+      "last_observation": "2021-12-01",
+      "rows": 61008,
+      "observed_rows": 48552,
+      "dashboard_rows": 571,
+      "last_successful_capture": "2026-10-22T11:21:20.469539Z",
+      "raw_sha256": "79c8fe264514f2d5bcd8b2383e84a561d90f51e0afea031b8008ecc1d7182a17",
+      "source_lifecycle": "PUBLISHED_ANNUAL_ARCHIVE"
+    },
+    "magyp_slaughter_2022": {
+      "first_observation": "2022-01-01",
+      "last_observation": "2022-12-01",
+      "rows": 60124,
+      "observed_rows": 48506,
+      "dashboard_rows": 558,
+      "last_successful_capture": "2026-10-22T11:21:21.880155Z",
+      "raw_sha256": "4cb96e4b2179daa91e2c07b6a0c3aec162fa57809b8766c90d7b06f0ba191088",
+      "source_lifecycle": "PUBLISHED_ANNUAL_ARCHIVE"
+    },
+    "magyp_slaughter_2023": {
+      "first_observation": "2023-01-01",
+      "last_observation": "2023-12-01",
+      "rows": 58691,
+      "observed_rows": 47936,
+      "dashboard_rows": 555,
+      "last_successful_capture": "2026-10-22T11:21:23.546981Z",
+      "raw_sha256": "8e31fcb7d5f0e77090d834e903a706d9c2201145c8ea2bb4275d3574e307430b",
+      "source_lifecycle": "PUBLISHED_ANNUAL_ARCHIVE"
+    },
+    "magyp_slaughter_2024": {
+      "first_observation": "2024-01-01",
+      "last_observation": "2024-12-01",
+      "rows": 61320,
+      "observed_rows": 48470,
+      "dashboard_rows": 584,
+      "last_successful_capture": "2026-10-22T11:21:24.871192Z",
+      "raw_sha256": "1ff972119ff2457b3b0fa3cdf82aee4a20f698be54ab5ba502fdcf1c6039a21d",
+      "source_lifecycle": "PUBLISHED_ANNUAL_ARCHIVE"
+    },
+    "magyp_slaughter_2025": {
+      "first_observation": "2025-01-01",
+      "last_observation": "2025-12-01",
+      "rows": 63179,
+      "observed_rows": 50493,
+      "dashboard_rows": 571,
+      "last_successful_capture": "2026-10-22T11:21:26.161899Z",
+      "raw_sha256": "38825eb9405c45b2afa8e404036cb983159dbe19e7dd2fc536ef2d8fddb921ca",
+      "source_lifecycle": "PUBLISHED_ANNUAL_ARCHIVE"
+    },
+    "magyp_slaughter_current": {
+      "first_observation": "2026-01-01",
+      "last_observation": "2026-09-01",
+      "rows": 47698,
+      "observed_rows": 47639,
+      "dashboard_rows": 458,
+      "last_successful_capture": "2026-10-22T11:21:27.474047Z",
+      "raw_sha256": "58a9079b5062fcdfa77013bb5dbf06254b951bb87f73a405ae7ab57c0cab4631",
+      "source_lifecycle": "CURRENT_PUBLICATION"
+    },
+    "sspm_40_1": {
+      "first_observation": "1980-01-01",
+      "last_observation": "2025-01-01",
+      "rows": 322,
+      "observed_rows": 283,
+      "dashboard_rows": 276,
+      "last_successful_capture": "2026-10-22T11:21:28.743523Z",
+      "raw_sha256": "46cc4c7f125c8ab545022898fdb1c131355cfabfaaad4b41f65518b5374664af",
+      "source_lifecycle": "CURRENT_PUBLICATION"
+    },
+    "sspm_40_3": {
+      "first_observation": "1980-01-01",
+      "last_observation": "2026-08-01",
+      "rows": 3920,
+      "observed_rows": 2792,
+      "dashboard_rows": 3360,
+      "last_successful_capture": "2026-10-22T11:21:29.984553Z",
+      "raw_sha256": "c5f63518f8d0d1c43d1524d7a036611da5b5d5402bdb9344db911c701a89fc89",
+      "source_lifecycle": "CURRENT_PUBLICATION"
+    }
+  }
+}
