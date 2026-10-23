@@ -76,6 +76,19 @@ test('all public SIO views have event lineage and 590 observations reconcile wit
  assert.equal(counts.DIARIO,audit.eligible_events);
 });
 
+test('quoted SIO delivery ranges preserve line breaks, escaped quotes, semicolons and event lineage',()=>{
+ const {ctx}=context();
+ ctx.input='\uFEFFcommodity;fecha_entrega;event_ids;procedencia\r\nMaíz;"01/12/2026\n31/12/2026";"[""id:1""]";"Lugar; ""A"""\r\nTrigo;"01/01/2027\r\n31/01/2027";"[""id:2""]";Origen\r\n';
+ const rows=JSON.parse(vm.runInContext('JSON.stringify(parseCommodityCSV(input))',ctx));
+ assert.equal(rows.length,2);
+ assert.equal(rows[0].fecha_entrega,'01/12/2026\n31/12/2026');
+ assert.equal(rows[1].fecha_entrega,'01/01/2027\r\n31/01/2027');
+ assert.equal(rows[0].procedencia,'Lugar; "A"');
+ assert.deepEqual(JSON.parse(rows[0].event_ids),['id:1']);
+ ctx.input='commodity;fecha_entrega\nMaíz;"sin cierre';
+ assert.throws(()=>vm.runInContext('parseCommodityCSV(input)',ctx),/comillas sin cerrar/);
+});
+
 test('other MAGyP reference family rows, series and latest values match the pre-SIO implementation',()=>{
  const baseline=execFileSync('git',['show','abe1249:app.js'],{encoding:'utf8'});
  const before=context(baseline).ctx,after=context().ctx;

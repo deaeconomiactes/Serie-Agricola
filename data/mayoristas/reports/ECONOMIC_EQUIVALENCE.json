@@ -1,0 +1,158 @@
+{
+  "controls": [
+    {
+      "year": 2026,
+      "frequency": "diaria",
+      "markets": [
+        "Mercado Central de Buenos Aires"
+      ],
+      "rows": 61576,
+      "average": 3254.71747710148,
+      "minimum": 144.44,
+      "maximum": 119167,
+      "latest": "2026-10-05",
+      "exact_equal": true,
+      "sha256": "dd4b8b35270a6afcf9448097d3cd125bd75d9b5b2b0d77226ce6a132ee045dbd"
+    },
+    {
+      "year": 2024,
+      "frequency": "mensual",
+      "markets": [
+        "Mercado Central de Buenos Aires"
+      ],
+      "rows": 4167,
+      "average": 1889.426265898727,
+      "minimum": 91.85,
+      "maximum": 58000,
+      "latest": "2024-12-01",
+      "exact_equal": true,
+      "sha256": "2d883dd0e04bc1af6fe847177f34645354f8856732c6d1f3b70333a5765ae445"
+    },
+    {
+      "year": 2025,
+      "frequency": "mensual",
+      "markets": [
+        "Mercado Central de Buenos Aires"
+      ],
+      "rows": 4541,
+      "average": 2430.5117683329613,
+      "minimum": 85.84,
+      "maximum": 59889,
+      "latest": "2025-12-01",
+      "exact_equal": true,
+      "sha256": "842d8d8156b9ae75f5350799fa1613fb9f091bdb7205b49e08503bd007b8514c"
+    },
+    {
+      "year": 2026,
+      "frequency": "mensual",
+      "markets": [
+        "Mercado Central de Buenos Aires"
+      ],
+      "rows": 3723,
+      "average": 3189.297765185657,
+      "minimum": 144.44,
+      "maximum": 110000,
+      "latest": "2026-10-01",
+      "exact_equal": true,
+      "sha256": "03fbad06e88d78a5974590ff5ba54ceb8d22702478612d5406e63f768e6c5d12"
+    },
+    {
+      "year": 2025,
+      "frequency": "mensual",
+      "markets": [
+        "Mercado de Corrientes"
+      ],
+      "rows": 29608,
+      "average": 1542.358032504578,
+      "minimum": 25,
+      "maximum": 50000,
+      "latest": "2025-12-30",
+      "exact_equal": true,
+      "sha256": "7b6c000ecc9bb552aca89265cff915ab1cb5099d2838b6884bc88449cc410712"
+    },
+    {
+      "year": 2026,
+      "frequency": "mensual",
+      "markets": [
+        "Mercado de Corrientes"
+      ],
+      "rows": 16765,
+      "average": 1804.63294978287,
+      "minimum": 3,
+      "maximum": 70000,
+      "latest": "2026-12-25",
+      "exact_equal": true,
+      "sha256": "4384c1a933a941309602965580129580ec7fe08ca0166c0c1ba0a5ca442376a5"
+    },
+    {
+      "year": 2025,
+      "frequency": "diaria",
+      "markets": [
+        "Mercado de Corrientes"
+      ],
+      "rows": 29608,
+      "average": 1542.358032504578,
+      "minimum": 25,
+      "maximum": 50000,
+      "latest": "2025-12-30",
+      "exact_equal": true,
+      "sha256": "ce74657229a00fc6fc428700cd66e14abc8499059617fd99bb93b56d0026ed94"
+    },
+    {
+      "year": 2026,
+      "frequency": "diaria",
+      "markets": [
+        "Mercado de Corrientes"
+      ],
+      "rows": 16765,
+      "average": 1804.63294978287,
+      "minimum": 3,
+      "maximum": 70000,
+      "latest": "2026-12-25",
+      "exact_equal": true,
+      "sha256": "97bb03abb05fc3966c51f7921140c46f326d0cd984df092fde32fcc1f67a2d6a"
+    },
+    {
+      "year": 2024,
+      "frequency": "anual",
+      "markets": [
+        "Mercado Central de Buenos Aires"
+      ],
+      "rows": 4167,
+      "average": 1889.426265898727,
+      "minimum": 91.85,
+      "maximum": 58000,
+      "latest": "2024-12-01",
+      "exact_equal": true,
+      "sha256": "dcc1b51df8d1733c878cbef1785160d47becde341e1d29660e11a3ec57425348"
+    },
+    {
+      "year": 2025,
+      "frequency": "anual",
+      "markets": [
+        "Mercado Central de Buenos Aires"
+      ],
+      "rows": 4541,
+      "average": 2430.5117683329613,
+      "minimum": 85.84,
+      "maximum": 59889,
+      "latest": "2025-12-01",
+      "exact_equal": true,
+      "sha256": "a4e489b7a2c62817dcb8bdd434e972069079d7df5bc73628f13c0b0633b534ee"
+    },
+    {
+      "year": 2026,
+      "frequency": "anual",
+      "markets": [
+        "Mercado Central de Buenos Aires"
+      ],
+      "rows": 61744,
+      "average": 3257.7347713138156,
+      "minimum": 144.44,
+      "maximum": 119167,
+      "latest": "2026-08-24",
+      "exact_equal": true,
+      "sha256": "728a486b0b341a2c2efb22df690bac4ab35708b4cca9f601b57e7ba27c19be50"
+    }
+  ]
+}

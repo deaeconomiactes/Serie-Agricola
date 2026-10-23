@@ -279,3 +279,14 @@ La UI solicita una serie cuando hay varias y explicita naturaleza transaccional;
 no precio spot ni censo de contratos vigentes. La evidencia original A07 queda
 conservada como diagnóstico anterior a la corrección. Siguen vigentes las demás
 salvedades y las limitaciones de cobertura/calidad de SIO, sin cambios a otros módulos.
+
+## 10. Seguimiento A08 — Mayoristas fragmentado, 23/10/2026
+
+Cutover local documentado en [MAYORISTAS_FRAGMENTED_OUTPUTS.md](MAYORISTAS_FRAGMENTED_OUTPUTS.md).
+19 fragmentos gzip, validación SHA/schema/conteos, caché y carga por selección.
+Apertura: 40.814.572 → 849.526 bytes (97,919% menos), con último año inicial
+y Todos los años disponible. 11 controles económicos exactos; sin cambios de fuente/metodología.
+El ámbito de fragmentación de Commodities de A08 no se modifica. El cierre
+tras sincronizar main resuelve el lector CSV de registros SIO multilínea, sin
+cambiar sus datos ni semántica; conserva el test previo y añade una regresión.
+Ver evidencia y validación final en el reporte de esta etapa.

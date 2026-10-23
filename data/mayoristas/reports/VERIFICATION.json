@@ -1,0 +1,55 @@
+{
+  "baseline_commit": "5e6777d",
+  "frontend": {
+    "total": 99,
+    "passed": 99,
+    "failed": 0
+  },
+  "python_passed": {
+    "mcba": 105,
+    "mercado_central": 20,
+    "common": 74,
+    "ci_publication": 6,
+    "mayoristas_build": 6,
+    "sio": 13
+  },
+  "delivery_frontend_passed": 6,
+  "economic_controls_exact": 11,
+  "browsers": {
+    "Edge": {
+      "passed": true,
+      "widths": [
+        1440,
+        1000,
+        900,
+        640
+      ]
+    },
+    "Chrome": {
+      "passed": true,
+      "widths": [
+        1440,
+        1000,
+        900,
+        640
+      ]
+    }
+  },
+  "actionlint": "PASS",
+  "git_diff_check": "PASS",
+  "protected_data_modified": false,
+  "sio_csv_diagnosis": {
+    "outputs_valid_v2": true,
+    "events": 605,
+    "multiline_records_per_view": 13,
+    "cause": "physical-line CSV split truncated quoted delivery-date ranges",
+    "fix": "preserve logical CSV records and original cell text",
+    "existing_test_unchanged": true,
+    "synthetic_regression_added": true,
+    "outputs_modified": false,
+    "semantics_modified": false
+  },
+  "economic_equivalence_report_sha256": "24bd334e4339be2218a94bb03d2ef8bcc1bb992ec78933b3556b9ec33f6e997b",
+  "synchronized_main_commit": "5e6777dc9aabe31eb221f2cc240a220903f1b6a4",
+  "production_deployed": false
+}

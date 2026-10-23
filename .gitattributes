@@ -8,3 +8,7 @@ data/commodities_sio/reports/RESUMEN_ACTUALIDAD_COMMODITIES_SIO.csv text eol=lf
 
 data/mercado_central/dashboard/**/*.csv text eol=lf
 data/mercado_central/dashboard/**/*.json text eol=lf
+
+# Immutable compressed delivery bytes are hashed by the browser.
+data/mayoristas/dashboard/*.json.gz binary
+data/mayoristas/dashboard/index.json text eol=lf

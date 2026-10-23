@@ -38,7 +38,17 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Preparar sitio sin archivo manual de precios internos retirado
+      - name: Node para adaptadores Mayoristas
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Generar y validar fragmentos Mayoristas desde outputs publicados
+        run: |
+          python scripts/mayoristas/build_dashboard.py
+          node --test tests/magyp_frontend/mayoristas-delivery.test.cjs
+
+      - name: Preparar sitio con fragmentos Mayoristas y sin archivos retirados del runtime
         env:
           PAGES_DESTINATION: ${{ runner.temp }}/serie-agricola-pages
         run: python scripts/ci/prepare_pages.py --destination "$PAGES_DESTINATION"

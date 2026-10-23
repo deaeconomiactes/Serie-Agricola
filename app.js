@@ -335,6 +335,11 @@ let magypPriceInfo = null;
 let magypUpdateMetadata = null;
 let mcbaMonthlyData = [];
 let mcbaMonthlyWarning = '';
+let priceDelivery = null;
+let priceDeliveryActive = false;
+let priceDeliveryRequest = 0;
+let priceDeliveryLastControls = null;
+let priceDeliveryPending = false;
 let priceFreshnessBySource = {};
 let magypPriceWarning = '';
 let futurePriceData = [];
@@ -453,12 +458,13 @@ function updatePriceFrequencyOptions() {
     if (!scopedRows.some(row => row.fechaPrecision !== 'mensual')) allowed.delete('diaria');
     const mcbaSelected = isAllSelected(getSelectedValues('priceFilterMercado'))
         || getSelectedValues('priceFilterMercado').includes(MCBAPrices.MCBA);
-    if (mcbaSelected && validPriceData.some(row => row.mercado === MCBAPrices.MCBA && row.data_source === 'MAGYP')) allowed.add('diaria');
+    if (mcbaSelected && (validPriceData.some(row => row.mercado === MCBAPrices.MCBA && row.data_source === 'MAGYP') || priceDelivery?.index.fragments.some(f => f.source === 'MAGYP' && (isAllSelected(getSelectedValues('priceFilterYear')) || getSelectedValues('priceFilterYear').includes(String(f.year)))))) allowed.add('diaria');
+    if (priceDelivery && hasSpecificSpecies && scopedRows.some(row => row.fechaPrecision !== 'mensual')) allowed.add('diaria');
     if (!hasSpecificSpecies && !mcbaSelected) allowed.delete('diaria');
     [...select.options].forEach(option => { option.disabled = !allowed.has(option.value); });
     priceFrequency = allowed.has(priceFrequency) ? priceFrequency : (allowed.has('mensual') ? 'mensual' : [...allowed][0]);
     select.value = priceFrequency;
-    select.onchange = () => { priceFrequency = select.value; populatePriceFilters(); updatePriceDashboard(); };
+    select.onchange = () => { priceFrequency = select.value; if (priceDelivery) { refreshPriceDelivery(); return; } populatePriceFilters(); updatePriceDashboard(); };
     const frequencyStatus = document.getElementById('priceFrequencyStatus');
     if (frequencyStatus) {
         frequencyStatus.textContent = !mcbaSelected && !hasSpecificSpecies && availableFrequencies(detectFrequency(priceData)).includes('diaria')
@@ -541,7 +547,7 @@ function loadPriceModuleOnDemand(module) {
             .catch(error => {
                 priceModulePromises.delete(module); // Reopening the tab can retry a failed load.
                 console.error('Error loading price module:', error);
-                if (module === 'priceView') setPriceStatus('No se pudieron cargar los precios. Volvé a abrir el módulo para reintentar.', true);
+                if (module === 'priceView') setPriceStatus(error.message.startsWith('PIPELINE/UI DATA ERROR') ? error.message : 'No se pudieron cargar los precios. Volvé a abrir el módulo para reintentar.', true);
                 else setCommodityDataStatus('No se pudieron cargar los datos. Volvé a abrir el módulo para reintentar.', 'error');
             }).finally(() => view?.setAttribute('aria-busy', 'false'));
         priceModulePromises.set(module, promise);
@@ -581,68 +587,74 @@ function filterFutureDates(data) {
     return { validRows, futureRows };
 }
 
+function priceDeliveryControls() {
+    return Object.fromEntries([...document.querySelectorAll('#priceView select')].map(select => [select.id,
+        select.multiple ? [...select.selectedOptions].map(option => option.value) : select.value]));
+}
+
+function restorePriceDeliveryControls(values) {
+    if (!values) return;
+    for (const [id,value] of Object.entries(values)) {
+        const select = document.getElementById(id);
+        if (!select) continue;
+        if (select.multiple) [...select.options].forEach(option => { option.selected = value.includes(option.value); });
+        else select.value = value;
+        if (select.multiple) updateMultiSelectSummary(id);
+    }
+}
+
 async function loadPriceData() {
-    let response = null;
-    let sourcePath = PRICE_CSV_PATH;
-    try { response = await fetch(PRICE_CSV_PATH); } catch (error) { console.warn('No se pudo acceder a la base general de precios; se probará el archivo de respaldo.', error); }
-    if (!response?.ok) {
-        response = await fetch(PRICE_CSV_FALLBACK_PATH);
-        sourcePath = PRICE_CSV_FALLBACK_PATH;
-        console.warn('Usando fallback PRECIOS_MAYORISTAS_2026_INTEGRADO.csv');
+    priceDelivery = new MayoristasDelivery.Loader();
+    await priceDelivery.init();
+    // All historical years remain selectable; opening only needs the latest available year.
+    const year = document.getElementById('priceFilterYear');
+    populateSelect(year, priceDelivery.index.years.map(String), 'Todos los años');
+    year.value = String(Math.max(...priceDelivery.index.years));
+    await refreshPriceDelivery(true);
+}
+
+async function refreshPriceDelivery(initial = false) {
+    if (!priceDelivery) return;
+    const request = ++priceDeliveryRequest;
+    const frequency = priceFrequency;
+    priceDeliveryPending = true;
+    const view = document.getElementById('priceView');
+    const status = document.getElementById('priceDeliveryStatus');
+    view?.setAttribute('aria-busy', 'true');
+    if (status) { status.textContent = 'Cargando selección…'; status.classList.add('is-visible'); }
+    try {
+        const result = await priceDelivery.load({year:getSelectedValues('priceFilterYear')[0],
+            markets:getSelectedValues('priceFilterMercado'),frequency});
+        if (!result || request !== priceDeliveryRequest) return;
+        const split = filterFutureDates(result.rows);
+        rawPriceData = result.rows; futurePriceData = split.futureRows;
+        priceData = validPriceData = split.validRows;
+        legacyPriceData = validPriceData.filter(row => row.data_source === 'LEGACY');
+        magypPriceData = validPriceData.filter(row => row.data_source === 'MAGYP');
+        mcbaMonthlyData = validPriceData.filter(row => row.data_source === 'MERCADO_CENTRAL');
+        magypPriceInfo = result.metadata.magypPriceInfo;
+        magypUpdateMetadata = result.metadata.magypUpdateMetadata;
+        priceDeliveryActive = true;
+        priceDeliveryPending = false;
+        populatePriceFilters(); updatePriceFrequencyOptions(); updatePriceDashboard();
+        priceDeliveryLastControls = priceDeliveryControls();
+        if (status) { status.textContent = ''; status.classList.remove('is-visible'); }
+    } catch (error) {
+        if (request !== priceDeliveryRequest) return;
+        if (initial) throw error;
+        restorePriceDeliveryControls(priceDeliveryLastControls);
+        priceFrequency = document.getElementById('priceFilterFrequency').value;
+        if (status) {
+            status.textContent = `${error.message}. Se conserva la última vista válida. Cambiá la selección para reintentar.`;
+            status.classList.add('is-visible');
+        }
+        console.error('Carga Mayoristas:', error.message);
+    } finally {
+        if (request === priceDeliveryRequest) {
+            priceDeliveryPending = false;
+            view?.setAttribute('aria-busy', 'false');
+        }
     }
-    if (!response.ok) throw new Error(`No se encontró una base de precios (${response.status})`);
-    const qualityResponse = await fetch('RESUMEN_SERIES_UTILIZABLES_PRECIOS_2026.csv').catch(() => null);
-    if (qualityResponse?.ok) {
-        priceSeriesData = parsePriceCSV(await qualityResponse.text());
-        priceQualityMap = new Map(priceSeriesData.map(row => [priceSeriesKey(row), row.indicador_serie_utilizable || '']));
-    }
-    legacyPriceData = processPriceData(parsePriceCSV(await response.text()), sourcePath).map(row => ({
-        ...row, data_source: 'LEGACY', source_status: 'LEGACY', last_update: '',
-        fechaPrecision: row.mercado === MCBAPrices.MCBA ? String(row.fechaPrecision).toLowerCase() : row.fechaPrecision,
-        calidadMCBA: '', tamanoMCBA: '', gradoMCBA: ''
-    }));
-    const magyp = await MCBAPrices.load();
-    magypPriceData = MCBAPrices.adapt(magyp.rows, MONTHS_FULL, magyp.status, formatLabel);
-    magypPriceInfo = magyp.info;
-    magypUpdateMetadata = magyp.updateMetadata || null;
-    magypPriceWarning = SourceUpdateStatus.describe(magypUpdateMetadata, magypPriceInfo || {}) ? '' : magyp.warning;
-    const monthly = await MCBAMonthly.load();
-    mcbaMonthlyData = MCBAMonthly.adapt(monthly.rows, MONTHS_FULL, formatLabel);
-    mcbaMonthlyWarning = monthly.warning;
-    rawPriceData = legacyPriceData.concat(magypPriceData, mcbaMonthlyData);
-    console.warn('Valores inválidos de planilla excluidos o normalizados:', spreadsheetInvalidCount);
-    const dateSplit = filterFutureDates(rawPriceData);
-    futurePriceData = dateSplit.futureRows;
-    priceData = dateSplit.validRows.filter(row => isValidPrice(row.precioObservado));
-    validPriceData = priceData;
-    const invalidPriceCount = dateSplit.validRows.length - priceData.length;
-    const years = getAvailablePriceYears(priceData);
-    const datedPrices = priceData.map(row => row.fecha).filter(Boolean).sort();
-    const rowsByYear = priceData.reduce((counts, row) => { if (Number.isFinite(row.year)) counts[row.year] = (counts[row.year] || 0) + 1; return counts; }, {});
-    const rowsByYearMonth = priceData.reduce((counts, row) => { if (row.year && row.mes) { const key = `${row.year}-${String(monthNumber(row.mes)).padStart(2, '0')}`; counts[key] = (counts[key] || 0) + 1; } return counts; }, {});
-    const currentYear = new Date().getFullYear();
-    const suspiciousRows = priceData.filter(row => Number.isFinite(row.year) && row.year > currentYear + 1);
-    priceFutureDateCount = priceData.filter(row => row.fecha && row.fecha > currentDateISO()).length;
-    console.log('Archivo de precios cargado:', sourcePath);
-    console.log('Total registros precios crudos:', rawPriceData.length);
-    console.log('Total registros precios válidos:', priceData.length);
-    console.log('Registros con precio observado:', priceData.filter(row => isValidPrice(row.precioObservado)).length);
-    console.log('Registros con precio kg estimado:', priceData.filter(row => isValidPrice(row.precioKgEstimado)).length);
-    console.log('Registros no comparables:', priceData.filter(row => !isValidPrice(row.precioKgEstimado)).length);
-    console.log('Unidades observadas:', [...new Set(priceData.map(row => row.unidadPrecioObservado).filter(Boolean))]);
-    console.log('Confianza conversión:', priceData.reduce((counts, row) => { const key = row.confianzaConversion || 'Sin informar'; counts[key] = (counts[key] || 0) + 1; return counts; }, {}));
-    console.warn('Registros excluidos por precio inválido o cero:', invalidPriceCount);
-    console.warn('Registros de precios con fecha futura excluidos:', futurePriceData.length);
-    console.log('Rango de fechas precios:', datedPrices[0] || 'Sin fecha', datedPrices[datedPrices.length - 1] || 'Sin fecha');
-    console.log('Años disponibles en precios:', years);
-    console.log('Filas por año en precios:', rowsByYear);
-    console.log('Filas de precios válidas por año-mes:', rowsByYearMonth);
-    console.warn('Registros con años futuros o sospechosos:', suspiciousRows.length);
-    console.log('Frecuencia original detectada en precios:', detectFrequency(priceData));
-    if (priceFutureDateCount) console.warn('Fechas futuras excluidas del KPI último registro:', priceFutureDateCount);
-    initPriceYearFilter();
-    updatePriceFrequencyOptions();
-    updatePriceDashboard();
 }
 
 function parsePriceCSV(text) {
@@ -950,12 +962,12 @@ function populatePriceFilters() {
         (isAllSelected(marketSelection) || marketSelection.includes(row.mercado)));
     const selectedSpecies = getSelectedValues('priceFilterEspecie');
     const definitions = [
-        ['priceFilterYear', validPriceData.map(row => row.year), 'Todos los años'],
+        ['priceFilterYear', priceDelivery ? priceDelivery.index.years : validPriceData.map(row => row.year), 'Todos los años'],
         ['priceFilterRubro', sourceRows.map(row => row.rubro), 'Todos'],
         ['priceFilterMes', sourceRows.map(row => row.mes), 'Todos los meses'],
         ['priceFilterEspecie', sourceRows.map(row => row.especie), 'Todas las especies'],
         ['priceFilterVariedad', sourceRows.filter(row => !Array.isArray(selectedSpecies) || !selectedSpecies.length || selectedSpecies.includes('TODOS') || selectedSpecies.includes(row.especie)).map(row => row.variedad || 'Sin especificar'), 'Todas las variedades'],
-        ['priceFilterMercado', validPriceData.map(row => row.mercado), 'Todos los mercados'],
+        ['priceFilterMercado', priceDelivery ? priceDelivery.index.markets : validPriceData.map(row => row.mercado), 'Todos los mercados'],
         ['priceFilterProcedencia', sourceRows.map(row => row.procedencia), 'Todas'],
         ['priceFilterUnidad', sourceRows.map(row => row.unidad), 'Todas'],
         ['priceFilterEnvase', sourceRows.map(row => row.envase), 'Todos'],
@@ -983,8 +995,10 @@ function populatePriceFilters() {
                 if (id === 'priceFilterMercado') ['priceFilterEnvase', 'priceFilterCalidad', 'priceFilterTamano', 'priceFilterGrado'].forEach(key => {
                     const field = document.getElementById(key); if (field) field.value = 'TODOS';
                 });
+                if (priceDelivery) { refreshPriceDelivery(); return; }
                 populatePriceFilters();
             }
+            if (priceDeliveryPending) return; // Apply secondary filters when the requested partition is ready.
             if (id === 'priceFilterEspecie') updatePriceVarietyFilter();
             updatePriceFrequencyOptions();
             if (select.multiple) updateMultiSelectSummary(id);
@@ -1051,6 +1065,7 @@ function getPriceFilters() {
 }
 
 function getPriceSourceRows(frequency = priceFrequency) {
+    if (priceDeliveryActive) return validPriceData; // Priority already applied by the same adapters at build time.
     const legacy = validPriceData.filter(row => row.data_source === 'LEGACY');
     const magyp = validPriceData.filter(row => row.data_source === 'MAGYP');
     const routed = MCBAPrices.route(legacy, magyp, frequency, magypPriceInfo !== null);
@@ -1078,6 +1093,7 @@ function applyPriceFilters() {
 }
 
 function updatePriceDashboard() {
+    if (priceDeliveryPending) return; // Keep the last rendered selection while loading another partition.
     const filters = getPriceFilters();
     const selectedYear = isAllSelected(filters.year) ? 'TODOS' : filters.year[0];
     const beforeYearFilterCount = validPriceData.length;
@@ -1110,6 +1126,7 @@ function updatePriceDashboard() {
     }
     updatePriceKPIs();
     renderPriceCharts();
+    if (priceDeliveryActive) priceDeliveryLastControls = priceDeliveryControls();
 }
 
 function updatePriceSourceStatus() {
@@ -1983,7 +2000,19 @@ function commodityHistoryYearMatches(row) {
 function parseCommodityCSV(text) {
     const clean = String(text || '').replace(/^\uFEFF/, '').trim();
     if (!clean) return [];
-    const lines = clean.split(/\r?\n/);
+    // CSV records can contain quoted line breaks (SIO delivery date ranges).
+    // Preserve the original cell text; a physical line is not always a record.
+    const lines = []; let start = 0; let quoted = false;
+    for (let i = 0; i < clean.length; i++) {
+        if (clean[i] === '"') {
+            if (quoted && clean[i + 1] === '"') i++;
+            else quoted = !quoted;
+        } else if (clean[i] === '\n' && !quoted) {
+            lines.push(clean.slice(start, i).replace(/\r$/, '')); start = i + 1;
+        }
+    }
+    if (quoted) throw new Error('CSV de commodities incompleto: comillas sin cerrar');
+    lines.push(clean.slice(start).replace(/\r$/, ''));
     const headers = parseDelimitedLine(lines[0], ';').map(normalizeCommodityHeader);
     return lines.slice(1).filter(line => line.trim()).map(line => {
         const values = parseDelimitedLine(line, ';');

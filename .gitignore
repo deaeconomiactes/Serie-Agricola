@@ -198,3 +198,9 @@ data/mercado_central/analytical/
 
 !tests/mercado_central/
 !tests/mercado_central/*.py
+
+# Prepared wholesale delivery shards; source archives remain outside runtime.
+!scripts/mayoristas/*.py
+!tests/mayoristas/*.py
+!data/mayoristas/dashboard/*.json.gz
+!data/mayoristas/reports/*.csv
