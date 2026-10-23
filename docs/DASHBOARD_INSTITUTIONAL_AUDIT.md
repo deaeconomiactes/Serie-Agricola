@@ -231,3 +231,36 @@ Con estas salvedades, se preservan los módulos y la separación de familias. No
 emitió una aprobación irrestricta para comparaciones económicas homogéneas de SIO
 o agregados composicionales. No se requieren nuevas fuentes para resolver las
 deudas identificadas.
+
+## 8. Consolidación aprobada y revalidación — 23/10/2026
+
+Las correcciones de esta auditoría ya están integradas en `main` mediante el
+PR #41, merge `2542741`, con commit de implementación `df207cc`. Se verificó que
+los archivos de aplicación, tests y auditoría de ese commit coinciden con los
+de `main`. Las actualizaciones automáticas posteriores de datos/estados son
+independientes del alcance aprobado y no forman parte de esta consolidación.
+
+El diff original contiene únicamente los cambios descritos en A01–A06, sus
+regresiones, versiones de assets, la excepción de Git para el test de navegador,
+el informe y evidencia liviana. Incluye exclusivamente cuatro capturas previstas:
+`carnes.png`, `commodities-640.png`, `commodities-heading.png` y `prices-1000.png`.
+No incorpora RAW, ZIP/XLS, datasets ni salidas temporales de navegador.
+
+Se repitieron sobre el código aprobado, sin cambios, las comprobaciones de cierre:
+
+| Suite | Resultado |
+|---|---:|
+| Frontend | 85/85 |
+| Carnes Python | 29/29 |
+| Python común/Commodities | 74/74 |
+| MCBA Python | 105/105 |
+| Mercado Central Python | 20/20 |
+| CI/publicación | 6/6 |
+| actionlint | Sin hallazgos |
+| git diff --check | Sin errores |
+
+Las mediciones originales siguen siendo **51.927.275 → 4.230.402 bytes** de carga
+inicial local (**−91,9%**); no se presentan como una nueva medición de producción.
+Se mantienen todas las salvedades metodológicas y de performance del informe.
+Esta consolidación agrega sólo el registro de verificación, sin nuevas
+correcciones, fuentes, datasets ni capturas.
