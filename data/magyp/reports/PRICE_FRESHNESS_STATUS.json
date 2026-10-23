@@ -415,7 +415,7 @@
       "frequency": "mensual derivada de observaciones diarias",
       "last_observation_date": "2026-10-19",
       "last_successful_update": "2026-10-20T12:49:39.330608Z",
-      "status": "NO_OP_ALREADY_CURRENT",
+      "status": "PIPELINE_ERROR",
       "automatic_update": true,
       "workflow": "update-mcba-monthly-central.yml",
       "notes": "Media mensual de modales diarios por serie y días observados; no es promedio mensual oficial MAGyP. Legacy en períodos/categorías sin cobertura.",
@@ -425,8 +425,8 @@
       "unit": [
         "kg"
       ],
-      "requested_date": "2026-10-20",
-      "attempted_at": "2026-10-20T13:43:27.809485Z",
+      "requested_date": "2026-10-23",
+      "attempted_at": "2026-10-23T19:12:35.129286Z",
       "diagnostic_note": null,
       "evidence": null
     },
