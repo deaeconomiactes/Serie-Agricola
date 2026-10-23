@@ -1,8 +1,8 @@
 {
   "schema_version": "sio-transactions-v2",
-  "input_sha256": "f7d471dfb7b2d24f36ef82db651690bf926c838f5c1c4338698ce64f905a16fb",
-  "input_rows": 590,
-  "eligible_events": 590,
+  "input_sha256": "2dc550e1b3bee4216a5a5dabe8e1c8df614c10cb8b4bd18df86c92a798d4eac2",
+  "input_rows": 605,
+  "eligible_events": 605,
   "exact_repeated_events_omitted": 0,
   "rejected": {},
   "dimensions": [
@@ -25,7 +25,7 @@
   "profile": {
     "fecha": {
       "missing": 0,
-      "distinct_nonmissing": 38
+      "distinct_nonmissing": 39
     },
     "commodity": {
       "missing": 0,
@@ -44,7 +44,7 @@
       "distinct_nonmissing": 1
     },
     "condicion_comercial": {
-      "missing": 590,
+      "missing": 605,
       "distinct_nonmissing": 0
     },
     "lugar_entrega": {
@@ -52,20 +52,20 @@
       "distinct_nonmissing": 39
     },
     "precio_puesto_en": {
-      "missing": 590,
+      "missing": 605,
       "distinct_nonmissing": 0
     },
     "procedencia": {
       "missing": 0,
-      "distinct_nonmissing": 322
+      "distinct_nonmissing": 328
     },
     "condicion_pago": {
-      "missing": 590,
-      "distinct_nonmissing": 0
+      "missing": 559,
+      "distinct_nonmissing": 3
     },
     "tipo_operacion": {
       "missing": 590,
-      "distinct_nonmissing": 0
+      "distinct_nonmissing": 1
     },
     "operacion": {
       "missing": 0,
@@ -73,15 +73,15 @@
     },
     "calidad": {
       "missing": 590,
-      "distinct_nonmissing": 0
+      "distinct_nonmissing": 3
     },
     "fecha_entrega": {
       "missing": 590,
-      "distinct_nonmissing": 0
+      "distinct_nonmissing": 9
     },
     "fuera_de_termino": {
       "missing": 590,
-      "distinct_nonmissing": 0
+      "distinct_nonmissing": 1
     },
     "fuente": {
       "missing": 0,
@@ -89,7 +89,7 @@
     },
     "volumen": {
       "missing": 0,
-      "distinct_nonmissing": 231
+      "distinct_nonmissing": 235
     },
     "volumen_unidad": {
       "missing": 0,
@@ -97,15 +97,15 @@
     },
     "precio": {
       "missing": 0,
-      "distinct_nonmissing": 245
+      "distinct_nonmissing": 251
     },
     "id_operacion_sio": {
       "missing": 0,
-      "distinct_nonmissing": 590
+      "distinct_nonmissing": 605
     },
     "fecha_descarga_snapshot": {
       "missing": 0,
-      "distinct_nonmissing": 42
+      "distinct_nonmissing": 43
     }
   },
   "baseline_public": {
@@ -126,12 +126,12 @@
       "rows_multiple_delivery": 103
     }
   },
-  "homogeneous_series": 494,
+  "homogeneous_series": 509,
   "rows_by_output": {
-    "diario": 529,
-    "mensual": 513,
-    "ultimos": 494,
-    "semaforo": 513,
+    "diario": 542,
+    "mensual": 527,
+    "ultimos": 509,
+    "semaforo": 527,
     "resumen": 1
   },
   "multi_delivery_groups_after": 0,
@@ -190,6 +190,28 @@
         "event_ids": "[\"id:8470451\"]"
       },
       {
+        "series_id": "ad2ca169091202185ef0f031ce3c97f8b25217d18dcd97026ab90f713dfb2abe",
+        "commodity": "Maíz",
+        "moneda": "USD",
+        "unidad": "TN",
+        "tipo_precio": "Precio Hecho",
+        "condicion_comercial": "",
+        "lugar_entrega": "Zona 7En destino",
+        "precio_puesto_en": "",
+        "procedencia": "BUENOS AIRESGENERAL VILLEGAS",
+        "condicion_pago": "Contra entrega",
+        "tipo_operacion": "",
+        "operacion": "Contrato",
+        "calidad": "",
+        "fecha_entrega": "",
+        "fuera_de_termino": "",
+        "fuente": "SIO Granos / Secretaría de Agricultura",
+        "operaciones": "1",
+        "precio_mediana": "161.73",
+        "quality_flags": "[\"MISSING_CALIDAD\", \"MISSING_CONDICION_COMERCIAL\", \"MISSING_FECHA_ENTREGA\", \"MISSING_PRECIO_PUESTO_EN\", \"MISSING_TIPO_OPERACION\", \"RAW_HASH_NOT_RECORDED\"]",
+        "event_ids": "[\"id:8470318\"]"
+      },
+      {
         "series_id": "b616821e43613f0c650e9a33dfe56e212e41b573a25301ccf90c9f908902b0af",
         "commodity": "Maíz",
         "moneda": "USD",
@@ -210,28 +232,6 @@
         "precio_mediana": "191.9",
         "quality_flags": "[\"MISSING_CALIDAD\", \"MISSING_CONDICION_COMERCIAL\", \"MISSING_CONDICION_PAGO\", \"MISSING_FECHA_ENTREGA\", \"MISSING_PRECIO_PUESTO_EN\", \"MISSING_TIPO_OPERACION\", \"RAW_HASH_NOT_RECORDED\"]",
         "event_ids": "[\"id:8470454\"]"
-      },
-      {
-        "series_id": "b67ca0b704327564472127051d3f7adcbadae1e5a373b0795e71ae83531bee04",
-        "commodity": "Maíz",
-        "moneda": "USD",
-        "unidad": "TN",
-        "tipo_precio": "Precio Hecho",
-        "condicion_comercial": "",
-        "lugar_entrega": "Zona 7En destino",
-        "precio_puesto_en": "",
-        "procedencia": "BUENOS AIRESGENERAL VILLEGAS",
-        "condicion_pago": "",
-        "tipo_operacion": "",
-        "operacion": "Contrato",
-        "calidad": "",
-        "fecha_entrega": "",
-        "fuera_de_termino": "",
-        "fuente": "SIO Granos / Secretaría de Agricultura",
-        "operaciones": "1",
-        "precio_mediana": "161.73",
-        "quality_flags": "[\"MISSING_CALIDAD\", \"MISSING_CONDICION_COMERCIAL\", \"MISSING_CONDICION_PAGO\", \"MISSING_FECHA_ENTREGA\", \"MISSING_PRECIO_PUESTO_EN\", \"MISSING_TIPO_OPERACION\", \"RAW_HASH_NOT_RECORDED\"]",
-        "event_ids": "[\"id:8470318\"]"
       }
     ]
   },
