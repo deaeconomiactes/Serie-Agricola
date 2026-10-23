@@ -46,7 +46,7 @@
         }
         return {status, label, tone, details,
             sourceLabel: options.sourceLabel || 'MCBA',
-            title: `${options.sourceLabel || 'MCBA'} · Estado publicado por ${options.stateOrigin || 'el pipeline'} · Fecha solicitada: ${dateLabel(metadata.requested_date)}`};
+            title: `${options.sourceLabel || 'MCBA'} · Estado publicado por ${options.stateOrigin || 'el proceso de actualización'} · Fecha solicitada: ${dateLabel(metadata.requested_date)}`};
     }
     function render(node, metadata, summary, visible = true, options = {}) {
         if (!node) return;

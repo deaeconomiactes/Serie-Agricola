@@ -24,13 +24,17 @@ function context(code, initialize = true) {
         validPriceData = validPriceData.map(r=>({...r,data_source:'LEGACY'}));`,ctx);
     return ctx;
 }
-test('Corrientes rows, price averages, rankings and monthly semaphore match committed baseline', () => {
+test('Corrientes source rows, period averages, rankings and semaphore prices match committed baseline', () => {
     const before = context(original), after = context(current);
     const expression = `JSON.stringify({
         rows: getFilteredPriceData(),
         evolution: aggregatePriceData(getFilteredPriceData(), 'mensual'),
         ranking: preparePriceRankingData(getFilteredPriceData(), 'general', getPriceFilters()),
-        semaphore: buildMonthlyPriceSemaphoreMatrix(getFilteredPriceData(),getPriceFilters())
+        // Only calendar-gap variations intentionally differ from the baseline.
+        // Preserve source rows, rankings, period prices and semaphore metadata.
+        semaphore: buildMonthlyPriceSemaphoreMatrix(getFilteredPriceData(),getPriceFilters()).map(row=>({
+            ...row, monthly:Object.fromEntries(Object.entries(row.monthly).map(([month,cell])=>[month,{price:cell.price}]))
+        }))
     })`;
     assert.equal(vm.runInContext(expression,after),vm.runInContext(expression,before));
 });

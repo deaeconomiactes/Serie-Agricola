@@ -374,19 +374,6 @@ async function init() {
     } catch (e) {
         console.error('Error loading CSV:', e);
     }
-    try {
-        await loadPriceData();
-    } catch (e) {
-        console.error('Error loading wholesale price CSV:', e);
-        setPriceStatus('No se pudo cargar la base de precios mayoristas.', true);
-    }
-    try {
-        await loadCommodityData();
-    } catch (e) {
-        console.error('Error loading SIO commodity dashboard CSV:', e);
-        setCommodityDataStatus('No se pudo cargar el módulo de commodities.', 'error');
-        renderCommodityEmptyState();
-    }
     hideLoading();
 }
 
@@ -496,6 +483,16 @@ function calculateVariation(series, frequency) {
     return calculatePeriodVariation(series, frequency);
 }
 
+function isPreviousCalendarPeriod(previousKey, currentKey, frequency) {
+    if (frequency === 'mensual') {
+        if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(previousKey || '') || !/^\d{4}-(0[1-9]|1[0-2])$/.test(currentKey || '')) return false;
+        const ordinal = key => Number(key.slice(0, 4)) * 12 + Number(key.slice(5, 7));
+        return ordinal(currentKey) - ordinal(previousKey) === 1;
+    }
+    if (frequency === 'anual') return /^\d{4}$/.test(previousKey || '') && Number(currentKey) - Number(previousKey) === 1;
+    return true;
+}
+
 function calculatePeriodVariation(data, frequency) {
     const valid = data
         .filter(item => Number.isFinite(Number(item.value)) && Number(item.value) > 0 && item.key)
@@ -503,6 +500,7 @@ function calculatePeriodVariation(data, frequency) {
         .sort((a, b) => String(a.key).localeCompare(String(b.key)));
     return valid.map((item, index) => {
         if (index === 0) return { ...item, variation: null, frequency };
+        if (!isPreviousCalendarPeriod(valid[index - 1].key, item.key, frequency)) return { ...item, variation: null, frequency };
         const previous = valid[index - 1].value;
         const variation = previous > 0 ? (item.value / previous - 1) * 100 : null;
         return { ...item, variation: Number.isFinite(variation) ? variation : null, frequency };
@@ -524,9 +522,31 @@ function wireModuleTabs() {
             });
             document.querySelectorAll('.module-view').forEach(view => view.classList.toggle('is-active', view.id === button.dataset.module));
             if (button.dataset.module === 'carnesView') loadCarnesModule();
+            if (['priceView', 'commodityView'].includes(button.dataset.module)) loadPriceModuleOnDemand(button.dataset.module);
             window.dispatchEvent(new Event('resize'));
         });
     });
+}
+
+const priceModulePromises = new Map();
+function loadPriceModuleOnDemand(module) {
+    if (!['priceView', 'commodityView'].includes(module)) return Promise.resolve();
+    if (!priceModulePromises.has(module)) {
+        const view = document.getElementById(module);
+        view?.setAttribute('aria-busy', 'true');
+        if (module === 'priceView') setPriceStatus('Cargando precios mayoristas…', true);
+        else setCommodityDataStatus('Cargando commodities…', 'loading');
+        const promise = Promise.resolve().then(() => module === 'priceView' ? loadPriceData() : loadCommodityData())
+            .then(() => window.dispatchEvent(new Event('resize')))
+            .catch(error => {
+                priceModulePromises.delete(module); // Reopening the tab can retry a failed load.
+                console.error('Error loading price module:', error);
+                if (module === 'priceView') setPriceStatus('No se pudieron cargar los precios. Volvé a abrir el módulo para reintentar.', true);
+                else setCommodityDataStatus('No se pudieron cargar los datos. Volvé a abrir el módulo para reintentar.', 'error');
+            }).finally(() => view?.setAttribute('aria-busy', 'false'));
+        priceModulePromises.set(module, promise);
+    }
+    return priceModulePromises.get(module);
 }
 
 let carnesModulePromise = null;
@@ -1385,7 +1405,7 @@ function preparePriceRankingData(data, analysisLevel = 'general', filters = getP
         item.observations++;
         const period = createTimeKey(row.fecha || row, priceFrequency);
         if (period) item.periods.push(period);
-        grouped.set(label, item);
+        grouped.set(key, item);
     });
     const ranking = [...grouped.values()].map(item => {
         const periods = item.periods.sort();
@@ -1402,8 +1422,8 @@ function preparePriceVariationData(data, frequency, filters = getPriceFilters())
         const series = evolution.series.map(item => {
             let previous = null;
             const meta = item.meta.map((period, index) => {
-                const variation = isValidPrice(previous) && isValidPrice(period.value) ? (period.value / previous - 1) * 100 : null;
-                if (isValidPrice(period.value)) previous = period.value;
+                const variation = previous && isPreviousCalendarPeriod(previous.key, period.key, frequency) && isValidPrice(previous.value) && isValidPrice(period.value) ? (period.value / previous.value - 1) * 100 : null;
+                previous = period;
                 return { ...period, variation, key: period.key || index };
             });
             return { label: item.label, data: meta.map(period => period.variation), meta };
@@ -1465,7 +1485,13 @@ function calculateAccumulatedVariation(first, last) {
     return isValidPrice(first) && isValidPrice(last) ? (last / first - 1) * 100 : null;
 }
 
+function getPriceCalendarYears(data) {
+    return new Set(data.map(row => String(row.fecha ? row.fecha.slice(0, 4) : row.year || '')).filter(year => /^\d{4}$/.test(year)));
+}
+
 function buildMonthlyPriceSemaphoreMatrix(data, filters = {}) {
+    // Columns are calendar months, so mixing years would merge different periods.
+    if (getPriceCalendarYears(data).size > 1) return [];
     const groups = new Map();
     data.filter(row => isValidPrice(getPriceValue(row)) && (!row.fecha || isValidOperationalDate(row.fecha))).forEach(row => {
         const fields = ['mercado', 'rubro', 'especie', 'variedad', 'procedencia', 'unidad'];
@@ -1489,7 +1515,10 @@ function buildMonthlyPriceSemaphoreMatrix(data, filters = {}) {
         const lastMonth = validMonths[validMonths.length - 1];
         const variation = calculateAccumulatedVariation(monthly[firstMonth].price, monthly[lastMonth].price);
         if (!Number.isFinite(variation)) return null;
-        validMonths.slice(1).forEach((month, index) => { monthly[month].variation = calculateMonthlyPriceVariation(monthly[month].price, monthly[validMonths[index]].price); });
+        validMonths.slice(1).forEach(month => {
+            const previousMonth = String(Number(month) - 1).padStart(2, '0');
+            monthly[month].variation = calculateMonthlyPriceVariation(monthly[month].price, monthly[previousMonth]?.price);
+        });
         const productLabel = getProductLabel(group.row);
         const market = group.row.mercado || 'Fuente sin informar';
         const splitDimensions = getPriceSplitDimensions(filters);
@@ -1515,7 +1544,9 @@ function renderPriceTrafficLightTable(data, frequency) {
     if (!body || !status) return;
     const rows = buildPriceTrafficLightTable(data, getPriceFilters(), frequency);
     body.innerHTML = rows.map(row => `<tr><td class="price-semaphore-product"><strong>${escapeHtml(row.rowLabel)}</strong><small>${escapeHtml(row.rowMeta)}</small></td>${MONTHS.map((_, index) => { const month = String(index + 1).padStart(2, '0'); const cell = row.monthly[month]; const value = cell?.price; const variation = cell?.variation; const cellClass = !cell ? '' : !Number.isFinite(variation) ? 'stable' : variation < -5 ? 'down-soft' : variation <= 0 ? 'stable' : variation <= 5 ? 'up-soft' : variation <= 15 ? 'up-medium' : 'up-strong'; return `<td class="price-semaphore-cell ${cellClass}">${value ? `<strong>${formatCurrency(value)}</strong>${Number.isFinite(variation) ? `<small>${variation >= 0 ? '↑' : '↓'}${formatPercent(Math.abs(variation))}</small>` : ''}` : '—'}</td>`; }).join('')}<td class="price-semaphore-variation">${formatPercent(row.accumulatedVariation)}</td><td><span class="price-semaphore-badge ${row.status.key}">${row.status.label}</span></td></tr>`).join('');
-    status.textContent = rows.length ? '' : 'No hay suficientes precios mensuales para construir el semáforo con los filtros seleccionados.';
+    status.textContent = rows.length ? '' : getPriceCalendarYears(data).size > 1
+        ? 'Seleccioná un año para ver el semáforo mensual sin combinar períodos de años diferentes.'
+        : 'No hay suficientes precios mensuales para construir el semáforo con los filtros seleccionados.';
     status.classList.toggle('is-visible', !rows.length);
 }
 
