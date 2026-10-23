@@ -1,0 +1,746 @@
+{
+  "audit_date": "2026-10-22",
+  "base_commit": "1a7c1eb",
+  "measurement": "local decoded response bytes; module navigation is incremental; external byte sizes may be hidden",
+  "browsers": [
+    {
+      "channel": "msedge",
+      "modules": [
+        {
+          "module": "quantityView",
+          "requests": 12,
+          "local_bytes": 4230402,
+          "largest_payload": "REGISTRO 2025 INTEGRADO.csv",
+          "largest_bytes": 3931671,
+          "elapsed_seconds": 10.766,
+          "resources": [
+            {
+              "path": "styles.css",
+              "bytes": 39279
+            },
+            {
+              "path": "mcba-monthly.js",
+              "bytes": 4404
+            },
+            {
+              "path": "update-status.js",
+              "bytes": 5069
+            },
+            {
+              "path": "mcba-prices.js",
+              "bytes": 9631
+            },
+            {
+              "path": "commodity-history.js",
+              "bytes": 18230
+            },
+            {
+              "path": "app.js",
+              "bytes": 203879
+            },
+            {
+              "path": "data/magyp/reports/PRICE_FRESHNESS_STATUS.json",
+              "bytes": 17904
+            },
+            {
+              "path": "REGISTRO 2025 INTEGRADO.csv",
+              "bytes": 3931671
+            },
+            {
+              "path": "favicon.ico",
+              "bytes": 335
+            }
+          ]
+        },
+        {
+          "module": "priceView",
+          "requests": 8,
+          "local_bytes": 40814572,
+          "largest_payload": "PRECIOS_MAYORISTAS_INTEGRADO.csv",
+          "largest_bytes": 30238719,
+          "elapsed_seconds": 30.109,
+          "resources": [
+            {
+              "path": "PRECIOS_MAYORISTAS_INTEGRADO.csv",
+              "bytes": 30238719
+            },
+            {
+              "path": "RESUMEN_SERIES_UTILIZABLES_PRECIOS_2026.csv",
+              "bytes": 210407
+            },
+            {
+              "path": "data/magyp/dashboard/mcba/MCBA_MAGYP_DAILY.csv",
+              "bytes": 5337468
+            },
+            {
+              "path": "data/magyp/dashboard/mcba/MCBA_MAGYP_SUMMARY.csv",
+              "bytes": 443
+            },
+            {
+              "path": "data/magyp/dashboard/mcba/_SUCCESS.json",
+              "bytes": 530
+            },
+            {
+              "path": "data/magyp/dashboard/mcba/MCBA_MAGYP_UPDATE_STATUS.json",
+              "bytes": 117
+            },
+            {
+              "path": "data/mercado_central/dashboard/mcba/MCBA_MC_MONTHLY_DERIVED.csv",
+              "bytes": 5026742
+            },
+            {
+              "path": "data/mercado_central/dashboard/mcba/_SUCCESS.json",
+              "bytes": 146
+            }
+          ]
+        },
+        {
+          "module": "commodityView",
+          "requests": 24,
+          "local_bytes": 6884627,
+          "largest_payload": "data/magyp/dashboard/commodities/fob.csv",
+          "largest_bytes": 1471954,
+          "elapsed_seconds": 7.015,
+          "resources": [
+            {
+              "path": "data/magyp/dashboard/commodities/internal.csv",
+              "bytes": 258148
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/index.json",
+              "bytes": 72968
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/internal/monthly.csv-4cf221f1a4d37285.gz",
+              "bytes": 206244
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/internal/registry.json-74139125e6d3801f.gz",
+              "bytes": 2507
+            },
+            {
+              "path": "data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_DIARIO.csv",
+              "bytes": 47581
+            },
+            {
+              "path": "data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_MENSUAL.csv",
+              "bytes": 3295
+            },
+            {
+              "path": "data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_ULTIMOS.csv",
+              "bytes": 1271
+            },
+            {
+              "path": "data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_RESUMEN.csv",
+              "bytes": 766
+            },
+            {
+              "path": "data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_SEMAFORO.csv",
+              "bytes": 1486
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/board.csv",
+              "bytes": 118087
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/fas.csv",
+              "bytes": 334275
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/fob.csv",
+              "bytes": 1471954
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/futures.csv",
+              "bytes": 789069
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/board/monthly.csv-e880c593b78109ea.gz",
+              "bytes": 87871
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/board/registry.json-e153cb39132262da.gz",
+              "bytes": 146551
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/fas/monthly.csv-fa2c80c0a141217f.gz",
+              "bytes": 94512
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/fas/registry.json-1b25e725c5ae7a51.gz",
+              "bytes": 1015
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/fob/monthly.csv-18f0c84dab54c17b.gz",
+              "bytes": 668916
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/fob/registry.json-8c5514b416d3d256.gz",
+              "bytes": 4771
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/futures/monthly.csv-7ec80d32b61467af.gz",
+              "bytes": 1233771
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/futures/registry.json-dbc6455aca41509d.gz",
+              "bytes": 155822
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/board/daily-2026.csv-ffe2e2092d921828.gz",
+              "bytes": 34612
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/fas/daily-2026.csv-8c93323a88753eed.gz",
+              "bytes": 73478
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/futures/daily-2026.csv-aad93fcb3222c6a4.gz",
+              "bytes": 1075657
+            }
+          ]
+        },
+        {
+          "module": "carnesView",
+          "requests": 5,
+          "local_bytes": 215494,
+          "largest_payload": "data/carnes/dashboard/index.json",
+          "largest_bytes": 88543,
+          "elapsed_seconds": 0.36,
+          "resources": [
+            {
+              "path": "carnes.js",
+              "bytes": 38054
+            },
+            {
+              "path": "data/carnes/dashboard/index.json",
+              "bytes": 88543
+            },
+            {
+              "path": "data/carnes/reports/CARNES_UPDATE_STATUS.json",
+              "bytes": 1875
+            },
+            {
+              "path": "data/carnes/dashboard/magyp_slaughter_current-slaughter-monthly-2026-a1063a7c4a5dc380.csv.gz",
+              "bytes": 38312
+            },
+            {
+              "path": "data/carnes/dashboard/magyp_slaughter_2025-slaughter-monthly-2025-7b15127d3fbf9628.csv.gz",
+              "bytes": 48710
+            }
+          ]
+        }
+      ],
+      "responsive": [
+        {
+          "module": "quantityView",
+          "width": 1440,
+          "page_overflow": false
+        },
+        {
+          "module": "quantityView",
+          "width": 1000,
+          "page_overflow": false
+        },
+        {
+          "module": "quantityView",
+          "width": 900,
+          "page_overflow": false
+        },
+        {
+          "module": "quantityView",
+          "width": 640,
+          "page_overflow": false
+        },
+        {
+          "module": "priceView",
+          "width": 1440,
+          "page_overflow": false
+        },
+        {
+          "module": "priceView",
+          "width": 1000,
+          "page_overflow": false
+        },
+        {
+          "module": "priceView",
+          "width": 900,
+          "page_overflow": false
+        },
+        {
+          "module": "priceView",
+          "width": 640,
+          "page_overflow": false
+        },
+        {
+          "module": "commodityView",
+          "width": 1440,
+          "page_overflow": false
+        },
+        {
+          "module": "commodityView",
+          "width": 1000,
+          "page_overflow": false
+        },
+        {
+          "module": "commodityView",
+          "width": 900,
+          "page_overflow": false
+        },
+        {
+          "module": "commodityView",
+          "width": 640,
+          "page_overflow": false
+        },
+        {
+          "module": "carnesView",
+          "width": 1440,
+          "page_overflow": false
+        },
+        {
+          "module": "carnesView",
+          "width": 1000,
+          "page_overflow": false
+        },
+        {
+          "module": "carnesView",
+          "width": 900,
+          "page_overflow": false
+        },
+        {
+          "module": "carnesView",
+          "width": 640,
+          "page_overflow": false
+        }
+      ],
+      "keyboard_focus": {
+        "tag": "A",
+        "outline": "solid"
+      },
+      "commodity_sources": [
+        {
+          "source": "magyp_internal",
+          "frequency": "mensual",
+          "subtitle": "Precio interno mensual — MAGyP",
+          "status": "Commodities · Actualizado\nÚltimo dato: 01/09/2026 · Actualización exitosa: 21/10/2026 10:30"
+        },
+        {
+          "source": "magyp_board",
+          "frequency": "diaria",
+          "subtitle": "Pizarra / Cámara — MAGyP",
+          "status": "Commodities · Actualizado\nÚltimo dato: 19/10/2026 · Actualización exitosa: 21/10/2026 10:30"
+        },
+        {
+          "source": "magyp_fas",
+          "frequency": "diaria",
+          "subtitle": "FAS teórico — MAGyP",
+          "status": "Commodities · Actualizado\nÚltimo dato: 20/10/2026 · Actualización exitosa: 21/10/2026 10:30"
+        },
+        {
+          "source": "magyp_fob",
+          "frequency": "diaria",
+          "subtitle": "FOB oficial — MAGyP",
+          "status": "Commodities · Sin nueva publicación\nÚltimo dato: 19/10/2026 · Actualización exitosa: 21/10/2026 10:11"
+        },
+        {
+          "source": "magyp_futures",
+          "frequency": "diaria",
+          "subtitle": "Futuros externos — MAGyP",
+          "status": "Commodities · Actualizado\nÚltimo dato: 20/10/2026 · Actualización exitosa: 21/10/2026 10:30"
+        },
+        {
+          "source": "sio",
+          "frequency": "mensual",
+          "subtitle": "Fuente SIO Granos — operaciones informadas",
+          "status": "Commodities · Actualizado\nÚltimo dato: 21/10/2026 · Actualización exitosa: 21/10/2026 18:08 (hora de origen)"
+        }
+      ],
+      "javascript_errors": [],
+      "forbidden_requests": []
+    },
+    {
+      "channel": "chrome",
+      "modules": [
+        {
+          "module": "quantityView",
+          "requests": 12,
+          "local_bytes": 4230402,
+          "largest_payload": "REGISTRO 2025 INTEGRADO.csv",
+          "largest_bytes": 3931671,
+          "elapsed_seconds": 13.422,
+          "resources": [
+            {
+              "path": "styles.css",
+              "bytes": 39279
+            },
+            {
+              "path": "mcba-monthly.js",
+              "bytes": 4404
+            },
+            {
+              "path": "update-status.js",
+              "bytes": 5069
+            },
+            {
+              "path": "mcba-prices.js",
+              "bytes": 9631
+            },
+            {
+              "path": "commodity-history.js",
+              "bytes": 18230
+            },
+            {
+              "path": "app.js",
+              "bytes": 203879
+            },
+            {
+              "path": "data/magyp/reports/PRICE_FRESHNESS_STATUS.json",
+              "bytes": 17904
+            },
+            {
+              "path": "REGISTRO 2025 INTEGRADO.csv",
+              "bytes": 3931671
+            },
+            {
+              "path": "favicon.ico",
+              "bytes": 335
+            }
+          ]
+        },
+        {
+          "module": "priceView",
+          "requests": 8,
+          "local_bytes": 40814572,
+          "largest_payload": "PRECIOS_MAYORISTAS_INTEGRADO.csv",
+          "largest_bytes": 30238719,
+          "elapsed_seconds": 34.766,
+          "resources": [
+            {
+              "path": "PRECIOS_MAYORISTAS_INTEGRADO.csv",
+              "bytes": 30238719
+            },
+            {
+              "path": "RESUMEN_SERIES_UTILIZABLES_PRECIOS_2026.csv",
+              "bytes": 210407
+            },
+            {
+              "path": "data/magyp/dashboard/mcba/MCBA_MAGYP_DAILY.csv",
+              "bytes": 5337468
+            },
+            {
+              "path": "data/magyp/dashboard/mcba/MCBA_MAGYP_SUMMARY.csv",
+              "bytes": 443
+            },
+            {
+              "path": "data/magyp/dashboard/mcba/_SUCCESS.json",
+              "bytes": 530
+            },
+            {
+              "path": "data/magyp/dashboard/mcba/MCBA_MAGYP_UPDATE_STATUS.json",
+              "bytes": 117
+            },
+            {
+              "path": "data/mercado_central/dashboard/mcba/MCBA_MC_MONTHLY_DERIVED.csv",
+              "bytes": 5026742
+            },
+            {
+              "path": "data/mercado_central/dashboard/mcba/_SUCCESS.json",
+              "bytes": 146
+            }
+          ]
+        },
+        {
+          "module": "commodityView",
+          "requests": 24,
+          "local_bytes": 6884627,
+          "largest_payload": "data/magyp/dashboard/commodities/fob.csv",
+          "largest_bytes": 1471954,
+          "elapsed_seconds": 16.235,
+          "resources": [
+            {
+              "path": "data/magyp/dashboard/commodities/internal.csv",
+              "bytes": 258148
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/index.json",
+              "bytes": 72968
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/internal/monthly.csv-4cf221f1a4d37285.gz",
+              "bytes": 206244
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/internal/registry.json-74139125e6d3801f.gz",
+              "bytes": 2507
+            },
+            {
+              "path": "data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_DIARIO.csv",
+              "bytes": 47581
+            },
+            {
+              "path": "data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_MENSUAL.csv",
+              "bytes": 3295
+            },
+            {
+              "path": "data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_ULTIMOS.csv",
+              "bytes": 1271
+            },
+            {
+              "path": "data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_RESUMEN.csv",
+              "bytes": 766
+            },
+            {
+              "path": "data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_SEMAFORO.csv",
+              "bytes": 1486
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/board.csv",
+              "bytes": 118087
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/fas.csv",
+              "bytes": 334275
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/fob.csv",
+              "bytes": 1471954
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/futures.csv",
+              "bytes": 789069
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/board/monthly.csv-e880c593b78109ea.gz",
+              "bytes": 87871
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/board/registry.json-e153cb39132262da.gz",
+              "bytes": 146551
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/fas/monthly.csv-fa2c80c0a141217f.gz",
+              "bytes": 94512
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/fas/registry.json-1b25e725c5ae7a51.gz",
+              "bytes": 1015
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/fob/monthly.csv-18f0c84dab54c17b.gz",
+              "bytes": 668916
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/fob/registry.json-8c5514b416d3d256.gz",
+              "bytes": 4771
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/futures/monthly.csv-7ec80d32b61467af.gz",
+              "bytes": 1233771
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/futures/registry.json-dbc6455aca41509d.gz",
+              "bytes": 155822
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/board/daily-2026.csv-ffe2e2092d921828.gz",
+              "bytes": 34612
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/fas/daily-2026.csv-8c93323a88753eed.gz",
+              "bytes": 73478
+            },
+            {
+              "path": "data/magyp/dashboard/commodities/history/futures/daily-2026.csv-aad93fcb3222c6a4.gz",
+              "bytes": 1075657
+            }
+          ]
+        },
+        {
+          "module": "carnesView",
+          "requests": 5,
+          "local_bytes": 215494,
+          "largest_payload": "data/carnes/dashboard/index.json",
+          "largest_bytes": 88543,
+          "elapsed_seconds": 1.515,
+          "resources": [
+            {
+              "path": "carnes.js",
+              "bytes": 38054
+            },
+            {
+              "path": "data/carnes/dashboard/index.json",
+              "bytes": 88543
+            },
+            {
+              "path": "data/carnes/reports/CARNES_UPDATE_STATUS.json",
+              "bytes": 1875
+            },
+            {
+              "path": "data/carnes/dashboard/magyp_slaughter_current-slaughter-monthly-2026-a1063a7c4a5dc380.csv.gz",
+              "bytes": 38312
+            },
+            {
+              "path": "data/carnes/dashboard/magyp_slaughter_2025-slaughter-monthly-2025-7b15127d3fbf9628.csv.gz",
+              "bytes": 48710
+            }
+          ]
+        }
+      ],
+      "responsive": [
+        {
+          "module": "quantityView",
+          "width": 1440,
+          "page_overflow": false
+        },
+        {
+          "module": "quantityView",
+          "width": 1000,
+          "page_overflow": false
+        },
+        {
+          "module": "quantityView",
+          "width": 900,
+          "page_overflow": false
+        },
+        {
+          "module": "quantityView",
+          "width": 640,
+          "page_overflow": false
+        },
+        {
+          "module": "priceView",
+          "width": 1440,
+          "page_overflow": false
+        },
+        {
+          "module": "priceView",
+          "width": 1000,
+          "page_overflow": false
+        },
+        {
+          "module": "priceView",
+          "width": 900,
+          "page_overflow": false
+        },
+        {
+          "module": "priceView",
+          "width": 640,
+          "page_overflow": false
+        },
+        {
+          "module": "commodityView",
+          "width": 1440,
+          "page_overflow": false
+        },
+        {
+          "module": "commodityView",
+          "width": 1000,
+          "page_overflow": false
+        },
+        {
+          "module": "commodityView",
+          "width": 900,
+          "page_overflow": false
+        },
+        {
+          "module": "commodityView",
+          "width": 640,
+          "page_overflow": false
+        },
+        {
+          "module": "carnesView",
+          "width": 1440,
+          "page_overflow": false
+        },
+        {
+          "module": "carnesView",
+          "width": 1000,
+          "page_overflow": false
+        },
+        {
+          "module": "carnesView",
+          "width": 900,
+          "page_overflow": false
+        },
+        {
+          "module": "carnesView",
+          "width": 640,
+          "page_overflow": false
+        }
+      ],
+      "keyboard_focus": {
+        "tag": "A",
+        "outline": "solid"
+      },
+      "commodity_sources": [
+        {
+          "source": "magyp_internal",
+          "frequency": "mensual",
+          "subtitle": "Precio interno mensual — MAGyP",
+          "status": "Commodities · Actualizado\nÚltimo dato: 01/09/2026 · Actualización exitosa: 21/10/2026 10:30"
+        },
+        {
+          "source": "magyp_board",
+          "frequency": "diaria",
+          "subtitle": "Pizarra / Cámara — MAGyP",
+          "status": "Commodities · Actualizado\nÚltimo dato: 19/10/2026 · Actualización exitosa: 21/10/2026 10:30"
+        },
+        {
+          "source": "magyp_fas",
+          "frequency": "diaria",
+          "subtitle": "FAS teórico — MAGyP",
+          "status": "Commodities · Actualizado\nÚltimo dato: 20/10/2026 · Actualización exitosa: 21/10/2026 10:30"
+        },
+        {
+          "source": "magyp_fob",
+          "frequency": "diaria",
+          "subtitle": "FOB oficial — MAGyP",
+          "status": "Commodities · Sin nueva publicación\nÚltimo dato: 19/10/2026 · Actualización exitosa: 21/10/2026 10:11"
+        },
+        {
+          "source": "magyp_futures",
+          "frequency": "diaria",
+          "subtitle": "Futuros externos — MAGyP",
+          "status": "Commodities · Actualizado\nÚltimo dato: 20/10/2026 · Actualización exitosa: 21/10/2026 10:30"
+        },
+        {
+          "source": "sio",
+          "frequency": "mensual",
+          "subtitle": "Fuente SIO Granos — operaciones informadas",
+          "status": "Commodities · Actualizado\nÚltimo dato: 21/10/2026 · Actualización exitosa: 21/10/2026 18:08 (hora de origen)"
+        }
+      ],
+      "javascript_errors": [],
+      "forbidden_requests": []
+    }
+  ],
+  "baseline": {
+    "channel": "msedge",
+    "module": "quantityView",
+    "elapsed_seconds": 67.11,
+    "cumulative_requests": 44,
+    "cumulative_local_bytes": 51927275
+  },
+  "screenshots": [
+    {
+      "path": "carnes.png",
+      "bytes": 33655,
+      "sha256": "30b763b7875cb475b11ffb5588e9610a707fa6f5336e633cd6d20295baa7d446"
+    },
+    {
+      "path": "commodities-640.png",
+      "bytes": 111834,
+      "sha256": "ceab50a8f50a3f430b6100632501eac7829bcf4892e328d4f66cf44501a2a965"
+    },
+    {
+      "path": "commodities-heading.png",
+      "bytes": 51691,
+      "sha256": "e6adb25daed877b51068a9af513511db503898b7913832c44238f7f9dc708513"
+    },
+    {
+      "path": "prices-1000.png",
+      "bytes": 145837,
+      "sha256": "dad2b0d227714036de8b0fe6284b9e0cf7d884b67ccb12d92517c974f0b1ce7a"
+    }
+  ]
+}

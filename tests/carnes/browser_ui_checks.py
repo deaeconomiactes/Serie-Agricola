@@ -106,8 +106,11 @@ def run(url, channel, output):
         assert not errors,errors
         page.locator('[data-module="priceView"]').click()
         assert page.locator('#priceView').evaluate("n=>n.classList.contains('is-active')")
+        assert not page.locator('.header-summary').is_visible()
         page.locator('[data-module="commodityView"]').click()
         assert page.locator('#commodityView').evaluate("n=>n.classList.contains('is-active')")
+        assert not page.locator('.header-summary').is_visible()
+        page.locator('[data-module="quantityView"]').click()
         assert page.locator('.header-summary').is_visible()
         report={'browser':channel,'initial_carnes_payload':initial,'javascript_errors':errors,
             'checks':'PASS: lazy, filters, province/category, annual/YTD, provisional, weight missing, rapid selection, statuses, history, responsive, existing tabs'}

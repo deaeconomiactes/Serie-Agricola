@@ -36,8 +36,8 @@ button, select { font: inherit; }
 ::-webkit-scrollbar-thumb { background: #486078; border-radius: 99px; }
 
 /* Carnes: isolated additions to the existing institutional components. */
-body:has(#carnesView.is-active) .header-summary,
-body:has(#carnesView.is-active) #headerSubtitle { display: none; }
+body:has(.module-view.is-active:not(#quantityView)) .header-summary,
+body:has(.module-view.is-active:not(#quantityView)) #headerSubtitle { display: none; }
 #carnesView [hidden] { display: none !important; }
 #carnesView .carnes-metadata { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin: 12px 0 18px; color: var(--text-secondary); font-size: .76rem; }
 #carnesView a { color: var(--accent-blue); overflow-wrap: anywhere; }
