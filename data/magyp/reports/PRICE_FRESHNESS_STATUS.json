@@ -459,7 +459,7 @@
       "market": "plazas informadas",
       "frequency": "transaccional / snapshot diario",
       "last_observation_date": "2026-10-23",
-      "last_successful_update": "2026-10-23T12:48:39",
+      "last_successful_update": "2026-10-23T17:54:42",
       "status": "UPDATED",
       "automatic_update": true,
       "workflow": "update-sio-commodities.yml",
@@ -472,7 +472,7 @@
         "TN"
       ],
       "requested_date": null,
-      "attempted_at": "2026-10-23T12:48:41.456927+00:00",
+      "attempted_at": "2026-10-23T17:54:44.174865+00:00",
       "diagnostic_note": null,
       "evidence": null
     }
