@@ -1,0 +1,245 @@
+{
+  "schema_version": "sio-transactions-v2",
+  "input_sha256": "f7d471dfb7b2d24f36ef82db651690bf926c838f5c1c4338698ce64f905a16fb",
+  "input_rows": 590,
+  "eligible_events": 590,
+  "exact_repeated_events_omitted": 0,
+  "rejected": {},
+  "dimensions": [
+    "commodity",
+    "moneda",
+    "unidad",
+    "tipo_precio",
+    "condicion_comercial",
+    "lugar_entrega",
+    "precio_puesto_en",
+    "procedencia",
+    "condicion_pago",
+    "tipo_operacion",
+    "operacion",
+    "calidad",
+    "fecha_entrega",
+    "fuera_de_termino",
+    "fuente"
+  ],
+  "profile": {
+    "fecha": {
+      "missing": 0,
+      "distinct_nonmissing": 38
+    },
+    "commodity": {
+      "missing": 0,
+      "distinct_nonmissing": 8
+    },
+    "moneda": {
+      "missing": 0,
+      "distinct_nonmissing": 2
+    },
+    "unidad": {
+      "missing": 0,
+      "distinct_nonmissing": 1
+    },
+    "tipo_precio": {
+      "missing": 0,
+      "distinct_nonmissing": 1
+    },
+    "condicion_comercial": {
+      "missing": 590,
+      "distinct_nonmissing": 0
+    },
+    "lugar_entrega": {
+      "missing": 0,
+      "distinct_nonmissing": 39
+    },
+    "precio_puesto_en": {
+      "missing": 590,
+      "distinct_nonmissing": 0
+    },
+    "procedencia": {
+      "missing": 0,
+      "distinct_nonmissing": 322
+    },
+    "condicion_pago": {
+      "missing": 590,
+      "distinct_nonmissing": 0
+    },
+    "tipo_operacion": {
+      "missing": 590,
+      "distinct_nonmissing": 0
+    },
+    "operacion": {
+      "missing": 0,
+      "distinct_nonmissing": 3
+    },
+    "calidad": {
+      "missing": 590,
+      "distinct_nonmissing": 0
+    },
+    "fecha_entrega": {
+      "missing": 590,
+      "distinct_nonmissing": 0
+    },
+    "fuera_de_termino": {
+      "missing": 590,
+      "distinct_nonmissing": 0
+    },
+    "fuente": {
+      "missing": 0,
+      "distinct_nonmissing": 1
+    },
+    "volumen": {
+      "missing": 0,
+      "distinct_nonmissing": 231
+    },
+    "volumen_unidad": {
+      "missing": 0,
+      "distinct_nonmissing": 1
+    },
+    "precio": {
+      "missing": 0,
+      "distinct_nonmissing": 245
+    },
+    "id_operacion_sio": {
+      "missing": 0,
+      "distinct_nonmissing": 590
+    },
+    "fecha_descarga_snapshot": {
+      "missing": 0,
+      "distinct_nonmissing": 42
+    }
+  },
+  "baseline_public": {
+    "daily_rows": 212,
+    "rows_multiple_delivery": 106,
+    "rows_multiple_conditions": null,
+    "condition_completeness_note": "El mensual anterior no conserva condición; no permite cuantificar mezclas a partir del agregado.",
+    "daily_sha256": "03953aad8361467ada14c3e1214737b5e7781140e7f57e6a7e1358cf01eb82a0",
+    "rows_by_output": {
+      "diario": 212,
+      "mensual": 22,
+      "ultimos": 13,
+      "semaforo": 22
+    },
+    "baseline_date": "2026-10-23",
+    "documented_a07_2026_10_22": {
+      "daily_rows": 207,
+      "rows_multiple_delivery": 103
+    }
+  },
+  "homogeneous_series": 494,
+  "rows_by_output": {
+    "diario": 529,
+    "mensual": 513,
+    "ultimos": 494,
+    "semaforo": 513,
+    "resumen": 1
+  },
+  "multi_delivery_groups_after": 0,
+  "multi_condition_groups_after": 0,
+  "control": {
+    "date": "2026-09-09",
+    "commodity": "Maíz",
+    "currency": "USD",
+    "unit": "TN",
+    "documented_previous_median": 193.45,
+    "recomputed_previous_median": 193.45,
+    "events": 4,
+    "separated_groups": [
+      {
+        "series_id": "3331a5f3a19f4ddcee100a0abed05e932a3b454388e386cc68a5c55a3229f80b",
+        "commodity": "Maíz",
+        "moneda": "USD",
+        "unidad": "TN",
+        "tipo_precio": "Precio Hecho",
+        "condicion_comercial": "",
+        "lugar_entrega": "Rosario SEn destino",
+        "precio_puesto_en": "",
+        "procedencia": "SANTA FERUFINO",
+        "condicion_pago": "",
+        "tipo_operacion": "",
+        "operacion": "Contrato",
+        "calidad": "",
+        "fecha_entrega": "",
+        "fuera_de_termino": "",
+        "fuente": "SIO Granos / Secretaría de Agricultura",
+        "operaciones": "1",
+        "precio_mediana": "195",
+        "quality_flags": "[\"MISSING_CALIDAD\", \"MISSING_CONDICION_COMERCIAL\", \"MISSING_CONDICION_PAGO\", \"MISSING_FECHA_ENTREGA\", \"MISSING_PRECIO_PUESTO_EN\", \"MISSING_TIPO_OPERACION\", \"RAW_HASH_NOT_RECORDED\"]",
+        "event_ids": "[\"id:8470443\"]"
+      },
+      {
+        "series_id": "77bce0e3bb268d0e652e9707593e648b92cdeea0862933288a15bb9df594ddc6",
+        "commodity": "Maíz",
+        "moneda": "USD",
+        "unidad": "TN",
+        "tipo_precio": "Precio Hecho",
+        "condicion_comercial": "",
+        "lugar_entrega": "Rosario NEn destino",
+        "precio_puesto_en": "",
+        "procedencia": "LA PAMPAREALICO",
+        "condicion_pago": "",
+        "tipo_operacion": "",
+        "operacion": "Contrato",
+        "calidad": "",
+        "fecha_entrega": "",
+        "fuera_de_termino": "",
+        "fuente": "SIO Granos / Secretaría de Agricultura",
+        "operaciones": "1",
+        "precio_mediana": "195",
+        "quality_flags": "[\"MISSING_CALIDAD\", \"MISSING_CONDICION_COMERCIAL\", \"MISSING_CONDICION_PAGO\", \"MISSING_FECHA_ENTREGA\", \"MISSING_PRECIO_PUESTO_EN\", \"MISSING_TIPO_OPERACION\", \"RAW_HASH_NOT_RECORDED\"]",
+        "event_ids": "[\"id:8470451\"]"
+      },
+      {
+        "series_id": "b616821e43613f0c650e9a33dfe56e212e41b573a25301ccf90c9f908902b0af",
+        "commodity": "Maíz",
+        "moneda": "USD",
+        "unidad": "TN",
+        "tipo_precio": "Precio Hecho",
+        "condicion_comercial": "",
+        "lugar_entrega": "Zona 5En origen",
+        "precio_puesto_en": "",
+        "procedencia": "BUENOS AIRESLIMA",
+        "condicion_pago": "",
+        "tipo_operacion": "",
+        "operacion": "Contrato",
+        "calidad": "",
+        "fecha_entrega": "",
+        "fuera_de_termino": "",
+        "fuente": "SIO Granos / Secretaría de Agricultura",
+        "operaciones": "1",
+        "precio_mediana": "191.9",
+        "quality_flags": "[\"MISSING_CALIDAD\", \"MISSING_CONDICION_COMERCIAL\", \"MISSING_CONDICION_PAGO\", \"MISSING_FECHA_ENTREGA\", \"MISSING_PRECIO_PUESTO_EN\", \"MISSING_TIPO_OPERACION\", \"RAW_HASH_NOT_RECORDED\"]",
+        "event_ids": "[\"id:8470454\"]"
+      },
+      {
+        "series_id": "b67ca0b704327564472127051d3f7adcbadae1e5a373b0795e71ae83531bee04",
+        "commodity": "Maíz",
+        "moneda": "USD",
+        "unidad": "TN",
+        "tipo_precio": "Precio Hecho",
+        "condicion_comercial": "",
+        "lugar_entrega": "Zona 7En destino",
+        "precio_puesto_en": "",
+        "procedencia": "BUENOS AIRESGENERAL VILLEGAS",
+        "condicion_pago": "",
+        "tipo_operacion": "",
+        "operacion": "Contrato",
+        "calidad": "",
+        "fecha_entrega": "",
+        "fuera_de_termino": "",
+        "fuente": "SIO Granos / Secretaría de Agricultura",
+        "operaciones": "1",
+        "precio_mediana": "161.73",
+        "quality_flags": "[\"MISSING_CALIDAD\", \"MISSING_CONDICION_COMERCIAL\", \"MISSING_CONDICION_PAGO\", \"MISSING_FECHA_ENTREGA\", \"MISSING_PRECIO_PUESTO_EN\", \"MISSING_TIPO_OPERACION\", \"RAW_HASH_NOT_RECORDED\"]",
+        "event_ids": "[\"id:8470318\"]"
+      }
+    ]
+  },
+  "limitations": [
+    "Snapshots observados, no censo de contratos ni reconstrucción de última instancia.",
+    "Condición/pago/tipo/calidad/entrega ausentes en memoria histórica no se reconstruyen ni se infieren.",
+    "Origen/destino es el sufijo literal del lugar; no se equipara a precio_puesto_en.",
+    "La variación describe cambios de composición de eventos dentro de las mismas dimensiones.",
+    "SHA de entrada permite trazar al CSV de eventos; no sustituye un hash RAW ausente."
+  ]
+}
