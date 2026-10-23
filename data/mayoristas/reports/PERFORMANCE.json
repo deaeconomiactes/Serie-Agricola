@@ -1,0 +1,234 @@
+{
+  "baseline_commit": "5e6777d",
+  "measurement": "local headless; decoded bytes, gzip response body bytes; not a production SLA",
+  "before": {
+    "seconds": 24.17200000002049,
+    "resources": [
+      {
+        "url": "http://127.0.0.1:8768/PRECIOS_MAYORISTAS_INTEGRADO.csv",
+        "bytes": 30238719,
+        "transfer": 30239019
+      },
+      {
+        "url": "http://127.0.0.1:8768/RESUMEN_SERIES_UTILIZABLES_PRECIOS_2026.csv",
+        "bytes": 210407,
+        "transfer": 210707
+      },
+      {
+        "url": "http://127.0.0.1:8768/data/magyp/dashboard/mcba/MCBA_MAGYP_DAILY.csv",
+        "bytes": 5337468,
+        "transfer": 5337768
+      },
+      {
+        "url": "http://127.0.0.1:8768/data/magyp/dashboard/mcba/MCBA_MAGYP_SUMMARY.csv",
+        "bytes": 443,
+        "transfer": 743
+      },
+      {
+        "url": "http://127.0.0.1:8768/data/magyp/dashboard/mcba/_SUCCESS.json",
+        "bytes": 530,
+        "transfer": 830
+      },
+      {
+        "url": "http://127.0.0.1:8768/data/magyp/dashboard/mcba/MCBA_MAGYP_UPDATE_STATUS.json",
+        "bytes": 117,
+        "transfer": 417
+      },
+      {
+        "url": "http://127.0.0.1:8768/data/mercado_central/dashboard/mcba/MCBA_MC_MONTHLY_DERIVED.csv",
+        "bytes": 5026742,
+        "transfer": 5027042
+      },
+      {
+        "url": "http://127.0.0.1:8768/data/mercado_central/dashboard/mcba/_SUCCESS.json",
+        "bytes": 146,
+        "transfer": 446
+      }
+    ],
+    "bytes": 40814572,
+    "memory": 516228908,
+    "rows": 58843
+  },
+  "after": {
+    "msedge": {
+      "channel": "msedge",
+      "errors": [],
+      "selections": [
+        {
+          "year": "2024",
+          "seconds": 0.469,
+          "bytes": 100540
+        },
+        {
+          "year": "2025",
+          "seconds": 1.813,
+          "bytes": 613814
+        },
+        {
+          "year": "2026",
+          "seconds": 1.157,
+          "bytes": 0
+        }
+      ],
+      "initial": {
+        "seconds": 2.969,
+        "bytes": 849526,
+        "requests": [
+          {
+            "path": "index.json",
+            "bytes": 21118
+          },
+          {
+            "path": "corrientes-mensual-2026-legacy-747e1f40b50a9e65.json.gz",
+            "bytes": 299351
+          },
+          {
+            "path": "mcba-mensual-2026-mercado_central-9064ff1141122ea9.json.gz",
+            "bytes": 529057
+          }
+        ],
+        "rows": 20373,
+        "year": "2026",
+        "memory": 83236416
+      },
+      "frequency_change_bytes": 1848776,
+      "last_view_rows": 3723
+    },
+    "chrome": {
+      "channel": "chrome",
+      "errors": [],
+      "selections": [
+        {
+          "year": "2024",
+          "seconds": 0.516,
+          "bytes": 100540
+        },
+        {
+          "year": "2025",
+          "seconds": 1.938,
+          "bytes": 613814
+        },
+        {
+          "year": "2026",
+          "seconds": 0.938,
+          "bytes": 0
+        }
+      ],
+      "initial": {
+        "seconds": 1.734,
+        "bytes": 849526,
+        "requests": [
+          {
+            "path": "index.json",
+            "bytes": 21118
+          },
+          {
+            "path": "mcba-mensual-2026-mercado_central-9064ff1141122ea9.json.gz",
+            "bytes": 529057
+          },
+          {
+            "path": "corrientes-mensual-2026-legacy-747e1f40b50a9e65.json.gz",
+            "bytes": 299351
+          }
+        ],
+        "rows": 20373,
+        "year": "2026",
+        "memory": 54026272
+      },
+      "frequency_change_bytes": 1848776,
+      "last_view_rows": 3723
+    },
+    "edge_reduction_percent": 97.919
+  },
+  "initial_iteration": {
+    "msedge": {
+      "channel": "msedge",
+      "errors": [],
+      "selections": [
+        {
+          "year": "2024",
+          "seconds": 0.469,
+          "bytes": 100540
+        },
+        {
+          "year": "2025",
+          "seconds": 1.813,
+          "bytes": 613814
+        },
+        {
+          "year": "2026",
+          "seconds": 1.157,
+          "bytes": 0
+        }
+      ],
+      "initial": {
+        "seconds": 2.969,
+        "bytes": 849526,
+        "requests": [
+          {
+            "path": "index.json",
+            "bytes": 21118
+          },
+          {
+            "path": "corrientes-mensual-2026-legacy-747e1f40b50a9e65.json.gz",
+            "bytes": 299351
+          },
+          {
+            "path": "mcba-mensual-2026-mercado_central-9064ff1141122ea9.json.gz",
+            "bytes": 529057
+          }
+        ],
+        "rows": 20373,
+        "year": "2026",
+        "memory": 83236416
+      },
+      "frequency_change_bytes": 1848776,
+      "last_view_rows": 3723
+    },
+    "chrome": {
+      "channel": "chrome",
+      "errors": [],
+      "selections": [
+        {
+          "year": "2024",
+          "seconds": 0.516,
+          "bytes": 100540
+        },
+        {
+          "year": "2025",
+          "seconds": 1.938,
+          "bytes": 613814
+        },
+        {
+          "year": "2026",
+          "seconds": 0.938,
+          "bytes": 0
+        }
+      ],
+      "initial": {
+        "seconds": 1.734,
+        "bytes": 849526,
+        "requests": [
+          {
+            "path": "index.json",
+            "bytes": 21118
+          },
+          {
+            "path": "mcba-mensual-2026-mercado_central-9064ff1141122ea9.json.gz",
+            "bytes": 529057
+          },
+          {
+            "path": "corrientes-mensual-2026-legacy-747e1f40b50a9e65.json.gz",
+            "bytes": 299351
+          }
+        ],
+        "rows": 20373,
+        "year": "2026",
+        "memory": 54026272
+      },
+      "frequency_change_bytes": 1848776,
+      "last_view_rows": 3723
+    },
+    "edge_reduction_percent": 97.919
+  }
+}
