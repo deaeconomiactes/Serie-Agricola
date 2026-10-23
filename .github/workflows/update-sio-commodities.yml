@@ -71,6 +71,7 @@ jobs:
         shell: bash
         run: |
           git add data/magyp/reports/PRICE_FRESHNESS_STATUS.json data/commodities_sio/dashboard/*.csv \
+            data/commodities_sio/reports/SIO_GRAIN_AUDIT.json \
             data/commodities_sio/reports/REPORTE_ACTUALIZACION_DIARIA_SIO.md \
             data/commodities_sio/reports/RESUMEN_ACTUALIDAD_COMMODITIES_SIO.csv
           echo "Archivos candidatos a publicar:"

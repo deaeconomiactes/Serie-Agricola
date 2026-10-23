@@ -1770,16 +1770,24 @@ function updateCommoditySourcePresentation() {
     const frequency = document.getElementById('commodityFilterFrequency');
     if (subtitle) subtitle.textContent = config.subtitle;
     const conditionGroup = document.getElementById('commodityConditionGroup');
-    if (conditionGroup) { conditionGroup.hidden = !config.reference; conditionGroup.style.display = config.reference ? '' : 'none'; }
+    const hasConditions = config.reference || commoditySource === 'sio';
+    if (conditionGroup) { conditionGroup.hidden = !hasConditions; conditionGroup.style.display = hasConditions ? '' : 'none'; }
     const conditionHeader = document.getElementById('commodityLatestConditionHeader');
-    if (conditionHeader) conditionHeader.hidden = !config.reference;
+    if (conditionHeader) conditionHeader.hidden = !hasConditions;
     const futures = commoditySource === 'magyp_futures';
     const conditionLabel = document.getElementById('commodityConditionLabel');
-    if (conditionLabel) conditionLabel.textContent = futures ? 'Vencimiento / Posición' : 'Condición / posición';
-    if (conditionHeader) conditionHeader.textContent = futures ? 'Vencimiento / Posición' : 'Condición / fuente';
+    if (conditionLabel) conditionLabel.textContent = futures ? 'Vencimiento / Posición' : commoditySource === 'sio' ? 'Condiciones de la operación' : 'Condición / posición';
+    if (conditionHeader) conditionHeader.textContent = futures ? 'Vencimiento / Posición' : commoditySource === 'sio' ? 'Condiciones / detalle de eventos' : 'Condición / fuente';
+    const marketLabel = document.getElementById('commodityMarketLabel');
+    const marketHeader = document.getElementById('commodityLatestMarketHeader');
+    if (marketLabel) marketLabel.textContent = commoditySource === 'sio' ? 'Lugar de entrega' : 'Mercado / plaza';
+    if (marketHeader) marketHeader.textContent = commoditySource === 'sio' ? 'Lugar de entrega' : 'Mercado / plaza';
+    const originGroup = document.getElementById('commoditySioOriginGroup');
+    if (originGroup) { originGroup.hidden = commoditySource !== 'sio'; originGroup.style.display = commoditySource === 'sio' ? '' : 'none'; }
     const periodHeader = document.getElementById('commodityLatestPeriodHeader');
     if (periodHeader) periodHeader.textContent = futures ? 'Cotización' : 'Período';
-    if (note) note.textContent = config.note;
+    if (note) note.textContent = commoditySource === 'sio'
+        ? 'SIO Granos: eventos informados, no contratos vigentes ni precio spot de plaza. Diario y mensual preservan lugar de entrega, procedencia y condiciones informadas. Mensual: agregación derivada de operaciones SIO, no precio mensual oficial. Condición/pago históricos no registrados permanecen desconocidos. Ceros excluidos; monedas y unidades separadas.' : config.note;
     const historyCoverage = document.getElementById('commodityHistoryCoverage');
     if (historyCoverage) {
         const summary = commodityData.resumen[0] || {};
@@ -1787,12 +1795,12 @@ function updateCommoditySourcePresentation() {
         historyCoverage.textContent = historyCoverage.hidden ? '' : `Cobertura de precios: ${formatCommodityCapture(summary.fecha_min)} — ${formatCommodityCapture(summary.fecha_max)} · Fuente: MAGyP${commoditySource === 'magyp_fob' ? ' / SSPM (histórico separado)' : ''}`;
     }
     const operationsLabel = document.getElementById('commodityKpiOperationsLabel');
-    if (operationsLabel) operationsLabel.textContent = config.operationsLabel;
+    if (operationsLabel) operationsLabel.textContent = commoditySource === 'sio' ? 'Operaciones / eventos con precio' : config.operationsLabel;
     const operationsUnit = document.getElementById('commodityKpiOperationsUnit');
-    if (operationsUnit) operationsUnit.textContent = config.operationsUnit;
+    if (operationsUnit) operationsUnit.textContent = commoditySource === 'sio' ? 'eventos observados; no contratos vigentes' : config.operationsUnit;
     const daily = commodityFrequency === 'diaria';
     const labels = {
-        commodityKpiMedianLabel: config.reference ? (daily ? 'Última cotización por serie' : 'Precio mensual por serie') : 'Mediana del último período',
+        commodityKpiMedianLabel: config.reference ? (daily ? 'Última cotización por serie' : 'Precio mensual por serie') : 'Mediana de eventos por serie',
         commodityKpiMonthlyLabel: daily ? 'Variación a 7 días' : 'Variación mensual',
         commodityKpiYoYLabel: daily ? 'Variación a 30 días' : 'Variación interanual',
         commodityKpiProductsLabel: commoditySource === 'magyp_fob' ? 'Posiciones disponibles' : 'Commodities disponibles',
@@ -1880,7 +1888,7 @@ function setCommoditySource(sourceKey) {
     commodityData = commodityDataBySource[commoditySource] || emptyCommodityData();
     commoditySelectedValues = [];
     commodityFrequency = COMMODITY_SOURCE_CONFIG[commoditySource].defaultFrequency || 'mensual';
-    ['commodityFilterCommodity', 'commodityFilterMarket', 'commodityFilterCurrency', 'commodityFilterUnit', 'commodityFilterType', 'commodityFilterCondition'].forEach(id => {
+    ['commodityFilterCommodity', 'commodityFilterMarket', 'commodityFilterCurrency', 'commodityFilterUnit', 'commodityFilterType', 'commodityFilterCondition', 'commodityFilterOrigin'].forEach(id => {
         const control = document.getElementById(id);
         if (control) control.dataset.initialized = 'false';
     });
@@ -1993,6 +2001,10 @@ function commodityNormalizedKey(value) {
 }
 
 function commodityMarketValue(row) {
+    if (row?.schema_version === 'sio-transactions-v2') return row.lugar_entrega || 'Lugar no informado';
+    if (String(row?.fuente || '').toLowerCase().includes('sio') && row?.lugares_entrega) {
+        return row.lugares_entrega.includes('|') ? 'Múltiples lugares (agregado histórico)' : row.lugares_entrega;
+    }
     const marketFields = ['mercado', 'plaza', 'mercado_plaza', 'fuente_plaza'];
     for (const field of marketFields) {
         const value = String(row?.[field] || '').trim();
@@ -2047,6 +2059,7 @@ function commodityIsAll(value) {
 
 function commodityMarketLabel(value) {
     const raw = String(value || '').trim();
+    if (commoditySource === 'sio') return raw || 'Lugar no informado';
     if (!raw) return 'Sin plaza';
     const shortRaw = raw.split(/[—–]/).pop().trim();
     const key = normalizeCommodityHeader(shortRaw).replace(/_/g, '');
@@ -2236,7 +2249,8 @@ function initCommodityFilters() {
     if (typeGroup) { typeGroup.hidden = !typeApplicable; typeGroup.style.display = typeApplicable ? '' : 'none'; }
     const typeLabel = document.getElementById('commodityTypeLabel');
     if (typeLabel) typeLabel.textContent = commoditySource === 'magyp_fas' ? 'Régimen FAS' : 'Tipo de precio';
-    populateCommoditySelect('commodityFilterCondition', optionRows.map(row => row.condicion_comercial), 'Todas', 'TODOS');
+    populateCommoditySelect('commodityFilterCondition', optionRows.map(row => commoditySource === 'sio' ? row.condicion_serie : row.condicion_comercial), 'Todas', 'TODOS');
+    if (commoditySource === 'sio') populateCommoditySelect('commodityFilterOrigin', optionRows.map(row => row.procedencia || 'Procedencia no informada'), 'Todas', 'TODOS');
     const frequency = document.getElementById('commodityFilterFrequency');
     if (frequency) {
         const frequencyDefault = sourceConfig.monthlyOnly ? 'mensual' : (['diaria', 'mensual'].includes(commodityFrequency) ? commodityFrequency : 'mensual');
@@ -2267,10 +2281,14 @@ function initCommodityFilters() {
 }
 
 function commodityRowMatches(row) {
+    if (commoditySource === 'sio') {
+        const origin = document.getElementById('commodityFilterOrigin')?.value || 'TODOS';
+        if (!commodityIsAll(origin) && origin !== (row.procedencia || 'Procedencia no informada')) return false;
+    }
     return commodityHistoryYearMatches(row) && [['commodityFilterCommodity', 'commodity'], ['commodityFilterMarket', 'mercado'], ['commodityFilterCurrency', 'moneda'], ['commodityFilterUnit', 'unidad'], ['commodityFilterType', 'tipo_precio'], ['commodityFilterCondition', 'condicion_comercial']].every(([filterId, field]) => {
-        if (filterId === 'commodityFilterCondition' && !COMMODITY_SOURCE_CONFIG[commoditySource]?.reference) return true;
+        if (filterId === 'commodityFilterCondition' && !COMMODITY_SOURCE_CONFIG[commoditySource]?.reference && commoditySource !== 'sio') return true;
         const selected = commodityFilterValues(filterId);
-        const rowValue = field === 'mercado' ? commodityMarketValue(row) : String(row[field] || '');
+        const rowValue = field === 'mercado' ? commodityMarketValue(row) : filterId === 'commodityFilterCondition' && commoditySource === 'sio' ? String(row.condicion_serie || '') : String(row[field] || '');
         return selected.some(value => commodityIsAll(value) || String(value) === rowValue);
     });
 }
@@ -2284,6 +2302,17 @@ function getCommodityFilteredRows() {
 }
 
 function getCommodityLatestRows() {
+    if (commoditySource === 'sio' && commodityData.mensual.some(row => row.schema_version === 'sio-transactions-v2')) {
+        const latest = new Map();
+        getCommodityFilteredRows().forEach(row => {
+            const period = commodityPeriodValue(row);
+            if (!latest.has(row.series_id) || commodityPeriodValue(latest.get(row.series_id)) < period) latest.set(row.series_id, row);
+        });
+        return [...latest.values()].map(row => {
+            const detail = commodityFrequency === 'diaria' ? commodityData.ultimos.find(item => item.series_id === row.series_id && item.fecha_ultima === row.fecha) || {} : {estado:(commodityData.semaforo || []).find(item => item.series_id === row.series_id && item.periodo_ym === row.periodo_ym)?.estado || 'Sin dato'};
+            return {...row, ...detail, periodo_ultimo:commodityPeriodValue(row), precio_mediana_ultimo_periodo:row.precio_mediana, operaciones_ultimo_periodo:row.operaciones};
+        });
+    }
     if (commodityHistoryMetadata[commoditySource] && commodityFrequency === 'mensual') {
         const latest = new Map();
         getCommodityFilteredRows().forEach(row => {
@@ -2342,6 +2371,7 @@ function commodityStateClass(state) {
 }
 
 function commoditySeriesKey(row, includeCondition = false) {
+    if (commoditySource === 'sio' && row.schema_version === 'sio-transactions-v2' && row.series_id) return row.series_id;
     if (COMMODITY_SOURCE_CONFIG[commoditySource]?.reference && row.series_id) return row.series_id;
     return [row.commodity, row.fuente, row.mercado, row.moneda, row.unidad, row.tipo_precio, includeCondition ? row.condicion_comercial : ''].join('|');
 }
@@ -2364,6 +2394,7 @@ function commodityPositionLabel(value) {
 }
 
 function commoditySeriesLabel(row, options = {}) {
+    if (commoditySource === 'sio' && row.schema_version === 'sio-transactions-v2') return [row.commodity, commodityMarketLabel(commodityMarketValue(row)), row.procedencia || 'Procedencia no informada', row.condicion_serie].filter(Boolean).join(' · ');
     const label = options.marketMode ? commodityMarketLabel(row.mercado) : (row.commodity || 'Sin commodity');
     if (COMMODITY_SOURCE_CONFIG[commoditySource]?.reference && row.condicion_comercial) return `${label} · ${commoditySource === 'magyp_futures' ? 'Vencimiento: ' : ''}${commodityPositionLabel(row.condicion_comercial)}${row.circular ? ' · circular ' + row.circular : ''}`;
     if (options.includeCondition && row.condicion_comercial && row.condicion_comercial !== 'Sin especificar') return `${label} (${row.condicion_comercial})`;
@@ -2399,6 +2430,7 @@ function commodityTooltipLines(row, value, period, metricLabel = 'Precio mediano
         `${metricLabel}: ${formatNumber(value)}${priceUnit}`,
         `Fuente: ${source}`,
         `Tipo: ${row?.tipo_precio || 'Sin dato'}`,
+        ...(commoditySource === 'sio' ? [`Procedencia: ${row?.procedencia || 'No informada'}`, `Condiciones: ${row?.condicion_serie || 'No informadas'}`] : []),
         ...(row?.condicion_comercial && row.condicion_comercial !== 'Sin especificar' ? [`${commoditySource === 'magyp_futures' ? 'Vencimiento / Posición' : 'Condición'}: ${commodityPositionLabel(row.condicion_comercial)}`] : []),
         ...(row?.circular ? [`Circular: ${row.circular}`] : []),
         `${commoditySource === 'magyp_futures' ? 'Cotización' : 'Período'}: ${commodityPeriodLabel(commoditySource === 'magyp_futures' ? row?.fecha || row?.fecha_ultima || period : period || commodityLatestDate(row))}`,
@@ -2498,6 +2530,7 @@ function renderCommodityVolume(rows) {
         const value = commodityNumber(local ? row.operaciones : row.volumen_total);
         if (!Number.isFinite(value) || value < 0) return;
         let key = row.commodity;
+        if (commoditySource === 'sio') key = commoditySeriesKey(row);
         if (local && context.marketMode) key = row.mercado;
         else if (local && context.marketAll) key = `${row.commodity}|${row.mercado}`;
         const group = groups.get(key) || { row, value: 0 };
@@ -2520,7 +2553,7 @@ function updateCommodityKpis(rows, latestRows) {
     const latestDates = latestRows.map(commodityLatestDate).filter(Boolean).sort();
     const latestPrices = latestRows.map(commodityLatestPrice).filter(value => Number.isFinite(value) && value > 0);
     const reference = Boolean(COMMODITY_SOURCE_CONFIG[commoditySource]?.reference);
-    const multipleReferenceSeries = reference && new Set(latestRows.map(row => row.series_id)).size > 1;
+    const multipleReferenceSeries = reference && new Set(latestRows.map(row => row.series_id)).size > 1 || commoditySource === 'sio' && (new Set(latestRows.map(row => commoditySeriesKey(row))).size > 1 || latestRows.some(row => row.delivery_status === 'MULTIPLE' || String(row.lugares_entrega || '').includes('|')));
     const latestPrice = multipleReferenceSeries ? null : commodityNumericMedian(latestPrices);
     const monthlyValues = latestRows.map(row => commodityNumber(row.variacion_mensual_pct ?? row.variacion_7d_pct)).filter(value => Number.isFinite(value));
     const yoyValues = latestRows.map(row => commodityNumber(row.variacion_interanual_pct ?? row.variacion_30d_pct)).filter(value => Number.isFinite(value));
@@ -2597,6 +2630,25 @@ function renderCommoditySemaphore(rows) {
     }).join('');
 }
 
+function commoditySioDetails(row) {
+    const list = field => {
+        try { return JSON.parse(row[field] || '[]').map(String); } catch (_) { return []; }
+    };
+    const ids = list('event_ids');
+    const details = [
+        `Lugar: ${commodityMarketLabel(commodityMarketValue(row))}`,
+        `Procedencia: ${row.procedencia || 'No informada'}`,
+        `Comercial: ${row.condicion_comercial || 'No informada'}`,
+        `Pago: ${row.condicion_pago || 'No informado'}`,
+        `Tipo de operación: ${row.tipo_operacion || 'No informado'}`,
+        `Evento: ${row.operacion || 'No informado'}`,
+        `Capturas: ${list('capture_timestamps').join(', ') || 'No registradas'}`,
+        `Eventos fuente: ${ids.map(id => id.replace(/^id:/, '')).join(', ') || 'No identificados'}`,
+        `SHA-256 del archivo de eventos: ${row.input_sha256 || 'No registrado'}`
+    ];
+    return `<details><summary>Ver ${ids.length || row.operaciones || ''} evento(s)</summary>${details.map(value => `<div>${escapeHtml(value)}</div>`).join('')}<small>Información no registrada permanece desconocida. No reconstruye contratos vigentes.</small>${row.source_url ? ` · <a href="${escapeHtml(row.source_url)}" target="_blank" rel="noopener">Fuente SIO</a>` : ''}</details>`;
+}
+
 function renderCommodityLatest(latestRows) {
     const body = document.getElementById('commodityLatestBody');
     const status = document.getElementById('commodityLatestStatus');
@@ -2605,7 +2657,8 @@ function renderCommodityLatest(latestRows) {
     status.classList.remove('is-visible');
     body.innerHTML = [...latestRows].sort((a, b) => `${a.commodity}|${a.mercado}|${a.moneda}|${a.tipo_precio}`.localeCompare(`${b.commodity}|${b.mercado}|${b.moneda}|${b.tipo_precio}`)).map(row => {
         const state = row.estado || 'Sin dato';
-        return `<tr><td>${escapeHtml(row.commodity)}</td><td>${escapeHtml(commoditySourceShort(row))}</td><td>${escapeHtml(commodityMarketLabel(row.mercado))}</td><td>${escapeHtml(row.moneda)}</td><td>${escapeHtml(row.unidad)}</td><td>${escapeHtml(row.tipo_precio)}</td><td>${escapeHtml(commodityPeriodLabel(commodityLatestDate(row)))}</td><td>${formatNumber(commodityLatestPrice(row))}</td><td>${formatNumber(commodityNumber(row.operaciones_ultimo_periodo ?? row.operaciones_ultimo_dia))}</td><td>${commodityPercent(row.variacion_mensual_pct ?? row.variacion_7d_pct)}</td><td>${commodityPercent(row.variacion_interanual_pct ?? row.variacion_30d_pct)}</td><td><span class="commodity-state ${commodityStateClass(state)}">${escapeHtml(state)}</span></td><td${COMMODITY_SOURCE_CONFIG[commoditySource]?.reference ? '' : ' hidden'}>${escapeHtml(commodityPositionLabel(row.condicion_comercial))}${row.circular ? ' · Circular ' + escapeHtml(row.circular) : ''}${row.source_url ? ' · <a href="' + escapeHtml(row.source_url) + '" target="_blank" rel="noopener">Fuente</a>' : ''}</td></tr>`;
+        const detail = commoditySource === 'sio' ? commoditySioDetails(row) : `${escapeHtml(commodityPositionLabel(row.condicion_comercial))}${row.circular ? ' · Circular ' + escapeHtml(row.circular) : ''}${row.source_url ? ' · <a href="' + escapeHtml(row.source_url) + '" target="_blank" rel="noopener">Fuente</a>' : ''}`;
+        return `<tr><td>${escapeHtml(row.commodity)}</td><td>${escapeHtml(commoditySourceShort(row))}</td><td>${escapeHtml(commodityMarketLabel(commodityMarketValue(row)))}</td><td>${escapeHtml(row.moneda)}</td><td>${escapeHtml(row.unidad)}</td><td>${escapeHtml(row.tipo_precio)}</td><td>${escapeHtml(commodityPeriodLabel(commodityLatestDate(row)))}</td><td>${formatNumber(commodityLatestPrice(row))}</td><td>${formatNumber(commodityNumber(row.operaciones_ultimo_periodo ?? row.operaciones_ultimo_dia))}</td><td>${commodityPercent(row.variacion_mensual_pct ?? row.variacion_7d_pct)}</td><td>${commodityPercent(row.variacion_interanual_pct ?? row.variacion_30d_pct)}</td><td><span class="commodity-state ${commodityStateClass(state)}">${escapeHtml(state)}</span></td><td${COMMODITY_SOURCE_CONFIG[commoditySource]?.reference || commoditySource === 'sio' ? '' : ' hidden'}>${detail}</td></tr>`;
     }).join('');
 }
 
@@ -2668,6 +2721,18 @@ function updateCommodityChartHeadings() {
     } else {
         if (latestTitle) latestTitle.textContent = 'Últimos precios por serie';
         if (latestDesc) latestDesc.textContent = 'Precio mediano del último período disponible, con fuente y plaza visibles';
+    }
+    if (commoditySource === 'sio') {
+        if (trendTitle) trendTitle.textContent = `Mediana ${periodLabel} de eventos por serie`;
+        if (trendDesc) trendDesc.textContent = 'Series separadas por dimensiones informadas; no representan contratos vigentes ni precio spot de una plaza.';
+        if (rankingTitle) rankingTitle.textContent = 'Última mediana de eventos por serie';
+        if (rankingDesc) rankingDesc.textContent = 'Comparación descriptiva; conservar lugar, procedencia, condiciones y fecha de cada serie.';
+        if (latestTitle) latestTitle.textContent = 'Últimos eventos por serie';
+        if (latestDesc) latestDesc.textContent = commodityFrequency === 'mensual' ? 'Agregación mensual derivada de operaciones SIO; no precio mensual oficial.' : 'Estadísticas de eventos diarios observados; no reconstruye última instancia contractual.';
+        const short = document.getElementById('commodityLatestVariationShort');
+        const long = document.getElementById('commodityLatestVariationLong');
+        if (short) short.textContent = commodityFrequency === 'diaria' ? 'Var. 7 días' : 'Var. mensual';
+        if (long) long.textContent = commodityFrequency === 'diaria' ? 'Var. 30 días' : 'Var. interanual';
     }
 }
 

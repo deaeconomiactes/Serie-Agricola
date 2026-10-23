@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import re
 import unicodedata
@@ -35,6 +36,8 @@ OUTPUT_COLUMNS = [
     "condicion_pago", "condicion_comercial", "frecuencia", "archivo_origen",
     "fecha_integracion", "observaciones", "apto_piloto", "apto_dashboard", "pagina_origen", "id_operacion_sio", "muestra_tipo", "muestra_paginas", "estado_paginacion",
     "precio_cero_flag", "precio_cero_tipo", "precio_valido_para_serie",
+    "tipo_operacion", "numero_operacion", "calidad", "fecha_entrega", "fuera_de_termino",
+    "source_url", "raw_sha256", "row_original_sha256", "capture_id",
 ]
 SNAPSHOT_COLUMNS = ["fecha_descarga_snapshot"] + OUTPUT_COLUMNS
 LIGHT_HISTORY_COLUMNS = [
@@ -42,6 +45,8 @@ LIGHT_HISTORY_COLUMNS = [
     "moneda", "unidad", "precio", "precio_original_texto", "volumen", "volumen_unidad", "procedencia",
     "lugar_entrega", "condicion_comercial", "precio_cero_flag", "precio_valido_para_serie", "fecha_descarga_snapshot",
     "fecha_actualizacion_dashboard", "observaciones",
+    "condicion_pago", "tipo_operacion", "precio_puesto_en", "numero_operacion", "calidad",
+    "fecha_entrega", "fuera_de_termino", "source_url", "raw_sha256", "row_original_sha256", "capture_id", "archivo_origen",
 ]
 LATEST_SNAPSHOT_PATTERN = re.compile(r"^SIO_latest_GetOperaciones_\d{8}_\d{6}\.json$", flags=re.I)
 EXTENSIONS = {".json", ".csv", ".xlsx", ".xls", ".html", ".htm"}
@@ -54,15 +59,19 @@ DEFAULT_SOURCE = "SIO Granos / Secretaría de Agricultura"
 LATEST_POSITIONAL_MAPPING = {
     0: {"source_label": "ID", "target_field": "id_operacion_sio"},
     1: {"source_label": "Fecha Concertación", "target_field": "fecha"},
+    2: {"source_label": "Nro. Operación", "target_field": "numero_operacion"},
     3: {"source_label": "Operación", "target_field": "operacion"},
     4: {"source_label": "Tipo", "target_field": "tipo_operacion"},
     5: {"source_label": "Precio", "target_field": "tipo_precio"},
     6: {"source_label": "Producto", "target_field": "commodity"},
     7: {"source_label": "Cant. (TN)", "target_field": "volumen", "unit_field": "volumen_unidad", "unit_value_if_label_matches": "TN"},
+    8: {"source_label": "Calidad", "target_field": "calidad"},
     9: {"source_label": "Procedencia Pcia./LOCALID.", "target_field": "procedencia"},
     10: {"source_label": "Precio/TN Monto", "target_field": "precio", "unit_field": "unidad", "unit_value_if_label_matches": "TN"},
     11: {"source_label": "Lugar Entrega", "target_field": "lugar_entrega"},
+    12: {"source_label": "Fecha Entr. DESDE/HASTA", "target_field": "fecha_entrega"},
     13: {"source_label": "Condición Pago", "target_field": "condicion_pago"},
+    14: {"source_label": "Fuera de Termino", "target_field": "fuera_de_termino"},
 }
 HEADER_KEYS = {
     "fecha", "fechadeclaracion", "fechaconcertacion", "fechadeentrega", "producto",
@@ -459,6 +468,7 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
     integrated_count = 0
     row_signatures: list[str] = []
     page_origin = page_number_from_path(path)
+    source_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
     sample_type = "exportacion_manual" if is_manual_export_file(path) else "paginacion_controlada" if page_origin else "piloto_una_pagina"
     for source in source_rows:
         read_count += 1
@@ -577,6 +587,15 @@ def process_file(path: Path, aliases: dict[str, str], positional_mapping: dict[i
             "lugar_entrega": delivery_place,
             "precio_puesto_en": first_text(source, "Precio puesto en", "Destino", "Puerto"),
             "operacion": operation,
+            "tipo_operacion": first_text(source, "tipo_operacion", "Tipo Operación", "Tipo de operación"),
+            "numero_operacion": first_text(source, "numero_operacion", "Nro. Operación"),
+            "calidad": first_text(source, "calidad", "Calidad"),
+            "fecha_entrega": first_text(source, "fecha_entrega", "Fecha Entr. DESDE/HASTA"),
+            "fuera_de_termino": first_text(source, "fuera_de_termino", "Fuera de Termino"),
+            "source_url": "https://www.siogranos.com.ar/consulta_publica/operaciones_informadas.aspx",
+            "raw_sha256": source_sha256,
+            "row_original_sha256": hashlib.sha256(raw_row_signature.encode("utf-8")).hexdigest(),
+            "capture_id": path.stem,
             "condicion_pago": payment,
             "condicion_comercial": commercial,
             "frecuencia": first_text(source, "Frecuencia", "Frequency"),
@@ -638,6 +657,7 @@ def snapshot_identity(row: dict[str, str]) -> tuple[str, ...]:
         text(row.get("procedencia")),
         text(row.get("lugar_entrega")),
         text(row.get("condicion_comercial")),
+        *(text(row.get(field)) for field in ("moneda", "unidad", "tipo_precio", "condicion_pago", "precio_puesto_en", "tipo_operacion", "operacion", "calidad", "fecha_entrega", "fuera_de_termino", "fuente")),
     )
 
 
@@ -687,7 +707,7 @@ def light_history_row(row: dict[str, str], dashboard_date: str = "") -> dict[str
 def write_light_history(path: Path, rows: list[dict[str, str]]) -> None:
     DASHBOARD_DIR.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8-sig", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=LIGHT_HISTORY_COLUMNS, delimiter=";", extrasaction="ignore")
+        writer = csv.DictWriter(handle, fieldnames=LIGHT_HISTORY_COLUMNS, delimiter=";", extrasaction="ignore", lineterminator="\n")
         writer.writeheader()
         writer.writerows(light_history_row(row) for row in rows)
 

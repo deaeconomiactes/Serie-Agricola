@@ -264,3 +264,18 @@ inicial local (**−91,9%**); no se presentan como una nueva medición de produc
 Se mantienen todas las salvedades metodológicas y de performance del informe.
 Esta consolidación agrega sólo el registro de verificación, sin nuevas
 correcciones, fuentes, datasets ni capturas.
+
+## 9. Seguimiento A07 — SIO transaccional, 23/10/2026
+
+Implementación local para revisión: [SIO_TRANSACTIONAL_GRAIN.md](SIO_TRANSACTIONAL_GRAIN.md).
+Se elimina la mezcla silenciosa observada en A07 mediante una identidad diaria y
+mensual que conserva lugar, condiciones informadas, procedencia y clase de evento.
+590 eventos se reconcilian en 494 series por dimensiones informadas. El control
+Maíz 193,45 se separa en cuatro lugares con 161,73 / 191,90 / 195 / 195 USD/TN.
+
+El histórico no registró condición comercial/pago/tipo de operación: no se
+reconstruyen ni se certifica homogeneidad sobre características desconocidas.
+La UI solicita una serie cuando hay varias y explicita naturaleza transaccional;
+no precio spot ni censo de contratos vigentes. La evidencia original A07 queda
+conservada como diagnóstico anterior a la corrección. Siguen vigentes las demás
+salvedades y las limitaciones de cobertura/calidad de SIO, sin cambios a otros módulos.

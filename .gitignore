@@ -168,6 +168,8 @@ data/carnes/analytical/
 !tests/magyp_frontend/*.cjs
 !tests/magyp_frontend/*.js
 !tests/magyp_frontend/institutional_browser_audit.py
+!scripts/sio/*.py
+!tests/sio/*.py
 !mcba-prices.js
 data/magyp/raw/**
 data/magyp/normalized/**
