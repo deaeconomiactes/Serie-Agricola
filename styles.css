@@ -35,44 +35,193 @@ button, select { font: inherit; }
 ::-webkit-scrollbar-track { background: var(--bg-secondary); }
 ::-webkit-scrollbar-thumb { background: #486078; border-radius: 99px; }
 
-/* Carnes: isolated additions to the existing institutional components. */
+/* Carnes: compact analytical workspace, scoped to the local pilot. */
 body:has(.module-view.is-active:not(#quantityView)) .header-summary,
-body:has(.module-view.is-active:not(#quantityView)) #headerSubtitle { display: none; }
-#carnesView [hidden] { display: none !important; }
-#carnesView .carnes-metadata { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin: 12px 0 18px; color: var(--text-secondary); font-size: .76rem; }
-#carnesView a { color: var(--accent-blue); overflow-wrap: anywhere; }
-#carnesView .carnes-state { border: 1px solid var(--border-color); border-radius: 20px; padding: 4px 10px; font-weight: 700; white-space: normal; }
-#carnesView .carnes-state--success { color: var(--accent-green); background: var(--accent-green-soft); }
-#carnesView .carnes-state--warning { color: var(--accent-amber); background: #d7b36a15; }
-#carnesView .carnes-state--error { color: #f3a0a8; background: #cc7f8620; }
-#carnesView .carnes-state--neutral { color: var(--text-secondary); }
-#carnesView .carnes-notice { margin: 10px 0; color: var(--accent-amber); font-size: .82rem; }
-#carnesView .carnes-notice:empty { display: none; }
-#carnesView .carnes-method { margin: 14px 0 18px; max-width: 100%; font-size: .78rem; }
-#carnesView .carnes-kpis { margin-bottom: 20px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
-#carnesView .kpi-value { font-size: 1.25rem; line-height: 1.35; overflow-wrap: anywhere; }
-#carnesView .kpi-unit { font-size: .74rem; color: var(--text-secondary); }
-#carnesView .carnes-chart { position: relative; flex: 0 0 auto; height: 330px; min-height: 0; padding: 18px; }
-#carnesView .carnes-breakdown { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 430px), 1fr)); gap: 20px; margin: 20px 0; }
-#carnesView .carnes-breakdown:not(:has(> .chart-card:not([hidden]))) { display: none; }
-#carnesView .carnes-breakdown .carnes-chart { height: 540px; }
-#carnesView .carnes-empty { padding: 22px; color: var(--text-muted); }
-#carnesView .carnes-records { margin: 20px 0; padding: 20px; }
-#carnesView .carnes-table-wrap { max-width: 100%; overflow-x: auto; margin: 14px 0; }
-#carnesView .carnes-table { width: 100%; border-collapse: collapse; font-size: .75rem; text-align: left; }
-#carnesView .carnes-table th { color: var(--text-muted); font-weight: 700; }
-#carnesView .carnes-table td, #carnesView .carnes-table th { padding: 10px; border-bottom: 1px solid var(--border-soft); vertical-align: top; }
-#carnesView .carnes-table td:nth-child(3) { white-space: nowrap; font-variant-numeric: tabular-nums; }
-#carnesView .carnes-table details { max-width: 320px; overflow-wrap: anywhere; }
-#carnesView .carnes-export { align-self: flex-start; width: auto; min-height: 34px; padding: 5px 12px; cursor: pointer; font-size: .75rem; background-image: none; }
-#carnesView .carnes-history { margin: 22px 0; }
-#carnesView .carnes-history > summary { padding: 20px; font-weight: 700; cursor: pointer; }
-#carnesView .carnes-history-content { padding: 0 20px 20px; }
-#carnesView .carnes-history-content > .chart-card { margin-top: 18px; }
-#carnesView .filter-select:focus-visible, #carnesView summary:focus-visible, #carnesView a:focus-visible { outline: 2px solid var(--accent-green); outline-offset: 3px; }
-#carnesView .filter-select:disabled { opacity: .65; cursor: default; }
-@media (max-width: 1050px) { #carnesView .carnes-filters, #carnesView .carnes-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 620px) { #carnesView .carnes-filters, #carnesView .carnes-kpis, #carnesView .carnes-history-content .filters-grid { grid-template-columns: 1fr; } #carnesView .carnes-records { padding: 12px; } }
+body:has(.module-view.is-active:not(#quantityView)) #headerSubtitle { display:none; }
+.carnes-brand,.carnes-footer { display:none; }
+body:has(#carnesView.is-active) .footer > :not(.carnes-footer) { display:none; }
+body:has(#carnesView.is-active) .carnes-footer { display:block; }
+body:has(#carnesView.is-active) { background:#0b121b; }
+body:has(#carnesView.is-active) .header { background:#101c28; }
+body:has(#carnesView.is-active) .header-inner { min-height:64px; padding:10px 0; width:calc(100% - 40px); gap:12px; }
+body:has(#carnesView.is-active) .header-left { gap:10px; }
+body:has(#carnesView.is-active) .logo-icon { width:30px;height:34px;flex-basis:30px;background:transparent;border:0; }
+body:has(#carnesView.is-active) .logo-icon svg { width:27px;height:27px; }
+body:has(#carnesView.is-active) :is(.header-title,.header-summary,#headerSubtitle) { display:none; }
+body:has(#carnesView.is-active) .carnes-brand { display:block;font-size:15px;font-weight:650;letter-spacing:-.02em;line-height:1.2; }
+.carnes-brand small { display:block;font-size:11px;font-weight:400;letter-spacing:0;color:#a3b4c5;margin-top:3px; }
+body:has(#carnesView.is-active) .module-nav { position:absolute;top:0;left:250px;right:20px;width:auto;min-height:64px;margin:0;padding:0;gap:24px;align-items:center;border:0; }
+body:has(#carnesView.is-active) .module-tab { min-height:36px;padding:9px 8px;font-size:11px;font-weight:500;border:0;border-radius:4px; }
+body:has(#carnesView.is-active) .module-tab.is-active { background:#163c3a;color:#8edac0; }
+body:has(#carnesView.is-active) .module-tab.is-active::after { display:none; }
+#carnesView { --carnes-surface:#111e2a;--carnes-inset:#0d1823;--border-color:#293a4b;--border-soft:#ffffff0a;--text-secondary:#a7b8c9;--text-muted:#8195aa;--accent-green:#66d4b0; }
+#carnesView [hidden] { display:none!important; }
+#carnesView .prices-section { width:calc(100% - 40px);padding:0;margin:0 auto; }
+#carnesView .prices-heading:empty { display:none; }
+#carnesView .carnes-shell { display:grid;grid-template-columns:176px minmax(0,1fr);gap:20px; }
+#carnesView .carnes-main { min-width:0;padding:20px 0 24px; }
+#carnesView .carnes-rail { position:sticky;top:16px;align-self:start;min-height:calc(100vh - 64px);padding:24px 12px 16px 0;border-right:1px solid var(--border-soft);display:flex;flex-direction:column; }
+#carnesView .carnes-rail-label { color:var(--text-muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 10px;padding-left:10px; }
+#carnesView .carnes-family-nav { display:grid;gap:5px;margin-bottom:32px; }
+#carnesView .carnes-family-nav button,#carnesView .carnes-rail-action { display:flex;align-items:center;gap:10px;width:100%;min-height:36px;padding:9px 10px;border:0;background:transparent;color:var(--text-secondary);font-size:11px;text-align:left;border-radius:4px;cursor:pointer; }
+#carnesView .carnes-family-nav button[aria-pressed="true"] { color:#a4e8d2;background:#193b3d;box-shadow:inset 3px 0 #68d5b1; }
+#carnesView .carnes-rail-action:hover,#carnesView .carnes-family-nav button:hover { background:#ffffff05; }
+#carnesView .carnes-rail > a { font-size:11px;padding:8px 10px;line-height:1.6;margin-bottom:6px; }
+#carnesView a { color:#8dd3c0;overflow-wrap:anywhere; }
+#carnesView .carnes-glyph { display:inline-block;flex:0 0 auto;width:18px;height:18px;background:currentColor;mask-size:contain;mask-position:center;mask-repeat:no-repeat; }
+#carnesView .carnes-rail-foot { margin-top:auto;padding:16px 10px;background:#111e2a;border:1px solid var(--border-soft);border-radius:6px;font-size:11px;line-height:1.6;color:var(--text-muted); }
+#carnesView .carnes-rail-foot strong { display:block;color:var(--text-secondary);font-weight:500;margin:4px 0; }
+#carnesView .carnes-rail-foot .carnes-glyph { color:var(--accent-green); }
+#carnesView .carnes-overview { position:relative;isolation:isolate;padding:14px 18px;margin:0 0 12px;border:1px solid var(--border-soft);border-radius:6px;background:var(--carnes-inset);overflow:hidden; }
+#carnesView .carnes-overview::before { content:'';position:absolute;z-index:-1;inset:0;background:url('assets/carnes/cattle-header.webp') center right/cover no-repeat;opacity:.35; }
+#carnesView .carnes-heading { display:flex;align-items:center;gap:12px;min-height:30px; }
+#carnesView .carnes-heading > .carnes-glyph { width:34px;height:34px;color:var(--accent-green); }
+#carnesView :is(.prices-title,.carnes-heading-divider) { display:none; }
+#carnesView .carnes-family-title { margin:0;font-size:26px;font-weight:650;line-height:1.2;letter-spacing:-.025em; }
+#carnesView .carnes-state { display:inline-flex;align-items:center;gap:6px;margin-left:auto;padding:4px 8px;border:1px solid #52ceaa20;border-radius:20px;background:#12332c;font-size:11px;white-space:nowrap; }
+#carnesView .carnes-state::before { content:'';width:5px;height:5px;border-radius:50%;background:currentColor; }
+#carnesView .carnes-state--success { color:#8cdebf; }
+#carnesView .carnes-state--warning { color:var(--accent-amber); }
+#carnesView .carnes-state--error { color:#f3a0a8; }
+#carnesView .carnes-state--neutral { color:var(--text-secondary); }
+#carnesView .carnes-metadata { margin:4px 0 0 46px;font-size:11px;color:var(--text-secondary); }
+#carnesView .carnes-meta-items { display:flex;flex-wrap:wrap;gap:4px 10px; }
+#carnesView .carnes-meta-items > span { display:inline-flex;gap:5px; }
+#carnesView .carnes-meta-items > span+span::before { content:'·';margin-right:4px; }
+#carnesView .carnes-meta-items strong { font-weight:400; }
+#carnesView .carnes-meta-label { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%); }
+#carnesView .carnes-meta-items > span:nth-child(4) .carnes-meta-label { position:static;width:auto;height:auto;clip-path:none; }
+#carnesView .carnes-context { padding:10px 12px;border:1px solid var(--border-soft);border-radius:6px;background:var(--carnes-surface); }
+#carnesView .carnes-toolbar { position:relative;display:grid;grid-template-columns:90px 130px minmax(110px,.8fr) minmax(200px,1.7fr) auto;gap:12px;align-items:end; }
+#carnesView .carnes-filters { display:contents; }
+#carnesView .filter-label { margin-bottom:4px;color:var(--text-secondary);font-size:11px;text-transform:none;font-weight:500;letter-spacing:0; }
+#carnesView .filter-select { min-height:32px;height:32px;padding:5px 26px 5px 9px;font-size:11px;background-color:#132332;border-radius:4px; }
+#carnesView summary { cursor:pointer;color:var(--text-secondary);font-size:11px; }
+#carnesView .carnes-context-filters > summary { min-height:32px;padding:7px 10px;border:1px solid #3a6479;border-radius:4px;color:#acd8e6;font-size:11px;white-space:nowrap; }
+#carnesView .carnes-context-filters > .filters-grid { position:absolute;z-index:5;top:calc(100% + 10px);right:0;width:min(620px,100%);grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:16px;background:#172c3b;border:1px solid var(--border-color);border-radius:6px;box-shadow:0 12px 30px #0007; }
+#carnesView .carnes-selection-note { margin:6px 2px 8px;font-size:11px;color:var(--text-muted); }
+#carnesView .carnes-kpis { display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px;margin-bottom:14px; }
+#carnesView .kpi-card { display:flex;align-items:flex-start;gap:10px;min-height:112px;padding:15px 12px;background:var(--carnes-surface);border:1px solid var(--border-soft);border-radius:6px;box-shadow:none; }
+#carnesView .kpi-card::before { display:none; }
+#carnesView .carnes-kpi-symbol { display:grid;place-items:center;width:32px;height:34px;flex-shrink:0;border-radius:5px;color:#8adcc2;background:#22524e; }
+#carnesView .kpi-card:nth-child(2) .carnes-kpi-symbol { color:#e1a0ba;background:#502c40; }
+#carnesView .kpi-card:nth-child(3) .carnes-kpi-symbol { color:#e6c480;background:#4b4029; }
+#carnesView .kpi-card:nth-child(4) .carnes-kpi-symbol { color:#9dbeef;background:#29456c; }
+#carnesView .kpi-content { min-width:0;gap:5px; }
+#carnesView .kpi-label { font-size:11px;text-transform:none;letter-spacing:0;color:var(--text-secondary);font-weight:500; }
+#carnesView .kpi-value { font-size:22px;line-height:1.25;font-weight:650;letter-spacing:-.03em;color:var(--text-primary);overflow-wrap:anywhere; }
+#carnesView .kpi-card:first-child .kpi-value { font-size:25px; }
+#carnesView .kpi-unit { font-size:11px;line-height:1.55;color:var(--text-secondary); }
+#carnesView .carnes-analysis { display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:12px;align-items:stretch; }
+#carnesView .chart-card { min-width:0;border:1px solid var(--border-soft);border-radius:6px;background:var(--carnes-surface);box-shadow:none; }
+#carnesView .chart-header { padding:13px 14px 8px;min-height:65px;border-bottom:0; }
+#carnesView .chart-title { font-size:15px;font-weight:600;margin:0; }
+#carnesView .chart-desc { margin:4px 0 0;font-size:11px;line-height:1.5;color:var(--text-secondary); }
+#carnesView .carnes-chart { position:relative;flex:0 0 auto;height:230px;min-height:0;padding:8px 12px 12px; }
+#carnesView .carnes-timeline { grid-column:1;grid-row:1; }
+#carnesView .carnes-breakdown { grid-column:2;grid-row:1;min-width:0; }
+#carnesView .carnes-breakdown > .chart-card { height:100%; }
+#carnesView .carnes-composition { grid-column:1;grid-row:2; }
+#carnesView .carnes-composition .carnes-chart { height:280px; }
+#carnesView .carnes-highlights { grid-column:2;grid-row:2;padding:0;background:var(--carnes-surface);border:1px solid var(--border-soft);border-radius:6px; }
+#carnesView .carnes-highlights h3 { padding:13px 14px;margin:0;border-bottom:1px solid var(--border-soft); }
+#carnesView .carnes-highlights ul { margin:0;padding:0 14px;list-style:none;font-size:11px;line-height:1.6;color:var(--text-secondary); }
+#carnesView .carnes-highlights li { padding:16px 0;border-bottom:1px solid var(--border-soft); }
+#carnesView .carnes-highlights li:last-child { border-bottom:0; }
+#carnesView .carnes-analysis:has(.carnes-breakdown[hidden]) .carnes-timeline { grid-column:1/-1; }
+#carnesView .carnes-analysis:has(.carnes-breakdown[hidden]) .carnes-highlights { grid-column:1/-1;grid-row:3; }
+#carnesView .carnes-analysis:has(.carnes-highlights[hidden]) .carnes-composition { grid-column:1/-1; }
+#carnesView .carnes-analytic-note { margin:6px 0;font-size:11px; }
+#carnesView .carnes-analytic-note:empty { display:none; }
+#carnesView .carnes-empty { padding:16px;font-size:12px;color:var(--text-secondary); }
+#carnesView .carnes-ranking .carnes-chart { height:auto;min-height:230px;padding:8px 14px 12px; }
+#carnesView .carnes-ranked-bars { display:grid;gap:8px;margin-bottom:12px; }
+#carnesView .carnes-rank-detail { line-height:1.25;display:flex;justify-content:space-between;gap:8px;width:100%;padding:0;border:0;background:transparent;color:var(--text-primary);font-size:12px;text-align:left;cursor:pointer; }
+#carnesView .carnes-rank-detail span:last-child { text-align:right;font-variant-numeric:tabular-nums; }
+#carnesView .carnes-rank-track { height:5px;margin-top:4px;background:#ffffff08;border-radius:2px;overflow:hidden; }
+#carnesView .carnes-rank-track > div { height:100%;background:var(--accent-green); }
+#carnesView :is(.carnes-references,.carnes-observations) { margin-top:12px;background:var(--carnes-surface);border:1px solid var(--border-soft);border-radius:6px; }
+#carnesView :is(.carnes-references,.carnes-observations) > summary { padding:12px 14px;font-weight:500;color:var(--text-secondary); }
+#carnesView .carnes-references > p { padding:0 14px 12px; }
+#carnesView .carnes-references .chart-card { border:0;border-top:1px solid var(--border-soft);border-radius:0; }
+#carnesView .carnes-methodology { margin-top:12px; }
+#carnesView .carnes-methodology > summary { padding:8px 0; }
+#carnesView :is(.carnes-method,.carnes-analytics-method) { width:100%;margin:8px 0;color:var(--text-secondary);font-size:11px; }
+#carnesView .carnes-notice { margin:10px 0;color:var(--accent-amber);font-size:12px; }
+#carnesView .carnes-notice:empty { display:none; }
+#carnesView .carnes-records { margin:0;padding:14px;border:0;border-top:1px solid var(--border-soft); }
+#carnesView .carnes-table-wrap { max-width:100%;overflow-x:auto;margin:12px 0; }
+#carnesView .carnes-table { width:100%;min-width:680px;border-collapse:collapse;font-size:11px;text-align:left; }
+#carnesView .carnes-table-caption { text-align:left;color:var(--text-secondary);padding:0 8px 10px;font-size:11px; }
+#carnesView .carnes-table th { color:var(--text-secondary);font-size:11px;font-weight:500;text-transform:uppercase; }
+#carnesView .carnes-table :is(td,th) { padding:8px;border-bottom:1px solid var(--border-soft);vertical-align:middle; }
+#carnesView .carnes-table :is(td,th):nth-child(3) { text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums; }
+#carnesView .carnes-table tbody tr:hover { background:#ffffff04; }
+#carnesView :is(.carnes-detail-button,.carnes-export) { width:auto;min-height:30px;padding:5px 8px;border:1px solid #2a475b;border-radius:4px;color:#9ed1e7;background:transparent;font-size:11px;cursor:pointer; }
+#carnesView .carnes-detail { position:fixed;inset:0 0 0 auto;margin:0;width:min(500px,100%);max-width:100%;height:100dvh;max-height:100dvh;padding:24px;background:var(--carnes-surface);color:var(--text-primary);border:0;border-left:1px solid var(--border-color);overflow:auto; }
+#carnesView .carnes-detail::backdrop { background:#050c15aa; }
+#carnesView .carnes-detail > button { display:block;margin:0 0 20px auto; }
+#carnesView .carnes-detail-list { display:grid;grid-template-columns:minmax(100px,1fr) minmax(0,2fr);gap:0;font-size:12px; }
+#carnesView .carnes-detail-list :is(dt,dd) { padding:10px 0;border-bottom:1px solid var(--border-soft); }
+#carnesView .carnes-detail-list dt { color:var(--text-secondary); }
+#carnesView .carnes-detail-list dd { margin:0;overflow-wrap:anywhere; }
+#carnesView .carnes-technical { margin-top:24px;padding-top:16px;border-top:1px solid var(--border-color); }
+#carnesView .carnes-history { margin:12px 0;border:0;background:transparent; }
+#carnesView .carnes-history > summary { padding:8px 0;font-weight:500; }
+#carnesView .carnes-history-content { padding:14px 0; }
+#carnesView .carnes-history-content > .chart-card { margin-top:14px; }
+#carnesView :is(button,select,summary,a,[tabindex]):focus-visible { outline:2px solid var(--accent-green);outline-offset:3px; }
+#carnesView .carnes-heatmap { padding:10px 14px; }
+#carnesView .carnes-heatmap-scroll { overflow-x:auto; }
+#carnesView .carnes-heatmap-grid { display:grid;grid-template-columns:55px repeat(12,minmax(34px,1fr));gap:3px;min-width:540px;align-items:center;font-size:11px;color:var(--text-secondary); }
+#carnesView .carnes-heatmap-grid > span { text-align:center; }
+#carnesView .carnes-heatmap-cell { height:28px;padding:0;border:1px solid #ffffff08;border-radius:2px;color:var(--text-secondary);background:#ffffff03;cursor:pointer; }
+#carnesView .carnes-heatmap-readout { min-height:2em;color:var(--text-secondary);font-size:11px; }
+#carnesView .carnes-pagination { display:flex;justify-content:end;gap:10px; }
+#carnesView .carnes-pagination button:disabled { opacity:.45;cursor:default; }
+#carnesView .carnes-search { max-width:420px;margin-bottom:10px;background-image:none; }
+@media(min-width:1101px) {
+ #carnesView .carnes-analysis:has(.carnes-breakdown[hidden]):has(.carnes-highlights[hidden]):has(.carnes-composition:not([hidden])) .carnes-timeline { grid-column:1; }
+ #carnesView .carnes-analysis:has(.carnes-breakdown[hidden]):has(.carnes-highlights[hidden]):has(.carnes-composition:not([hidden])) .carnes-composition { grid-column:2;grid-row:1; }
+}
+@media(max-width:1100px) {
+ #carnesView .carnes-shell { grid-template-columns:150px minmax(0,1fr);gap:16px; }
+ #carnesView .carnes-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ #carnesView .carnes-toolbar { grid-template-columns:90px 130px minmax(110px,1fr); }
+ #carnesView .carnes-toolbar .filter-group:has(#carnes-group) { grid-column:1/3; }
+ #carnesView .carnes-context-filters[open] { grid-column:1/-1; }
+ #carnesView .carnes-context-filters > .filters-grid { position:static;width:100%;margin-top:10px;box-shadow:none; }
+ #carnesView .carnes-analysis { display:flex;flex-direction:column; }
+ #carnesView .carnes-highlights ul { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px; }
+}
+@media(max-width:700px) {
+ body:has(#carnesView.is-active) .header-inner { min-height:58px; }
+ body:has(#carnesView.is-active) .module-nav { position:static;min-height:44px;width:calc(100% - 32px);padding:4px 0;margin:0 auto;gap:8px;flex-wrap:wrap; }
+ body:has(#carnesView.is-active) .module-tab { font-size:11px;padding:7px 5px; }
+ #carnesView .prices-section { width:calc(100% - 24px); }
+ #carnesView .carnes-shell { display:block; }
+ #carnesView .carnes-rail { position:static;min-height:0;padding:12px 0 0;border:0; }
+ #carnesView .carnes-rail > :not(.carnes-family-nav) { display:none; }
+ #carnesView .carnes-rail > a { display:block; margin:6px 0 0; padding:2px 8px; }
+ #carnesView .carnes-family-nav { display:flex;margin:0;gap:8px; }
+ #carnesView .carnes-family-nav button { width:auto;font-size:11px;padding:8px; }
+ #carnesView .carnes-main { padding-top:12px; }
+ #carnesView .carnes-overview { padding:12px; }
+ #carnesView .carnes-family-title { font-size:20px; }
+ #carnesView .carnes-state { font-size:8px; }
+ #carnesView .carnes-heading { gap:8px; }
+ #carnesView .carnes-metadata { margin-left:0;margin-top:10px; }
+ #carnesView .carnes-toolbar { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ #carnesView .carnes-toolbar .filter-group:has(#carnes-group) { grid-column:auto; }
+ #carnesView .carnes-context-filters { grid-column:1/-1; }
+ #carnesView .carnes-highlights ul { display:block; }
+ #carnesView .kpi-card { min-height:120px;padding:12px 10px;gap:8px; }
+ #carnesView .carnes-kpi-symbol { width:25px;height:28px; }
+ #carnesView .kpi-value,#carnesView .kpi-card:first-child .kpi-value { font-size:20px; }
+ #carnesView .carnes-composition .carnes-chart { height:390px; }
+}
+@media(max-width:420px) { #carnesView .carnes-kpis { grid-template-columns:minmax(0,1fr); } }
+
 
 /* Header */
 .app-shell { min-height: 100vh; }

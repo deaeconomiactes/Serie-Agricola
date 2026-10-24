@@ -69,9 +69,9 @@ test('provincial participation uses the same published national period and unit'
 });
 test('interannual uses matching economic dimensions, including species and YTD closure',()=>{
     const row=C.point(C.selectedSeries(current,base),base);
-    const before={...row,observation_date:'2025-09-01',period_end:'2025-09-30',value:String(Number(row.value)/2),source_id:'annual_archive'};
+    const before={...row,observation_date:'2025-09-01',period_end:'2025-09-30',value:String(Number(row.value)/2),source_id:'magyp_slaughter_2025'};
     assert.equal(C.yearAgo(row,[before]),100);
-    for(const change of [{unit:'other'},{species:'bovinos_y_bubalinos'},{methodology:'other'},{frequency:'annual'},{period_end:'2025-12-31'}])
+    for(const change of [{source_id:'sspm_40_3'},{unit:'other'},{species:'bovinos_y_bubalinos'},{methodology:'other'},{frequency:'annual'},{period_end:'2025-12-31'}])
         assert.equal(C.yearAgo(row,[{...before,...change}]),null);
     assert.equal(C.yearAgo(row,[before,before]),null);assert.equal(C.yearAgo(row,[{...before,value:'0'}]),null);
     assert.equal(C.yearAgo({...row,observation_date:'2024-02-01',period_end:'2024-02-29'},[{...before,observation_date:'2023-02-01',period_end:'2023-02-28'}]),100);

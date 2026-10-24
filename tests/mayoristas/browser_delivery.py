@@ -25,6 +25,7 @@ def run(url, channel, output):
         assert len(result['initial']['requests'])==3
         assert page.evaluate('priceCharts.evolution instanceof Chart') if page.evaluate("typeof priceCharts!=='undefined' && !!priceCharts.evolution") else page.locator('#priceView canvas').count()>0
         # A bad new year must keep both the previous chart data and selected controls.
+        if page.locator('#priceMoreFilters').count():page.locator('#priceMoreFilters > summary').click()
         page.locator('#priceFilterMes').select_option('Mayo')
         previous=page.evaluate('JSON.stringify(filteredPriceData)')
         page.route('**/data/mayoristas/dashboard/*2024*.json.gz',lambda route:route.fulfill(status=200,body=b'corrupt'))
@@ -48,6 +49,7 @@ def run(url, channel, output):
         before=page.evaluate('priceDelivery.metrics.bytes');page.locator('#priceFilterFrequency').select_option('diaria')
         page.wait_for_function("document.getElementById('priceView').getAttribute('aria-busy')==='false'")
         assert page.evaluate("validPriceData.every(r=>r.mercado===MCBAPrices.MCBA) && validPriceData.some(r=>r.data_source==='MAGYP')")
+        assert not page.locator('#priceMovements').is_visible(), 'Daily view must not expose an empty ranking disclosure'
         result['frequency_change_bytes']=page.evaluate('priceDelivery.metrics.bytes')-before
         page.locator('#priceFilterFrequency').select_option('mensual')
         page.wait_for_function("document.getElementById('priceView').getAttribute('aria-busy')==='false'")
