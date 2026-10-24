@@ -13,7 +13,7 @@
       ],
       "frequency": "mensual",
       "last_observation_date": "2026-09-01",
-      "last_successful_update": "2026-10-21T13:30:46.545601Z",
+      "last_successful_update": "2026-10-24T01:21:15.662899Z",
       "status": "UPDATED",
       "automatic_update": true,
       "workflow": "magyp-commodities-review.yml",
@@ -24,8 +24,8 @@
       "unit": [
         "TN"
       ],
-      "requested_date": "2026-10-21",
-      "attempted_at": "2026-10-21T13:30:46.591021+00:00",
+      "requested_date": "2026-10-23",
+      "attempted_at": "2026-10-24T01:21:15.710612+00:00",
       "diagnostic_note": null,
       "evidence": null,
       "historical_coverage": {
@@ -65,7 +65,7 @@
       ],
       "history_automation": "Reproducible CLI; periodic current-family workflow remains independent",
       "effective_data_last_observation_date": "2026-09-01",
-      "effective_data_last_capture": "2026-10-21T13:30:46.545601Z"
+      "effective_data_last_capture": "2026-10-24T01:21:15.662899Z"
     },
     {
       "source_family": "magyp_board",
@@ -78,8 +78,8 @@
         "ROSARIO"
       ],
       "frequency": "diaria",
-      "last_observation_date": "2026-10-19",
-      "last_successful_update": "2026-10-21T13:30:48.806836Z",
+      "last_observation_date": "2026-10-22",
+      "last_successful_update": "2026-10-24T01:21:18.022907Z",
       "status": "UPDATED",
       "automatic_update": true,
       "workflow": "magyp-commodities-review.yml",
@@ -90,8 +90,8 @@
       "unit": [
         "TN"
       ],
-      "requested_date": "2026-10-21",
-      "attempted_at": "2026-10-21T13:30:48.819893+00:00",
+      "requested_date": "2026-10-23",
+      "attempted_at": "2026-10-24T01:21:18.034467+00:00",
       "diagnostic_note": null,
       "evidence": null,
       "historical_coverage": {
@@ -129,8 +129,8 @@
         "MAGyP current publication"
       ],
       "history_automation": "Reproducible CLI; periodic current-family workflow remains independent",
-      "effective_data_last_observation_date": "2026-10-19",
-      "effective_data_last_capture": "2026-10-21T13:30:48.806836Z"
+      "effective_data_last_observation_date": "2026-10-22",
+      "effective_data_last_capture": "2026-10-24T01:21:18.022907Z"
     },
     {
       "source_family": "magyp_fas",
@@ -139,8 +139,8 @@
         "Argentina / paridad teórica"
       ],
       "frequency": "diaria cuando publica",
-      "last_observation_date": "2026-10-20",
-      "last_successful_update": "2026-10-21T13:30:52.508632Z",
+      "last_observation_date": "2026-10-23",
+      "last_successful_update": "2026-10-24T01:21:22.263900Z",
       "status": "UPDATED",
       "automatic_update": true,
       "workflow": "magyp-commodities-review.yml",
@@ -153,8 +153,8 @@
         "Sin identificar",
         "TN"
       ],
-      "requested_date": "2026-10-21",
-      "attempted_at": "2026-10-21T13:30:52.547611+00:00",
+      "requested_date": "2026-10-23",
+      "attempted_at": "2026-10-24T01:21:22.385630+00:00",
       "diagnostic_note": null,
       "evidence": null,
       "historical_coverage": {
@@ -193,8 +193,8 @@
         "MAGyP current publication"
       ],
       "history_automation": "Reproducible CLI; periodic current-family workflow remains independent",
-      "effective_data_last_observation_date": "2026-10-20",
-      "effective_data_last_capture": "2026-10-21T13:30:52.508632Z"
+      "effective_data_last_observation_date": "2026-10-23",
+      "effective_data_last_capture": "2026-10-24T01:21:22.263900Z"
     },
     {
       "source_family": "magyp_fob",
@@ -203,9 +203,9 @@
         "FOB oficial / plaza no informada"
       ],
       "frequency": "diaria cuando publica",
-      "last_observation_date": "2026-10-19",
-      "last_successful_update": "2026-10-21T13:11:45.209561Z",
-      "status": "NO_PUBLICATION",
+      "last_observation_date": "2026-10-23",
+      "last_successful_update": "2026-10-24T01:21:24.730181Z",
+      "status": "UPDATED",
       "automatic_update": true,
       "workflow": "magyp-commodities-review.yml",
       "notes": "Familia independiente; sin interpolación.",
@@ -215,8 +215,8 @@
       "unit": [
         "Sin identificar"
       ],
-      "requested_date": "2026-10-21",
-      "attempted_at": "2026-10-21T13:30:54.803872+00:00",
+      "requested_date": "2026-10-23",
+      "attempted_at": "2026-10-24T01:21:24.862809+00:00",
       "diagnostic_note": null,
       "evidence": null,
       "historical_coverage": {
@@ -301,8 +301,8 @@
         "MAGyP / SSPM series 358.1; separate from position API"
       ],
       "history_automation": "Reproducible CLI; periodic current-family workflow remains independent",
-      "effective_data_last_observation_date": "2026-10-19",
-      "effective_data_last_capture": "2026-10-21T13:11:45.209561Z"
+      "effective_data_last_observation_date": "2026-10-23",
+      "effective_data_last_capture": "2026-10-24T01:21:24.730181Z"
     },
     {
       "source_family": "magyp_futures",
@@ -312,8 +312,8 @@
         "KANSAS"
       ],
       "frequency": "diaria cuando publica",
-      "last_observation_date": "2026-10-20",
-      "last_successful_update": "2026-10-21T13:30:57.105146Z",
+      "last_observation_date": "2026-10-23",
+      "last_successful_update": "2026-10-24T01:21:27.042684Z",
       "status": "UPDATED",
       "automatic_update": true,
       "workflow": "magyp-commodities-review.yml",
@@ -324,8 +324,8 @@
       "unit": [
         "TN"
       ],
-      "requested_date": "2026-10-21",
-      "attempted_at": "2026-10-21T13:30:57.173224+00:00",
+      "requested_date": "2026-10-23",
+      "attempted_at": "2026-10-24T01:21:27.109998+00:00",
       "diagnostic_note": null,
       "evidence": null,
       "historical_coverage": {
@@ -361,8 +361,8 @@
         "MAGyP current publication"
       ],
       "history_automation": "Reproducible CLI; periodic current-family workflow remains independent",
-      "effective_data_last_observation_date": "2026-10-20",
-      "effective_data_last_capture": "2026-10-21T13:30:57.105146Z"
+      "effective_data_last_observation_date": "2026-10-23",
+      "effective_data_last_capture": "2026-10-24T01:21:27.042684Z"
     },
     {
       "source_family": "mcba",
@@ -371,7 +371,7 @@
       "frequency": "diaria cuando publica",
       "last_observation_date": "2026-10-05",
       "last_successful_update": "2026-10-06T13:34:47.388718Z",
-      "status": "SOURCE_UNAVAILABLE",
+      "status": "MAGYP_LAST_VALID",
       "automatic_update": true,
       "workflow": "update-magyp-mcba.yml",
       "notes": "Edge Windows; fecha civil argentina; último bundle válido ante indisponibilidad.",
