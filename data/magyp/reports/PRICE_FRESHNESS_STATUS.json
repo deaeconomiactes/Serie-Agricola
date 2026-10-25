@@ -458,8 +458,8 @@
       "source": "SIO Granos / Secretaría de Agricultura",
       "market": "plazas informadas",
       "frequency": "transaccional / snapshot diario",
-      "last_observation_date": "2026-10-24",
-      "last_successful_update": "2026-10-24T16:44:49",
+      "last_observation_date": "2026-10-25",
+      "last_successful_update": "2026-10-25T17:06:54",
       "status": "UPDATED",
       "automatic_update": true,
       "workflow": "update-sio-commodities.yml",
@@ -472,7 +472,7 @@
         "TN"
       ],
       "requested_date": null,
-      "attempted_at": "2026-10-24T16:44:51.547278+00:00",
+      "attempted_at": "2026-10-25T17:06:57.284886+00:00",
       "diagnostic_note": null,
       "evidence": null
     }

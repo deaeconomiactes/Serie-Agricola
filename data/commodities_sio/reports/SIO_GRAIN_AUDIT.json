@@ -1,8 +1,8 @@
 {
   "schema_version": "sio-transactions-v2",
-  "input_sha256": "4df5bad19dd192092cee3a723dc08ec46f461f26a8359f43301964ac0ea1ec34",
-  "input_rows": 635,
-  "eligible_events": 635,
+  "input_sha256": "c3d6945e170d0ab9d20003743a857125e4bf486fc88d54fb176bae028db3320a",
+  "input_rows": 636,
+  "eligible_events": 636,
   "exact_repeated_events_omitted": 0,
   "rejected": {},
   "dimensions": [
@@ -25,7 +25,7 @@
   "profile": {
     "fecha": {
       "missing": 0,
-      "distinct_nonmissing": 40
+      "distinct_nonmissing": 41
     },
     "commodity": {
       "missing": 0,
@@ -44,7 +44,7 @@
       "distinct_nonmissing": 1
     },
     "condicion_comercial": {
-      "missing": 635,
+      "missing": 636,
       "distinct_nonmissing": 0
     },
     "lugar_entrega": {
@@ -52,12 +52,12 @@
       "distinct_nonmissing": 40
     },
     "precio_puesto_en": {
-      "missing": 635,
+      "missing": 636,
       "distinct_nonmissing": 0
     },
     "procedencia": {
       "missing": 0,
-      "distinct_nonmissing": 337
+      "distinct_nonmissing": 338
     },
     "condicion_pago": {
       "missing": 559,
@@ -77,7 +77,7 @@
     },
     "fecha_entrega": {
       "missing": 590,
-      "distinct_nonmissing": 20
+      "distinct_nonmissing": 21
     },
     "fuera_de_termino": {
       "missing": 590,
@@ -101,11 +101,11 @@
     },
     "id_operacion_sio": {
       "missing": 0,
-      "distinct_nonmissing": 635
+      "distinct_nonmissing": 636
     },
     "fecha_descarga_snapshot": {
       "missing": 0,
-      "distinct_nonmissing": 45
+      "distinct_nonmissing": 46
     }
   },
   "baseline_public": {
@@ -126,12 +126,12 @@
       "rows_multiple_delivery": 103
     }
   },
-  "homogeneous_series": 535,
+  "homogeneous_series": 536,
   "rows_by_output": {
-    "diario": 568,
-    "mensual": 553,
-    "ultimos": 535,
-    "semaforo": 553,
+    "diario": 569,
+    "mensual": 554,
+    "ultimos": 536,
+    "semaforo": 554,
     "resumen": 1
   },
   "multi_delivery_groups_after": 0,
