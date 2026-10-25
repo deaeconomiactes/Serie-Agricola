@@ -1,5 +1,9 @@
 # Carnes — primera UI productiva
 
+Para las métricas y comparaciones añadidas en el piloto posterior, consultar
+[Carnes: tercera iteración analítica](CARNES_ANALYTICS_PILOT.md). Esta guía
+describe la primera implementación productiva.
+
 Implementación del 22/10/2026 basada en `CARNES_UI_PLAN.md` (nombre real de la
 propuesta aprobada en main; el adjunto la menciona como `CARNES_UI_PROPOSAL.md`).
 No cambia datos ni pipelines. No activa cron. Los módulos existentes conservan

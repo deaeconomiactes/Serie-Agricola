@@ -560,7 +560,7 @@ function loadCarnesModule() {
     if (!carnesModulePromise) {
         carnesModulePromise = new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            script.src = 'carnes.js?v=1';
+            script.src = 'carnes.js?v=ui-pilot-20261023-5';
             script.onload = () => resolve(window.Carnes.mount(document.getElementById('carnesRoot')));
             script.onerror = () => { script.remove(); reject(new Error('No se pudo cargar Carnes.')); };
             document.head.append(script);
