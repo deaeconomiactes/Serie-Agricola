@@ -371,7 +371,7 @@
       "frequency": "diaria cuando publica",
       "last_observation_date": "2026-10-05",
       "last_successful_update": "2026-10-06T13:34:47.388718Z",
-      "status": "MAGYP_LAST_VALID",
+      "status": "SOURCE_UNAVAILABLE",
       "automatic_update": true,
       "workflow": "update-magyp-mcba.yml",
       "notes": "Edge Windows; fecha civil argentina; último bundle válido ante indisponibilidad.",
@@ -381,8 +381,8 @@
       "unit": [
         "kg"
       ],
-      "requested_date": "2026-10-23",
-      "attempted_at": "2026-10-23T22:05:12.732651Z",
+      "requested_date": "2026-10-25",
+      "attempted_at": "2026-10-25T03:55:46.667938Z",
       "diagnostic_note": null,
       "evidence": "https://github.com/deaeconomiactes/Serie-Agricola/actions/runs/39354603566"
     },
