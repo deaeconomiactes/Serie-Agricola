@@ -28,12 +28,17 @@ def run(url, channel, output):
             print(json.dumps({'errors':errors,'state':page.locator('#commodityView').get_attribute('aria-busy'),
                               'status':page.locator('#commodityDataStatus').text_content()},ensure_ascii=False))
             raise
-        page.locator('#commodityFilterSource').select_option('sio')
+        if page.locator('[data-co-family=sio]').count():
+            page.locator('[data-co-family=sio]').click()
+            page.wait_for_function('commoditySource==="sio"')
+            page.locator('#commodityMoreFilters > summary').click()
+        else:
+            page.locator('#commodityFilterSource').select_option('sio')
         page.locator('#commoditySioOriginGroup').wait_for(state='visible')
         assert page.locator('#commodityMarketLabel').text_content()=='Lugar de entrega'
         assert 'Seleccioná una serie' in page.locator('#commodityKpiMedian').inner_text()
         assert 'Sin plaza' not in page.locator('#commodityView').inner_text()
-        assert 'no precio mensual oficial' in page.locator('#commodityMethodNote').inner_text()
+        assert 'no precio mensual oficial' in page.locator('#commodityMethodNote').text_content()
         page.locator('#commodityFilterFrequency').select_option('diaria')
         page.locator('#commodityFilterCommodityTrigger').click()
         page.locator('#commodityFilterCommodityMenu').get_by_text('Maíz',exact=True).click()
@@ -42,6 +47,8 @@ def run(url, channel, output):
         page.locator('#commodityFilterMarket').select_option(target['lugar_entrega'])
         page.locator('#commodityFilterCondition').select_option(target['condicion_serie'])
         page.locator('#commodityFilterOrigin').select_option(target['procedencia'])
+        if page.locator('#commodityMoreFilters').count():
+            page.locator('#commodityMoreFilters > summary').press('Escape')
         actual=page.locator('#commodityKpiMedian').inner_text()
         assert actual==expected.replace('.',','),(actual,expected)
         assert page.locator('#commodityLatestBody tr').count()==1
@@ -51,13 +58,20 @@ def run(url, channel, output):
             page.locator('#commodityView').scroll_into_view_if_needed()
             assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
             page.screenshot(path=str(output/f'{channel}-sio-{width}.png'))
+        if page.locator('#commodityObservations').count():
+            page.locator('#commodityObservations > summary').click()
         page.locator('#commodityLatestBody summary').click()
         assert 'LA PAMPAREALICO' in page.locator('#commodityLatestBody').inner_text()
         assert 'Capturas:' in page.locator('#commodityLatestBody').inner_text()
         page.locator('#commodityFilterFrequency').select_option('mensual')
-        assert 'agregación' in page.locator('#commodityMethodNote').inner_text().lower()
+        assert 'agregación' in page.locator('#commodityMethodNote').text_content().lower()
         assert page.locator('#commodityKpiMedian').inner_text()!='Seleccioná una serie'
-        page.locator('#commodityFilterSource').select_option('magyp_internal')
+        page.set_viewport_size({'width':1440,'height':1050})
+        if page.locator('[data-co-family=magyp_internal]').count():
+            page.locator('[data-co-family=magyp_internal]').click()
+            page.wait_for_function('commoditySource==="magyp_internal"')
+        else:
+            page.locator('#commodityFilterSource').select_option('magyp_internal')
         assert not page.locator('#commoditySioOriginGroup').is_visible()
         assert page.locator('#commodityMarketLabel').text_content()=='Mercado / plaza'
         assert page.locator('#commodityFilterFrequency').input_value()=='mensual'
