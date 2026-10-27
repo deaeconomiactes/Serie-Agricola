@@ -12,6 +12,7 @@ permissions:
   contents: read
 concurrency:
   group: serie-agricola-data-writer
+  queue: max
   cancel-in-progress: false
 jobs:
   update:
@@ -23,6 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.ref }}
           fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
@@ -93,6 +95,7 @@ jobs:
           if changed and not set(changed.split('\0')).issubset(allowed): raise SystemExit('Fuera de allowlist')
           PY
           git diff --cached --check
+          python scripts/ci/workflow_status.py plan
           if git diff --cached --quiet; then
             echo 'changed=false' >> "$GITHUB_OUTPUT"
           else
@@ -103,7 +106,7 @@ jobs:
             echo 'changed=true' >> "$GITHUB_OUTPUT"
           fi
       - name: Deploy explícito tras publicación válida
-        if: github.ref == 'refs/heads/main' && steps.publication.outputs.changed == 'true'
+        if: github.ref == 'refs/heads/main' && steps.publication.outputs.deploy_required == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run deploy.yml --ref main
@@ -126,3 +129,15 @@ jobs:
           if s['status']=='PIPELINE_ERROR': raise SystemExit('PIPELINE_ERROR: último válido conservado')
           print(s['status'])
           PY
+
+      - name: Resumen final mensual derivado
+        if: always()
+        env:
+          CHANGED: ${{ steps.publication.outcome == 'success' && steps.publication.outputs.changed == 'true' }}
+          DEPLOY: ${{ steps.publication.outcome == 'success' && steps.publication.outputs.deploy_required == 'true' }}
+          FINAL_RESULT: ${{ (steps.acquisition.outcome == '' || steps.acquisition.outcome == 'skipped' || steps.publication.outcome == 'failure') && 'PIPELINE_ERROR' || '' }}
+        run: >-
+          python scripts/ci/workflow_status.py summary --source MCBA_MERCADO_CENTRAL
+          --status "$FINAL_RESULT"
+          --status-file data/mercado_central/dashboard/mcba/UPDATE_STATUS.json
+          --changed "$CHANGED" --deploy "$DEPLOY"

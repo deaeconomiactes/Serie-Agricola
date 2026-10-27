@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Rebase onto the current main; retry one push only when main actually advanced.
 set -euo pipefail
+if [ "${GITHUB_ACTIONS:-false}" = true ] && [ "${GITHUB_REF:-}" != refs/heads/main ]; then
+  echo '::error::La publicación productiva requiere refs/heads/main.'
+  exit 1
+fi
 
 git fetch origin main
 for attempt in 1 2; do

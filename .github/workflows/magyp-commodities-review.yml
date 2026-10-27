@@ -17,6 +17,7 @@ permissions:
   contents: read
 concurrency:
   group: serie-agricola-data-writer
+  queue: max
   cancel-in-progress: false
 jobs:
   update:
@@ -28,6 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: ${{ github.ref }}
           fetch-depth: 0
           persist-credentials: true
       - uses: actions/setup-python@v7
@@ -74,6 +76,7 @@ jobs:
           node --test tests/magyp_frontend/commodities.test.cjs tests/magyp_frontend/regression.test.cjs tests/magyp_frontend/mcba.test.cjs
           git diff --check
       - name: Publicar únicamente CSV livianos en main
+        id: publication
         if: github.ref == 'refs/heads/main'
         shell: bash
         run: |
@@ -86,6 +89,7 @@ jobs:
             data/magyp/reports/PRICE_FRESHNESS_STATUS.json
           python scripts/magyp/grains/validate_publication.py --check-staged
           git diff --cached --check
+          python scripts/ci/workflow_status.py plan
           if git diff --cached --quiet; then
             echo '[PUBLISH] Sin cambios en los cinco CSV; no se crea commit.'
           else
@@ -96,12 +100,12 @@ jobs:
             bash scripts/ci/push_data_main.sh
           fi
       - name: Desplegar explícitamente el dashboard validado
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && steps.publication.outputs.deploy_required == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           # workflow_dispatch sí dispara Actions con GITHUB_TOKEN; el push por sí solo no.
-          # También permite recuperar un despliegue anterior fallido aunque no haya CSV nuevos.
+          # Recuperar un deploy fallido se hace mediante dispatch manual de deploy.yml.
           gh workflow run deploy.yml --ref main
       - name: Evidencia RAW y salidas de la actualización
         if: always()
@@ -127,4 +131,24 @@ jobs:
           if not states or any(r['status']=='PIPELINE_ERROR' for r in states):
               raise SystemExit('PIPELINE_ERROR: revisar metadata; últimas salidas válidas conservadas')
           print('Fuentes con último válido conservado: ' + ', '.join(sorted({r['status'] for r in states})))
+          PY
+
+      - name: Resumen final por familia consultada
+        if: always()
+        env:
+          CHANGED: ${{ steps.publication.outcome == 'success' && steps.publication.outputs.changed == 'true' }}
+          DEPLOY: ${{ steps.publication.outcome == 'success' && steps.publication.outputs.deploy_required == 'true' }}
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from scripts.ci.workflow_status import summary
+          published=json.loads(Path('data/magyp/reports/PRICE_FRESHNESS_STATUS.json').read_text())
+          families={r['source_family']:r for r in published['sources']}
+          states=list(Path('data/magyp/reports').glob('PRICE_STATE_*.json'))
+          if not states: summary('MAGyP_COMMODITIES','PIPELINE_ERROR',os.getenv('REQUESTED_DATE'),None,os.environ['CHANGED'],os.environ['DEPLOY'])
+          for path in sorted(states):
+              state=json.loads(path.read_text())
+              family=path.stem.removeprefix('PRICE_STATE_')
+              summary('MAGyP_'+family.upper(),state.get('status','PIPELINE_ERROR'),state.get('requested_date'),families['magyp_'+family].get('last_observation_date'),os.environ['CHANGED'],os.environ['DEPLOY'])
           PY

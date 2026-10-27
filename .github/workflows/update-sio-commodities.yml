@@ -12,15 +12,18 @@ permissions:
 
 concurrency:
   group: serie-agricola-data-writer
+  queue: max
   cancel-in-progress: false
 
 jobs:
   update-sio:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Descargar repositorio
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.ref }}
           fetch-depth: 0
 
       - name: Configurar Python
@@ -38,8 +41,12 @@ jobs:
 
       - name: Capturar snapshot latest
         id: capture
+        timeout-minutes: 2
+        shell: bash
         continue-on-error: true
-        run: python explorar_sio_granos.py --update-latest --allow-web --save-response 2>&1 | tee "$RUNNER_TEMP/sio-capture.log"
+        run: |
+          set -euo pipefail
+          python explorar_sio_granos.py --update-latest --allow-web --save-response 2>&1 | tee "$RUNNER_TEMP/sio-capture.log"
 
       - name: Integrar snapshot e histórico liviano
         if: steps.capture.outcome == 'success'
@@ -67,7 +74,8 @@ jobs:
         if: steps.capture.outcome == 'success'
         run: python scripts/magyp/build_price_freshness.py --sio-status UPDATED
       - name: Publicar sólo salidas livianas
-        if: steps.capture.outcome == 'success'
+        id: publication
+        if: github.ref == 'refs/heads/main' && steps.capture.outcome == 'success'
         shell: bash
         run: |
           git add data/magyp/reports/PRICE_FRESHNESS_STATUS.json data/commodities_sio/dashboard/*.csv \
@@ -76,6 +84,8 @@ jobs:
             data/commodities_sio/reports/RESUMEN_ACTUALIDAD_COMMODITIES_SIO.csv
           echo "Archivos candidatos a publicar:"
           git diff --cached --name-only
+          git diff --cached --check
+          python scripts/ci/workflow_status.py plan
           if git diff --cached --quiet; then
             echo "No hay cambios livianos para publicar."
             exit 0
@@ -83,7 +93,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "chore: actualizar snapshot diario SIO"
-          git push
+          # Los derivados tracked fuera del allowlist permanecen locales: no rebase del árbol sucio.
+          # El grupo writer serializa bots; un avance humano concurrente aborta sin force.
+          git push origin HEAD:main
 
       - name: Conservar datos e informar captura SIO fallida
         if: steps.capture.outcome == 'failure'
@@ -99,12 +111,12 @@ jobs:
           PY
       - name: Publicar sólo metadata de fallo SIO
         id: publish_fallback
-        if: steps.capture.outcome == 'failure'
+        if: github.ref == 'refs/heads/main' && steps.capture.outcome == 'failure'
         env:
           GH_TOKEN: ${{ github.token }}
         run: bash scripts/ci/publish_price_freshness.sh
       - name: Desplegar explícitamente dashboard SIO
-        if: steps.capture.outcome == 'success' || steps.publish_fallback.outputs.changed == 'true'
+        if: github.ref == 'refs/heads/main' && (steps.publication.outputs.deploy_required == 'true' || steps.publish_fallback.outputs.deploy_required == 'true')
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run deploy.yml --ref main
@@ -112,3 +124,17 @@ jobs:
       - name: Error visible de datos o código SIO
         if: env.SIO_RESULT == 'PIPELINE_ERROR'
         run: exit 1
+
+      - name: Resumen final SIO
+        if: always()
+        env:
+          CHANGED: ${{ (steps.publication.outcome == 'success' && steps.publication.outputs.changed == 'true') || (steps.publish_fallback.outcome == 'success' && steps.publish_fallback.outputs.changed == 'true') }}
+          DEPLOY: ${{ (steps.publication.outcome == 'success' && steps.publication.outputs.deploy_required == 'true') || (steps.publish_fallback.outcome == 'success' && steps.publish_fallback.outputs.deploy_required == 'true') }}
+          FINAL_RESULT: ${{ env.SIO_RESULT || (job.status == 'success' && 'UPDATED') || 'PIPELINE_ERROR' }}
+        run: |
+          python - <<'PY'
+          import csv,os
+          from scripts.ci.workflow_status import summary
+          with open('data/commodities_sio/dashboard/COMMODITIES_SIO_DASHBOARD_RESUMEN.csv',encoding='utf-8-sig') as stream: row=next(csv.DictReader(stream,delimiter=';'))
+          summary('SIO',os.environ['FINAL_RESULT'],None,row.get('fecha_max'),os.environ['CHANGED'],os.environ['DEPLOY'])
+          PY

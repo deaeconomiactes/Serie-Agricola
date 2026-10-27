@@ -204,5 +204,7 @@ data/mercado_central/analytical/
 !tests/mayoristas/*.py
 !tests/commodities/*.py
 !tests/cantidades/*.py
+!scripts/ci/*.py
+!tests/ci/*.py
 !data/mayoristas/dashboard/*.json.gz
 !data/mayoristas/reports/*.csv
