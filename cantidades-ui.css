@@ -1,0 +1,89 @@
+/* Quantity-specific adoption of the institutional system. Other modules are untouched. */
+.quantity-footer{display:none}
+body:has(#quantityView.is-active){background:#0b121b}
+body:has(#quantityView.is-active) .header{background:#101c28}
+body:has(#quantityView.is-active) .header-inner{width:calc(100% - 40px);padding:10px 0;min-height:64px}
+body:has(#quantityView.is-active) .header-title,body:has(#quantityView.is-active) .header-subtitle,body:has(#quantityView.is-active) .header-right{display:none}
+body:has(#quantityView.is-active) .header-left{gap:10px}
+body:has(#quantityView.is-active) .logo-icon{width:30px;height:34px;flex-basis:30px;border:0;background:none}
+body:has(#quantityView.is-active) .logo-icon svg{width:27px;height:27px}
+body:has(#quantityView.is-active) .carnes-brand{display:block;font-size:15px;font-weight:650;letter-spacing:-.02em;line-height:1.2}
+body:has(#quantityView.is-active) .module-nav{position:absolute;top:0;left:250px;right:20px;width:auto;min-height:64px;margin:0;padding:0;gap:24px;align-items:center;border:0}
+body:has(#quantityView.is-active) .module-tab{min-height:36px;padding:9px 8px;font-size:11px;font-weight:500;border:0;border-radius:4px}
+body:has(#quantityView.is-active) .module-tab.is-active{background:#193b3d;color:#a4e8d2}
+body:has(#quantityView.is-active) .module-tab.is-active::after{display:none}
+body:has(#quantityView.is-active) .footer>:not(.quantity-footer){display:none}
+body:has(#quantityView.is-active) .quantity-footer{display:block}
+#quantityView{display:none;--text-secondary:#a7b8c9;--border-color:#293a4b;--border-soft:#ffffff0a;color:#eef3f7}
+#quantityView.is-active{display:grid;grid-template-columns:176px minmax(0,1fr);gap:20px;width:calc(100% - 40px);margin:0 auto}
+#quantityView [hidden],#quantityView .qt-canonical{display:none!important}
+#quantityView .qt-main{min-width:0;padding:20px 0 24px}
+#quantityView .qt-rail{position:sticky;align-self:start;top:16px;min-height:calc(100vh - 64px);padding:24px 12px 16px 0;border-right:1px solid #ffffff0a}
+#quantityView .qt-rail>summary{display:none}
+#quantityView .qt-eyebrow{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#8195aa}
+#quantityView .qt-rail .qt-eyebrow{padding-left:10px;margin:0 0 10px}
+#quantityView .qt-rail nav{display:grid;gap:5px;margin-bottom:30px}
+#quantityView .qt-rail button{display:block;width:100%;min-height:36px;padding:9px 10px;border:0;border-radius:4px;background:transparent;color:#a7b8c9;font:inherit;font-size:12px;text-align:left;cursor:pointer}
+#quantityView .qt-rail button[aria-current]{color:#a4e8d2;background:#193b3d;box-shadow:inset 3px 0 #66d4b0}
+#quantityView .qt-rail button:hover{background:#ffffff07}
+#quantityView .qt-rail-note{font-size:11px;line-height:1.8;color:#8195aa;border-top:1px solid #ffffff0a;padding-top:16px}
+#quantityView .qt-header{margin-bottom:14px;padding-bottom:15px;border-bottom:1px solid #ffffff0a}
+#quantityView .qt-header-top{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:8px}
+#quantityView .qt-static{font-size:11px;color:#a7b8c9;border:1px solid #293a4b;padding:4px 8px;border-radius:4px;white-space:nowrap}
+#quantityView .qt-header h2{font-size:25px;line-height:1.3;font-weight:650;letter-spacing:-.025em;margin:0 0 8px}
+#quantityView .qt-header p{font-size:12px;line-height:1.7;color:#a7b8c9;margin:4px 0;overflow-wrap:anywhere}
+#quantityView .qt-header .qt-source{font-size:11px;color:#8195aa}
+#quantityView .filters-section{width:100%;padding:0;margin:0 0 12px;background:#111e2a;border:1px solid #ffffff0a;border-radius:6px;box-shadow:none}
+#quantityView .filters-inner{display:grid;grid-template-columns:90px minmax(110px,.85fr) minmax(160px,1.4fr) minmax(150px,1.1fr) 105px auto;gap:10px;width:100%;padding:12px;align-items:start}
+#quantityView .filter-group{min-width:0;gap:5px;margin:0}
+#quantityView .filter-label{font-size:11px;font-weight:500;color:#a7b8c9;letter-spacing:0;text-transform:none}
+#quantityView .filter-select{height:34px;min-height:34px;padding:5px 9px;border:1px solid #293a4b;border-radius:4px;background:#132332;color:#eef3f7;font-size:12px;min-width:0}
+#quantityView .qt-more{position:relative;margin-top:20px;z-index:30}
+#quantityView .qt-more>summary{font-size:11px;line-height:16px;padding:8px 10px;border:1px solid #365d6b;border-radius:4px;color:#b7d7df;cursor:pointer;white-space:nowrap}
+#quantityView .qt-more>div{position:absolute;top:42px;right:0;display:grid;grid-template-columns:1fr 1fr;gap:14px;width:480px;max-width:calc(100vw - 40px);padding:16px;background:#111e2a;border:1px solid #365d6b;border-radius:6px;box-shadow:0 12px 28px #0005}
+#quantityView .qt-kpis{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:12px;margin:0 0 10px}
+#quantityView .qt-kpis article{display:grid;align-content:start;gap:6px;min-width:0;background:#111e2a;border:1px solid #ffffff0a;border-radius:6px;padding:16px}
+#quantityView .qt-kpi-label{font-size:11px;color:#a7b8c9}
+#quantityView .qt-kpis strong{font-size:25px;font-weight:650;line-height:1.4;letter-spacing:-.02em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#quantityView .qt-kpis article>span:last-child{font-size:11px;color:#8195aa;line-height:1.6}
+#quantityView .qt-counts{font-size:11px;color:#a7b8c9;line-height:1.7;margin:0 0 8px}
+#quantityView .qt-comparison{font-size:11px;color:#c7b98d;background:#171b21;padding:8px 12px;border-left:2px solid #b6a376;line-height:1.7;margin:0 0 14px}
+#quantityView .qt-analysis{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:12px;margin-bottom:12px;min-width:0}
+#quantityView .chart-card{min-width:0;min-height:0;grid-column:auto;margin:0;padding:0;border:1px solid #ffffff0a;border-radius:6px;background:#111e2a;box-shadow:none;overflow:hidden;scroll-margin-top:12px}
+#quantityView .chart-header{padding:15px 16px 8px;border:0}
+#quantityView .chart-title{font-size:14px;line-height:1.5;font-weight:650;color:#eef3f7;margin:0 0 4px}
+#quantityView .chart-desc{font-size:11px;line-height:1.6;color:#a7b8c9;margin:0}
+#quantityView .chart-body{flex:none;height:345px;min-height:345px;max-height:345px;padding:12px 16px 16px}
+#quantityView .qt-composition{margin-bottom:12px}
+#quantityView .qt-origins{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:12px;margin-bottom:12px;min-width:0}
+#quantityView .qt-origin-canvas{position:relative;height:340px;padding:12px 16px 16px}
+#quantityView .qt-origin-canvas canvas{width:100%!important;height:100%!important}
+#quantityView .qt-insight{padding:20px;background:#0d1823;border:1px solid #ffffff0a;border-radius:6px;min-width:0}
+#quantityView .qt-insight h3{font-size:24px;line-height:1.5;margin:16px 0 10px;overflow-wrap:anywhere;font-weight:600}
+#quantityView .qt-insight p{font-size:12px;line-height:1.8;color:#a7b8c9}
+#quantityView #quantitySeasonality .chart-body{height:auto;max-height:none;min-height:0;overflow:auto}
+#quantityView .heatmap-grid{min-width:900px}
+#quantityView .heatmap-row-label{font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#quantityView .heatmap-cell{font-size:10px}
+#quantityView .tab-btn{font-size:11px;padding:6px 9px;min-height:32px;border-radius:4px}
+#quantityView .qt-disclosure{min-width:0;margin:12px 0 0;background:#111e2a;border:1px solid #ffffff0a;border-radius:6px;scroll-margin-top:12px}
+#quantityView .qt-disclosure>summary{font-size:12px;color:#b4c8d9;padding:13px 15px;cursor:pointer}
+#quantityView .qt-disclosure[open]>summary{border-bottom:1px solid #ffffff0a}
+#quantityView .qt-disclosure>p{font-size:12px;color:#a7b8c9;line-height:1.8;padding:0 16px}
+#quantityView .qt-record-tools{display:flex;gap:14px;flex-wrap:wrap;padding:14px 16px;align-items:end}
+#quantityView .qt-record-tools label{display:grid;gap:6px;flex:1;min-width:160px;font-size:11px;color:#a7b8c9}
+#quantityView input[type=search]{width:100%;background:#132332;border:1px solid #293a4b;border-radius:4px;min-height:36px;color:#eef3f7;padding:8px;font:inherit}
+#quantityView .qt-record-tools button,#quantityView .qt-pages button,#quantityView #quantityRecordBody button{background:#132332;border:1px solid #365d6b;border-radius:4px;color:#b7d7df;padding:8px 12px;font:inherit;font-size:11px;cursor:pointer;min-height:34px}
+#quantityView .qt-pages button:disabled{opacity:.4;cursor:default}
+#quantityView #quantityRecordCount{font-size:11px;color:#8195aa;margin:0;padding:0 16px 12px}
+#quantityView .qt-record-scroll{width:100%;max-width:100%;overflow:auto}
+#quantityView .qt-record-scroll table{width:100%;min-width:680px;border-collapse:collapse;font-size:12px}
+#quantityView th,#quantityView td{padding:9px 12px;text-align:left;border-bottom:1px solid #ffffff0a}
+#quantityView th{font-size:11px;background:#0d1823;color:#a7b8c9;font-weight:500}
+#quantityView .qt-pages{display:flex;gap:12px;align-items:center;justify-content:end;padding:12px 16px;color:#a7b8c9;font-size:12px}
+#quantityView .qt-technical{margin:0 16px 16px;color:#a7b8c9;font-size:11px}
+#quantityView .qt-technical pre{max-height:320px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#0d1823;padding:12px}
+#quantityView :focus-visible{outline:2px solid #66d4b0;outline-offset:3px}
+@media(max-width:1100px){body:has(#quantityView.is-active) .module-nav{left:210px;gap:8px}#quantityView.is-active{grid-template-columns:150px minmax(0,1fr);gap:16px}#quantityView .filters-inner{grid-template-columns:repeat(3,minmax(0,1fr))}#quantityView .qt-analysis,#quantityView .qt-origins{grid-template-columns:minmax(0,1fr)}#quantityView .qt-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){body:has(#quantityView.is-active) .header-inner{width:calc(100% - 24px);min-height:58px}body:has(#quantityView.is-active) .module-nav{position:static;width:calc(100% - 24px);margin:0 auto;min-height:44px;display:flex;flex-wrap:wrap;gap:4px}body:has(#quantityView.is-active) .module-tab{font-size:10px;padding:8px}#quantityView.is-active{grid-template-columns:minmax(0,1fr);width:calc(100% - 24px);gap:0}#quantityView .qt-main{padding-top:14px}#quantityView .qt-rail{position:static;min-height:0;border:1px solid #293a4b;border-radius:4px;padding:0;margin-top:10px}#quantityView .qt-rail>summary{display:list-item;padding:10px 12px;font-size:12px;color:#a7b8c9;cursor:pointer}#quantityView .qt-rail>div{padding:12px}#quantityView .qt-rail nav{grid-template-columns:1fr 1fr;margin-bottom:16px}#quantityView .qt-rail-note{margin-bottom:0}#quantityView .qt-header h2{font-size:22px}#quantityView .filters-inner{grid-template-columns:repeat(2,minmax(0,1fr));padding:10px}#quantityView .qt-more{margin-top:20px}#quantityView .qt-more>div{position:absolute;width:290px;max-width:calc(100vw - 32px);grid-template-columns:1fr}#quantityView .chart-body{height:310px;min-height:310px;max-height:310px;padding:8px 12px}#quantityView .qt-kpis article{padding:12px}#quantityView .qt-kpis strong{font-size:22px}#quantityView .chart-header-flex{flex-wrap:wrap;gap:8px}}
+@media(max-width:420px){#quantityView .qt-kpis{grid-template-columns:minmax(0,1fr)}#quantityView .qt-more{grid-column:1/-1;margin:0}#quantityView .qt-more>div{position:static;width:auto;max-width:none;box-shadow:none;margin-top:8px}#quantityView .qt-header-top{align-items:start}#quantityView .qt-record-tools{display:grid;grid-template-columns:minmax(0,1fr)}}
