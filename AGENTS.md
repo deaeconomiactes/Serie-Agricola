@@ -9,14 +9,25 @@ Commodities agrícolas es un módulo separado de las cantidades y los precios ma
 ## Cómo trabajar
 
 - Antes de editar, identifica el pipeline y la documentación que corresponden a la tarea. Lee sólo las guías pertinentes; no es necesario releer todo el repositorio para cambios acotados.
-- El agente raíz conserva la responsabilidad de definir el alcance y los criterios de aceptación, integrar cambios y comunicar el resultado. Una tarea pequeña y bien acotada puede resolverse directamente sin delegación.
-- Delega sólo trabajo independiente que se beneficie de un especialista. Antes de delegar, indica objetivo, alcance, archivos bajo responsabilidad, restricciones y resultado esperado. Asigna un único responsable de edición por archivo y evita solapamientos.
-- Usa `explorer` para mapear código y flujos existentes cuando la tarea lo requiera; `researcher` para verificar fuentes externas y documentación oficial; `worker` para una implementación acotada; y `reviewer` para revisar cambios relevantes de arquitectura, fuentes, transformaciones o integridad de datos.
-- Las investigaciones independientes pueden correr en paralelo. La implementación debe tener propiedad de archivos clara. El agente raíz integra las entregas, revisa el diff completo y confirma las comprobaciones pertinentes antes de cerrar la tarea.
+- El agente raíz define el alcance y los criterios de aceptación, e intenta resolver directamente las tareas pequeñas o bien delimitadas antes de delegar.
+- Delega sólo cuando el trabajo sea realmente independiente y el beneficio esperado supere el costo de contexto y coordinación. No crees una cadena fija de planner, explorer, implementer, reviewer y tester.
+- Por defecto, no delegues. Si hace falta, usa como máximo un subagente activo y una sola ronda de delegación por tarea. No pidas a agentes distintos que repitan el mismo análisis; asigna un único responsable por archivo y fija objetivo, alcance, restricciones y resultado esperado.
+- Usa `explorer` para búsquedas acotadas de código, contexto y estructura; `researcher` para verificar una pregunta concreta en fuentes oficiales; `worker` con Luna para una implementación independiente y bien acotada. El agente raíz integra la entrega y valida el diff.
+- Escala a `sol_specialist` con GPT-6.1 Sol Medium sólo para decisiones arquitectónicas, cambios transversales, pipelines complejos, debugging persistente o cuando Terra no alcance una solución satisfactoria. No uses Sol como paso obligatorio.
+- No invoques `reviewer` con Astra automáticamente. Resérvalo para una petición manual del usuario o un problema excepcionalmente complejo que siga sin resolverse después de Sol.
 - Los subagentes heredan los permisos de la sesión principal: el perfil del agente no crea un entorno aislado ni garantiza acceso de sólo lectura. Elige los permisos de la sesión antes de delegar; si una exploración o revisión debe ser técnicamente de sólo lectura, usa una sesión principal de sólo lectura.
-- El modelo de `.codex/config.toml` es el default del agente raíz; una selección manual en Codex cambia el modelo principal de esa tarea. Los perfiles personalizados conservan el modelo que declaran. Estas instrucciones orientan la delegación, pero no obligan a iniciar subagentes en cada tarea.
+- `.codex/config.toml` define el modelo predeterminado del proyecto y los valores iniciales de subagentes; los perfiles personalizados pueden fijar su propio modelo. Si el usuario selecciona manualmente otro modelo en Codex, respeta esa selección y no intentes volver al predeterminado.
+- Conserva el contexto: no leas el repositorio completo sin una razón concreta; localiza primero los archivos relevantes y devuelve síntesis breves. Al delegar, pasa sólo objetivo, archivos, estado, restricciones, hallazgos y pregunta específica necesarios.
+- Ajusta la verificación al riesgo: cambios pequeños requieren comprobaciones específicas; cambios transversales, una revisión más amplia. No ejecutes un reviewer independiente en cada modificación.
 - No implementes una API cuando la tarea sea investigar o preparar arquitectura. Distingue hechos verificados, hipótesis y cuestiones pendientes.
 - En una implementación, añade o actualiza verificaciones específicas para las transformaciones y ejecuta las comprobaciones pertinentes antes de integrar.
+
+## Política de modelos y eficiencia
+
+- Modelo principal predeterminado: GPT-6.1 Terra Medium para el trabajo cotidiano del repositorio.
+- Luna es la opción habitual para búsquedas, triage, recopilación de contexto, documentación y cambios mecánicos o acotados.
+- Sol es un escalamiento selectivo para las tareas complejas descritas arriba; Astra no se inicia automáticamente.
+- Esta política busca reducir consumo innecesario, pero no garantiza una duración fija de sesión: los límites de uso dependen de la cuenta y del consumo acumulado en todos sus proyectos.
 
 ## Integridad de series de precios
 
