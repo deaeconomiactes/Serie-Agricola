@@ -13,7 +13,7 @@ name: MAGyP MCBA - productivo Windows self-hosted
 # Labels requeridos: self-hosted, windows, serie-agricola. El registro x64 agrega x64 además.
 # Verificar que figure Idle/Online y que la cuenta del runner pueda acceder al repo, GitHub/PyPI,
 # descargas de Playwright y https://ssma.magyp.gob.ar/frutas.precios.aspx de forma autorizada.
-# El job usa Microsoft Edge instalado; sólo instala Chromium temporal si Edge está ausente.
+# El job productivo requiere Microsoft Edge instalado; Chromium es sólo diagnóstico manual.
 # El piloto sigue siendo sólo diagnóstico manual: un smoke GitHub-hosted no acredita acceso a MAGyP.
 
 on:
@@ -30,7 +30,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: serie-agricola-data-writer
+  group: mcba-acquisition-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -44,8 +44,10 @@ jobs:
         shell: pwsh
     timeout-minutes: 15
     permissions:
-      contents: write
-      actions: write
+      contents: read
+    outputs:
+      candidate_ready: ${{ steps.candidate_artifact.outcome == 'success' }}
+      result: ${{ steps.capture.outputs.result }}
     env:
       MCBA_DATE: ${{ inputs.requested_date }}
       # Mantener LF en el helper Bash sin alterar la configuración global del host.
@@ -55,6 +57,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.ref }}
           persist-credentials: false
           fetch-depth: 0 # Tests de regresión comparan contra 5fb5987.
       - uses: actions/setup-node@v6
@@ -90,13 +93,14 @@ jobs:
           (Split-Path $bash) | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           python -m venv (Join-Path $root 'venv')
           (Join-Path $root 'venv/Scripts') | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-      - name: Dependencias fijadas y Edge preferido (Chromium sólo si falta Edge)
+      - name: Registrar baseline MCBA antes de adquirir
+        run: python scripts/ci/mcba_candidate.py baseline --published-dir data/magyp/dashboard/mcba --output "$env:MCBA_CAPTURE_ROOT/reports/PUBLICATION_BASELINE.json"
+      - name: Dependencias fijadas y verificación de Edge
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
           python -m pip install -r scripts/magyp/requirements-browser.txt
           $channel = python -c "from scripts.magyp.mcba.acquisition import preferred_browser_channel; print(preferred_browser_channel())"
-          if ($channel -notin @('msedge', 'chromium')) { throw 'Canal de navegador inválido' }
-          if ($channel -eq 'chromium') { python -m playwright install chromium }
+          if ($channel -ne 'msedge') { throw 'Microsoft Edge es requerido para la captura productiva MCBA' }
           "MCBA_BROWSER_CHANNEL=$channel" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Output "[FETCH] MCBA browser=chromium channel=$channel"
       - name: Tests offline antes de la captura
@@ -109,6 +113,7 @@ jobs:
           node --test @frontendTests
       - name: Captura, normalización, analytical y publicación local validada
         id: capture
+        timeout-minutes: 8
         continue-on-error: true
         run: >-
           python scripts/magyp/mcba/update_mcba_dashboard.py
@@ -120,8 +125,9 @@ jobs:
         run: |
           $statusPath = Join-Path $env:MCBA_CAPTURE_ROOT 'reports/MCBA_RUN_STATUS.json'
           if (!(Test-Path -LiteralPath $statusPath)) { throw 'Falta resultado explícito MCBA; no inferir estado' }
-          python scripts/magyp/build_price_freshness.py --mcba-status "$statusPath"
+          Write-Output "Resultado explícito guardado: $statusPath"
       - name: Validar bundle final
+        id: validated
         if: steps.capture.outputs.result == 'UPDATED'
         env:
           CAPTURE_OUTCOME: ${{ steps.capture.outcome }}
@@ -133,71 +139,27 @@ jobs:
           python -m unittest discover -s tests/magyp_mcba -v
           node --test tests/magyp_frontend/*.test.cjs
           git diff --check
-      - name: Publicar exclusivamente salidas MCBA validadas
-        id: publish_data
-        if: github.ref == 'refs/heads/main' && steps.capture.outputs.result == 'UPDATED' && steps.capture.outcome == 'success'
-        env:
-          CAPTURE_OUTCOME: ${{ steps.capture.outcome }}
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          flags=()
-          if [ "$CAPTURE_OUTCOME" = success ]; then
-            git add -- data/magyp/dashboard/mcba/MCBA_MAGYP_DAILY.csv \
-              data/magyp/dashboard/mcba/MCBA_MAGYP_DETAIL.csv \
-              data/magyp/dashboard/mcba/MCBA_MAGYP_LATEST.csv \
-              data/magyp/dashboard/mcba/MCBA_MAGYP_SUMMARY.csv \
-              data/magyp/dashboard/mcba/_SUCCESS.json
-          else
-            flags+=(--capture-failed)
-            echo '[PUBLISH] MAGYP_LAST_VALID: conservar todos los CSV; publicar sólo estado.'
-          fi
-          git add -- data/magyp/dashboard/mcba/MCBA_MAGYP_UPDATE_STATUS.json
-          python scripts/magyp/mcba/validate_production_mcba.py --requested-date "$MCBA_DATE" --check-staged "${flags[@]}"
-          git diff --cached --check
-          if git diff --cached --quiet; then
-            echo '[PUBLISH] Sin cambios MCBA.'
-          else
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git commit -m 'chore: actualizar MCBA MAGyP y estado de fuente'
-            # Autenticación efímera por entorno: nunca escribir tokens en Git config.
-            header=$(python -c 'import base64, os; print(base64.b64encode(("x-access-token:" + os.environ["GH_TOKEN"]).encode()).decode())')
-            echo "::add-mask::$header"
-            export GIT_CONFIG_COUNT=2
-            export GIT_CONFIG_KEY_1=http.https://github.com/.extraheader
-            export GIT_CONFIG_VALUE_1="AUTHORIZATION: basic $header"
-            trap 'unset GH_TOKEN GIT_CONFIG_VALUE_1 header' EXIT
-            mkdir -p "$MCBA_CAPTURE_ROOT/reports"
-            bash scripts/ci/push_data_main.sh 2>&1 | tee "$MCBA_CAPTURE_ROOT/reports/MCBA_PUBLICATION.log"
-          fi
-      - name: Publicar metadata de disponibilidad, sin tocar CSV
-        id: publish_freshness
-        if: always() && github.ref == 'refs/heads/main' && steps.freshness.outcome == 'success' && (steps.capture.outputs.result != 'UPDATED' || steps.publish_data.outcome == 'success')
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: bash scripts/ci/publish_price_freshness.sh
-      - name: Desplegar Pages explícitamente desde main
-        if: always() && github.ref == 'refs/heads/main' && (steps.publish_freshness.outputs.changed == 'true' || (steps.capture.outputs.result == 'UPDATED' && steps.capture.outcome == 'success' && steps.publish_freshness.outcome == 'success'))
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run deploy.yml --ref main
-      - name: CSV livianos para revisión y posterior publicación manual
-        if: ${{ always() }}
+      - name: Preparar candidato cerrado, sin frescura ajena ni RAW
+        id: candidate
+        if: always() && steps.freshness.outcome == 'success' && (steps.capture.outputs.result != 'UPDATED' || steps.validated.outcome == 'success')
+        run: >-
+          python scripts/ci/mcba_candidate.py pack
+          --published-dir data/magyp/dashboard/mcba
+          --baseline "$env:MCBA_CAPTURE_ROOT/reports/PUBLICATION_BASELINE.json"
+          --status "$env:MCBA_CAPTURE_ROOT/reports/MCBA_RUN_STATUS.json"
+          --destination "$env:MCBA_JOB_ROOT/candidate"
+      - name: Conservar candidato antes de publicar en Linux
+        id: candidate_artifact
+        if: always() && steps.candidate.outcome == 'success'
         uses: actions/upload-artifact@v5
         with:
-          name: mcba-pages-candidate
+          name: mcba-publication-candidate-${{ github.run_id }}
           retention-days: 14
-          path: |
-            data/magyp/dashboard/mcba/MCBA_MAGYP_DAILY.csv
-            data/magyp/dashboard/mcba/MCBA_MAGYP_DETAIL.csv
-            data/magyp/dashboard/mcba/MCBA_MAGYP_LATEST.csv
-            data/magyp/dashboard/mcba/MCBA_MAGYP_SUMMARY.csv
-            data/magyp/dashboard/mcba/MCBA_MAGYP_UPDATE_STATUS.json
-            data/magyp/reports/PRICE_FRESHNESS_STATUS.json
-            data/magyp/dashboard/mcba/_SUCCESS.json
+          if-no-files-found: error
+          path: ${{ env.MCBA_JOB_ROOT }}/candidate/
+      - name: Resultado operativo de adquisición
+        if: always() && env.MCBA_CAPTURE_ROOT != ''
+        run: python scripts/ci/workflow_status.py summary --source MAGyP_MCBA --status-file "$env:MCBA_CAPTURE_ROOT/reports/MCBA_RUN_STATUS.json"
       - name: Respaldo RAW sin estado de sesión, separado de Pages
         if: ${{ always() && env.MCBA_CAPTURE_ROOT != '' }}
         uses: actions/upload-artifact@v5
@@ -235,3 +197,69 @@ jobs:
           if ($target -ne $expected -or !$target.StartsWith($base + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'No limpiar fuera del temporal autorizado' }
           if ((Get-Item -LiteralPath $target).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'No limpiar un enlace/junction' }
           Remove-Item -LiteralPath $target -Recurse -Force -ErrorAction Stop
+
+  publish:
+    needs: prepare
+    if: always() && !cancelled() && github.ref == 'refs/heads/main' && needs.prepare.outputs.candidate_ready == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: serie-agricola-data-writer
+      queue: max
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r scripts/magyp/requirements.txt
+      - uses: actions/download-artifact@v4
+        with:
+          name: mcba-publication-candidate-${{ github.run_id }}
+          path: ${{ runner.temp }}/mcba-candidate
+      - name: Validar candidato y reconstruir frescura desde main actual
+        id: candidate
+        run: python scripts/ci/mcba_candidate.py apply --root . --candidate "$RUNNER_TEMP/mcba-candidate"
+      - name: Publicar bundle, estado y frescura en un único commit
+        id: publication
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -- data/magyp/dashboard/mcba/MCBA_MAGYP_DAILY.csv \
+            data/magyp/dashboard/mcba/MCBA_MAGYP_DETAIL.csv \
+            data/magyp/dashboard/mcba/MCBA_MAGYP_LATEST.csv \
+            data/magyp/dashboard/mcba/MCBA_MAGYP_SUMMARY.csv \
+            data/magyp/dashboard/mcba/_SUCCESS.json \
+            data/magyp/dashboard/mcba/MCBA_MAGYP_UPDATE_STATUS.json \
+            data/magyp/reports/PRICE_FRESHNESS_STATUS.json
+          git diff --cached --check
+          python scripts/ci/workflow_status.py plan
+          if ! git diff --cached --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'chore: actualizar MCBA MAGyP y estado de fuente'
+            bash scripts/ci/push_data_main.sh
+          fi
+      - name: Deploy sólo después de cambio productivo publicado
+        id: deploy
+        if: steps.publication.outputs.deploy_required == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main
+      - name: Resumen final de publicación
+        if: always()
+        env:
+          CHANGED: ${{ steps.publication.outcome == 'success' && steps.publication.outputs.changed == 'true' }}
+          DEPLOY: ${{ steps.publication.outcome == 'success' && steps.publication.outputs.deploy_required == 'true' }}
+          FINAL_RESULT: ${{ (steps.candidate.outcome == 'failure' || steps.publication.outcome == 'failure' || steps.deploy.outcome == 'failure') && 'PIPELINE_ERROR' || needs.prepare.outputs.result || 'PIPELINE_ERROR' }}
+        run: >-
+          python scripts/ci/workflow_status.py summary --source MAGyP_MCBA
+          --status "$FINAL_RESULT" --status-file "$RUNNER_TEMP/mcba-candidate/candidate.json"
+          --last-csv data/magyp/dashboard/mcba/MCBA_MAGYP_SUMMARY.csv
+          --changed "$CHANGED" --deploy "$DEPLOY"
