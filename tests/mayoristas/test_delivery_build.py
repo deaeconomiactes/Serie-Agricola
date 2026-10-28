@@ -94,5 +94,16 @@ class DeliveryBuildTests(unittest.TestCase):
             self.assertEqual(total,count);self.assertEqual(len(set(orders)),count)
         self.assertTrue({2024,2025,2026}.issubset(index['years']))
 
+    def test_pages_excludes_sio_audit_evidence_without_removing_sources(self):
+        reports=self.root/'data/commodities_sio/reports';reports.mkdir(parents=True)
+        names=('SIO_GRAIN_AUDIT.json','CASOS_PRECIOS_CERO_SIO.csv')
+        for name in names:(reports/name).write_text('audit evidence',encoding='utf-8')
+        (reports/'runtime.json').write_text('{}',encoding='utf-8')
+        destination=Path(self.temporary.name)/'pages';prepare(self.root,destination)
+        for name in names:
+            self.assertTrue((reports/name).exists())
+            self.assertFalse((destination/'data/commodities_sio/reports'/name).exists())
+        self.assertTrue((destination/'data/commodities_sio/reports/runtime.json').exists())
+
 
 if __name__=='__main__':unittest.main()

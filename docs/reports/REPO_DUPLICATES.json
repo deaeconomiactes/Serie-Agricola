@@ -1,0 +1,678 @@
+[
+  {
+    "sha256": "836c0945412d12e97f7acae45f28b5405ac19bf0535c4cf1b24e6d7d375acc4a",
+    "bytes": 30238719,
+    "paths": [
+      "PRECIOS_MAYORISTAS_2026_INTEGRADO.csv",
+      "PRECIOS_MAYORISTAS_INTEGRADO.csv"
+    ],
+    "consumers": {
+      "PRECIOS_MAYORISTAS_2026_INTEGRADO.csv": {
+        "frontend": [
+          "app.js"
+        ],
+        "script": [
+          "auditar_precios_2026.py",
+          "auditar_precios_ba_2024_2025.py",
+          "auditar_unidades_precios.py",
+          "integrar_precios_2026.py",
+          "integrar_precios_mcba_2024_2025.py",
+          "scripts/ci/inventory_repository.py",
+          "scripts/ci/prepare_pages.py"
+        ],
+        "docs": [
+          "data/precios_mayoristas/reports/REPORTE_AUDITORIA_FUNCIONAMIENTO_PRECIOS.md",
+          "data/precios_mayoristas/reports/REPORTE_AUDITORIA_PRECIOS_BA_2024_2025.md",
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "PRECIOS_MAYORISTAS_INTEGRADO.csv": {
+        "docs": [
+          "REPORTE_AUDITORIA_PRECIOS.md",
+          "REPORTE_AUDITORIA_PRECIOS_2026.md",
+          "REPORTE_AUDITORIA_UNIDADES_PRECIOS.md",
+          "data/magyp/reports/MCBA_CURRENT_DUPLICATE_AUDIT.md",
+          "data/magyp/reports/MCBA_CURRENT_VS_MAGYP.md",
+          "data/magyp/reports/MCBA_PHASE3_READINESS_REPORT.md",
+          "data/precios_mayoristas/reports/REPORTE_AUDITORIA_FUNCIONAMIENTO_PRECIOS.md",
+          "data/precios_mayoristas/reports/REPORTE_AUDITORIA_PRECIOS_BA_2024_2025.md",
+          "docs/MAYORISTAS_FRAGMENTED_OUTPUTS.md",
+          "docs/REPO_CLEANUP_MANIFEST.json",
+          "docs/audit/2026-10-22/BROWSER_AUDIT_EVIDENCE.json"
+        ],
+        "frontend": [
+          "app.js"
+        ],
+        "script": [
+          "auditar_precios_2026.py",
+          "auditar_precios_ba_2024_2025.py",
+          "auditar_unidades_precios.py",
+          "integrar_precios_2026.py",
+          "integrar_precios_mcba_2024_2025.py",
+          "scripts/ci/inventory_repository.py",
+          "scripts/ci/prepare_pages.py",
+          "scripts/magyp/build_price_freshness.py",
+          "scripts/magyp/investigate_corrientes.py",
+          "scripts/magyp/mcba/compare_mcba_current_vs_magyp.py",
+          "scripts/magyp/mcba/validate_coverage_mcba.py",
+          "scripts/magyp/mcba/validate_readiness_mcba.py",
+          "scripts/mayoristas/build_dashboard.py",
+          "scripts/mayoristas/source_rows.cjs",
+          "scripts/mercado_central/audit_history.py",
+          "scripts/mercado_central/validate_mcba_monthly.py"
+        ],
+        "test": [
+          "tests/ci/test_mcba_candidate.py",
+          "tests/magyp_common/test_price_freshness.py",
+          "tests/magyp_frontend/regression.test.cjs",
+          "tests/mayoristas/test_delivery_build.py"
+        ]
+      }
+    },
+    "canonical": "PRECIOS_MAYORISTAS_INTEGRADO.csv",
+    "action": "REVIEW_REQUIRED",
+    "reason": "La copia legacy tiene consumidores y referencias; no se ha probado su retiro seguro."
+  },
+  {
+    "sha256": "3d614676f4e33cef1a483f68e871d490a9475ff90b9d41dbe3e9c9d736b03f74",
+    "bytes": 3090,
+    "paths": [
+      "REPORTE_AUDITORIA_PRECIOS.md",
+      "REPORTE_AUDITORIA_PRECIOS_2026.md"
+    ],
+    "consumers": {
+      "REPORTE_AUDITORIA_PRECIOS.md": {
+        "script": [
+          "auditar_precios_2026.py"
+        ],
+        "docs": [
+          "data/precios_mayoristas/reports/REPORTE_AUDITORIA_FUNCIONAMIENTO_PRECIOS.md",
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "REPORTE_AUDITORIA_PRECIOS_2026.md": {
+        "script": [
+          "auditar_precios_2026.py"
+        ],
+        "docs": [
+          "data/precios_mayoristas/reports/REPORTE_AUDITORIA_FUNCIONAMIENTO_PRECIOS.md",
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      }
+    },
+    "canonical": "REVIEW_REQUIRED",
+    "action": "REVIEW_REQUIRED",
+    "reason": "Evidencia o salidas con rutas distintas; consumidores y significado requieren revisión."
+  },
+  {
+    "sha256": "055c422ad624c448a576193720d5459b0c970f6d4c51ed238c0fe42c0dea15a4",
+    "bytes": 3284,
+    "paths": [
+      "data/carnes/dashboard/magyp_indicators_archive-exports-monthly-2019-055c422ad624c448.csv.gz",
+      "tests/carnes/fixtures/ui/magyp_indicators_archive-exports-monthly-2019-055c422ad624c448.csv.gz"
+    ],
+    "consumers": {
+      "data/carnes/dashboard/magyp_indicators_archive-exports-monthly-2019-055c422ad624c448.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "tests/carnes/fixtures/ui/magyp_indicators_archive-exports-monthly-2019-055c422ad624c448.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      }
+    },
+    "canonical": "data/carnes/dashboard/",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente."
+  },
+  {
+    "sha256": "719d494a7971a12b46a005096ba7533c9f06b6d579b940c4b0ade666884ba71e",
+    "bytes": 2335,
+    "paths": [
+      "data/carnes/dashboard/magyp_indicators_archive-livestock_price-monthly-2019-719d494a7971a12b.csv.gz",
+      "tests/carnes/fixtures/ui/magyp_indicators_archive-livestock_price-monthly-2019-719d494a7971a12b.csv.gz"
+    ],
+    "consumers": {
+      "data/carnes/dashboard/magyp_indicators_archive-livestock_price-monthly-2019-719d494a7971a12b.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "tests/carnes/fixtures/ui/magyp_indicators_archive-livestock_price-monthly-2019-719d494a7971a12b.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      }
+    },
+    "canonical": "data/carnes/dashboard/",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente."
+  },
+  {
+    "sha256": "9b9a727808cb327ca0889efd2e8d5ee90ba3141aa455add057d88c45e43972b6",
+    "bytes": 15885,
+    "paths": [
+      "data/carnes/dashboard/magyp_production_current-carcass_weight-monthly-2026-9b9a727808cb327c.csv.gz",
+      "tests/carnes/fixtures/ui/magyp_production_current-carcass_weight-monthly-2026-9b9a727808cb327c.csv.gz"
+    ],
+    "consumers": {
+      "data/carnes/dashboard/magyp_production_current-carcass_weight-monthly-2026-9b9a727808cb327c.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "tests/carnes/fixtures/ui/magyp_production_current-carcass_weight-monthly-2026-9b9a727808cb327c.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      }
+    },
+    "canonical": "data/carnes/dashboard/",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente."
+  },
+  {
+    "sha256": "3fc96b12f67902d04129f934e9c9d44259f947d41d1a78b5d992468b42f6eacc",
+    "bytes": 3304,
+    "paths": [
+      "data/carnes/dashboard/magyp_production_current-carcass_weight-year_to_date-2026-3fc96b12f67902d0.csv.gz",
+      "tests/carnes/fixtures/ui/magyp_production_current-carcass_weight-year_to_date-2026-3fc96b12f67902d0.csv.gz"
+    ],
+    "consumers": {
+      "data/carnes/dashboard/magyp_production_current-carcass_weight-year_to_date-2026-3fc96b12f67902d0.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "tests/carnes/fixtures/ui/magyp_production_current-carcass_weight-year_to_date-2026-3fc96b12f67902d0.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      }
+    },
+    "canonical": "data/carnes/dashboard/",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente."
+  },
+  {
+    "sha256": "1ab456e6f3047f2891dfffb028e63cd766b2a5be3957b4cf2b8a986d0472881c",
+    "bytes": 15309,
+    "paths": [
+      "data/carnes/dashboard/magyp_production_current-production-monthly-2026-1ab456e6f3047f28.csv.gz",
+      "tests/carnes/fixtures/ui/magyp_production_current-production-monthly-2026-1ab456e6f3047f28.csv.gz"
+    ],
+    "consumers": {
+      "data/carnes/dashboard/magyp_production_current-production-monthly-2026-1ab456e6f3047f28.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "tests/carnes/fixtures/ui/magyp_production_current-production-monthly-2026-1ab456e6f3047f28.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      }
+    },
+    "canonical": "data/carnes/dashboard/",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente."
+  },
+  {
+    "sha256": "43f1ce1dd1a5a97fc4d455f836e0b39728e3110aa999dc7fb0db5dea5b5b8792",
+    "bytes": 3948,
+    "paths": [
+      "data/carnes/dashboard/magyp_production_current-production-year_to_date-2026-43f1ce1dd1a5a97f.csv.gz",
+      "tests/carnes/fixtures/ui/magyp_production_current-production-year_to_date-2026-43f1ce1dd1a5a97f.csv.gz"
+    ],
+    "consumers": {
+      "data/carnes/dashboard/magyp_production_current-production-year_to_date-2026-43f1ce1dd1a5a97f.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "tests/carnes/fixtures/ui/magyp_production_current-production-year_to_date-2026-43f1ce1dd1a5a97f.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      }
+    },
+    "canonical": "data/carnes/dashboard/",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente."
+  },
+  {
+    "sha256": "9d6c12451bf3a387ba0df72396f7ead7ed83ad9ad24f71db07ca95f469fd00fa",
+    "bytes": 43509,
+    "paths": [
+      "data/carnes/dashboard/magyp_slaughter_2018-slaughter-monthly-2018-9d6c12451bf3a387.csv.gz",
+      "tests/carnes/fixtures/ui/magyp_slaughter_2018-slaughter-monthly-2018-9d6c12451bf3a387.csv.gz"
+    ],
+    "consumers": {
+      "data/carnes/dashboard/magyp_slaughter_2018-slaughter-monthly-2018-9d6c12451bf3a387.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "tests/carnes/fixtures/ui/magyp_slaughter_2018-slaughter-monthly-2018-9d6c12451bf3a387.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      }
+    },
+    "canonical": "data/carnes/dashboard/",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente."
+  },
+  {
+    "sha256": "612acf074c91f3b6467519352f2f4a2d6bd47d99ca848509e5b2176f98063136",
+    "bytes": 60795,
+    "paths": [
+      "data/carnes/dashboard/magyp_slaughter_2019-slaughter-monthly-2019-612acf074c91f3b6.csv.gz",
+      "tests/carnes/fixtures/ui/magyp_slaughter_2019-slaughter-monthly-2019-612acf074c91f3b6.csv.gz"
+    ],
+    "consumers": {
+      "data/carnes/dashboard/magyp_slaughter_2019-slaughter-monthly-2019-612acf074c91f3b6.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "tests/carnes/fixtures/ui/magyp_slaughter_2019-slaughter-monthly-2019-612acf074c91f3b6.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      }
+    },
+    "canonical": "data/carnes/dashboard/",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente."
+  },
+  {
+    "sha256": "a1063a7c4a5dc380dce16545fb3b9b1a79a62d4f62aff4a333fdf1f2f028fcfc",
+    "bytes": 38312,
+    "paths": [
+      "data/carnes/dashboard/magyp_slaughter_current-slaughter-monthly-2026-a1063a7c4a5dc380.csv.gz",
+      "tests/carnes/fixtures/ui/magyp_slaughter_current-slaughter-monthly-2026-a1063a7c4a5dc380.csv.gz"
+    ],
+    "consumers": {
+      "data/carnes/dashboard/magyp_slaughter_current-slaughter-monthly-2026-a1063a7c4a5dc380.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json",
+          "docs/audit/2026-10-22/BROWSER_AUDIT_EVIDENCE.json"
+        ]
+      },
+      "tests/carnes/fixtures/ui/magyp_slaughter_current-slaughter-monthly-2026-a1063a7c4a5dc380.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      }
+    },
+    "canonical": "data/carnes/dashboard/",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente."
+  },
+  {
+    "sha256": "01766c7ba1defde8b4e51c34d6873d56dafdf729fd3830575a0d0594ee2be5b4",
+    "bytes": 9458,
+    "paths": [
+      "data/carnes/dashboard/magyp_slaughter_current-slaughter-year_to_date-2026-01766c7ba1defde8.csv.gz",
+      "tests/carnes/fixtures/ui/magyp_slaughter_current-slaughter-year_to_date-2026-01766c7ba1defde8.csv.gz"
+    ],
+    "consumers": {
+      "data/carnes/dashboard/magyp_slaughter_current-slaughter-year_to_date-2026-01766c7ba1defde8.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "tests/carnes/fixtures/ui/magyp_slaughter_current-slaughter-year_to_date-2026-01766c7ba1defde8.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      }
+    },
+    "canonical": "data/carnes/dashboard/",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente."
+  },
+  {
+    "sha256": "147b3b8c4f3b5ebcf5a70346308330112dd961cc86f2e9604a7ed563b5f5f2e1",
+    "bytes": 3188,
+    "paths": [
+      "data/carnes/dashboard/sspm_40_3-production-monthly-2026-147b3b8c4f3b5ebc.csv.gz",
+      "tests/carnes/fixtures/ui/sspm_40_3-production-monthly-2026-147b3b8c4f3b5ebc.csv.gz"
+    ],
+    "consumers": {
+      "data/carnes/dashboard/sspm_40_3-production-monthly-2026-147b3b8c4f3b5ebc.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "tests/carnes/fixtures/ui/sspm_40_3-production-monthly-2026-147b3b8c4f3b5ebc.csv.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      }
+    },
+    "canonical": "data/carnes/dashboard/",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente."
+  },
+  {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0,
+    "paths": [
+      "data/commodities/processed/.gitkeep",
+      "data/commodities/raw/.gitkeep",
+      "data/commodities/reports/.gitkeep",
+      "data/commodities_bcr/processed/.gitkeep",
+      "data/commodities_bcr/raw/.gitkeep",
+      "data/commodities_bcr/reports/.gitkeep",
+      "data/commodities_sio/processed/.gitkeep",
+      "data/commodities_sio/raw/.gitkeep",
+      "data/commodities_sio/reports/.gitkeep",
+      "data/magyp/analytical/mcba/.gitkeep",
+      "data/magyp/dashboard/mcba/.gitkeep",
+      "data/magyp/normalized/mcba/.gitkeep",
+      "data/magyp/raw/mcba/.gitkeep",
+      "data/magyp/reports/.gitkeep",
+      "scripts/magyp/grains/.gitkeep",
+      "scripts/magyp/meats/.gitkeep",
+      "scripts/magyp/sio/.gitkeep",
+      "scripts/mercado_central/__init__.py"
+    ],
+    "consumers": {
+      "data/commodities/processed/.gitkeep": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/commodities/raw/.gitkeep": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/commodities/reports/.gitkeep": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/commodities_bcr/processed/.gitkeep": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/commodities_bcr/raw/.gitkeep": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/commodities_bcr/reports/.gitkeep": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/commodities_sio/processed/.gitkeep": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/commodities_sio/raw/.gitkeep": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/commodities_sio/reports/.gitkeep": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/magyp/analytical/mcba/.gitkeep": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/magyp/dashboard/mcba/.gitkeep": {
+        "docs": [
+          "data/magyp/reports/PILOTO_MCBA_ENTREGA.md",
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/magyp/normalized/mcba/.gitkeep": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/magyp/raw/mcba/.gitkeep": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/magyp/reports/.gitkeep": {
+        "docs": [
+          "data/magyp/reports/PILOTO_MCBA_ENTREGA.md",
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "scripts/magyp/grains/.gitkeep": {
+        "docs": [
+          "data/magyp/reports/PILOTO_MCBA_ENTREGA.md",
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "scripts/magyp/meats/.gitkeep": {
+        "docs": [
+          "data/magyp/reports/PILOTO_MCBA_ENTREGA.md",
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "scripts/magyp/sio/.gitkeep": {
+        "docs": [
+          "data/magyp/reports/PILOTO_MCBA_ENTREGA.md",
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "scripts/mercado_central/__init__.py": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      }
+    },
+    "canonical": "Cada ruta cumple una función distinta",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar."
+  },
+  {
+    "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+    "bytes": 2,
+    "paths": [
+      "data/commodities_local_mensual/processed/.gitkeep",
+      "data/commodities_local_mensual/raw/.gitkeep",
+      "data/commodities_sio/devtools/.gitkeep",
+      "data/commodities_worldbank/dashboard/.gitkeep",
+      "data/commodities_worldbank/processed/.gitkeep",
+      "data/commodities_worldbank/raw/.gitkeep",
+      "data/commodities_worldbank/reports/.gitkeep"
+    ],
+    "consumers": {
+      "data/commodities_local_mensual/processed/.gitkeep": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/commodities_local_mensual/raw/.gitkeep": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/commodities_sio/devtools/.gitkeep": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/commodities_worldbank/dashboard/.gitkeep": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/commodities_worldbank/processed/.gitkeep": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/commodities_worldbank/raw/.gitkeep": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/commodities_worldbank/reports/.gitkeep": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      }
+    },
+    "canonical": "Cada ruta cumple una función distinta",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar."
+  },
+  {
+    "sha256": "30f8cc706d6d9c01dacddaf49cb11782160cfd7575e08487b3bb5c1af95d5da5",
+    "bytes": 2681,
+    "paths": [
+      "data/commodities_local_mensual/reports/REPORTE_AUDITORIA_COMMODITIES_LOCAL_MENSUAL.md",
+      "data/commodities_local_mensual/reports/REPORTE_AUDITORIA_LOCAL_MENSUAL.md"
+    ],
+    "consumers": {
+      "data/commodities_local_mensual/reports/REPORTE_AUDITORIA_COMMODITIES_LOCAL_MENSUAL.md": {
+        "script": [
+          "auditar_commodities_local_mensual.py"
+        ],
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/commodities_local_mensual/reports/REPORTE_AUDITORIA_LOCAL_MENSUAL.md": {
+        "script": [
+          "auditar_commodities_local_mensual.py"
+        ],
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      }
+    },
+    "canonical": "REVIEW_REQUIRED",
+    "action": "REVIEW_REQUIRED",
+    "reason": "Evidencia o salidas con rutas distintas; consumidores y significado requieren revisión."
+  },
+  {
+    "sha256": "a6eecac59f3c393f87d2fe22540e315cdc0be20e3742af3f6674af1395c5356e",
+    "bytes": 599,
+    "paths": [
+      "data/magyp/reports/MCBA_MONTH_MATCHING_DAILY.csv",
+      "data/magyp/reports/MCBA_MONTH_MATCHING_OBSERVED_AGGREGATES.csv"
+    ],
+    "consumers": {
+      "data/magyp/reports/MCBA_MONTH_MATCHING_DAILY.csv": {
+        "docs": [
+          "data/magyp/reports/MCBA_PHASE3_READINESS_REPORT.md",
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/magyp/reports/MCBA_MONTH_MATCHING_OBSERVED_AGGREGATES.csv": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      }
+    },
+    "canonical": "REVIEW_REQUIRED",
+    "action": "REVIEW_REQUIRED",
+    "reason": "Evidencia o salidas con rutas distintas; consumidores y significado requieren revisión."
+  },
+  {
+    "sha256": "6a7aa8c8b193b66422cb6eedfb5d35ec673c42023c6a0b2a19b227fc5c636131",
+    "bytes": 5221,
+    "paths": [
+      "data/mayoristas/dashboard/corrientes-anual-2024-legacy-6a7aa8c8b193b664.json.gz",
+      "data/mayoristas/dashboard/corrientes-diaria-2024-legacy-6a7aa8c8b193b664.json.gz",
+      "data/mayoristas/dashboard/corrientes-mensual-2024-legacy-6a7aa8c8b193b664.json.gz"
+    ],
+    "consumers": {
+      "data/mayoristas/dashboard/corrientes-anual-2024-legacy-6a7aa8c8b193b664.json.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/mayoristas/dashboard/corrientes-diaria-2024-legacy-6a7aa8c8b193b664.json.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/mayoristas/dashboard/corrientes-mensual-2024-legacy-6a7aa8c8b193b664.json.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      }
+    },
+    "canonical": "Cada descriptor del índice",
+    "action": "KEEP",
+    "reason": "Rutas de vistas distintas referenciadas por el índice; bytes iguales no permiten retirar una ruta."
+  },
+  {
+    "sha256": "3d4485d342d145459a3dd2bdb0507cd9cb5a4678d412df3cf55eea7df079d53e",
+    "bytes": 510674,
+    "paths": [
+      "data/mayoristas/dashboard/corrientes-anual-2025-legacy-3d4485d342d14545.json.gz",
+      "data/mayoristas/dashboard/corrientes-diaria-2025-legacy-3d4485d342d14545.json.gz",
+      "data/mayoristas/dashboard/corrientes-mensual-2025-legacy-3d4485d342d14545.json.gz"
+    ],
+    "consumers": {
+      "data/mayoristas/dashboard/corrientes-anual-2025-legacy-3d4485d342d14545.json.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/mayoristas/dashboard/corrientes-diaria-2025-legacy-3d4485d342d14545.json.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/mayoristas/dashboard/corrientes-mensual-2025-legacy-3d4485d342d14545.json.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      }
+    },
+    "canonical": "Cada descriptor del índice",
+    "action": "KEEP",
+    "reason": "Rutas de vistas distintas referenciadas por el índice; bytes iguales no permiten retirar una ruta."
+  },
+  {
+    "sha256": "747e1f40b50a9e6571db2d4195bfca7dea684cb4a7e1042eca6586d21f77f329",
+    "bytes": 299351,
+    "paths": [
+      "data/mayoristas/dashboard/corrientes-anual-2026-legacy-747e1f40b50a9e65.json.gz",
+      "data/mayoristas/dashboard/corrientes-diaria-2026-legacy-747e1f40b50a9e65.json.gz",
+      "data/mayoristas/dashboard/corrientes-mensual-2026-legacy-747e1f40b50a9e65.json.gz"
+    ],
+    "consumers": {
+      "data/mayoristas/dashboard/corrientes-anual-2026-legacy-747e1f40b50a9e65.json.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/mayoristas/dashboard/corrientes-diaria-2026-legacy-747e1f40b50a9e65.json.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      },
+      "data/mayoristas/dashboard/corrientes-mensual-2026-legacy-747e1f40b50a9e65.json.gz": {
+        "docs": [
+          "docs/REPO_CLEANUP_MANIFEST.json"
+        ]
+      }
+    },
+    "canonical": "Cada descriptor del índice",
+    "action": "KEEP",
+    "reason": "Rutas de vistas distintas referenciadas por el índice; bytes iguales no permiten retirar una ruta."
+  }
+]

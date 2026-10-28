@@ -208,3 +208,21 @@ data/mercado_central/analytical/
 !tests/ci/*.py
 !data/mayoristas/dashboard/*.json.gz
 !data/mayoristas/reports/*.csv
+
+# Entornos y evidencia local; no se ignoran fixtures ni outputs dashboard.
+.venv/
+venv/
+node_modules/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+playwright-report/
+test-results/
+*.log
+*.tmp
+# El inventario ligero generado es documentación versionable.
+!docs/reports/REPO_INVENTORY.csv
+/screenshots/
+/browser-reports/
+/local-evidence/
+!docs/reports/PAGES_CONTENTS.csv
