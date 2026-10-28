@@ -1,0 +1,830 @@
+[
+  {
+    "path": "PRECIOS_MAYORISTAS_INTEGRADO.csv",
+    "classification": "BUILD_INPUT",
+    "action": "KEEP",
+    "reason": "Insumo del builder de shards y de controles históricos; contiene historia MCBA y Corrientes.",
+    "replaced_by": "data/mayoristas/dashboard/index.json",
+    "references_found": [
+      "scripts/mayoristas/build_dashboard.py",
+      "scripts/mayoristas/source_rows.cjs",
+      "scripts/mercado_central/validate_mcba_monthly.py",
+      "scripts/ci/prepare_pages.py",
+      "tests/mayoristas/test_delivery_build.py"
+    ],
+    "validated_safe": true
+  },
+  {
+    "path": "PRECIOS_MAYORISTAS_2026_INTEGRADO.csv",
+    "classification": "HISTORICAL_FALLBACK",
+    "action": "REVIEW_REQUIRED",
+    "reason": "Blob idéntico al integrado en HEAD; copia legacy generada y citada en auditorías. No se ha demostrado que todos sus consumidores externos puedan retirarse.",
+    "replaced_by": "PRECIOS_MAYORISTAS_INTEGRADO.csv",
+    "references_found": [
+      "integrar_precios_2026.py",
+      "auditar_precios_2026.py",
+      "scripts/ci/prepare_pages.py",
+      "data/precios_mayoristas/reports/REPORTE_AUDITORIA_FUNCIONAMIENTO_PRECIOS.md"
+    ],
+    "validated_safe": false
+  },
+  {
+    "path": "REGISTRO 2025 INTEGRADO.csv",
+    "classification": "PRODUCTIVE_RUNTIME",
+    "action": "KEEP",
+    "reason": "Base estática de cantidades 2024–2025 servida al navegador.",
+    "replaced_by": null,
+    "references_found": [
+      "app.js",
+      "cantidades-ui.js"
+    ],
+    "validated_safe": true
+  },
+  {
+    "path": "REGISTRO 2025.csv.enc",
+    "classification": "BUILD_INPUT",
+    "action": "KEEP",
+    "reason": "Entrada cifrada usada en deploy Pages.",
+    "replaced_by": null,
+    "references_found": [
+      ".github/workflows/deploy.yml"
+    ],
+    "validated_safe": true
+  },
+  {
+    "path": "data/mayoristas/dashboard/",
+    "classification": "PRODUCTIVE_RUNTIME",
+    "action": "KEEP",
+    "reason": "Índice y fragmentos consumidos por el loader del navegador.",
+    "replaced_by": null,
+    "references_found": [
+      "mayoristas-loader.js",
+      "scripts/ci/prepare_pages.py"
+    ],
+    "validated_safe": true
+  },
+  {
+    "path": "data/magyp/dashboard/mcba/",
+    "classification": "BUILD_INPUT",
+    "action": "KEEP",
+    "reason": "Publicación MCBA y metadatos utilizados para construir shards y validar.",
+    "replaced_by": "data/mayoristas/dashboard/",
+    "references_found": [
+      "scripts/mayoristas/build_dashboard.py",
+      ".github/workflows/update-magyp-mcba.yml"
+    ],
+    "validated_safe": true
+  },
+  {
+    "path": "data/mercado_central/",
+    "classification": "BUILD_INPUT",
+    "action": "KEEP",
+    "reason": "Publicación mensual derivada, fuentes y validaciones para reconstruir Mayoristas.",
+    "replaced_by": "data/mayoristas/dashboard/",
+    "references_found": [
+      "scripts/mayoristas/build_dashboard.py",
+      ".github/workflows/update-mcba-monthly-central.yml"
+    ],
+    "validated_safe": true
+  },
+  {
+    "path": "data/commodities_sio/reports/CASOS_PRECIOS_CERO_SIO.csv",
+    "classification": "AUDIT_EVIDENCE",
+    "action": "KEEP",
+    "reason": "Evidencia de auditoría de 14.688.217 bytes; producida por auditar_commodities_sio.py y excluida únicamente del artefacto Pages.",
+    "replaced_by": null,
+    "references_found": [
+      "auditar_commodities_sio.py",
+      "scripts/ci/prepare_pages.py",
+      "tests/mayoristas/test_delivery_build.py"
+    ],
+    "validated_safe": true
+  },
+  {
+    "path": "data/commodities_local_mensual/",
+    "classification": "HISTORICAL_FALLBACK",
+    "action": "KEEP",
+    "reason": "Historia y fuentes manuales conservadas para reproducibilidad y contingencia.",
+    "replaced_by": null,
+    "references_found": [
+      "data/commodities_local_mensual/README.md",
+      "scripts/ci/prepare_pages.py"
+    ],
+    "validated_safe": true
+  },
+  {
+    "path": ".github/workflows/magyp-mcba-pilot.yml",
+    "classification": "MANUAL_DIAGNOSTIC",
+    "action": "KEEP",
+    "reason": "Prueba manual Linux/Chromium independiente del runner Windows, con captura opcional y permisos de lectura.",
+    "replaced_by": null,
+    "references_found": [
+      "tests/magyp_mcba/test_phase3.py",
+      "docs/MCBA_PRODUCTION_POLICY.md"
+    ],
+    "validated_safe": true
+  },
+  {
+    "path": ".github/workflows/update-magyp-fob.yml",
+    "classification": "DEPRECATED",
+    "action": "KEEP",
+    "reason": "No existe en origin/main ni en este checkout; FOB corriente está integrado en Commodities MAGyP. No se propone crear ni eliminar un archivo.",
+    "replaced_by": ".github/workflows/magyp-commodities-review.yml",
+    "references_found": [
+      "docs/WORKFLOWS_AUDITORIA_OPERATIVA.md",
+      ".github/workflows/magyp-commodities-review.yml"
+    ],
+    "validated_safe": true
+  },
+  {
+    "path": "docs/MCBA_PRODUCTION_AUTOMATION.md",
+    "classification": "DOCUMENTATION",
+    "action": "REVIEW_REQUIRED",
+    "reason": "Informe histórico describe inicio manual; workflow actual tiene cron. Índice y operación aclaran la diferencia; revisar una edición histórica más amplia.",
+    "replaced_by": ".github/workflows/update-magyp-mcba.yml",
+    "references_found": [
+      "docs/README.md",
+      "docs/OPERACION_WORKFLOWS.md"
+    ],
+    "validated_safe": false
+  },
+  {
+    "path": "docs/WORKFLOWS_AUDITORIA_OPERATIVA.md",
+    "classification": "AUDIT_EVIDENCE",
+    "action": "KEEP",
+    "reason": "Auditoría fechada con propuestas y evidencia operacional.",
+    "replaced_by": "docs/OPERACION_WORKFLOWS.md",
+    "references_found": [
+      "docs/README.md"
+    ],
+    "validated_safe": true
+  },
+  {
+    "path": ".gitignore",
+    "classification": "BUILD_INPUT",
+    "action": "KEEP",
+    "reason": "Auditado con git check-ignore: excluye entornos y evidencia local, preserva excepciones de dashboard y fixtures; reglas específicas RAW existentes conservadas.",
+    "replaced_by": null,
+    "references_found": [
+      ".gitignore",
+      "docs/DEPENDENCIAS_E_INVENTARIO.md"
+    ],
+    "validated_safe": true
+  },
+  {
+    "path": "scripts/",
+    "classification": "REVIEW_REQUIRED",
+    "action": "REVIEW_REQUIRED",
+    "reason": "Inventario exhaustivo de consumidores por script pendiente; se conservan herramientas de auditoría y builders.",
+    "replaced_by": null,
+    "references_found": [],
+    "validated_safe": false
+  },
+  {
+    "path": "data/",
+    "classification": "REVIEW_REQUIRED",
+    "action": "REVIEW_REQUIRED",
+    "reason": "Clasificación exhaustiva por archivo y detección de duplicados pendientes; se conserva todo.",
+    "replaced_by": null,
+    "references_found": [],
+    "validated_safe": false
+  },
+  {
+    "path": "tests/",
+    "classification": "TEST_FIXTURE",
+    "action": "KEEP",
+    "reason": "Se conservan suites y fixtures; no se retiró código ni cobertura.",
+    "replaced_by": null,
+    "references_found": [],
+    "validated_safe": false
+  },
+  {
+    "path": "docs/",
+    "classification": "DOCUMENTATION",
+    "action": "REVIEW_REQUIRED",
+    "reason": "Índice creado; clasificación exhaustiva de cada informe histórico y contradicciones pendientes.",
+    "replaced_by": null,
+    "references_found": [],
+    "validated_safe": false
+  },
+  {
+    "path": "requirements",
+    "classification": "BUILD_INPUT",
+    "action": "KEEP",
+    "reason": "Cinco archivos requirements inventariados; imports y dependencias transitivas o CLI justifican conservarlos sin upgrades.",
+    "replaced_by": null,
+    "references_found": [
+      "docs/DEPENDENCIAS_E_INVENTARIO.md"
+    ],
+    "validated_safe": true
+  },
+  {
+    "path": "REPORTE_AUDITORIA_PRECIOS.md",
+    "classification": "DUPLICATE",
+    "action": "REVIEW_REQUIRED",
+    "reason": "Evidencia o salidas con rutas distintas; consumidores y significado requieren revisión.",
+    "replaced_by": "REVIEW_REQUIRED",
+    "references_found": [
+      "auditar_precios_2026.py",
+      "data/precios_mayoristas/reports/REPORTE_AUDITORIA_FUNCIONAMIENTO_PRECIOS.md"
+    ],
+    "validated_safe": false
+  },
+  {
+    "path": "REPORTE_AUDITORIA_PRECIOS_2026.md",
+    "classification": "DUPLICATE",
+    "action": "REVIEW_REQUIRED",
+    "reason": "Evidencia o salidas con rutas distintas; consumidores y significado requieren revisión.",
+    "replaced_by": "REVIEW_REQUIRED",
+    "references_found": [
+      "auditar_precios_2026.py",
+      "data/precios_mayoristas/reports/REPORTE_AUDITORIA_FUNCIONAMIENTO_PRECIOS.md"
+    ],
+    "validated_safe": false
+  },
+  {
+    "path": "data/carnes/dashboard/magyp_indicators_archive-exports-monthly-2019-055c422ad624c448.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "tests/carnes/fixtures/ui/magyp_indicators_archive-exports-monthly-2019-055c422ad624c448.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/carnes/dashboard/magyp_indicators_archive-livestock_price-monthly-2019-719d494a7971a12b.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "tests/carnes/fixtures/ui/magyp_indicators_archive-livestock_price-monthly-2019-719d494a7971a12b.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/carnes/dashboard/magyp_production_current-carcass_weight-monthly-2026-9b9a727808cb327c.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "tests/carnes/fixtures/ui/magyp_production_current-carcass_weight-monthly-2026-9b9a727808cb327c.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/carnes/dashboard/magyp_production_current-carcass_weight-year_to_date-2026-3fc96b12f67902d0.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "tests/carnes/fixtures/ui/magyp_production_current-carcass_weight-year_to_date-2026-3fc96b12f67902d0.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/carnes/dashboard/magyp_production_current-production-monthly-2026-1ab456e6f3047f28.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "tests/carnes/fixtures/ui/magyp_production_current-production-monthly-2026-1ab456e6f3047f28.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/carnes/dashboard/magyp_production_current-production-year_to_date-2026-43f1ce1dd1a5a97f.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "tests/carnes/fixtures/ui/magyp_production_current-production-year_to_date-2026-43f1ce1dd1a5a97f.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/carnes/dashboard/magyp_slaughter_2018-slaughter-monthly-2018-9d6c12451bf3a387.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "tests/carnes/fixtures/ui/magyp_slaughter_2018-slaughter-monthly-2018-9d6c12451bf3a387.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/carnes/dashboard/magyp_slaughter_2019-slaughter-monthly-2019-612acf074c91f3b6.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "tests/carnes/fixtures/ui/magyp_slaughter_2019-slaughter-monthly-2019-612acf074c91f3b6.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/carnes/dashboard/magyp_slaughter_current-slaughter-monthly-2026-a1063a7c4a5dc380.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [
+      "docs/audit/2026-10-22/BROWSER_AUDIT_EVIDENCE.json"
+    ],
+    "validated_safe": true
+  },
+  {
+    "path": "tests/carnes/fixtures/ui/magyp_slaughter_current-slaughter-monthly-2026-a1063a7c4a5dc380.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/carnes/dashboard/magyp_slaughter_current-slaughter-year_to_date-2026-01766c7ba1defde8.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "tests/carnes/fixtures/ui/magyp_slaughter_current-slaughter-year_to_date-2026-01766c7ba1defde8.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/carnes/dashboard/sspm_40_3-production-monthly-2026-147b3b8c4f3b5ebc.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "tests/carnes/fixtures/ui/sspm_40_3-production-monthly-2026-147b3b8c4f3b5ebc.csv.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Fixture reproducible independiente de la publicación corriente.",
+    "replaced_by": "data/carnes/dashboard/",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/commodities/processed/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/commodities/raw/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/commodities/reports/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/commodities_bcr/processed/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/commodities_bcr/raw/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/commodities_bcr/reports/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/commodities_sio/processed/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/commodities_sio/raw/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/commodities_sio/reports/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/magyp/analytical/mcba/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/magyp/dashboard/mcba/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [
+      "data/magyp/reports/PILOTO_MCBA_ENTREGA.md"
+    ],
+    "validated_safe": true
+  },
+  {
+    "path": "data/magyp/normalized/mcba/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/magyp/raw/mcba/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/magyp/reports/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [
+      "data/magyp/reports/PILOTO_MCBA_ENTREGA.md"
+    ],
+    "validated_safe": true
+  },
+  {
+    "path": "scripts/magyp/grains/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [
+      "data/magyp/reports/PILOTO_MCBA_ENTREGA.md"
+    ],
+    "validated_safe": true
+  },
+  {
+    "path": "scripts/magyp/meats/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [
+      "data/magyp/reports/PILOTO_MCBA_ENTREGA.md"
+    ],
+    "validated_safe": true
+  },
+  {
+    "path": "scripts/magyp/sio/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [
+      "data/magyp/reports/PILOTO_MCBA_ENTREGA.md"
+    ],
+    "validated_safe": true
+  },
+  {
+    "path": "scripts/mercado_central/__init__.py",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/commodities_local_mensual/processed/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/commodities_local_mensual/raw/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/commodities_sio/devtools/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/commodities_worldbank/dashboard/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/commodities_worldbank/processed/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/commodities_worldbank/raw/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/commodities_worldbank/reports/.gitkeep",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Marcadores de directorio o paquete; conservar.",
+    "replaced_by": "Cada ruta cumple una función distinta",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/commodities_local_mensual/reports/REPORTE_AUDITORIA_COMMODITIES_LOCAL_MENSUAL.md",
+    "classification": "DUPLICATE",
+    "action": "REVIEW_REQUIRED",
+    "reason": "Evidencia o salidas con rutas distintas; consumidores y significado requieren revisión.",
+    "replaced_by": "REVIEW_REQUIRED",
+    "references_found": [
+      "auditar_commodities_local_mensual.py"
+    ],
+    "validated_safe": false
+  },
+  {
+    "path": "data/commodities_local_mensual/reports/REPORTE_AUDITORIA_LOCAL_MENSUAL.md",
+    "classification": "DUPLICATE",
+    "action": "REVIEW_REQUIRED",
+    "reason": "Evidencia o salidas con rutas distintas; consumidores y significado requieren revisión.",
+    "replaced_by": "REVIEW_REQUIRED",
+    "references_found": [
+      "auditar_commodities_local_mensual.py"
+    ],
+    "validated_safe": false
+  },
+  {
+    "path": "data/magyp/reports/MCBA_MONTH_MATCHING_DAILY.csv",
+    "classification": "DUPLICATE",
+    "action": "REVIEW_REQUIRED",
+    "reason": "Evidencia o salidas con rutas distintas; consumidores y significado requieren revisión.",
+    "replaced_by": "REVIEW_REQUIRED",
+    "references_found": [
+      "data/magyp/reports/MCBA_PHASE3_READINESS_REPORT.md"
+    ],
+    "validated_safe": false
+  },
+  {
+    "path": "data/magyp/reports/MCBA_MONTH_MATCHING_OBSERVED_AGGREGATES.csv",
+    "classification": "DUPLICATE",
+    "action": "REVIEW_REQUIRED",
+    "reason": "Evidencia o salidas con rutas distintas; consumidores y significado requieren revisión.",
+    "replaced_by": "REVIEW_REQUIRED",
+    "references_found": [],
+    "validated_safe": false
+  },
+  {
+    "path": "data/mayoristas/dashboard/corrientes-anual-2024-legacy-6a7aa8c8b193b664.json.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Rutas de vistas distintas referenciadas por el índice; bytes iguales no permiten retirar una ruta.",
+    "replaced_by": "Cada descriptor del índice",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/mayoristas/dashboard/corrientes-diaria-2024-legacy-6a7aa8c8b193b664.json.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Rutas de vistas distintas referenciadas por el índice; bytes iguales no permiten retirar una ruta.",
+    "replaced_by": "Cada descriptor del índice",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/mayoristas/dashboard/corrientes-mensual-2024-legacy-6a7aa8c8b193b664.json.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Rutas de vistas distintas referenciadas por el índice; bytes iguales no permiten retirar una ruta.",
+    "replaced_by": "Cada descriptor del índice",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/mayoristas/dashboard/corrientes-anual-2025-legacy-3d4485d342d14545.json.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Rutas de vistas distintas referenciadas por el índice; bytes iguales no permiten retirar una ruta.",
+    "replaced_by": "Cada descriptor del índice",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/mayoristas/dashboard/corrientes-diaria-2025-legacy-3d4485d342d14545.json.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Rutas de vistas distintas referenciadas por el índice; bytes iguales no permiten retirar una ruta.",
+    "replaced_by": "Cada descriptor del índice",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/mayoristas/dashboard/corrientes-mensual-2025-legacy-3d4485d342d14545.json.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Rutas de vistas distintas referenciadas por el índice; bytes iguales no permiten retirar una ruta.",
+    "replaced_by": "Cada descriptor del índice",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/mayoristas/dashboard/corrientes-anual-2026-legacy-747e1f40b50a9e65.json.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Rutas de vistas distintas referenciadas por el índice; bytes iguales no permiten retirar una ruta.",
+    "replaced_by": "Cada descriptor del índice",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/mayoristas/dashboard/corrientes-diaria-2026-legacy-747e1f40b50a9e65.json.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Rutas de vistas distintas referenciadas por el índice; bytes iguales no permiten retirar una ruta.",
+    "replaced_by": "Cada descriptor del índice",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "data/mayoristas/dashboard/corrientes-mensual-2026-legacy-747e1f40b50a9e65.json.gz",
+    "classification": "DUPLICATE",
+    "action": "KEEP",
+    "reason": "Rutas de vistas distintas referenciadas por el índice; bytes iguales no permiten retirar una ruta.",
+    "replaced_by": "Cada descriptor del índice",
+    "references_found": [],
+    "validated_safe": true
+  },
+  {
+    "path": "assets/favicon.svg",
+    "classification": "PRODUCTIVE_RUNTIME",
+    "action": "KEEP",
+    "reason": "Favicon liviano propio referenciado explícitamente; evita la solicitud implícita a favicon.ico.",
+    "replaced_by": null,
+    "references_found": [
+      "index.html",
+      "scripts/ci/prepare_pages.py"
+    ],
+    "validated_safe": true
+  },
+  {
+    "path": "data/commodities_sio/reports/SIO_GRAIN_AUDIT.json",
+    "classification": "AUDIT_EVIDENCE",
+    "action": "KEEP",
+    "reason": "Evidencia de 7.849 bytes usada por scripts y tests; no se carga desde frontend y se excluye solamente de Pages.",
+    "replaced_by": null,
+    "references_found": [
+      "scripts/sio/grain.py",
+      "tests/sio/test_grain.py",
+      "tests/magyp_frontend/sio-grain.test.cjs",
+      ".github/workflows/update-sio-commodities.yml",
+      "scripts/ci/prepare_pages.py"
+    ],
+    "validated_safe": true
+  }
+]

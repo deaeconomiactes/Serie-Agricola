@@ -22,11 +22,17 @@ def prepare(source, destination):
         source / 'data/mercado_central',
     } if wholesale else set()
 
+    # These reports support audit and tests but are not loaded by the dashboard.
+    audit_only = {
+        source / 'data/commodities_sio/reports/SIO_GRAIN_AUDIT.json',
+        source / 'data/commodities_sio/reports/CASOS_PRECIOS_CERO_SIO.csv',
+    }
+
     def ignore(folder, names):
         folder = Path(folder).resolve()
         if wholesale and folder == wholesale_index.parent:
             return [name for name in names if name not in runtime]
-        excluded = [name for name in names if folder / name in retired]
+        excluded = [name for name in names if folder / name in retired or folder / name in audit_only]
         if folder == source / 'data' and 'commodities_local_mensual' in names:
             excluded.append('commodities_local_mensual')
         if folder == source and '.git' in names:
