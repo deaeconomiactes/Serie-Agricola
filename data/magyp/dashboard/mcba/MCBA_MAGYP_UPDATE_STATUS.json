@@ -1,8 +1,8 @@
 {
-  "attempted_at": "2026-10-28T11:30:55.663699Z",
+  "attempted_at": "2026-10-29T11:14:47.069168Z",
   "last_observation_date": "2026-10-05",
   "last_successful_update": "2026-10-06T13:34:47.388718Z",
-  "requested_date": "2026-10-28",
+  "requested_date": "2026-10-29",
   "result": "SOURCE_UNAVAILABLE",
   "source": "MAGyP",
   "source_status": "MAGYP_LAST_VALID",

@@ -381,8 +381,8 @@
       "unit": [
         "kg"
       ],
-      "requested_date": "2026-10-28",
-      "attempted_at": "2026-10-28T11:30:55.663699Z",
+      "requested_date": "2026-10-29",
+      "attempted_at": "2026-10-29T11:14:47.069168Z",
       "diagnostic_note": null,
       "evidence": "https://github.com/deaeconomiactes/Serie-Agricola/actions/runs/39354603566"
     },
