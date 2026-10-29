@@ -325,11 +325,19 @@
                 </select>
             </div>
 <div class="filter-group">
-                <label class="filter-label" for="priceFilterEspecieTrigger">Especie</label>
+                <label class="filter-label" for="priceFilterEspecieTrigger">Producto</label>
                 <div class="multi-select" data-multi-select="priceFilterEspecie">
                     <select id="priceFilterEspecie" class="filter-select price-multi-select" multiple size="1" aria-hidden="true" tabindex="-1"><option value="TODOS">Todas</option></select>
-                    <button id="priceFilterEspecieTrigger" class="multi-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="multi-select-summary">Todas las especies</span><span class="multi-select-chevron" aria-hidden="true">⌄</span></button>
-                    <div class="multi-select-dropdown" role="listbox" aria-label="Especie" tabindex="-1"></div>
+                    <button id="priceFilterEspecieTrigger" class="multi-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="multi-select-summary">Todos los productos</span><span class="multi-select-chevron" aria-hidden="true">⌄</span></button>
+                    <div class="multi-select-dropdown" role="listbox" aria-label="Producto" tabindex="-1"></div>
+                </div>
+            </div>
+<div class="filter-group">
+                <label class="filter-label" for="priceFilterProcedenciaTrigger">Procedencia</label>
+                <div class="multi-select" data-multi-select="priceFilterProcedencia">
+                    <select id="priceFilterProcedencia" class="filter-select price-multi-select" multiple size="1" aria-hidden="true" tabindex="-1"><option value="TODOS">Todas</option></select>
+                    <button id="priceFilterProcedenciaTrigger" class="multi-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="multi-select-summary">Todas las procedencias</span><span class="multi-select-chevron" aria-hidden="true">⌄</span></button>
+                    <div class="multi-select-dropdown" role="listbox" aria-label="Procedencia" tabindex="-1"></div>
                 </div>
             </div>
 <div class="filter-group">
@@ -361,14 +369,6 @@
                 </div>
             </div>
 <div class="filter-group">
-                <label class="filter-label" for="priceFilterProcedenciaTrigger">Procedencia</label>
-                <div class="multi-select" data-multi-select="priceFilterProcedencia">
-                    <select id="priceFilterProcedencia" class="filter-select price-multi-select" multiple size="1" aria-hidden="true" tabindex="-1"><option value="TODOS">Todas</option></select>
-                    <button id="priceFilterProcedenciaTrigger" class="multi-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="multi-select-summary">Todas las procedencias</span><span class="multi-select-chevron" aria-hidden="true">⌄</span></button>
-                    <div class="multi-select-dropdown" role="listbox" aria-label="Procedencia" tabindex="-1"></div>
-                </div>
-            </div>
-<div class="filter-group">
                 <label class="filter-label" for="priceFilterUnidad">Unidad original</label>
                 <select id="priceFilterUnidad" class="filter-select"><option value="TODOS">Todas</option></select>
             </div>
@@ -394,11 +394,12 @@
 <div id="priceSourceStatus" class="price-inline-status" role="status" aria-live="polite"></div>
 <div id="priceStatus" class="price-status" role="status" aria-live="polite"></div>
 <div id="priceUnitStatus" class="price-inline-status price-unit-status" role="status" aria-live="polite"></div>
+<div id="priceComparisonStatus" class="price-inline-status" role="status" aria-live="polite"></div>
 <div id="priceSelectionSummary" class="price-inline-status" role="status" aria-live="polite"></div>
         <details id="priceSources" class="sa-price-disclosure"><summary>Fuentes y actualización de la selección</summary><div id="corrientesUpdateStatus" class="source-update-status" role="status" aria-live="polite" hidden></div>
 <div id="mcbaMonthlyUpdateStatus" class="source-update-status" role="status" aria-live="polite" hidden></div>
 <div id="mcbaUpdateStatus" class="source-update-status" role="status" aria-live="polite" hidden></div></details>
-        <p class="sa-price-scope">El precio promedio resume la selección; no representa una canasta ponderada ni un índice de mercado.</p>
+        <p class="sa-price-scope">Promedios simples por día y luego por mes y año; no representan una canasta ponderada ni un índice de mercado.</p>
         <div class="price-kpi-grid"><div class="kpi-card price-kpi-average"><div class="kpi-icon"><img src="assets/carnes/icons/chart-bar.svg" alt=""></div><div class="kpi-content"><span class="kpi-label" id="priceKpiAverageLabel">Precio promedio por kg</span><span class="kpi-value" id="priceKpiAverage">–</span><span class="kpi-unit" id="priceKpiAverageUnit">calculado sobre registros con unidad comparable</span></div></div>
 <div class="kpi-card price-kpi-variation"><div class="kpi-icon"><img src="assets/carnes/icons/percent.svg" alt=""></div><div class="kpi-content"><span class="kpi-label" id="priceKpiIncreaseLabel">Mayor suba</span><span class="kpi-value" id="priceKpiIncrease">–</span><span class="kpi-unit" id="priceKpiIncreaseDetail">del período</span></div></div>
 <div class="kpi-card price-kpi-variation"><div class="kpi-icon"><img src="assets/carnes/icons/percent.svg" alt=""></div><div class="kpi-content"><span class="kpi-label" id="priceKpiDecreaseLabel">Mayor baja</span><span class="kpi-value" id="priceKpiDecrease">–</span><span class="kpi-unit" id="priceKpiDecreaseDetail">del período</span></div></div></div>
@@ -439,7 +440,7 @@
         </div>
           <div class="sa-price-pagination"><button type="button" id="priceDetailPrevious">Anterior</button><span id="priceDetailPage"></span><button type="button" id="priceDetailNext">Siguiente</button></div>
         </details>
-        <details id="priceMethodology" class="sa-price-disclosure"><summary>Metodología y límites de comparación</summary><p class="method-note methodology-note price-method-note">Los precios mayoristas se muestran como promedios simples por período. Mercado/Fuente indica dónde se releva el precio; Procedencia/Origen indica de dónde proviene el producto cuando la fuente lo informa.</p><p class="method-note price-method-note">Los precios se muestran como promedios simples por período. No están ponderados por cantidades salvo que exista un ponderador explícito. Las visualizaciones respetan la frecuencia original y no desagregan datos artificialmente.</p><p class="method-note price-method-note">Mercado/Fuente indica dónde se releva o publica el precio. Procedencia/Origen indica de dónde proviene el producto cuando la fuente lo informa. No se calculan relaciones precio-cantidad ni inferencias de escasez.</p><p id="priceDailyMethodNote" class="method-note price-method-note" hidden>En vista diaria se muestra la evolución del precio promedio. Las variaciones se resumen entre la primera y última fecha disponible para evitar ruido diario.</p></details>
+        <details id="priceMethodology" class="sa-price-disclosure"><summary>Metodología y límites de comparación</summary><p class="method-note methodology-note price-method-note">Los precios mayoristas se muestran como promedios simples por período. Mercado/Fuente indica dónde se releva el precio; Procedencia/Origen indica de dónde proviene el producto cuando la fuente lo informa.</p><p class="method-note price-method-note">Dentro de una serie homogénea se promedian primero las observaciones de cada día, luego los días de cada mes y, para el año, los meses disponibles. No hay ponderación por cantidades; no se desagregan datos artificialmente. Las comparaciones entre mercados exigen moneda, unidad, variedad, presentación y frecuencia compatibles.</p><p class="method-note price-method-note">Mercado/Fuente indica dónde se releva o publica el precio. Procedencia/Origen indica de dónde proviene el producto cuando la fuente lo informa. No se calculan relaciones precio-cantidad ni inferencias de escasez.</p><p id="priceDailyMethodNote" class="method-note price-method-note" hidden>En vista diaria se muestra la evolución del precio promedio. Las variaciones se resumen entre la primera y última fecha disponible para evitar ruido diario.</p></details>
       </div>
     </section></div>
 
@@ -576,12 +577,12 @@
     </footer>
     </div>
 
-    <script src="mayoristas-loader.js?v=1"></script>
+    <script src="mayoristas-loader.js?v=normalizacion-20261029"></script>
     <script src="mcba-monthly.js?v=1"></script>
     <script src="update-status.js?v=institutional-audit-20261022"></script>
     <script src="mcba-prices.js?v=mcba-status-v2"></script>
     <script src="commodity-history.js?v=1"></script>
-    <script src="app.js?v=mayoristas-shards-v1"></script>
+    <script src="app.js?v=mayoristas-normalizacion-20261029"></script>
     <script src="mayoristas-ui.js?v=2"></script>
     <script src="commodities-ui.js?v=ui-20261026-2"></script>
     <script src="cantidades-analytics.js?v=1"></script>

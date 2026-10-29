@@ -13,7 +13,7 @@ async function readSources(root) {
     ctx.quality=read('RESUMEN_SERIES_UTILIZABLES_PRECIOS_2026.csv');
     ctx.integrated=read('PRECIOS_MAYORISTAS_INTEGRADO.csv');
     vm.runInContext(`priceSeriesData=parsePriceCSV(quality);priceQualityMap=new Map(priceSeriesData.map(row=>[priceSeriesKey(row),row.indicador_serie_utilizable||'']));
-        legacyPriceData=processPriceData(parsePriceCSV(integrated),PRICE_CSV_PATH).map(row=>({...row,data_source:'LEGACY',source_status:'LEGACY',last_update:'',fechaPrecision:row.mercado===MCBAPrices.MCBA?String(row.fechaPrecision).toLowerCase():row.fechaPrecision,calidadMCBA:'',tamanoMCBA:'',gradoMCBA:''}));`,ctx);
+        legacyPriceData=processPriceData(parsePriceCSV(integrated),PRICE_CSV_PATH,true).map(row=>({...row,data_source:'LEGACY',source_status:'LEGACY',last_update:'',fechaPrecision:row.mercado===MCBAPrices.MCBA?String(row.fechaPrecision).toLowerCase():row.fechaPrecision,calidadMCBA:'',tamanoMCBA:'',gradoMCBA:''}));`,ctx);
     const base='data/magyp/dashboard/mcba/';
     const result=await mcba.verifyBundle({daily:read(base+'MCBA_MAGYP_DAILY.csv'),summary:read(base+'MCBA_MAGYP_SUMMARY.csv'),marker:JSON.parse(read(base+'_SUCCESS.json'))});
     const fresh=await monthly.verify(read(monthly.BASE+monthly.FILE),JSON.parse(read(monthly.BASE+'_SUCCESS.json')));
@@ -27,6 +27,8 @@ async function readSources(root) {
     // Future dates are filtered at runtime, exactly as before; the build has no calendar-dependent output.
     const views={};
     for(const frequency of ['diaria','mensual','anual']) views[frequency]=JSON.parse(vm.runInContext(`JSON.stringify(getPriceSourceRows('${frequency}'))`,ctx));
+    const normalize=require(path.join(root,'scripts/mayoristas/normalize.cjs')).makeNormalizer(root,views);
+    for(const frequency of Object.keys(views)) views[frequency]=views[frequency].map(normalize);
     return {views,metadata:{magypPriceInfo:result.info,magypUpdateMetadata:update},context:ctx};
 }
 module.exports={readSources};

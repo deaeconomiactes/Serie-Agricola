@@ -59,7 +59,7 @@ test('exact economic equivalence: rows, KPIs, evolution, rankings, variation, se
   for(const year of years) {
    const selection={year,frequency,markets:[market]};const actual=await loader.load(selection);
    const expected=original.views[frequency].filter(r=>r.year===year&&r.mercado===market);
-   assert.equal(digest(actual.rows),digest(expected),JSON.stringify(selection)+' exact row order/content');
+   assert.deepEqual(actual.rows,expected,JSON.stringify(selection)+' exact row order/content');
    ctx.testFilters={year:[String(year)],mercado:[market],mes:['TODOS'],rubro:['TODOS'],especie:['TODOS'],variedad:['TODOS'],procedencia:['TODOS'],unidad:['TODOS'],envase:['TODOS'],calidadMCBA:['TODOS'],tamanoMCBA:['TODOS'],gradoMCBA:['TODOS'],unidadComparable:'comparables'};
    const compute=rows=>{
     ctx.testRows=rows;ctx.testFrequency=frequency;
@@ -74,11 +74,10 @@ test('exact economic equivalence: rows, KPIs, evolution, rankings, variation, se
         ranking:preparePriceIncreaseRankingData(const_equivalence_rows,priceFrequency),
         decrease:preparePriceDecreaseRankingData(const_equivalence_rows,priceFrequency),
         variation:preparePriceVariationData(const_equivalence_rows,priceFrequency,testFilters),
-        semaphore:buildMonthlyPriceSemaphoreMatrix(const_equivalence_rows,testFilters),
-        tables:const_equivalence_rows})`,ctx));
+        semaphore:buildMonthlyPriceSemaphoreMatrix(const_equivalence_rows,testFilters)})`,ctx));
    };
    const before=compute(expected),after=compute(actual.rows);
-   assert.equal(digest(after),digest(before),JSON.stringify(selection)+' calculations');
+   assert.deepEqual(after,before,JSON.stringify(selection)+' calculations');
    controls.push({...selection,rows:after.rows,average:after.average,minimum:after.minimum,maximum:after.maximum,latest:after.latest,exact_equal:true,sha256:digest(after)});
   }
  }

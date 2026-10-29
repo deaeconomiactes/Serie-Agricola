@@ -1,0 +1,104 @@
+[
+  {
+    "raw": "Ctes.",
+    "canonical": "Corrientes",
+    "status": "APPROVED",
+    "reason": "Abreviatura geográfica inequívoca o diferencia ortográfica"
+  },
+  {
+    "raw": "E. Rios",
+    "canonical": "Entre Ríos",
+    "status": "APPROVED",
+    "reason": "Abreviatura geográfica inequívoca o diferencia ortográfica"
+  },
+  {
+    "raw": "Bs. As.",
+    "canonical": "Buenos Aires",
+    "status": "APPROVED",
+    "reason": "Abreviatura geográfica inequívoca o diferencia ortográfica"
+  },
+  {
+    "raw": "R. Negro",
+    "canonical": "Río Negro",
+    "status": "APPROVED",
+    "reason": "Abreviatura geográfica inequívoca o diferencia ortográfica"
+  },
+  {
+    "raw": "Cordoba",
+    "canonical": "Córdoba",
+    "status": "APPROVED",
+    "reason": "Abreviatura geográfica inequívoca o diferencia ortográfica"
+  },
+  {
+    "raw": "Tucuman",
+    "canonical": "Tucumán",
+    "status": "APPROVED",
+    "reason": "Abreviatura geográfica inequívoca o diferencia ortográfica"
+  },
+  {
+    "raw": "Sgo.est.",
+    "canonical": "Santiago del Estero",
+    "status": "APPROVED",
+    "reason": "Abreviatura geográfica inequívoca o diferencia ortográfica"
+  },
+  {
+    "raw": "M.d.plat",
+    "canonical": "Mar del Plata",
+    "status": "APPROVED",
+    "reason": "Abreviatura geográfica inequívoca o diferencia ortográfica"
+  },
+  {
+    "raw": "S. Pedro",
+    "canonical": "San Pedro",
+    "status": "APPROVED",
+    "reason": "Abreviatura geográfica inequívoca o diferencia ortográfica"
+  },
+  {
+    "raw": "Catamarc",
+    "canonical": "Catamarca",
+    "status": "APPROVED",
+    "reason": "Abreviatura geográfica inequívoca o diferencia ortográfica"
+  },
+  {
+    "raw": "Sta.cruz",
+    "canonical": "Santa Cruz",
+    "status": "APPROVED",
+    "reason": "Abreviatura geográfica inequívoca o diferencia ortográfica"
+  },
+  {
+    "raw": "S.bs.as.",
+    "canonical": "",
+    "status": "REVIEW_REQUIRED",
+    "reason": "Subregión geográfica; no equivale automáticamente a una provincia"
+  },
+  {
+    "raw": "Se Bs.as",
+    "canonical": "",
+    "status": "REVIEW_REQUIRED",
+    "reason": "Subregión geográfica; no equivale automáticamente a una provincia"
+  },
+  {
+    "raw": "O Bs.as.",
+    "canonical": "",
+    "status": "REVIEW_REQUIRED",
+    "reason": "Subregión geográfica; no equivale automáticamente a una provincia"
+  },
+  {
+    "raw": "S.bs.as.",
+    "canonical": "Buenos Aires",
+    "status": "REJECTED",
+    "reason": "Subregión no equivale a la provincia completa"
+  },
+  {
+    "raw": "Se Bs.as",
+    "canonical": "Buenos Aires",
+    "status": "REJECTED",
+    "reason": "Subregión no equivale a la provincia completa"
+  },
+  {
+    "raw": "O Bs.as.",
+    "canonical": "Buenos Aires",
+    "status": "REJECTED",
+    "reason": "Subregión no equivale a la provincia completa"
+  }
+]

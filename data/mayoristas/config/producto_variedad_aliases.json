@@ -1,0 +1,219 @@
+[
+  {
+    "raw": "Batata Colorada",
+    "producto": "Batata",
+    "variedad": "Colorada",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Cebolla Blanca",
+    "producto": "Cebolla",
+    "variedad": "Blanca",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Chaucha Musica",
+    "producto": "Chaucha",
+    "variedad": "Musica",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Chaucha Por Metro",
+    "producto": "Chaucha",
+    "variedad": "Por Metro",
+    "status": "REVIEW_REQUIRED",
+    "reason": "Coincide con producto y variedad separados en los datos; requiere revisión comercial"
+  },
+  {
+    "raw": "Chaucha Rolliza",
+    "producto": "Chaucha",
+    "variedad": "Rolliza",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Choclo Amarillo",
+    "producto": "Choclo",
+    "variedad": "Amarillo",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Durazno O'Henry",
+    "producto": "Durazno",
+    "variedad": "O'Henry",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Lechuga Mantecosa",
+    "producto": "Lechuga",
+    "variedad": "Mantecosa",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Lechuga Morada",
+    "producto": "Lechuga",
+    "variedad": "Morada",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Mandarina Criolla",
+    "producto": "Mandarina",
+    "variedad": "Criolla",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Mandarina Dancy",
+    "producto": "Mandarina",
+    "variedad": "Dancy",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Mandarina Ellendale",
+    "producto": "Mandarina",
+    "variedad": "Ellendale",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Mandarina Encore",
+    "producto": "Mandarina",
+    "variedad": "Encore",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Mandarina Murcot",
+    "producto": "Mandarina",
+    "variedad": "Murcot",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Mandarina Nova",
+    "producto": "Mandarina",
+    "variedad": "Nova",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Melon Amarillo",
+    "producto": "Melon",
+    "variedad": "Amarillo",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Naranja Buckeye",
+    "producto": "Naranja",
+    "variedad": "Buckeye",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Naranja Navelina",
+    "producto": "Naranja",
+    "variedad": "Navelina",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Naranja New Hall",
+    "producto": "Naranja",
+    "variedad": "New Hall",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Naranja Ombligo",
+    "producto": "Naranja",
+    "variedad": "Ombligo",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Naranja Salustiana",
+    "producto": "Naranja",
+    "variedad": "Salustiana",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Naranja Valencia",
+    "producto": "Naranja",
+    "variedad": "Valencia",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Palta Hass",
+    "producto": "Palta",
+    "variedad": "Hass",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Pomelo Blanco",
+    "producto": "Pomelo",
+    "variedad": "Blanco",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Repollo Blanco",
+    "producto": "Repollo",
+    "variedad": "Blanco",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Repollo Colorado",
+    "producto": "Repollo",
+    "variedad": "Colorado",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Tomate Cherry",
+    "producto": "Tomate",
+    "variedad": "Cherry",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Tomate Perita",
+    "producto": "Tomate",
+    "variedad": "Perita",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Tomate Redondo",
+    "producto": "Tomate",
+    "variedad": "Redondo",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Uva Cardinal",
+    "producto": "Uva",
+    "variedad": "Cardinal",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Zapallo Plomo",
+    "producto": "Zapallo",
+    "variedad": "Plomo",
+    "status": "APPROVED",
+    "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  }
+]
