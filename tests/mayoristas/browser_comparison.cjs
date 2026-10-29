@@ -11,6 +11,15 @@ const {chromium}=require('playwright');
  const performance=await page.evaluate(()=>({seconds:(Date.now()-window.__testStart)/1000,requests:priceDelivery.metrics.requests.length,
   bytes:priceDelivery.metrics.bytes,heap:window.performance.memory?.usedJSHeapSize}));
  performance.seconds=(Date.now()-start)/1000;
+ const initialProducts=await page.locator('#priceFilterEspecie option').evaluateAll(options=>options.map(o=>({value:o.value,label:o.textContent})));
+ const tomato=initialProducts.filter(o=>o.value==='Tomate');
+ if(tomato.length!==1||!tomato[0].label.includes('en todos los mercados'))throw Error(JSON.stringify(initialProducts));
+ if(initialProducts.some(o=>['Tomate Perita','Tomate Redondo','Tomate Cherry','Sandia Redonda Rayada'].includes(o.value)))throw Error(JSON.stringify(initialProducts));
+ if(process.env.MAYORISTAS_SCREENSHOT_DIR) {
+  await page.locator('#priceFilterEspecieTrigger').click();
+  await page.screenshot({path:require('path').join(process.env.MAYORISTAS_SCREENSHOT_DIR,'producto.png')});
+  await page.locator('#priceFilterEspecieTrigger').click();
+ }
  async function select(id,values){await page.evaluate(({id,values})=>{const el=document.getElementById(id);[...el.options].forEach(o=>o.selected=values.includes(o.value));el.dispatchEvent(new Event('change',{bubbles:true}));},{id,values});}
  await select('priceFilterMercado',['Mercado Central de Buenos Aires','Mercado de Corrientes']);
  await page.waitForFunction('!priceDeliveryPending');
@@ -29,6 +38,10 @@ const {chromium}=require('playwright');
  const pair=await page.evaluate(()=>({status:document.getElementById('priceComparisonStatus').textContent,
   series:priceCharts.evolution?.data?.datasets?.map(x=>x.label)||[]}));
  if(pair.series.length!==2||!pair.status.includes('TORITO|18'))throw Error(JSON.stringify(pair));
+ if(process.env.MAYORISTAS_SCREENSHOT_DIR) {
+  await page.locator('#priceEvolutionPanel').scrollIntoViewIfNeeded();
+  await page.screenshot({path:require('path').join(process.env.MAYORISTAS_SCREENSHOT_DIR,'comparacion.png')});
+ }
  await select('priceFilterMercado',['Mercado de Corrientes']);
  await page.waitForFunction('!priceDeliveryPending');
  await select('priceFilterVariedad',['Perita']);
@@ -37,5 +50,5 @@ const {chromium}=require('playwright');
   status:document.getElementById('priceComparisonStatus').textContent}));
  if(!single.rows||!single.plot||!single.status.includes('ARS'))throw Error(JSON.stringify(single));
  if(errors.length)throw Error(errors.join('\n'));
- console.log(JSON.stringify({performance,result,pair,single,errors}));await browser.close();
+ console.log(JSON.stringify({performance,tomato,result,pair,single,errors}));await browser.close();
 })().catch(error=>{console.error(error);process.exitCode=1;});

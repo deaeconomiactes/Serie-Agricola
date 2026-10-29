@@ -20,6 +20,11 @@ test('approved mappings preserve available raw fields and cover at least ten pro
  }
  const review=products.find(r=>r.status==='REVIEW_REQUIRED');
  assert.equal(normalize({...blank,especie:review.raw}).especie,review.raw);
+ const sandia=normalize({...blank,especie:'Sandia Redonda Rayada',legacy_especie_raw:'Sandia Redonda Rayada'});
+ assert.equal(sandia.especie,'Sandía');assert.equal(sandia.variedad,'Redonda Rayada');
+ assert.equal(sandia.producto_raw,'Sandia Redonda Rayada');
+ const base=normalize({...blank,especie:'Sandia',variedad:'Redonda Ra'});
+ assert.equal(base.especie,'Sandía');assert.equal(base.variedad,'Redonda Ra');
 });
 test('provenance aliases are explicit and preserve provinces versus subregions',()=>{
  const approved=origins.filter(r=>r.status==='APPROVED');assert.ok(approved.length>=10);
@@ -64,6 +69,9 @@ test('2026 production shards retain both tomato markets and the confirmed source
  const {Loader}=require('../../mayoristas-loader.js');
  const loader=new Loader(async url=>{const body=fs.readFileSync(path.join(root,url));return {ok:true,arrayBuffer:async()=>body.buffer.slice(body.byteOffset,body.byteOffset+body.byteLength)};});
  const {rows}=await loader.load({year:2026,frequency:'mensual',markets:['TODOS']});
+ const sandia=rows.filter(r=>r.producto_raw==='Sandia Redonda Rayada');
+ assert.ok(sandia.length>0);
+ assert.ok(sandia.every(r=>r.especie==='Sandía'&&r.variedad==='Redonda Rayada'));
  const tomato=rows.filter(r=>r.especie==='Tomate'&&r.procedencia==='Corrientes');
  const central=tomato.filter(r=>r.mercado==='Mercado Central de Buenos Aires');
  const corrientes=tomato.filter(r=>r.mercado==='Mercado de Corrientes');

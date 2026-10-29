@@ -215,5 +215,19 @@
     "variedad": "Plomo",
     "status": "APPROVED",
     "reason": "Nombre compuesto inequívoco, corroborado por producto y variedad separados"
+  },
+  {
+    "raw": "Sandia Redonda Rayada",
+    "producto": "Sandía",
+    "variedad": "Redonda Rayada",
+    "status": "APPROVED",
+    "reason": "Relación explícita en VARIETY_MAP existente: SANDIA + SANDIA REDONDA RAYADA"
+  },
+  {
+    "raw": "Sandia",
+    "producto": "Sandía",
+    "variedad": "",
+    "status": "APPROVED",
+    "reason": "Acentuación ortográfica; conserva la variedad informada"
   }
 ]
