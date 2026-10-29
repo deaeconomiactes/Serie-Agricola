@@ -25,10 +25,41 @@ INPUTS = {
     'data/mercado_central/dashboard/mcba/MCBA_MC_MONTHLY_DERIVED.csv': ('mcba_monthly', ',', 'monthly derived official daily observations'),
     'data/mercado_central/dashboard/mcba/_SUCCESS.json': ('metadata', None, 'monthly bundle integrity'),
     'data/magyp/reports/PRICE_FRESHNESS_STATUS.json': ('freshness', None, 'shared freshness loaded at boot'),
+    'data/mayoristas/config/procedencia_aliases.json': ('metadata', None, 'approved provenance aliases'),
+    'data/mayoristas/config/producto_variedad_aliases.json': ('metadata', None, 'approved product and variety aliases'),
+    'data/mayoristas/config/fuentes.json': ('metadata', None, 'source currency confirmation'),
 }
 
 def packed(value):
     return json.dumps(value, ensure_ascii=False, separators=(',', ':'), allow_nan=False).encode()
+
+def compact_dimensions(row):
+    """Omit reconstructible fields, keeping values that differ from their fallback."""
+    row = dict(row)
+    if row.get('_normalization_schema') != 'v1':
+        return row
+    raw = {
+        'producto_raw': row.get('product_raw', row.get('especie', '')),
+        'variedad_raw': row.get('variety_raw', row.get('variedad', '')),
+        'procedencia_raw': row.get('origin_raw', row.get('procedencia', '')),
+        'mercado_raw': row.get('mercado', ''),
+        'envase_raw': row.get('package_raw', row.get('envase', '')),
+        'unidad_raw': row.get('price_unit', row.get('unidadPrecioObservado', '')),
+        'tamanio_raw': row.get('size_raw', row.get('tamanoMCBA', '')),
+        'calidad_raw': row.get('quality_raw', row.get('calidadMCBA', '')),
+        'grado_raw': row.get('grade_raw', row.get('gradoMCBA', '')),
+        'fuente_original': row.get('fuente', ''),
+        'moneda_original': str(row.get('currency') or '').strip(),
+    }
+    for field, fallback in raw.items():
+        if row.get(field) == fallback:
+            row.pop(field, None)
+    for field in ('producto_normalizado', 'variedad_normalizada', 'procedencia_normalizada',
+                  'mercado_normalizado', 'envase_normalizado', 'tamanio_normalizado', 'calidad_normalizada', 'grado_normalizado',
+                  'unidad_normalizada', 'moneda_normalizada',
+                  'factor_conversion', 'peso_utilizado', 'conversion_validada'):
+        row.pop(field, None)
+    return row
 
 def inventory(root):
     result=[]
@@ -52,7 +83,7 @@ def build(root=ROOT, output=None, node='node'):
         groups=defaultdict(list)
         for order,row in enumerate(rows):
             if not row.get('mercado') or not isinstance(row.get('year'),int): raise ValueError('Invalid market/year')
-            groups[(row['mercado'],row['year'],row['data_source'])].append(dict(row,_runtime_order=order))
+            groups[(row['mercado'],row['year'],row['data_source'])].append(dict(compact_dimensions(row),_runtime_order=order))
         counts[frequency]=len(rows)
         for (market,year,origin),group in sorted(groups.items()):
             expanded=packed(group)

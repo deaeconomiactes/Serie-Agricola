@@ -44,6 +44,29 @@
         dates.sort();if((dates[0]||null)!==f.first_observation || (dates.at(-1)||null)!==f.last_observation) fail('cobertura inconsistente');
         return rows;
     }
+    function expandDimensions(row) {
+        if (row._normalization_schema !== 'v1') return row;
+        const originalCurrency = row.moneda_original ?? String(row.currency || '').trim();
+        const currencyKey = String(row.currency || originalCurrency).toUpperCase();
+        const currency = ['ARS','USD','EUR','BRL','PYG','UYU','CLP','BOB'].includes(currencyKey) ? currencyKey : 'UNKNOWN';
+        const unit = row.unidadPrecioObservado === '$/kg' ? 'kg' : row.unidadPrecioObservado === '$/bulto' ? 'bulto' : 'UNKNOWN';
+        const weight = Number(row.kgBulto); const kg = Number.isFinite(weight) && weight > 0 ? weight : null;
+        const declared = /\bX\s*(\d+(?:[.,]\d+)?)\s*KG\b/i.exec(row.envase || '');
+        const validated = unit === 'kg' || Boolean(unit === 'bulto' && kg && declared && Number(declared[1].replace(',','.')) === kg && !/\bMAZOS?\b/i.test(row.envase || ''));
+        return {...row, producto_raw:row.producto_raw ?? row.product_raw ?? row.especie ?? '',
+            variedad_raw:row.variedad_raw ?? row.variety_raw ?? row.variedad ?? '',
+            procedencia_raw:row.procedencia_raw ?? row.origin_raw ?? row.procedencia ?? '',
+            mercado_raw:row.mercado_raw ?? row.mercado ?? '', envase_raw:row.envase_raw ?? row.package_raw ?? row.envase ?? '',
+            unidad_raw:row.unidad_raw ?? row.price_unit ?? row.unidadPrecioObservado ?? '',
+            tamanio_raw:row.tamanio_raw ?? row.size_raw ?? row.tamanoMCBA ?? '', calidad_raw:row.calidad_raw ?? row.quality_raw ?? row.calidadMCBA ?? '',
+            grado_raw:row.grado_raw ?? row.grade_raw ?? row.gradoMCBA ?? '',
+            producto_normalizado:row.especie, variedad_normalizada:row.variedad, procedencia_normalizada:row.procedencia,
+            mercado_normalizado:row.mercado, envase_normalizado:row.envase, tamanio_normalizado:row.tamanoMCBA || '',
+            calidad_normalizada:row.calidadMCBA || '', grado_normalizado:row.gradoMCBA || '',
+            unidad_normalizada:unit, moneda_original:originalCurrency, moneda_normalizada:currency,
+            factor_conversion:unit === 'kg' ? 1 : unit === 'bulto' && kg ? 1/kg : null,
+            peso_utilizado:kg, conversion_validada:validated, fuente_original:row.fuente_original ?? row.fuente ?? ''};
+    }
     class Loader {
         constructor(fetcher=root.fetch?.bind(root)) {this.fetcher=fetcher;this.cache=new Map();this.request=0;this.metrics={bytes:0,requests:[]};}
         async response(path) {
@@ -93,7 +116,7 @@
             if(request!==this.request)return null;
             const rows=chunks.flat().sort((a,b)=>a._runtime_order-b._runtime_order);
             if(new Set(rows.map(r=>r._runtime_order)).size!==rows.length)fail('filas duplicadas entre fragmentos');
-            return {rows:rows.map(({_runtime_order,...row})=>row),metadata:this.index.metadata};
+            return {rows:rows.map(({_runtime_order,...row})=>expandDimensions(row)),metadata:this.index.metadata};
         }
     }
     const api={BASE,VERSION,Loader,validateIndex,validateRows,hash};

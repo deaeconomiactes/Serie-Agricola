@@ -1,0 +1,41 @@
+/* Local smoke test. NODE_PATH must include the bundled playwright package. */
+const {chromium}=require('playwright');
+(async()=>{
+ const browser=await chromium.launch({channel:'msedge',headless:true});
+ const page=await browser.newPage({viewport:{width:1440,height:1000}});const errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('http://127.0.0.1:8768',{waitUntil:'domcontentloaded'});
+ await page.locator('#loadingOverlay').waitFor({state:'hidden',timeout:120000});
+ const start=Date.now();await page.locator('[data-module="priceView"]').click();
+ await page.waitForFunction('priceDeliveryActive && !priceDeliveryPending',null,{timeout:120000});
+ const performance=await page.evaluate(()=>({seconds:(Date.now()-window.__testStart)/1000,requests:priceDelivery.metrics.requests.length,
+  bytes:priceDelivery.metrics.bytes,heap:window.performance.memory?.usedJSHeapSize}));
+ performance.seconds=(Date.now()-start)/1000;
+ async function select(id,values){await page.evaluate(({id,values})=>{const el=document.getElementById(id);[...el.options].forEach(o=>o.selected=values.includes(o.value));el.dispatchEvent(new Event('change',{bubbles:true}));},{id,values});}
+ await select('priceFilterMercado',['Mercado Central de Buenos Aires','Mercado de Corrientes']);
+ await page.waitForFunction('!priceDeliveryPending');
+ await select('priceFilterEspecie',['Tomate']);
+ await select('priceFilterProcedencia',['Corrientes']);
+ const result=await page.evaluate(()=>({counts:Object.fromEntries([...new Set(filteredPriceData.map(r=>r.mercado))].map(m=>[m,filteredPriceData.filter(r=>r.mercado===m).length])),
+  status:document.getElementById('priceComparisonStatus').textContent,
+  variety:[...document.getElementById('priceFilterVariedad').options].map(o=>o.value),
+  plot:!!priceCharts.evolution}));
+ if(!result.counts['Mercado Central de Buenos Aires']||!result.counts['Mercado de Corrientes'])throw Error(JSON.stringify(result));
+ if(!result.status.includes('variedad')||result.plot)throw Error(JSON.stringify(result));
+ if(!['Cherry','Perita','Redondo'].every(v=>result.variety.includes(v)))throw Error(JSON.stringify(result));
+ await select('priceFilterVariedad',['Redondo']);
+ for(const [id,value] of [['priceFilterCalidad','Primera'],['priceFilterTamano','MEDIANO'],['priceFilterGrado','P/I']])
+  await page.evaluate(({id,value})=>{const el=document.getElementById(id);el.value=value;el.dispatchEvent(new Event('change',{bubbles:true}));},{id,value});
+ const pair=await page.evaluate(()=>({status:document.getElementById('priceComparisonStatus').textContent,
+  series:priceCharts.evolution?.data?.datasets?.map(x=>x.label)||[]}));
+ if(pair.series.length!==2||!pair.status.includes('TORITO|18'))throw Error(JSON.stringify(pair));
+ await select('priceFilterMercado',['Mercado de Corrientes']);
+ await page.waitForFunction('!priceDeliveryPending');
+ await select('priceFilterVariedad',['Perita']);
+ await page.evaluate(()=>{const el=document.getElementById('priceFilterEnvase');el.value='Torito X 18 Kg';el.dispatchEvent(new Event('change',{bubbles:true}));});
+ const single=await page.evaluate(()=>({rows:filteredPriceData.length,plot:!!priceCharts.evolution,
+  status:document.getElementById('priceComparisonStatus').textContent}));
+ if(!single.rows||!single.plot||!single.status.includes('ARS'))throw Error(JSON.stringify(single));
+ if(errors.length)throw Error(errors.join('\n'));
+ console.log(JSON.stringify({performance,result,pair,single,errors}));await browser.close();
+})().catch(error=>{console.error(error);process.exitCode=1;});

@@ -1,0 +1,15 @@
+# Inventario de dimensiones mayoristas
+
+**Instantánea del índice anterior a la normalización.** Los archivos de inventario son evidencia anterior; ejecutar el script nuevamente los regenera desde el índice activo. Las reglas productivas se encuentran en `data/mayoristas/config/` y se describen en `NORMALIZACION_PRODUCTIVA.md`.
+
+`python scripts/mayoristas/auditar_dimensiones.py` inventaría los fragmentos activos de todas las frecuencias y años del índice. El resultado `DIMENSIONES_MAYORISTAS_INVENTARIO.csv` contiene producto, variedad, procedencia, mercado, unidad, envase, tamaño, calidad y grado, con valor disponible, valor usado actualmente, fuente, frecuencia de vista y conteo. `raw_proveniencia=fuente` indica que el adaptador conserva el campo raw de esa publicación; `adaptador` indica que se usó el valor del adaptador porque el original no está disponible. No equivale a una lectura del archivo primario.
+
+Cada frecuencia es una vista alternativa: no sumar entre frecuencias. En el índice examinado hay 114.840 filas en diaria, 58.962 en mensual y 116.983 en anual. Los totales incluyen fechas futuras, que el dashboard filtra en ejecución. Se inventarian las filas enrutadas a los shards, no necesariamente todas las filas descartadas o desplazadas de las fuentes de entrada.
+
+La clave sin acentos y puntuación señala agrupaciones candidatas, pero **no cambia ni fusiona valores**. Las variantes con igual clave se marcan `REVIEW_REQUIRED`; una clave compartida no demuestra equivalencia comercial. `PROCEDENCIAS_ABREVIATURAS_CANDIDATAS.csv` contiene posibles abreviaturas detectadas como subsecuencias: hay falsos positivos intencionalmente visibles (por ejemplo una denominación provincial y sus subregiones). No aplicar la lista sin revisión. Las abreviaturas no detectadas siguen sin clasificar.
+
+`PRODUCTO_VARIEDAD_CANDIDATOS.csv` propone separar un nombre embebido cuando otra fila contiene las mismas palabras como producto y variedad. El resultado contiene 93 registros de vista, 31 combinaciones distintas y 15 productos base. Es una señal para revisar, no una regla automática ni evidencia de que las presentaciones sean comparables. No se añadieron reglas específicas de productos ni procedencias al código.
+
+El inventario cubre 2.850 combinaciones de dimensión, valor disponible, valor actual, origen del valor, fuente y frecuencia. Las agrupaciones con variantes por clave requieren revisión: 40 de procedencia, 102 de producto, 239 de variedad, 11 de envase, 2 de tamaño y 1 de unidad. Estos conteos no incluyen abreviaciones con claves distintas, ni prueban equivalencias entre mercados.
+
+El inventario no modifica adquisiciones, salidas de dashboard, filtros, agregaciones ni datos publicados. No es todavía el catálogo validado para la normalización productiva. En particular, la moneda del legado de Corrientes está vacía; la comparabilidad económica y la regla de agregación mensual siguen abiertas. Tampoco se midió rendimiento del dashboard tras una implementación, ya que no se realizó esa implementación.
