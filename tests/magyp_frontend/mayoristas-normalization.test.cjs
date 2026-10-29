@@ -89,6 +89,18 @@ test('2026 production shards retain both tomato markets and the confirmed source
  assert.ok(new Set(common.map(([pair])=>JSON.parse(pair)[1])).size>=10);
  const ctx=vm.createContext({console,document:{addEventListener(){}}});
  vm.runInContext(fs.readFileSync(path.join(root,'app.js'),'utf8'),ctx);
+ ctx.tomato=tomato.filter(r=>r.fecha && r.fecha<='2026-10-29');
+ const actual=JSON.parse(vm.runInContext(`JSON.stringify(comparableMarketSelection(tomato,{mercado:['Mercado Central de Buenos Aires','Mercado de Corrientes'],especie:['Tomate'],procedencia:['Corrientes'],variedad:['TODOS']},'mensual'))`,ctx));
+ assert.equal(actual.status,'COMPARABLE');assert.equal(actual.combinations.length,5);
+ assert.match(actual.label,/Tomate Redondo/);assert.match(actual.label,/P\/I/);
+ assert.deepEqual(actual.months,['2026-04','2026-05','2026-06','2026-07','2026-08']);
+ assert.equal(actual.rows.length,211);assert.ok(actual.combinations.every(c=>c.rows.every(r=>r.variedad==='Redondo')));
+ assert.deepEqual(actual.unavailableVarieties,['Cherry','Larga Vida','Perita']);
+ for(const product of ['Zanahoria','Berenjena','Pepino']) {
+  const entry=common.find(([pair])=>JSON.parse(pair)[0]===product);assert.ok(entry,product+' tiene datos en ambos mercados');
+  const [,origin]=JSON.parse(entry[0]);ctx.otherRows=entry[1];ctx.otherFilters={mercado:['Mercado Central de Buenos Aires','Mercado de Corrientes'],especie:[product],procedencia:[origin],variedad:['TODOS']};
+  assert.notEqual(vm.runInContext("comparableMarketSelection(otherRows,otherFilters,'mensual').status",ctx),'COMPARABLE');
+ }
  for(const [,group] of common) {
   ctx.rows=group;
   assert.notEqual(vm.runInContext("comparePriceMarkets(rows,{mercado:['Mercado Central de Buenos Aires','Mercado de Corrientes']}).status",ctx),'NO_COMPARABLE_CURRENCY');
@@ -101,9 +113,10 @@ test('source currency is confirmed independently of raw unit and doubtful bundle
 });
 test('monthly market comparison requires matching variety and package and retains shared periods',()=>{
  const ctx=vm.createContext({console,document:{addEventListener(){}}});vm.runInContext(fs.readFileSync(path.join(root,'app.js'),'utf8'),ctx);
- ctx.rows=[{mercado:'A',fecha:'2026-05-01',moneda_normalizada:'ARS',envase:'Torito',kg_raw:'18',precioKgEstimado:10,confianzaConversion:'Alta'},
-  {mercado:'B',fecha:'2026-05-20',moneda_normalizada:'ARS',envase:'Torito X 18 Kg',kgBulto:18,precioKgEstimado:20,confianzaConversion:'Media',conversion_validada:true},
-  {mercado:'B',fecha:'2026-05-20',moneda_normalizada:'ARS',envase:'Doc. de Mazo X 18 Kg',kgBulto:18,precioKgEstimado:30,confianzaConversion:'Media',conversion_validada:false}];
+ const dims={especie:'Tomate',variedad:'Redondo',procedencia:'Corrientes',fechaPrecision:'mensual'};
+ ctx.rows=[{...dims,mercado:'A',fecha:'2026-05-01',moneda_normalizada:'ARS',envase:'Torito',kg_raw:'18',precioKgEstimado:10,confianzaConversion:'Alta'},
+  {...dims,mercado:'B',fecha:'2026-05-20',moneda_normalizada:'ARS',envase:'Torito X 18 Kg',kgBulto:18,precioKgEstimado:20,confianzaConversion:'Media',conversion_validada:true},
+  {...dims,mercado:'B',fecha:'2026-05-20',moneda_normalizada:'ARS',envase:'Doc. de Mazo X 18 Kg',kgBulto:18,precioKgEstimado:30,confianzaConversion:'Media',conversion_validada:false}];
  ctx.filters={mercado:['A','B'],especie:['Tomate'],variedad:['Redondo'],procedencia:['Corrientes']};
  assert.equal(vm.runInContext("comparableMarketSelection(rows,filters,'mensual').status",ctx),'COMPARABLE');
  assert.equal(vm.runInContext("comparableMarketSelection(rows,filters,'mensual').rows.length",ctx),2);

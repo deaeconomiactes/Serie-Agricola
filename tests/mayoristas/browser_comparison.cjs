@@ -30,14 +30,20 @@ const {chromium}=require('playwright');
   variety:[...document.getElementById('priceFilterVariedad').options].map(o=>o.value),
   plot:!!priceCharts.evolution}));
  if(!result.counts['Mercado Central de Buenos Aires']||!result.counts['Mercado de Corrientes'])throw Error(JSON.stringify(result));
- if(!result.status.includes('variedad')||result.plot)throw Error(JSON.stringify(result));
+ if(!result.status.includes('Tomate Redondo')||!result.plot)throw Error(JSON.stringify(result));
  if(!['Cherry','Perita','Redondo'].every(v=>result.variety.includes(v)))throw Error(JSON.stringify(result));
+ const automatic=await page.evaluate(()=>({options:[...document.getElementById('priceComparisonChoice').options].map(o=>o.textContent),
+  visible:!document.getElementById('priceComparisonControl').hidden,series:priceCharts.evolution?.data?.datasets?.map(x=>x.label)||[]}));
+ if(automatic.options.length<2||!automatic.visible||automatic.series.length!==2)throw Error(JSON.stringify(automatic));
+ if(process.env.MAYORISTAS_SCREENSHOT_DIR) await page.screenshot({path:require('path').join(process.env.MAYORISTAS_SCREENSHOT_DIR,'automatica.png')});
+ const alternative=await page.evaluate(()=>{const el=document.getElementById('priceComparisonChoice');el.value=el.options[1].value;el.dispatchEvent(new Event('change',{bubbles:true}));return {selected:el.options[el.selectedIndex].textContent,status:document.getElementById('priceComparisonStatus').textContent,series:priceCharts.evolution?.data?.datasets?.length};});
+ if(alternative.series!==2||!alternative.status.includes(alternative.selected))throw Error(JSON.stringify(alternative));
  await select('priceFilterVariedad',['Redondo']);
  for(const [id,value] of [['priceFilterCalidad','Primera'],['priceFilterTamano','MEDIANO'],['priceFilterGrado','P/I']])
   await page.evaluate(({id,value})=>{const el=document.getElementById(id);el.value=value;el.dispatchEvent(new Event('change',{bubbles:true}));},{id,value});
  const pair=await page.evaluate(()=>({status:document.getElementById('priceComparisonStatus').textContent,
   series:priceCharts.evolution?.data?.datasets?.map(x=>x.label)||[]}));
- if(pair.series.length!==2||!pair.status.includes('TORITO|18'))throw Error(JSON.stringify(pair));
+ if(pair.series.length!==2||!pair.status.includes('TORITO'))throw Error(JSON.stringify(pair));
  if(process.env.MAYORISTAS_SCREENSHOT_DIR) {
   await page.locator('#priceEvolutionPanel').scrollIntoViewIfNeeded();
   await page.screenshot({path:require('path').join(process.env.MAYORISTAS_SCREENSHOT_DIR,'comparacion.png')});
@@ -50,5 +56,5 @@ const {chromium}=require('playwright');
   status:document.getElementById('priceComparisonStatus').textContent}));
  if(!single.rows||!single.plot||!single.status.includes('ARS'))throw Error(JSON.stringify(single));
  if(errors.length)throw Error(errors.join('\n'));
- console.log(JSON.stringify({performance,tomato,result,pair,single,errors}));await browser.close();
+ console.log(JSON.stringify({performance,tomato,result,automatic,alternative,pair,single,errors}));await browser.close();
 })().catch(error=>{console.error(error);process.exitCode=1;});
