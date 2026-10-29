@@ -45,9 +45,9 @@ function makeNormalizer(root, views) {
         const currency = sourceCurrency || (['ARS','USD','EUR','BRL','PYG','UYU','CLP','BOB'].includes(currencyKey) ? currencyKey : 'UNKNOWN');
         const rule = productRules.get(key(row.especie));
         // Never overwrite a distinct variety already stated by the source.
-        const canSplit = rule && (!row.variedad || key(row.variedad) === key(rule.variedad) || key(row.variedad) === 'SIN VARIEDAD');
+        const canSplit = rule && (!rule.variedad || !row.variedad || key(row.variedad) === key(rule.variedad) || key(row.variedad) === 'SIN VARIEDAD');
         const species = canSplit ? rule.producto : row.especie;
-        const variety = canSplit ? rule.variedad : row.variedad;
+        const variety = canSplit && rule.variedad ? rule.variedad : row.variedad;
         const origin = approved.get(key(row.procedencia)) || labels.get(key(row.procedencia)) || row.procedencia;
         const unit = row.unidadPrecioObservado === '$/kg' ? 'kg' : row.unidadPrecioObservado === '$/bulto' ? 'bulto' : 'UNKNOWN';
         const kg = Number(row.kgBulto);
