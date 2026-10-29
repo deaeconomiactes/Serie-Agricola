@@ -348,6 +348,7 @@ let priceSeriesData = [];
 let priceQualityMap = new Map();
 let priceFutureDateCount = 0;
 let priceUnitMode = 'comparable';
+let priceComparisonChoice = '';
 let spreadsheetInvalidCount = 0;
 let heatmapFilter = 'TODOS';
 let selectedYear = '2025';
@@ -1180,10 +1181,10 @@ function updatePriceDashboard() {
         NO_COMPARABLE_CURRENCY:'Hay datos disponibles, pero las monedas no están confirmadas o no son iguales.',
         NO_COMPARABLE_UNIT:'Hay datos disponibles, pero las unidades no son comparables.',
         NO_COMMON_VARIETY:'Hay datos en ambos mercados, pero no existe una variedad común.',
-        NO_COMMON_PRESENTATION:'Hay datos en ambos mercados, pero no existe una presentación común identificada.',
+        NO_COMMON_PRESENTATION:'Hay datos en ambos mercados, pero no existe una combinación de variedad y presentación comparable.',
         NO_COMPARABLE_FREQUENCY:'Hay datos en ambos mercados, pero sus frecuencias no son compatibles.',
         NO_COMPARABLE_DIMENSIONS:'Seleccioná un producto, una procedencia, una variedad y una presentación compatibles.'
-        ,SELECT_VARIETY:'Seleccioná un producto, una procedencia y una variedad para comparar ambos mercados.'
+        ,SELECT_VARIETY:'Seleccioná un producto y una procedencia para buscar comparaciones entre mercados.'
         ,SELECT_PRESENTATION:'Seleccioná una presentación comparable para visualizar ambos mercados.'
         ,SELECT_QUALITY:'Seleccioná calidad, tamaño y grado de Mercado Central para evitar mezclar categorías; Corrientes no informa esos detalles.'
     };
@@ -1197,8 +1198,19 @@ function updatePriceDashboard() {
     }).join(' | ');
     const comparisonStatus = document.getElementById('priceComparisonStatus');
     if (comparisonStatus) {
-        comparisonStatus.textContent = [comparisonMessage, comparison.rows ? `Comparación mensual por ${comparison.presentation}: ${comparison.rows.length} observaciones; calidad y tamaño Corrientes no informados.` : '', marketCounts].filter(Boolean).join(' ');
+        comparisonStatus.textContent = [comparisonMessage, comparison.rows ? `Comparaciones compatibles encontradas: ${comparison.combinations.length}. Comparación utilizada: ${comparison.label}. ${comparison.note}${comparison.unavailableVarieties.length ? ` Sin combinación compatible para: ${comparison.unavailableVarieties.join(', ')}.` : ''}` : '', marketCounts].filter(Boolean).join(' ');
         comparisonStatus.classList.toggle('is-visible', Boolean(comparisonStatus.textContent));
+    }
+    const comparisonControl = document.getElementById('priceComparisonControl');
+    const comparisonSelect = document.getElementById('priceComparisonChoice');
+    if (comparisonControl && comparisonSelect) {
+        comparisonControl.hidden = !comparison.combinations || comparison.combinations.length < 2 || Boolean(comparisonMessage);
+        comparisonSelect.innerHTML = '';
+        for (const item of comparison.combinations || []) {
+            const option = document.createElement('option'); option.value = item.key; option.textContent = item.label; comparisonSelect.appendChild(option);
+        }
+        if (comparison.rows) comparisonSelect.value = comparison.key;
+        comparisonSelect.onchange = () => { priceComparisonChoice = comparisonSelect.value; updatePriceDashboard(); };
     }
     const unitStatus = document.getElementById('priceUnitStatus');
     if (unitStatus) {
@@ -1307,22 +1319,73 @@ function comparableMarketSelection(rows, filters, frequency) {
     const markets = isAllSelected(getFilterValues(filters.mercado)) ? (priceDelivery?.index?.markets || [...new Set(rows.map(r=>r.mercado))]) : getFilterValues(filters.mercado);
     if (markets.length < 2) return null;
     if (markets.some(m => !rows.some(r => r.mercado === m))) return {status:'NO_DATA', markets};
-    if (new Set(rows.map(r => r.moneda_normalizada || 'UNKNOWN')).size !== 1 || rows.some(r => (r.moneda_normalizada || 'UNKNOWN') === 'UNKNOWN')) return {status:'NO_COMPARABLE_CURRENCY',markets};
-    if (['especie','procedencia','variedad'].some(k => isAllSelected(getFilterValues(filters[k])) || getFilterValues(filters[k]).length !== 1))
+    if (['especie','procedencia'].some(k => isAllSelected(getFilterValues(filters[k])) || getFilterValues(filters[k]).length !== 1))
         return {status:'SELECT_VARIETY',markets};
     if (frequency !== 'mensual') return {status:'NO_COMPARABLE_FREQUENCY',markets};
-    const valid = rows.filter(r => isComparablePriceRow(r) && comparablePresentation(r));
-    const perMarket = markets.map(m => new Set(valid.filter(r => r.mercado === m).map(comparablePresentation)));
-    const common = [...perMarket[0]].filter(p => perMarket.every(set => set.has(p)));
-    if (!common.length) return {status:'NO_COMMON_PRESENTATION',markets};
-    if (common.length > 1) return {status:'SELECT_PRESENTATION',markets};
-    let selected = valid.filter(r => common.includes(comparablePresentation(r)));
-    if (['calidadMCBA','tamanoMCBA','gradoMCBA'].some(k => new Set(selected.map(r => r[k]).filter(Boolean)).size > 1))
-        return {status:'SELECT_QUALITY',markets};
-    const periods = markets.map(m => new Set(selected.filter(r => r.mercado === m).map(r => r.fecha?.slice(0,7))));
-    const commonPeriods = new Set([...periods[0]].filter(p => p && periods.every(set => set.has(p))));
-    selected = selected.filter(r => commonPeriods.has(r.fecha?.slice(0,7)));
-    return {status:selected.length ? 'COMPARABLE' : 'NO_DATA',markets,rows:selected,presentation:common[0]};
+    const attrs = ['calidadMCBA','tamanoMCBA','gradoMCBA'];
+    const grouped = new Map();
+    for (const row of rows) {
+        const currency = row.moneda_normalizada || 'UNKNOWN';
+        const variety = row.variedad || '';
+        const presentation = comparablePresentation(row);
+        if (!markets.includes(row.mercado) || !isComparablePriceRow(row) || currency === 'UNKNOWN' || !presentation ||
+            !['DIARIA','MENSUAL'].includes(normalizeText(row.fechaPrecision || '')) ||
+            !variety || ['SIN ESPECIFICAR','SIN VARIEDAD'].includes(normalizeText(variety)) || !row.fecha) continue;
+        const identity = [getPriceProduct(row), row.procedencia || '', String(variety).trim().toLocaleUpperCase('es-AR'), currency, presentation];
+        const key = JSON.stringify(identity);
+        if (!grouped.has(key)) grouped.set(key, new Map());
+        const byMarket = grouped.get(key);
+        if (!byMarket.has(row.mercado)) byMarket.set(row.mercado, new Map());
+        const details = attrs.map(field => String(row[field] || '').trim().replace(/\s+/g,' ').toLocaleUpperCase('es-AR'));
+        const precision = normalizeText(row.fechaPrecision || '');
+        const subgroupKey = JSON.stringify([row.data_source || '', precision, ...details]);
+        const subgroups = byMarket.get(row.mercado);
+        if (!subgroups.has(subgroupKey)) subgroups.set(subgroupKey, {identity, details, detailLabels:attrs.map(field => row[field] || 'no informado'), source:row.data_source || '', precision, rows:[]});
+        subgroups.get(subgroupKey).rows.push(row);
+    }
+    const combinations = [];
+    for (const byMarket of grouped.values()) {
+        if (markets.some(m => !byMarket.has(m))) continue;
+        const walk = (index, picked) => {
+            if (index < markets.length) {
+                for (const group of byMarket.get(markets[index]).values()) {
+                    if (attrs.some((_,i) => group.details[i] && picked.some(p => p.details[i] && p.details[i] !== group.details[i]))) continue;
+                    walk(index + 1, [...picked, group]);
+                }
+                return;
+            }
+            const months = picked.map(g => new Set(g.rows.map(r => r.fecha.slice(0,7))));
+            const common = [...months[0]].filter(month => months.every(set => set.has(month))).sort();
+            if (!common.length) return;
+            const selectedRows = picked.flatMap(g => g.rows.filter(r => common.includes(r.fecha.slice(0,7))));
+            const identity = picked[0].identity;
+            const sourceLabel = source => ({MERCADO_CENTRAL:'Mercado Central',MAGYP:'MAGyP',LEGACY:'archivo histórico'}[source] || source);
+            const details = picked.map((g,i) => {
+                const known = g.detailLabels.filter(value => value !== 'no informado');
+                const detail = known.length ? known.join(' / ') : 'atributos no informados';
+                return `${detail} (${sourceLabel(g.source) || markets[i]}, ${g.precision.toLocaleLowerCase('es-AR')})`;
+            }).join(' · ');
+            const label = `${identity[0]} ${formatLabel(identity[2])} · ${identity[4].replace('|',' · ')} kg · ${identity[3]}/kg · ${details}`;
+            const note = picked.some(g => g.details.some(v => !v)) ? 'Calidad, tamaño o grado no informados en alguna fuente; no se supone que sean iguales.' : '';
+            const key = JSON.stringify([identity, ...picked.map((g,i) => [markets[i],g.source,g.precision,...g.details])]);
+            combinations.push({key,label,note,rows:selectedRows,variety:identity[2],presentation:identity[4],months:common});
+        };
+        walk(0, []);
+    }
+    combinations.sort((a,b) => b.months.length-a.months.length || b.rows.length-a.rows.length || a.label.localeCompare(b.label,'es'));
+    if (!combinations.length) {
+        const currencies = markets.map(market => new Set(rows.filter(row => row.mercado === market && row.moneda_normalizada && row.moneda_normalizada !== 'UNKNOWN').map(row => row.moneda_normalizada)));
+        if (![...currencies[0]].some(currency => currencies.every(set => set.has(currency)))) return {status:'NO_COMPARABLE_CURRENCY',markets};
+        return {status:'NO_COMMON_PRESENTATION',markets};
+    }
+    const selected = combinations.find(item => item.key === priceComparisonChoice) || combinations[0];
+    priceComparisonChoice = selected.key;
+    const available = new Map();
+    for (const row of rows) if (row.variedad && !['SIN ESPECIFICAR','SIN VARIEDAD'].includes(normalizeText(row.variedad)))
+        available.set(String(row.variedad).trim().toLocaleUpperCase('es-AR'), row.variedad);
+    const matched = new Set(combinations.map(item => item.variety));
+    const unavailableVarieties = [...available].filter(([key]) => !matched.has(key)).map(([,value])=>value).sort((a,b)=>a.localeCompare(b,'es'));
+    return {status:'COMPARABLE',markets,combinations,unavailableVarieties,...selected};
 }
 
 // Cross-market prices must not share an axis merely because both use '$'.

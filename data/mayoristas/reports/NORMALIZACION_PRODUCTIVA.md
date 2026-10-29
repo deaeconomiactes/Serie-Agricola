@@ -1,5 +1,7 @@
 # Normalización productiva Mayoristas
 
+**Comparación automática:** con producto y procedencia seleccionados, la vista mensual busca combinaciones por variedad, moneda, presentación, fuente y atributos comerciales. Para cada combinación conserva sólo meses presentes en todos los mercados y promedia cada serie por separado. Si hay varias, muestra un selector y elige inicialmente la que tiene más meses comunes; si no hay ninguna, explica la ausencia. Los atributos no informados siguen siendo desconocidos y se indican en la interfaz. Las reglas anteriores que exigían seleccionar manualmente variedad y atributos describen el comportamiento previo.
+
 **Actualización posterior:** el responsable del proyecto confirmó que la fuente legada de Corrientes utiliza pesos argentinos. Esa confirmación figura en `data/mayoristas/config/fuentes.json`; las referencias a moneda UNKNOWN en el análisis histórico siguiente describen el estado anterior a esa confirmación. El símbolo `$` no se usa como evidencia monetaria.
 
 La comparación mensual exige un producto, una procedencia y una variedad, precios por kg válidos, moneda común y tipo y peso de presentación iguales. Sólo utiliza meses presentes en ambos mercados. Cuando Mercado Central publica varias calidades, tamaños o grados exige seleccionarlos; esos detalles no están informados en Corrientes y la vista lo indica. Las presentaciones en mazos y las que no expresan peso numérico verificable quedan fuera de la conversión comparable.
