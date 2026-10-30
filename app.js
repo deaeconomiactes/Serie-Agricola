@@ -349,6 +349,7 @@ let priceQualityMap = new Map();
 let priceFutureDateCount = 0;
 let priceUnitMode = 'comparable';
 let priceComparisonChoice = '';
+let priceIndividualSeriesChoice = '';
 let spreadsheetInvalidCount = 0;
 let heatmapFilter = 'TODOS';
 let selectedYear = '2025';
@@ -1140,6 +1141,7 @@ function resetPriceFilters() {
     if (frequency) frequency.value = 'mensual';
     priceFrequency = 'mensual';
     priceComparisonChoice = '';
+    priceIndividualSeriesChoice = '';
     closeMultiSelects();
     if (priceDelivery) { refreshPriceDelivery(); return; }
     populatePriceFilters(); updatePriceFrequencyOptions(); updatePriceDashboard();
@@ -1211,11 +1213,23 @@ function updatePriceDashboard() {
         NO_COMMON_PRESENTATION:'Hay datos en ambos mercados, pero no existe una combinación de variedad y presentación comparable.',
         NO_COMPARABLE_FREQUENCY:'Hay datos en ambos mercados, pero sus frecuencias no son compatibles.',
         NO_COMPARABLE_DIMENSIONS:'Seleccioná un producto, una procedencia, una variedad y una presentación compatibles.'
-        ,SELECT_VARIETY:'Seleccioná un producto y una procedencia para buscar comparaciones entre mercados.'
+        ,SELECT_VARIETY: isAllSelected(getFilterValues(filters.especie)) ? 'Para comparar mercados, seleccioná un producto y una procedencia.' : 'Para comparar mercados, seleccioná una procedencia.'
         ,SELECT_PRESENTATION:'Seleccioná una presentación comparable para visualizar ambos mercados.'
         ,SELECT_QUALITY:'Seleccioná calidad, tamaño y grado de Mercado Central para evitar mezclar categorías; Corrientes no informa esos detalles.'
     };
     const comparisonMessage = comparisonMessages[comparison.status] || '';
+    const individualSeries = (comparisonMessage || comparison.status === 'SINGLE_MARKET')
+        ? getIndividualPriceSeries(filteredPriceData, priceUnitMode, priceFrequency) : [];
+    const individual = individualSeries.find(item => item.key === priceIndividualSeriesChoice) || individualSeries[0];
+    if (individual) priceIndividualSeriesChoice = individual.key;
+    const hideAggregate = Boolean(!hasData || (!individual && comparisonMessage) || comparison.rows);
+    const kpiGrid = document.getElementById('priceKpiGrid'), range = document.getElementById('priceRange'), kpiNote = document.getElementById('priceKpiScopeNote');
+    if (kpiGrid) kpiGrid.hidden = hideAggregate;
+    if (range) range.hidden = hideAggregate;
+    if (kpiNote) {
+        kpiNote.hidden = !hideAggregate;
+        kpiNote.textContent = comparison.rows ? 'Los indicadores agregados se ocultan para no mezclar mercados. Explorá cada serie en el gráfico.' : 'Los indicadores aparecerán al seleccionar una serie comparable.';
+    }
     const marketCounts = [...new Set(availableOriginalRows.map(row => row.mercado))].map(market => {
         const rows = availableOriginalRows.filter(row => row.mercado === market);
         const currencies = [...new Set(rows.map(row => row.moneda_normalizada || row.currency || 'UNKNOWN'))]
@@ -1225,7 +1239,7 @@ function updatePriceDashboard() {
     }).join(' | ');
     const comparisonStatus = document.getElementById('priceComparisonStatus');
     if (comparisonStatus) {
-        comparisonStatus.textContent = [comparisonMessage, comparison.rows ? `Comparaciones compatibles encontradas: ${comparison.combinations.length}. Comparación utilizada: ${comparison.label}. ${comparison.note}${comparison.unavailableVarieties.length ? ` Sin combinación compatible para: ${comparison.unavailableVarieties.join(', ')}.` : ''}` : '', marketCounts].filter(Boolean).join(' ');
+        comparisonStatus.textContent = [comparisonMessage, individual ? `Serie individual, no es comparación entre mercados.${individualSeries.length < 2 ? ` ${individual.label}.` : ' Elegí otra serie para explorarla.'} Los atributos no informados se conservan como tales.` : '', comparison.rows ? `Comparaciones compatibles encontradas: ${comparison.combinations.length}. Comparación utilizada: ${comparison.label}. ${comparison.note}${comparison.unavailableVarieties.length ? ` Sin combinación compatible para: ${comparison.unavailableVarieties.join(', ')}.` : ''}` : '', marketCounts].filter(Boolean).join(' ');
         comparisonStatus.classList.toggle('is-visible', Boolean(comparisonStatus.textContent));
     }
     const comparisonControl = document.getElementById('priceComparisonControl');
@@ -1239,6 +1253,17 @@ function updatePriceDashboard() {
         if (comparison.rows) comparisonSelect.value = comparison.key;
         comparisonSelect.onchange = () => { priceComparisonChoice = comparisonSelect.value; updatePriceDashboard(); };
     }
+    const individualControl = document.getElementById('priceIndividualSeriesControl');
+    const individualSelect = document.getElementById('priceIndividualSeriesChoice');
+    if (individualControl && individualSelect) {
+        individualControl.hidden = !individual || individualSeries.length < 2;
+        individualSelect.replaceChildren();
+        for (const item of individualSeries) {
+            const option = document.createElement('option'); option.value = item.key; option.textContent = item.label; individualSelect.appendChild(option);
+        }
+        if (individual) individualSelect.value = individual.key;
+        individualSelect.onchange = () => { priceIndividualSeriesChoice = individualSelect.value; updatePriceDashboard(); };
+    }
     const unitStatus = document.getElementById('priceUnitStatus');
     if (unitStatus) {
         const nonComparableIncluded = priceUnitMode !== 'comparable' && filteredPriceData.some(row => !isComparablePriceRow(row));
@@ -1250,22 +1275,29 @@ function updatePriceDashboard() {
     const splitDimensions = getPriceSplitDimensions(filters);
     const selectionSummary = document.getElementById('priceSelectionSummary');
     if (selectionSummary) {
-        selectionSummary.textContent = splitDimensions.length
+        selectionSummary.textContent = individual ? 'Gráficos e indicadores correspondientes a la serie individual seleccionada.' : splitDimensions.length
             ? `Resumen de selección filtrada · comparación separada por ${splitDimensions.map(formatPriceDimensionName).join(', ')}`
             : '';
-        selectionSummary.classList.toggle('is-visible', splitDimensions.length > 0);
+        selectionSummary.classList.toggle('is-visible', Boolean(individual) || splitDimensions.length > 0);
     }
-    if (comparisonMessage) {
+    if (individual) {
+        const availableRows = filteredPriceData;
+        filteredPriceData = individual.rows; updatePriceKPIs(); renderPriceCharts();
+        filteredPriceData = availableRows;
+        updatePriceCoverageMetadata(individual.rows);
+    } else if (comparisonMessage) {
         const availableRows = filteredPriceData;
         filteredPriceData = [];
         updatePriceKPIs(); renderPriceCharts();
         filteredPriceData = availableRows;
+        updatePriceCoverageMetadata(availableRows);
         showChartMessage('priceChartMonthly', comparisonMessage);
     } else if (comparison.rows) {
         const availableRows = filteredPriceData;
         filteredPriceData = []; updatePriceKPIs();
         filteredPriceData = comparison.rows; renderPriceCharts();
         filteredPriceData = availableRows;
+        updatePriceCoverageMetadata(comparison.rows);
     } else { updatePriceKPIs(); renderPriceCharts(); }
     if (priceDeliveryActive) priceDeliveryLastControls = priceDeliveryControls();
 }
@@ -1332,6 +1364,36 @@ function getPriceSplitDimensions(filters = {}) {
     return ['mercado', 'rubro', 'especie', 'variedad', 'procedencia']
         .filter(dimension => isMultiSpecificSelection(getFilterValues(filters[dimension])) ||
             (dimension === 'mercado' && isAllSelected(getFilterValues(filters.mercado)) && new Set(filteredPriceData.map(r => r.mercado)).size > 1));
+}
+
+// A published series is kept separate by every available economic and source dimension.
+// Missing attributes remain explicitly unspecified; they are never treated as verified matches.
+function getIndividualPriceSeries(rows, mode, frequency) {
+    const groups = new Map();
+    const clean = value => String(value ?? '').trim().replace(/\s+/g, ' ');
+    for (const row of rows) {
+        const value = mode === 'comparable' ? row.precioKgEstimado : row.precioObservado;
+        const period = createTimeKey(row.fecha || row, frequency);
+        if (!period || !isValidPrice(value)) continue;
+        const fields = [row.mercado, getPriceProduct(row), row.procedencia, row.variedad,
+            row.moneda_normalizada || row.currency, mode === 'comparable' ? 'kg' : (row.unidadPrecioObservado || row.unidad || row.unidad_normalizada),
+            row.envase, row.kg_raw || row.kgBulto, row.calidadMCBA, row.tamanoMCBA, row.gradoMCBA,
+            row.rubro, row.data_source, row.source_status, row.fechaPrecision,
+            row.unidadPrecioObservado, row.unidad, row.unidad_normalizada].map(clean);
+        const key = JSON.stringify(fields.map(value => value.toLocaleUpperCase('es-AR')));
+        if (!groups.has(key)) {
+            const [market, product, origin, variety, currency, unit, presentation, weight, quality, size, grade, , source, sourceStatus, precision, observedUnit, rawUnit, normalizedUnit] = fields;
+            const details = [quality && `calidad ${quality}`, size && `tamaño ${size}`, grade && `grado ${grade}`].filter(Boolean).join(' / ');
+            const label = [market || 'Mercado no informado', [product, variety].filter(Boolean).join(' '),
+                `origen ${origin || 'no informado'}`, presentation || 'presentación no informada',
+                weight ? `${weight} kg/envase` : '', details, `${currency || 'moneda no informada'}/${unit || 'unidad no informada'}`,
+                [source || 'fuente no informada', sourceStatus === source ? '' : sourceStatus, precision || 'frecuencia no informada'].filter(Boolean).join(' · '),
+                [observedUnit, rawUnit, normalizedUnit].filter(Boolean).length ? `unidades informadas: ${[...new Set([observedUnit,rawUnit,normalizedUnit].filter(Boolean))].join(' / ')}` : 'unidad original no informada'].filter(Boolean).join(' · ');
+            groups.set(key, {key, label, rows:[], periods:new Set()});
+        }
+        const group = groups.get(key); group.rows.push(row); group.periods.add(period);
+    }
+    return [...groups.values()].sort((a,b) => b.periods.size - a.periods.size || b.rows.length - a.rows.length || a.label.localeCompare(b.label, 'es'));
 }
 
 function comparablePresentation(row) {
@@ -1475,7 +1537,8 @@ function getPriceSplitLabel(row, splitDimensions) {
 
 function getAvailablePriceVisualizations(filteredData, filters, frequency) {
     const level = getPriceAnalysisLevel(filters);
-    const hasSplitSelection = getPriceSplitDimensions(filters).length > 0;
+    const splitDimensions = getPriceSplitDimensions(filters);
+    const hasSplitSelection = splitDimensions.some(dimension => dimension !== 'mercado');
     const speciesCount = new Set(filteredData.map(getPriceProduct)).size;
     const varietyCount = new Set(filteredData.map(row => row.variedad || 'Sin especificar')).size;
     const provenanceCount = new Set(filteredData.map(row => row.procedencia || 'Sin procedencia informada')).size;
@@ -1487,7 +1550,7 @@ function getAvailablePriceVisualizations(filteredData, filters, frequency) {
         showSpeciesRanking: level === 'general' && (speciesCount >= 2 || hasSplitSelection),
         showVarietyRanking: level === 'species_detail' && (varietyCount >= 2 || hasSplitSelection),
         showProcedenciaComparison: level === 'variety_detail' && (provenanceCount >= 2 || hasSplitSelection),
-        showMarketComparison: marketCount >= 1,
+        showMarketComparison: marketCount >= 2,
         showVariationBars: !isDaily && periods >= 2,
         showAccumulatedVariationCard: isDaily && periods >= 2,
         showIncreasesRanking: !isDaily && level !== 'single_series',
@@ -1561,6 +1624,13 @@ function updatePriceKPIs() {
     document.getElementById('priceKpiMinLabel').textContent = comparableView ? 'Precio mínimo por kg' : 'Precio observado mínimo';
 }
 
+function updatePriceCoverageMetadata(rows) {
+    const dates = rows.map(row => row.fecha).filter(date => date && isValidOperationalDate(date)).sort();
+    document.getElementById('priceKpiLast').textContent = dates.length ? dates.at(-1).split('-').reverse().join('/') : 'Sin dato válido';
+    document.getElementById('priceKpiSpecies').textContent = new Set(rows.map(getPriceProduct)).size || '–';
+    document.getElementById('priceKpiVarieties').textContent = new Set(rows.map(row => row.variedad || 'Sin especificar')).size || '–';
+}
+
 function formatCurrency(value) {
     return Number.isFinite(value) ? `$ ${formatNumber(value)}` : '–';
 }
@@ -1614,6 +1684,55 @@ function createPriceChart(chartKey, canvasId, config) {
     clearChartMessage(canvasId);
     const canvas = document.getElementById(canvasId);
     return canvas ? new Chart(canvas.getContext('2d'), config) : null;
+}
+
+function priceSeriesColor(label, index = 0) {
+    const name = normalizeText(label);
+    if (name.includes('MERCADO CENTRAL DE BUENOS AIRES')) return '#34d399';
+    if (name.includes('MERCADO DE CORRIENTES')) return '#60a5fa';
+    return PALETTE[index % PALETTE.length];
+}
+
+function setupPriceEvolutionExplorer(evolution, chart) {
+    const root = document.getElementById('priceEvolutionExplore');
+    const legend = document.getElementById('priceEvolutionLegend');
+    const select = document.getElementById('pricePeriodSelect');
+    const values = document.getElementById('pricePeriodValues');
+    if (!root || !legend || !select || !values) return;
+    root.hidden = !chart || !evolution.labels.length;
+    legend.replaceChildren(); select.replaceChildren(); values.replaceChildren();
+    if (root.hidden) return;
+    evolution.labels.forEach((label,index) => { const option=document.createElement('option');option.value=String(index);option.textContent=label;select.appendChild(option); });
+    select.value = String(evolution.labels.length - 1);
+    function showPeriod() {
+        const index = Number(select.value);
+        values.replaceChildren();
+        chart.data.datasets.forEach((dataset,seriesIndex) => {
+            if (!chart.isDatasetVisible(seriesIndex)) return;
+            const item=document.createElement('span');item.className='sa-price-period-item';
+            const name=document.createElement('span');name.textContent=dataset.label;
+            const amount=document.createElement('strong');const value=evolution.series[seriesIndex]?.data[index];
+            amount.textContent=isValidPrice(value) ? formatCurrency(value) : 'Sin dato';
+            item.append(name,amount);values.appendChild(item);
+        });
+        if (!values.childElementCount) values.textContent='Activá una serie para consultar el período.';
+    }
+    chart.data.datasets.forEach((dataset,index) => {
+        const button=document.createElement('button');button.type='button';button.className='sa-price-series-toggle';
+        button.setAttribute('aria-pressed','true');
+        const swatch=document.createElement('span');swatch.className='sa-price-series-swatch';swatch.style.backgroundColor=dataset.borderColor;
+        swatch.setAttribute('aria-hidden','true');
+        const label=document.createElement('span');label.textContent=dataset.label;button.append(swatch,label);
+        button.addEventListener('click',()=>{const visible=chart.isDatasetVisible(index);chart.setDatasetVisibility(index,!visible);button.setAttribute('aria-pressed',String(!visible));chart.update();showPeriod();});
+        legend.appendChild(button);
+    });
+    select.onchange=showPeriod;
+    chart.options.onClick=(event,elements,instance)=>{
+        const point=elements[0] || instance.getElementsAtEventForMode(event.native || event,'index',{intersect:false},true)[0];
+        const index=point?.index ?? (Number.isFinite(event.x) ? instance.scales.x.getValueForPixel(event.x) : null);
+        if(Number.isInteger(index) && index>=0 && index<evolution.labels.length){select.value=String(index);showPeriod();}
+    };
+    showPeriod();
 }
 
 function preparePriceEvolutionData(data, frequency, filters = getPriceFilters()) {
@@ -1823,7 +1942,14 @@ function renderPriceTrafficLightTable(data, frequency) {
     const status = document.getElementById('priceTrafficLightStatus');
     if (!body || !status) return;
     const rows = buildPriceTrafficLightTable(data, getPriceFilters(), frequency);
-    body.innerHTML = rows.map(row => `<tr><td class="price-semaphore-product"><strong>${escapeHtml(row.rowLabel)}</strong><small>${escapeHtml(row.rowMeta)}</small></td>${MONTHS.map((_, index) => { const month = String(index + 1).padStart(2, '0'); const cell = row.monthly[month]; const value = cell?.price; const variation = cell?.variation; const cellClass = !cell ? '' : !Number.isFinite(variation) ? 'stable' : variation < -5 ? 'down-soft' : variation <= 0 ? 'stable' : variation <= 5 ? 'up-soft' : variation <= 15 ? 'up-medium' : 'up-strong'; return `<td class="price-semaphore-cell ${cellClass}">${value ? `<strong>${formatCurrency(value)}</strong>${Number.isFinite(variation) ? `<small>${variation >= 0 ? '↑' : '↓'}${formatPercent(Math.abs(variation))}</small>` : ''}` : '—'}</td>`; }).join('')}<td class="price-semaphore-variation">${formatPercent(row.accumulatedVariation)}</td><td><span class="price-semaphore-badge ${row.status.key}">${row.status.label}</span></td></tr>`).join('');
+    body.innerHTML = rows.map((row,rowIndex) => `<tr data-order="${rowIndex}" data-variation="${row.accumulatedVariation}" data-name="${escapeHtml(row.rowLabel)}"><td class="price-semaphore-product"><strong>${escapeHtml(row.rowLabel)}</strong><small>${escapeHtml(row.rowMeta)}</small></td>${MONTHS.map((_, index) => {
+        const month = String(index + 1).padStart(2, '0'); const cell = row.monthly[month]; const value = cell?.price; const variation = cell?.variation;
+        const cellClass = !cell ? '' : !Number.isFinite(variation) ? 'stable' : variation < -5 ? 'down-soft' : variation <= 0 ? 'stable' : variation <= 5 ? 'up-soft' : variation <= 15 ? 'up-medium' : 'up-strong';
+        const period = `${MONTHS_FULL[index]} ${row.year || (row.fecha || '').slice(0,4)}`.trim();
+        const change = Number.isFinite(variation) ? `${variation >= 0 ? '+' : ''}${formatPercent(variation)}` : 'Sin variación mensual disponible';
+        const label = `${row.rowLabel} · ${period} · ${formatCurrency(value)} · ${change}`;
+        return `<td class="price-semaphore-cell ${cellClass}">${isValidPrice(value) ? `<button type="button" class="sa-semaphore-cell-button" aria-label="${escapeHtml(label)}" aria-pressed="false" data-label="${escapeHtml(row.rowLabel)}" data-meta="${escapeHtml(row.rowMeta)}" data-market="${escapeHtml(row.market)}" data-period="${escapeHtml(period)}" data-price="${escapeHtml(formatCurrency(value))}" data-change="${escapeHtml(change)}" data-metric="${escapeHtml(getPriceMetricLabel())}"><strong>${formatCurrency(value)}</strong>${Number.isFinite(variation) ? `<small>${variation >= 0 ? '↑' : '↓'}${formatPercent(Math.abs(variation))}</small>` : ''}</button>` : '—'}</td>`;
+    }).join('')}<td class="price-semaphore-variation">${formatPercent(row.accumulatedVariation)}</td><td><span class="price-semaphore-badge ${row.status.key}">${row.status.label}</span></td></tr>`).join('');
     status.textContent = rows.length ? '' : getPriceCalendarYears(data).size > 1
         ? 'Seleccioná un año para ver el semáforo mensual sin combinar períodos de años diferentes.'
         : 'No hay suficientes precios mensuales para construir el semáforo con los filtros seleccionados.';
@@ -1836,6 +1962,7 @@ function renderPriceCharts() {
     const splitDimensions = getPriceSplitDimensions(filters);
     const visualizations = getAvailablePriceVisualizations(filteredPriceData, filters, priceFrequency);
     const evolution = preparePriceEvolutionData(filteredPriceData, priceFrequency, filters);
+    setupPriceEvolutionExplorer(evolution, null);
     const ranking = preparePriceRankingData(filteredPriceData, visualizations.level, filters);
     const variation = preparePriceVariationData(filteredPriceData, priceFrequency, filters);
     const increases = preparePriceIncreaseRankingData(filteredPriceData, priceFrequency);
@@ -1847,23 +1974,29 @@ function renderPriceCharts() {
 
     const metricLabel = getPriceMetricLabel();
     document.getElementById('priceTimeSeriesTitle').textContent = `Evolución ${priceFrequency} · ${metricLabel}`;
+    const evolutionDescription = document.getElementById('priceTimeSeriesDesc');
+    if (evolutionDescription) evolutionDescription.textContent = evolution.labels.length
+        ? `${evolution.labels[0]}${evolution.labels.length > 1 ? ` – ${evolution.labels.at(-1)}` : ''} · ${evolution.series.length} ${evolution.series.length === 1 ? 'serie' : 'series'}. Elegí un período o un punto y pulsá una serie para mostrarla u ocultarla.`
+        : 'Promedio por período de precios mayoristas según filtros seleccionados.';
     document.getElementById('priceDailyMethodNote').hidden = priceFrequency !== 'diaria';
     const tooManySeries = 'La selección actual genera demasiadas series para una lectura clara. Reducí la cantidad de categorías seleccionadas.';
     if (evolution.tooManySeries) {
         showChartMessage('priceChartMonthly', tooManySeries);
     } else if (evolution.labels.length && evolution.series?.length) {
         const evolutionOptions = priceChartOptions(metricLabel);
+        evolutionOptions.interaction = {mode:'index',intersect:false};
+        evolutionOptions.plugins.legend.display = false;
         evolutionOptions.plugins.tooltip = {
             ...tooltipConfig(),
             callbacks: {
                 label: context => {
                     const series = evolution.series[context.datasetIndex];
                     const item = series?.meta?.[context.dataIndex];
-                    return [`Período: ${evolution.labels[context.dataIndex] || 'Sin período'}`, `${series?.label || metricLabel}: ${formatCurrency(item?.value)}`, `Observaciones: ${item?.observations || 0}`];
+                    return [`${series?.label || metricLabel}: ${formatCurrency(item?.value)}`,
+                        ...(Number.isFinite(item?.observations) ? [`Observaciones: ${item.observations}`] : [])];
                 }
             }
         };
-        const colors = ['#34d399', '#60a5fa', '#fb923c', '#a78bfa', '#f472b6', '#facc15', '#22d3ee', '#fb7185'];
         priceCharts.evolution = createPriceChart('evolution', 'priceChartMonthly', {
             type: 'line',
             data: {
@@ -1871,15 +2004,16 @@ function renderPriceCharts() {
                 datasets: evolution.series.map((series, index) => ({
                     label: splitDimensions.length ? series.label : `${metricLabel} ${priceFrequency}`,
                     data: series.data,
-                    borderColor: colors[index % colors.length],
-                    backgroundColor: `${colors[index % colors.length]}2a`,
+                    borderColor: priceSeriesColor(series.label,index),
+                    backgroundColor: `${priceSeriesColor(series.label,index)}2a`,
                     fill: !splitDimensions.length,
-                    tension: .3,
+                    tension: 0,
                     pointRadius: priceFrequency === 'diaria' ? 2 : 4
                 }))
             },
             options: evolutionOptions
         });
+        setupPriceEvolutionExplorer(evolution, priceCharts.evolution);
     } else showChartMessage('priceChartMonthly', insufficient);
 
     const rankingTitle = visualizations.level === 'species_detail' ? 'Ranking de variedades por precio promedio' : visualizations.level === 'variety_detail' ? 'Ranking por procedencia de precio promedio' : 'Ranking de productos por precio promedio';
@@ -1892,7 +2026,7 @@ function renderPriceCharts() {
         base.scales.x.beginAtZero = true;
         base.scales.x.suggestedMax = Math.max(...ranking.values) * 1.1;
         base.plugins.tooltip = { ...tooltipConfig(), callbacks: { label: context => { const item = ranking.meta[context.dataIndex]; return [`${metricLabel}: ${formatCurrency(item.average)}`, `Observaciones: ${item.observations}`, `Período: ${formatPeriodLabel(item.firstPeriod, priceFrequency)} - ${formatPeriodLabel(item.lastPeriod, priceFrequency)}`]; } } };
-        priceCharts.ranking = createPriceChart('ranking', 'priceChartRanking', { type: 'bar', data: { labels: ranking.labels, datasets: [{ label: metricLabel, data: ranking.values, backgroundColor: PALETTE }] }, options: base });
+        priceCharts.ranking = createPriceChart('ranking', 'priceChartRanking', { type: 'bar', data: { labels: ranking.labels, datasets: [{ label: metricLabel, data: ranking.values, backgroundColor: ranking.labels.map((label,index)=>priceSeriesColor(label,index)) }] }, options: base });
     } else if (!document.getElementById('priceRankingCard').hidden) showChartMessage('priceChartRanking', ranking.labels.length ? comparable : insufficient);
     document.getElementById('priceVariationCard').hidden = !visualizations.showVariationBars;
     if (variation.tooManySeries) {
@@ -1901,8 +2035,7 @@ function renderPriceCharts() {
         const variationOptions = priceChartOptions('Variación %');
         variationOptions.scales.y.ticks.callback = value => formatPercent(value);
         variationOptions.plugins.tooltip = { ...tooltipConfig(), callbacks: { label: context => { const series = variation.series[context.datasetIndex]; const item = series?.meta?.[context.dataIndex]; return [`${series?.label || 'Variación'}: ${formatPercent(item?.variation)}`, `Observaciones: ${item?.observations || 0}`]; } } };
-        const variationColors = ['#fb923c', '#60a5fa', '#a78bfa', '#34d399', '#f472b6', '#facc15', '#22d3ee', '#fb7185'];
-        priceCharts.variation = createPriceChart('variation', 'priceChartVariation', { type: 'bar', data: { labels: variation.labels, datasets: variation.series.map((series, index) => ({ label: variation.splitDimensions?.length ? series.label : `Variación ${priceFrequency}`, data: series.data, backgroundColor: variation.splitDimensions?.length ? variationColors[index % variationColors.length] : series.data.map(value => value >= 0 ? '#fb923c' : '#60a5fa') })) }, options: variationOptions });
+        priceCharts.variation = createPriceChart('variation', 'priceChartVariation', { type: 'bar', data: { labels: variation.labels, datasets: variation.series.map((series, index) => ({ label: variation.splitDimensions?.length ? series.label : `Variación ${priceFrequency}`, data: series.data, backgroundColor: variation.splitDimensions?.length ? priceSeriesColor(series.label,index) : series.data.map(value => value >= 0 ? '#fb923c' : '#60a5fa') })) }, options: variationOptions });
     } else if (visualizations.showVariationBars) showChartMessage('priceChartVariation', insufficient);
 
     const variationMeta = { diaria: ['Variación acumulada del período', 'Cambio entre el primer y último precio promedio disponible'], mensual: ['Variación mensual de precios', 'Cambio porcentual respecto al mes anterior'], anual: ['Variación anual de precios', 'Cambio porcentual respecto al año anterior'] }[priceFrequency];
@@ -1927,7 +2060,7 @@ function renderPriceCharts() {
         const options = priceChartOptions(metricLabel, true);
         options.scales.x.beginAtZero = true;
         options.plugins.tooltip = { ...tooltipConfig(), callbacks: { label: context => { const item = marketComparison.meta[context.dataIndex]; return [`${metricLabel}: ${formatCurrency(item.average)}`, `Observaciones: ${item.observations}`]; } } };
-        priceCharts.marketComparison = createPriceChart('marketComparison', 'priceChartMarket', { type: 'bar', data: { labels: marketComparison.labels, datasets: [{ label: metricLabel, data: marketComparison.values, backgroundColor: ['#34d399', '#60a5fa'] }] }, options });
+        priceCharts.marketComparison = createPriceChart('marketComparison', 'priceChartMarket', { type: 'bar', data: { labels: marketComparison.labels, datasets: [{ label: metricLabel, data: marketComparison.values, backgroundColor: marketComparison.labels.map((label,index)=>priceSeriesColor(label,index)) }] }, options });
     } else if (!marketCard.hidden) showChartMessage('priceChartMarket', 'La selección actual contiene un solo mercado.');
     const dailyDescription = priceFrequency === 'diaria' ? 'Variación acumulada entre primera y última fecha disponible' : 'Productos con mayor cambio entre el primer y último período';
     document.getElementById('priceIncreaseDesc').textContent = dailyDescription;
@@ -1961,7 +2094,10 @@ function priceChartOptions(axisLabel, horizontal = false) {
     options.maintainAspectRatio = false;
     options.indexAxis = horizontal ? 'y' : 'x';
     options.scales.x.ticks.callback = horizontal ? value => formatCurrency(value) : function(value) { return this.getLabelForValue(value); };
-    options.scales.y.ticks.callback = horizontal ? function(value) { return this.getLabelForValue(value); } : value => formatCurrency(value);
+    options.scales.y.ticks.callback = horizontal ? function(value) {
+        const label=String(this.getLabelForValue(value)).replace(/Mercado Central de Buenos Aires/gi,'Central BA').replace(/Mercado de Corrientes/gi,'Corrientes');
+        return label.length > 28 ? `${label.slice(0,27)}…` : label;
+    } : value => formatCurrency(value);
     options.plugins.tooltip = { ...tooltipConfig(), callbacks: { label: context => ` ${formatCurrency(context.parsed.y ?? context.parsed.x)}` } };
     return options;
 }
