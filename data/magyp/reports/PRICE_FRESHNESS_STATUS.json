@@ -413,8 +413,8 @@
       "source": "Mercado Central de Buenos Aires",
       "market": "Mercado Central de Buenos Aires",
       "frequency": "mensual derivada de observaciones diarias",
-      "last_observation_date": "2026-10-29",
-      "last_successful_update": "2026-10-29T19:43:46.822869Z",
+      "last_observation_date": "2026-10-30",
+      "last_successful_update": "2026-10-30T19:57:07.101444Z",
       "status": "UPDATED",
       "automatic_update": true,
       "workflow": "update-mcba-monthly-central.yml",
@@ -425,8 +425,8 @@
       "unit": [
         "kg"
       ],
-      "requested_date": "2026-10-29",
-      "attempted_at": "2026-10-29T19:43:31.429292Z",
+      "requested_date": "2026-10-30",
+      "attempted_at": "2026-10-30T19:56:39.346857Z",
       "diagnostic_note": null,
       "evidence": null
     },

@@ -4,8 +4,8 @@
     {
       "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS%20%20ENERO-26_0.zip",
       "original_name": "FRUTAS  ENERO-26_0.zip",
-      "captured_at_utc": "2026-10-20T12:44:01.768151+00:00",
-      "capture_id": "2026-10-20T124401768151+0000-2e6429324ea0",
+      "captured_at_utc": "2026-10-30T19:56:41.266670Z",
+      "capture_id": "2026-10-30T195641266670Z-2e6429324ea0",
       "raw_sha256": "2e6429324ea0e7353b88a082db0086059cc47653f376290dc54b68bf15ff2452",
       "size_bytes": 214724,
       "members": [
@@ -40,76 +40,10 @@
       "last_date": "2026-01-30"
     },
     {
-      "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTA_JUNIO_2026_0.zip",
-      "original_name": "FRUTA_JUNIO_2026_0.zip",
-      "captured_at_utc": "2026-10-20T12:44:01.927854+00:00",
-      "capture_id": "2026-10-20T124401927854+0000-156451bf65c5",
-      "raw_sha256": "156451bf65c5355ad82e03ce400310edc2fc60a24746ad346ea5e9891298f9ba",
-      "size_bytes": 193514,
-      "members": [
-        "RF020626.XLS",
-        "RF030626.XLS",
-        "RF040626.XLS",
-        "RF050626.XLS",
-        "RF080626.XLS",
-        "RF010626.XLS",
-        "RF090626.XLS",
-        "RF100626.XLS",
-        "RF110626.XLS",
-        "RF120626.XLS",
-        "RF160626.XLS",
-        "RF170626.XLS",
-        "RF180626.XLS",
-        "RF190626.XLS",
-        "RF220626.XLS",
-        "RF230626.XLS",
-        "RF240626.XLS",
-        "RF250626.XLS",
-        "RF260626.XLS",
-        "RF290626.XLS",
-        "RF300626.XLS"
-      ],
-      "excluded_members": 0,
-      "format": "XLS BIFF2",
-      "observed_periods": [
-        "2026-06"
-      ],
-      "first_date": "2026-06-01",
-      "last_date": "2026-06-30"
-    },
-    {
-      "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_OCTUBRE_26.zip",
-      "original_name": "FRUTAS_OCTUBRE_26.zip",
-      "captured_at_utc": "2026-10-20T12:44:02.077692+00:00",
-      "capture_id": "2026-10-20T124402077692+0000-37a226be0d59",
-      "raw_sha256": "37a226be0d5984e07da55b08d9c1dee170f9a23df6a8685bf120ce11a37563a2",
-      "size_bytes": 93415,
-      "members": [
-        "RF011026.XLS",
-        "RF021026.XLS",
-        "RF051026.XLS",
-        "RF061026.XLS",
-        "RF071026.XLS",
-        "RF081026.XLS",
-        "RF091026.XLS",
-        "RF131026.XLS",
-        "RF141026.XLS",
-        "RF161026.XLS",
-        "RF191026.XLS"
-      ],
-      "excluded_members": 0,
-      "format": "XLS BIFF2",
-      "observed_periods": [
-        "2026-10"
-      ],
-      "first_date": "2026-10-01",
-      "last_date": "2026-10-19"
-    },
-    {
       "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZAS%20ENERO-26_0.zip",
       "original_name": "HORTALIZAS ENERO-26_0.zip",
-      "captured_at_utc": "2026-10-20T12:44:02.295844+00:00",
-      "capture_id": "2026-10-20T124402295844+0000-370e402d046c",
+      "captured_at_utc": "2026-10-30T19:56:42.696726Z",
+      "capture_id": "2026-10-30T195642696726Z-370e402d046c",
       "raw_sha256": "370e402d046ccdfa3e43e0b4edd87b82144511fcaaded13489ef2b83670dac37",
       "size_bytes": 238604,
       "members": [
@@ -144,76 +78,10 @@
       "last_date": "2026-01-30"
     },
     {
-      "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA-JUNIO-2026.zip",
-      "original_name": "HORTALIZA-JUNIO-2026.zip",
-      "captured_at_utc": "2026-10-20T12:44:02.485611+00:00",
-      "capture_id": "2026-10-20T124402485611+0000-a4fe1270717b",
-      "raw_sha256": "a4fe1270717b7fb831646ba4015c9ca034c5c9720394ed24fefe2930a9819afb",
-      "size_bytes": 352325,
-      "members": [
-        "RH080626.XLS",
-        "RH090626.XLS",
-        "RH100626.XLS",
-        "RH110626.XLS",
-        "RH120626.XLS",
-        "RH160626.XLS",
-        "RH170626.XLS",
-        "RH180626.XLS",
-        "RH190626.XLS",
-        "RH010626.XLS",
-        "RH020626.XLS",
-        "RH030626.XLS",
-        "RH040626.XLS",
-        "RH050626.XLS",
-        "RH220626.XLS",
-        "RH230626.XLS",
-        "RH240626.XLS",
-        "RH250626.XLS",
-        "RH260626.XLS",
-        "RH290626.XLS",
-        "RH300626.XLS"
-      ],
-      "excluded_members": 1,
-      "format": "XLS BIFF2",
-      "observed_periods": [
-        "2026-06"
-      ],
-      "first_date": "2026-06-01",
-      "last_date": "2026-06-30"
-    },
-    {
-      "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA_OCTUBRE_26.zip",
-      "original_name": "HORTALIZA_OCTUBRE_26.zip",
-      "captured_at_utc": "2026-10-20T12:44:03.122751+00:00",
-      "capture_id": "2026-10-20T124403122751+0000-69cd50ba4fb9",
-      "raw_sha256": "69cd50ba4fb99538909cf77060439ba6d1e31915379d7a7953ec308fd634f936",
-      "size_bytes": 2739240,
-      "members": [
-        "RH011026.XLS",
-        "RH021026.XLS",
-        "RH051026.XLS",
-        "RH061026.XLS",
-        "RH071026.XLS",
-        "RH081026.XLS",
-        "RH091026.XLS",
-        "RH131026.XLS",
-        "RH141026.XLS",
-        "RH161026.XLS",
-        "RH191026.XLS"
-      ],
-      "excluded_members": 44,
-      "format": "XLS BIFF2",
-      "observed_periods": [
-        "2026-10"
-      ],
-      "first_date": "2026-10-01",
-      "last_date": "2026-10-19"
-    },
-    {
       "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_FEBRERO-26_0.zip",
       "original_name": "FRUTAS_FEBRERO-26_0.zip",
-      "captured_at_utc": "2026-10-20T12:49:33.115668Z",
-      "capture_id": "2026-10-20T124933115668Z-2826fc0fb64d",
+      "captured_at_utc": "2026-10-30T19:56:44.000101Z",
+      "capture_id": "2026-10-30T195644000101Z-2826fc0fb64d",
       "raw_sha256": "2826fc0fb64d089220e3d9cd199f53e322e324500c74fe16570ec7d02fed68e1",
       "size_bytes": 177230,
       "members": [
@@ -247,8 +115,8 @@
     {
       "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZAS_FEBRERO-26.zip",
       "original_name": "HORTALIZAS_FEBRERO-26.zip",
-      "captured_at_utc": "2026-10-20T12:49:33.536238Z",
-      "capture_id": "2026-10-20T124933536238Z-21ef774ac0e7",
+      "captured_at_utc": "2026-10-30T19:56:45.101324Z",
+      "capture_id": "2026-10-30T195645101324Z-21ef774ac0e7",
       "raw_sha256": "21ef774ac0e71a67164e9080bb7825b3d23d30d4f11284482d870da231a9930b",
       "size_bytes": 198700,
       "members": [
@@ -282,8 +150,8 @@
     {
       "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_MARZO-2026.zip",
       "original_name": "FRUTAS_MARZO-2026.zip",
-      "captured_at_utc": "2026-10-20T12:49:33.903282Z",
-      "capture_id": "2026-10-20T124933903282Z-79b9b5837c53",
+      "captured_at_utc": "2026-10-30T19:56:46.389253Z",
+      "capture_id": "2026-10-30T195646389253Z-79b9b5837c53",
       "raw_sha256": "79b9b5837c53849f5279d9d34c701c24cf875987ff0288c59b1401af93227d77",
       "size_bytes": 207858,
       "members": [
@@ -319,8 +187,8 @@
     {
       "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZAS_MARZO-2026_0.zip",
       "original_name": "HORTALIZAS_MARZO-2026_0.zip",
-      "captured_at_utc": "2026-10-20T12:49:34.296091Z",
-      "capture_id": "2026-10-20T124934296091Z-9ec912cb708b",
+      "captured_at_utc": "2026-10-30T19:56:47.471309Z",
+      "capture_id": "2026-10-30T195647471309Z-9ec912cb708b",
       "raw_sha256": "9ec912cb708b9609f9c1100e2dea7de700b68b343508668d92eaa67f5ce525e2",
       "size_bytes": 228368,
       "members": [
@@ -356,8 +224,8 @@
     {
       "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_ABRIL2026_0.zip",
       "original_name": "FRUTAS_ABRIL2026_0.zip",
-      "captured_at_utc": "2026-10-20T12:49:34.666038Z",
-      "capture_id": "2026-10-20T124934666038Z-a5368ed93d91",
+      "captured_at_utc": "2026-10-30T19:56:48.553934Z",
+      "capture_id": "2026-10-30T195648553934Z-a5368ed93d91",
       "raw_sha256": "a5368ed93d9122b4789b63d4513dca71689a6074ae44f246a09c13f49db9b982",
       "size_bytes": 191390,
       "members": [
@@ -395,8 +263,8 @@
     {
       "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZAS_ABRIL2026.zip",
       "original_name": "HORTALIZAS_ABRIL2026.zip",
-      "captured_at_utc": "2026-10-20T12:49:35.067836Z",
-      "capture_id": "2026-10-20T124935067836Z-efbc0517393f",
+      "captured_at_utc": "2026-10-30T19:56:49.855101Z",
+      "capture_id": "2026-10-30T195649855101Z-efbc0517393f",
       "raw_sha256": "efbc0517393f25b98d4147ee11def53d6018a7558ece136090b0cdcc5992326a",
       "size_bytes": 249229,
       "members": [
@@ -434,8 +302,8 @@
     {
       "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS-MAYO-2026.zip",
       "original_name": "FRUTAS-MAYO-2026.zip",
-      "captured_at_utc": "2026-10-20T12:49:35.467729Z",
-      "capture_id": "2026-10-20T124935467729Z-e6595c02ab64",
+      "captured_at_utc": "2026-10-30T19:56:50.942597Z",
+      "capture_id": "2026-10-30T195650942597Z-e6595c02ab64",
       "raw_sha256": "e6595c02ab6423cfbc7639b005f62ec581e165dc5f7b02e40d9b021f4a37f4c7",
       "size_bytes": 159454,
       "members": [
@@ -469,8 +337,8 @@
     {
       "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZAS-MAYO-2026.zip",
       "original_name": "HORTALIZAS-MAYO-2026.zip",
-      "captured_at_utc": "2026-10-20T12:49:35.871079Z",
-      "capture_id": "2026-10-20T124935871079Z-1ec5bbe49fd7",
+      "captured_at_utc": "2026-10-30T19:56:52.232873Z",
+      "capture_id": "2026-10-30T195652232873Z-1ec5bbe49fd7",
       "raw_sha256": "1ec5bbe49fd7b946cf13dbc564053e25a608eed0896a8ec8b847a1270c3eae67",
       "size_bytes": 244218,
       "members": [
@@ -502,10 +370,86 @@
       "last_date": "2026-05-29"
     },
     {
+      "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTA_JUNIO_2026_0.zip",
+      "original_name": "FRUTA_JUNIO_2026_0.zip",
+      "captured_at_utc": "2026-10-30T19:56:53.375869Z",
+      "capture_id": "2026-10-30T195653375869Z-156451bf65c5",
+      "raw_sha256": "156451bf65c5355ad82e03ce400310edc2fc60a24746ad346ea5e9891298f9ba",
+      "size_bytes": 193514,
+      "members": [
+        "RF020626.XLS",
+        "RF030626.XLS",
+        "RF040626.XLS",
+        "RF050626.XLS",
+        "RF080626.XLS",
+        "RF010626.XLS",
+        "RF090626.XLS",
+        "RF100626.XLS",
+        "RF110626.XLS",
+        "RF120626.XLS",
+        "RF160626.XLS",
+        "RF170626.XLS",
+        "RF180626.XLS",
+        "RF190626.XLS",
+        "RF220626.XLS",
+        "RF230626.XLS",
+        "RF240626.XLS",
+        "RF250626.XLS",
+        "RF260626.XLS",
+        "RF290626.XLS",
+        "RF300626.XLS"
+      ],
+      "excluded_members": 0,
+      "format": "XLS BIFF2",
+      "observed_periods": [
+        "2026-06"
+      ],
+      "first_date": "2026-06-01",
+      "last_date": "2026-06-30"
+    },
+    {
+      "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA-JUNIO-2026.zip",
+      "original_name": "HORTALIZA-JUNIO-2026.zip",
+      "captured_at_utc": "2026-10-30T19:56:54.604805Z",
+      "capture_id": "2026-10-30T195654604805Z-a4fe1270717b",
+      "raw_sha256": "a4fe1270717b7fb831646ba4015c9ca034c5c9720394ed24fefe2930a9819afb",
+      "size_bytes": 352325,
+      "members": [
+        "RH080626.XLS",
+        "RH090626.XLS",
+        "RH100626.XLS",
+        "RH110626.XLS",
+        "RH120626.XLS",
+        "RH160626.XLS",
+        "RH170626.XLS",
+        "RH180626.XLS",
+        "RH190626.XLS",
+        "RH010626.XLS",
+        "RH020626.XLS",
+        "RH030626.XLS",
+        "RH040626.XLS",
+        "RH050626.XLS",
+        "RH220626.XLS",
+        "RH230626.XLS",
+        "RH240626.XLS",
+        "RH250626.XLS",
+        "RH260626.XLS",
+        "RH290626.XLS",
+        "RH300626.XLS"
+      ],
+      "excluded_members": 1,
+      "format": "XLS BIFF2",
+      "observed_periods": [
+        "2026-06"
+      ],
+      "first_date": "2026-06-01",
+      "last_date": "2026-06-30"
+    },
+    {
       "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_JULIO_26.zip",
       "original_name": "FRUTAS_JULIO_26.zip",
-      "captured_at_utc": "2026-10-20T12:49:37.161888Z",
-      "capture_id": "2026-10-20T124937161888Z-45cc008ae84f",
+      "captured_at_utc": "2026-10-30T19:56:55.893173Z",
+      "capture_id": "2026-10-30T195655893173Z-45cc008ae84f",
       "raw_sha256": "45cc008ae84f37f48364c5fb9f15356da0080812a7baaba30e2f11ce1e1c4b62",
       "size_bytes": 180282,
       "members": [
@@ -542,8 +486,8 @@
     {
       "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA_JULIO_26_1.zip",
       "original_name": "HORTALIZA_JULIO_26_1.zip",
-      "captured_at_utc": "2026-10-20T12:49:37.551411Z",
-      "capture_id": "2026-10-20T124937551411Z-882c539464b0",
+      "captured_at_utc": "2026-10-30T19:56:57.210946Z",
+      "capture_id": "2026-10-30T195657210946Z-882c539464b0",
       "raw_sha256": "882c539464b07c7da8d0b5a21a68529e550b8b958c50aab62aa4470c89bf3ea1",
       "size_bytes": 286734,
       "members": [
@@ -580,8 +524,8 @@
     {
       "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTRAS_AGOSTO-26_0.zip",
       "original_name": "FRUTRAS_AGOSTO-26_0.zip",
-      "captured_at_utc": "2026-10-20T12:49:37.965639Z",
-      "capture_id": "2026-10-20T124937965639Z-bdfe66537128",
+      "captured_at_utc": "2026-10-30T19:56:58.651488Z",
+      "capture_id": "2026-10-30T195658651488Z-bdfe66537128",
       "raw_sha256": "bdfe66537128721e0d675c8af01142bfcc6a3c4069a90b48098d532a4f4eccfa",
       "size_bytes": 359769,
       "members": [
@@ -617,8 +561,8 @@
     {
       "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA_%20AGOSTO_26.zip",
       "original_name": "HORTALIZA_ AGOSTO_26.zip",
-      "captured_at_utc": "2026-10-20T12:49:38.372746Z",
-      "capture_id": "2026-10-20T124938372746Z-e66fba777a43",
+      "captured_at_utc": "2026-10-30T19:56:59.957147Z",
+      "capture_id": "2026-10-30T195659957147Z-e66fba777a43",
       "raw_sha256": "e66fba777a434127299dd8b9a4b3841c9062dcefe7eaf0ba453555518bf15d94",
       "size_bytes": 306490,
       "members": [
@@ -654,8 +598,8 @@
     {
       "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_SEPTIEMBRE_26_0.zip",
       "original_name": "FRUTAS_SEPTIEMBRE_26_0.zip",
-      "captured_at_utc": "2026-10-20T12:49:38.912394Z",
-      "capture_id": "2026-10-20T124938912394Z-309d5aef8307",
+      "captured_at_utc": "2026-10-30T19:57:01.529118Z",
+      "capture_id": "2026-10-30T195701529118Z-309d5aef8307",
       "raw_sha256": "309d5aef8307426cfa49d70c7c9fdc52ad2932435949c11bbddb8c9201c3a292",
       "size_bytes": 448018,
       "members": [
@@ -693,8 +637,8 @@
     {
       "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA_SEPTIENBRE_26_0.zip",
       "original_name": "HORTALIZA_SEPTIENBRE_26_0.zip",
-      "captured_at_utc": "2026-10-20T12:49:39.330608Z",
-      "capture_id": "2026-10-20T124939330608Z-f979ea7edb4a",
+      "captured_at_utc": "2026-10-30T19:57:02.893613Z",
+      "capture_id": "2026-10-30T195702893613Z-f979ea7edb4a",
       "raw_sha256": "f979ea7edb4a40123c89d7e270e33b8938d6aeb359c1f5a17f029372395a6a8a",
       "size_bytes": 312416,
       "members": [
@@ -728,15 +672,89 @@
       ],
       "first_date": "2026-09-01",
       "last_date": "2026-09-30"
+    },
+    {
+      "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/FRUTAS_OCTUBRE_26.zip",
+      "original_name": "FRUTAS_OCTUBRE_26.zip",
+      "captured_at_utc": "2026-10-30T19:57:04.092438Z",
+      "capture_id": "2026-10-30T195704092438Z-cd4c98551b7d",
+      "raw_sha256": "cd4c98551b7d6b5797cc8a04188932f19fe66772435316e6d0becc1cbb90b74e",
+      "size_bytes": 170003,
+      "members": [
+        "RF071026.XLS",
+        "RF081026.XLS",
+        "RF091026.XLS",
+        "RF131026.XLS",
+        "RF141026.XLS",
+        "RF161026.XLS",
+        "RF191026.XLS",
+        "RF201026.XLS",
+        "RF211026.XLS",
+        "RF221026.XLS",
+        "RF231026.XLS",
+        "RF261026.XLS",
+        "RF011026.XLS",
+        "RF021026.XLS",
+        "RF051026.XLS",
+        "RF061026.XLS",
+        "RF271026.XLS",
+        "RF281026.XLS",
+        "RF291026.XLS",
+        "RF301026.XLS"
+      ],
+      "excluded_members": 0,
+      "format": "XLS BIFF2",
+      "observed_periods": [
+        "2026-10"
+      ],
+      "first_date": "2026-10-01",
+      "last_date": "2026-10-30"
+    },
+    {
+      "source_url": "https://mercadocentral.gob.ar/sites/default/files/precios_mayoristas/HORTALIZA_OCTUBRE_26_0.zip",
+      "original_name": "HORTALIZA_OCTUBRE_26_0.zip",
+      "captured_at_utc": "2026-10-30T19:57:07.101444Z",
+      "capture_id": "2026-10-30T195707101444Z-a644b7b60928",
+      "raw_sha256": "a644b7b60928f03c81bdfad81c179fc2938c6984ff305ebe0624bae29636a100",
+      "size_bytes": 2856481,
+      "members": [
+        "RH011026.XLS",
+        "RH021026.XLS",
+        "RH051026.XLS",
+        "RH061026.XLS",
+        "RH071026.XLS",
+        "RH081026.XLS",
+        "RH091026.XLS",
+        "RH131026.XLS",
+        "RH141026.XLS",
+        "RH161026.XLS",
+        "RH191026.XLS",
+        "RH201026.XLS",
+        "RH211026.XLS",
+        "RH221026.XLS",
+        "RH231026.XLS",
+        "RH261026.XLS",
+        "RH271026.XLS",
+        "RH281026.XLS",
+        "RH291026.XLS",
+        "RH301026.XLS"
+      ],
+      "excluded_members": 44,
+      "format": "XLS BIFF2",
+      "observed_periods": [
+        "2026-10"
+      ],
+      "first_date": "2026-10-01",
+      "last_date": "2026-10-30"
     }
   ],
   "format": "ZIP with daily XLS BIFF2, 14 columns",
   "source_frequency": "daily observations in monthly archives",
   "dashboard_frequency": "derived monthly",
-  "daily_rows": 70377,
-  "detail_price_rows": 54353,
-  "species_summary_rows": 16024,
-  "monthly_series": 3723,
+  "daily_rows": 73617,
+  "detail_price_rows": 56842,
+  "species_summary_rows": 16775,
+  "monthly_series": 3769,
   "coverage": [
     {
       "period": "2026-01",
@@ -903,27 +921,27 @@
     {
       "period": "2026-10",
       "type": "Frutas",
-      "daily_rows": 1198,
-      "days": 11,
+      "daily_rows": 2181,
+      "days": 20,
       "first_date": "2026-10-01",
-      "last_date": "2026-10-19",
-      "monthly_series": 127
+      "last_date": "2026-10-30",
+      "monthly_series": 153
     },
     {
       "period": "2026-10",
       "type": "Hortalizas",
-      "daily_rows": 1909,
-      "days": 11,
+      "daily_rows": 3415,
+      "days": 20,
       "first_date": "2026-10-01",
-      "last_date": "2026-10-19",
-      "monthly_series": 189
+      "last_date": "2026-10-30",
+      "monthly_series": 209
     }
   ],
   "cross_period_members": [
     "RF040526.XLS",
     "RH040526.XLS"
   ],
-  "multiple_quote_monthly_series": 1,
+  "multiple_quote_monthly_series": 2,
   "legacy_comparison": {
     "last_period": "2025-12",
     "common_periods": [],
