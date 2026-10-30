@@ -47,6 +47,28 @@ class DeliveryBuildTests(unittest.TestCase):
         with self.assertRaises(ValueError):self.generate()
         self.assertEqual(previous,index.read_bytes())
 
+    def test_temporary_candidate_does_not_modify_active_index_or_inventory(self):
+        self.generate()
+        active=self.root/'data/mayoristas/dashboard/index.json'
+        inventory=self.root/'data/mayoristas/reports/LOAD_INVENTORY.json'
+        before=(active.read_bytes(),inventory.read_bytes())
+        output=Path(self.temporary.name)/'candidate'
+        self.source['views']['mensual'][0]['precioObservado']=125
+        with patch('scripts.mayoristas.build_dashboard.subprocess.run',return_value=SimpleNamespace(stdout=json.dumps(self.source))):
+            result=build(self.root, output=output, write_inventory=False)
+        self.assertEqual((active.read_bytes(),inventory.read_bytes()),before)
+        self.assertTrue((output/'index.json').exists())
+        self.assertEqual(result['row_counts']['mensual'],1)
+
+    def test_builder_reads_complete_node_output_from_temporary_file(self):
+        def run(*args, **kwargs):
+            if 'stdout' in kwargs:
+                kwargs['stdout'].write(json.dumps(self.source).encode('utf-8'))
+            return SimpleNamespace(stdout=None)
+        with patch('scripts.mayoristas.build_dashboard.subprocess.run',side_effect=run):
+            result=build(self.root, write_inventory=False)
+        self.assertEqual(result['row_counts'],{'diaria':1,'mensual':1,'anual':1})
+
     def test_atomic_index_replace_failure_preserves_last_valid(self):
         self.generate();index=self.root/'data/mayoristas/dashboard/index.json';previous=index.read_bytes()
         import os

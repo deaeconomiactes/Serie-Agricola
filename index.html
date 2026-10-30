@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <link rel="stylesheet" href="styles.css?v=carnes-pilot-20261023-5">
-    <link rel="stylesheet" href="mayoristas-ui.css?v=2">
+    <link rel="stylesheet" href="mayoristas-ui.css?v=filtros-20261030">
     <link rel="stylesheet" href="commodities-ui.css?v=ui-20261026-2">
     <link rel="stylesheet" href="cantidades-ui.css?v=1">
 </head>
@@ -348,7 +348,7 @@
                     <div class="multi-select-dropdown" role="listbox" aria-label="Mercado" tabindex="-1"></div>
                 </div>
             </div>
-          <details id="priceMoreFilters"><summary>Más filtros</summary><div class="sa-price-more-grid"><div class="filter-group">
+          <div class="sa-price-filter-actions"><details id="priceMoreFilters"><summary>Más filtros</summary><div class="sa-price-more-grid"><div class="filter-group">
                 <label class="filter-label" for="priceFilterMes">Mes</label>
                 <select id="priceFilterMes" class="filter-select"><option value="TODOS">Todos</option></select>
             </div>
@@ -387,7 +387,7 @@
                 <div class="filter-group"><label for="priceFilterTamano">Tamaño</label><select id="priceFilterTamano" class="filter-select"><option value="TODOS">Todos</option></select></div>
                 <div class="filter-group"><label for="priceFilterGrado">Grado</label><select id="priceFilterGrado" class="filter-select"><option value="TODOS">Todos</option></select></div>
             </div>
-        </details></div></details>
+        </details></div></details><button id="priceFilterReset" type="button" aria-label="Limpiar filtros y volver a la vista inicial">Limpiar filtros</button></div>
         </div>
         <div id="priceFrequencyStatus" class="price-inline-status" role="status" aria-live="polite"></div>
 <div id="priceDeliveryStatus" class="price-inline-status" role="status" aria-live="polite"></div>
@@ -583,7 +583,7 @@
     <script src="update-status.js?v=institutional-audit-20261022"></script>
     <script src="mcba-prices.js?v=mcba-status-v2"></script>
     <script src="commodity-history.js?v=1"></script>
-    <script src="app.js?v=mayoristas-comparacion-automatica-20261029"></script>
+    <script src="app.js?v=mayoristas-filtros-20261030"></script>
     <script src="mayoristas-ui.js?v=2"></script>
     <script src="commodities-ui.js?v=ui-20261026-2"></script>
     <script src="cantidades-analytics.js?v=1"></script>
