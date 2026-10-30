@@ -49,8 +49,11 @@ body:has(#priceView.is-active) .mayoristas-footer { display:block; }
 #priceView .filter-select { padding-right:28px; }
 #priceView .multi-select-summary { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 #priceView .multi-select-dropdown { min-width:100%;max-width:min(480px,80vw);font-size:12px; }
-#priceView #priceMoreFilters > summary { padding:7px 10px;min-height:34px;border:1px solid #3a6479;border-radius:4px;white-space:nowrap;color:#acd8e6;font-size:11px;cursor:pointer; }
-#priceView .sa-price-more-grid { position:absolute;right:0;top:calc(100% + 8px);width:min(760px,100%);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:16px;border:1px solid var(--sa-border);border-radius:var(--sa-radius);background:#172b3a;box-shadow:0 12px 28px #0006;z-index:40; }
+#priceView .sa-price-filter-actions { grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start; }
+#priceView #priceMoreFilters { grid-column:1/-1;grid-row:1;min-width:0; }
+#priceView #priceMoreFilters > summary { display:list-item;width:max-content;padding:7px 10px;min-height:34px;border:1px solid #3a6479;border-radius:4px;white-space:nowrap;color:#acd8e6;font-size:11px;cursor:pointer; }
+#priceView #priceFilterReset { grid-column:2;grid-row:1;justify-self:end;z-index:1;min-height:34px;padding:7px 10px;border:1px solid var(--sa-border);border-radius:4px;background:var(--sa-control);color:var(--sa-text);font:inherit;font-size:11px;cursor:pointer; }
+#priceView .sa-price-more-grid { width:100%;margin-top:10px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:16px;border:1px solid var(--sa-border);border-radius:var(--sa-radius);background:#172b3a; }
 #priceView #priceSecondaryFilters { grid-column:1/-1;padding:8px 0 0;margin:0; }
 #priceView #priceSecondaryFilters > .filters-grid { margin-top:12px;grid-template-columns:repeat(2,minmax(0,1fr)); }
 #priceView .price-inline-status { font-size:11px;line-height:1.6; }
@@ -104,8 +107,6 @@ body:has(#priceView.is-active) .mayoristas-footer { display:block; }
 @media(max-width:1100px) {
  #priceView .sa-price-shell { grid-template-columns:150px minmax(0,1fr);gap:16px; }
  #priceView .price-filters { grid-template-columns:repeat(2,minmax(0,1fr)); }
- #priceView #priceMoreFilters { grid-column:1/-1; }
- #priceView .sa-price-more-grid { position:static;width:100%;margin-top:10px;box-shadow:none; }
  #priceView .price-kpi-grid { grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); }
  #priceView .sa-price-range { grid-template-columns:repeat(2,minmax(0,1fr)); }
  #priceView .sa-price-range > div:first-child { grid-column:1/-1; }

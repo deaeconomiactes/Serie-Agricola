@@ -72,10 +72,18 @@ def inventory(root):
                            can_fragment=family not in ('metadata','freshness','quality'),can_lazy_load=family!='freshness'))
     return result
 
-def build(root=ROOT, output=None, node='node'):
+def build(root=ROOT, output=None, node='node', write_inventory=True):
     root=Path(root).resolve();output=Path(output or root/'data/mayoristas/dashboard').resolve()
-    result=subprocess.run([node,str(root/'scripts/mayoristas/source_rows.cjs'),str(root)],capture_output=True,text=True,encoding='utf-8',check=True)
-    source=json.loads(result.stdout)
+    # A file avoids a huge stdout pipe and allows Node to finish writing before parsing.
+    with tempfile.TemporaryFile(mode='w+b') as stream:
+        result=subprocess.run([node,str(root/'scripts/mayoristas/source_rows.cjs'),str(root)],stdout=stream,stderr=subprocess.PIPE,check=True)
+        stream.seek(0)
+        # Unit tests may supply a small simulated subprocess result.
+        if result.stdout is not None:
+            source=json.loads(result.stdout)
+        else:
+            with io.TextIOWrapper(stream,encoding='utf-8') as text_stream:
+                source=json.load(text_stream)
     output.mkdir(parents=True,exist_ok=True)
     descriptors=[];bodies={};counts={}
     for frequency,rows in source['views'].items():
@@ -130,8 +138,9 @@ def build(root=ROOT, output=None, node='node'):
     finally:
         if os.path.exists(temp): os.unlink(temp)
     # Obsolete shards may remain for an open tab; Pages stages only index-referenced files.
-    report=root/'data/mayoristas/reports';report.mkdir(parents=True,exist_ok=True)
-    (report/'LOAD_INVENTORY.json').write_bytes(packed(inventory(root))+b'\n')
+    if write_inventory:
+        report=root/'data/mayoristas/reports';report.mkdir(parents=True,exist_ok=True)
+        (report/'LOAD_INVENTORY.json').write_bytes(packed(inventory(root))+b'\n')
     print(f'[BUILD] Mayoristas: {len(descriptors)} shards, {sum(len(b) for b in bodies.values())} compressed bytes')
     return index
 
@@ -140,4 +149,5 @@ if __name__=='__main__':
     parser.add_argument('--root',type=Path,default=ROOT)
     parser.add_argument('--output',type=Path)
     parser.add_argument('--node',default=shutil.which('node') or 'node')
-    args=parser.parse_args();build(args.root,args.output,args.node)
+    parser.add_argument('--skip-inventory',action='store_true',help='Build a temporary candidate without changing repository reports')
+    args=parser.parse_args();build(args.root,args.output,args.node,not args.skip_inventory)

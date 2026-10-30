@@ -374,6 +374,7 @@ async function init() {
     priceFreshnessBySource = await SourceUpdateStatus.loadFreshness();
     wireModuleTabs();
     initMultiSelectControls();
+    document.getElementById('priceFilterReset')?.addEventListener?.('click', resetPriceFilters);
     try {
         await loadQuantityData();
         wireFilters();
@@ -1116,6 +1117,32 @@ function getPriceFilters() {
         gradoMCBA: getSelectedValues('priceFilterGrado'),
         unidadComparable: document.getElementById('priceFilterComparable')?.value || 'comparables'
     };
+}
+
+function resetPriceFilters() {
+    const ids = ['priceFilterMes','priceFilterRubro','priceFilterEspecie','priceFilterVariedad',
+        'priceFilterMercado','priceFilterProcedencia','priceFilterUnidad','priceFilterEnvase',
+        'priceFilterCalidad','priceFilterTamano','priceFilterGrado'];
+    for (const id of ids) {
+        const select = document.getElementById(id);
+        if (!select) continue;
+        if (select.multiple) {
+            [...select.options].forEach(option => { option.selected = option.value === 'TODOS'; });
+            updateMultiSelectSummary(id);
+        } else select.value = 'TODOS';
+    }
+    const years = priceDelivery?.index?.years || getAvailablePriceYears(validPriceData);
+    const year = document.getElementById('priceFilterYear');
+    if (year) year.value = years.length ? String(Math.max(...years.map(Number))) : 'TODOS';
+    const comparable = document.getElementById('priceFilterComparable');
+    if (comparable) comparable.value = 'comparables';
+    const frequency = document.getElementById('priceFilterFrequency');
+    if (frequency) frequency.value = 'mensual';
+    priceFrequency = 'mensual';
+    priceComparisonChoice = '';
+    closeMultiSelects();
+    if (priceDelivery) { refreshPriceDelivery(); return; }
+    populatePriceFilters(); updatePriceFrequencyOptions(); updatePriceDashboard();
 }
 
 function getPriceSourceRows(frequency = priceFrequency) {

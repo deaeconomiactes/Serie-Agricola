@@ -13,13 +13,31 @@ const rows=MCBAPrices.parseCSV(text,['date','price']);
 // parseCSV's default contract is daily MAGyP; use the public monthly loader for checks.
 test('official Central derived publication has valid hash, rows, period and source',async()=>{
  const result=await monthly.verify(text,marker);
- assert.equal(result.length,3723);assert.equal(result.length,marker.record_count);
+ assert.ok(result.length>0);assert.equal(result.length,marker.record_count);
  const adapted=monthly.adapt(result.slice(0,1),['Enero']);
  assert.equal(adapted[0].data_source,'MERCADO_CENTRAL');
  assert.equal(adapted[0].fechaPrecision,'mensual');
  assert.match(adapted[0].metodoConversion,/derivada/);
  assert.equal(adapted[0].precioObservado,Number(result[0].price));
  assert.equal(adapted[0].volume,undefined);
+});
+test('el conteo se valida contra el manifiesto y no contra una cifra fija',async()=>{
+ const first=await monthly.verify(text,marker);
+ const header=text.slice(0,text.indexOf('\n'));
+ const lines=text.trimEnd().split('\n');
+ const columns=header.split(',');
+ const idColumn=columns.indexOf('observation_id');
+ // Change the ID of an otherwise valid row to model a later publication.
+ const parsed=MCBAPrices.parseCSV(text,['date','price']);
+ const sample=parsed[0];
+ const csv=value=>`"${String(value ?? '').replace(/"/g,'""')}"`;
+ const added=columns.map(name=>csv(name==='observation_id' ? sample.observation_id+'-new' : sample[name])).join(',');
+ assert.ok(idColumn>=0);
+ const expanded=lines.join('\n')+'\n'+added+'\n';
+ const sha=require('node:crypto').createHash('sha256').update(expanded).digest('hex');
+ const expandedMarker={...marker,files:{...marker.files,[monthly.FILE]:sha},record_count:first.length+1};
+ assert.equal((await monthly.verify(expanded,expandedMarker)).length,first.length+1);
+ await assert.rejects(monthly.verify(expanded,{...expandedMarker,record_count:first.length}),/Conteo/);
 });
 test('corrupt, empty, wrong currency/schema/date and duplicate monthly data fail closed',async()=>{
  await assert.rejects(monthly.verify(text+'\n',marker));

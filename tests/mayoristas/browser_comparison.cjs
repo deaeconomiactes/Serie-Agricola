@@ -4,10 +4,10 @@ const {chromium}=require('playwright');
  const browser=await chromium.launch({channel:'msedge',headless:true});
  const page=await browser.newPage({viewport:{width:1440,height:1000}});const errors=[];
  page.on('pageerror',e=>errors.push(e.message));
- await page.goto('http://127.0.0.1:8768',{waitUntil:'domcontentloaded'});
+ await page.goto(process.env.MAYORISTAS_URL || 'http://127.0.0.1:8768',{waitUntil:'domcontentloaded'});
  await page.locator('#loadingOverlay').waitFor({state:'hidden',timeout:120000});
  const start=Date.now();await page.locator('[data-module="priceView"]').click();
- await page.waitForFunction('priceDeliveryActive && !priceDeliveryPending',null,{timeout:120000});
+ await page.waitForFunction('typeof priceDeliveryActive !== "undefined" && priceDeliveryActive && !priceDeliveryPending',null,{timeout:120000});
  const performance=await page.evaluate(()=>({seconds:(Date.now()-window.__testStart)/1000,requests:priceDelivery.metrics.requests.length,
   bytes:priceDelivery.metrics.bytes,heap:window.performance.memory?.usedJSHeapSize}));
  performance.seconds=(Date.now()-start)/1000;
@@ -25,6 +25,8 @@ const {chromium}=require('playwright');
  await page.waitForFunction('!priceDeliveryPending');
  await select('priceFilterEspecie',['Tomate']);
  await select('priceFilterProcedencia',['Corrientes']);
+ const monthlyStatus=await page.locator('#mcbaMonthlyUpdateStatus').textContent();
+ if(!monthlyStatus.includes('Actualizado')||monthlyStatus.includes('Error de actualización'))throw Error(`Estado mensual incorrecto: ${monthlyStatus}`);
  const result=await page.evaluate(()=>({counts:Object.fromEntries([...new Set(filteredPriceData.map(r=>r.mercado))].map(m=>[m,filteredPriceData.filter(r=>r.mercado===m).length])),
   status:document.getElementById('priceComparisonStatus').textContent,
   variety:[...document.getElementById('priceFilterVariedad').options].map(o=>o.value),

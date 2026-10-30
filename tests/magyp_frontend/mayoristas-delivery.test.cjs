@@ -9,12 +9,13 @@ global.crypto=webcrypto;
 const delivery=require('../../mayoristas-loader.js');
 const {readSources}=require('../../scripts/mayoristas/source_rows.cjs');
 const root=path.resolve(__dirname,'../..');
-const folder=path.join(root,delivery.BASE);
+// CI may validate a freshly generated candidate without changing tracked shards.
+const folder=process.env.MAYORISTAS_DELIVERY_ROOT ? path.resolve(process.env.MAYORISTAS_DELIVERY_ROOT) : path.join(root,delivery.BASE);
 const index=JSON.parse(fs.readFileSync(path.join(folder,'index.json'),'utf8'));
 const quiet={log(){},warn(){},error(){}};
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 function fetcher(calls=[],modify=bytes=>bytes) {
- return async url=>{calls.push(url);const body=modify(fs.readFileSync(path.join(root,url)),url);return {ok:true,arrayBuffer:async()=>body.buffer.slice(body.byteOffset,body.byteOffset+body.byteLength)};};
+ return async url=>{calls.push(url);const body=modify(fs.readFileSync(path.join(folder,path.basename(url))),url);return {ok:true,arrayBuffer:async()=>body.buffer.slice(body.byteOffset,body.byteOffset+body.byteLength)};};
 }
 test('index schema, exact counts, hashes and every published shard validate',async()=>{
  delivery.validateIndex(index);
@@ -36,7 +37,7 @@ test('initial view loads only 2026 monthly for selected markets; hash cache reus
 });
 test('corrupt hash, decompressed schema, count and HTTP failure reject without poisoning cache',async()=>{
  let broken=true;
- const loader=new delivery.Loader(async url=>{const body=fs.readFileSync(path.join(root,url));const bytes=broken&&url.endsWith('.gz')?Buffer.concat([body,Buffer.from('x')]):body;return {ok:true,arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)};});
+ const loader=new delivery.Loader(async url=>{const body=fs.readFileSync(path.join(folder,path.basename(url)));const bytes=broken&&url.endsWith('.gz')?Buffer.concat([body,Buffer.from('x')]):body;return {ok:true,arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)};});
  await loader.init();const f=index.fragments[0];await assert.rejects(loader.shard(f),/hash/);assert.equal(loader.cache.size,0);
  broken=false;await loader.shard(f);
  const rows=JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(folder,f.path))));
@@ -57,6 +58,7 @@ test('exact economic equivalence: rows, KPIs, evolution, rankings, variation, se
  const controls=[];
  for(const [market,frequency,years] of [[index.markets[0],'diaria',[2026]],[index.markets[0],'mensual',[2024,2025,2026]],[index.markets[1],'mensual',[2025,2026]],[index.markets[1],'diaria',[2025,2026]],[index.markets[0],'anual',[2024,2025,2026]]]) {
   for(const year of years) {
+   if(process.env.MAYORISTAS_CANDIDATE_SMOKE==='1' && (market!==index.markets[0] || frequency!=='mensual' || year!==2026)) continue;
    const selection={year,frequency,markets:[market]};const actual=await loader.load(selection);
    const expected=original.views[frequency].filter(r=>r.year===year&&r.mercado===market);
    assert.deepEqual(actual.rows,expected,JSON.stringify(selection)+' exact row order/content');
@@ -81,7 +83,7 @@ test('exact economic equivalence: rows, KPIs, evolution, rankings, variation, se
    controls.push({...selection,rows:after.rows,average:after.average,minimum:after.minimum,maximum:after.maximum,latest:after.latest,exact_equal:true,sha256:digest(after)});
   }
  }
- assert.equal(controls.length,11);
+ assert.equal(controls.length,process.env.MAYORISTAS_CANDIDATE_SMOKE==='1' ? 1 : 11);
  if(process.env.MAYORISTAS_EQUIVALENCE_REPORT)fs.writeFileSync(process.env.MAYORISTAS_EQUIVALENCE_REPORT,JSON.stringify({controls},null,2)+'\n');
 });
 test('scope: wholesale opening cannot fetch integrated or upstream full source publications',()=>{
