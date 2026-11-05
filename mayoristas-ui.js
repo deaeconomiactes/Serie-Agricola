@@ -18,6 +18,7 @@
         const target=document.getElementById(button.dataset.priceTarget);
         button.addEventListener('click',()=>{
             if(!target||target.hidden)return;
+            for(let parent=target.parentElement;parent && parent!==root;parent=parent.parentElement) if(parent instanceof HTMLDetailsElement) parent.open=true;
             if(target instanceof HTMLDetailsElement)target.open=true;
             const focus=target.querySelector('summary,h2,h3')||target;
             if(!focus.matches('summary'))focus.tabIndex=-1;

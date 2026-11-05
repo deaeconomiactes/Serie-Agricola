@@ -53,38 +53,26 @@ test('late responses from previous selections are ignored and never become the c
  release();assert.equal(await old,null);assert.ok(current.rows.every(r=>r.year===2026));
 });
 test('exact economic equivalence: rows, KPIs, evolution, rankings, variation, semaphore and tables',async()=>{
- const original=await readSources(root);const ctx=original.context;ctx.console=quiet;ctx.document.getElementById=()=>({value:"TODOS"});
- const loader=new delivery.Loader(fetcher());await loader.init();
- const controls=[];
- for(const [market,frequency,years] of [[index.markets[0],'diaria',[2026]],[index.markets[0],'mensual',[2024,2025,2026]],[index.markets[1],'mensual',[2025,2026]],[index.markets[1],'diaria',[2025,2026]],[index.markets[0],'anual',[2024,2025,2026]]]) {
-  for(const year of years) {
-   if(process.env.MAYORISTAS_CANDIDATE_SMOKE==='1' && (market!==index.markets[0] || frequency!=='mensual' || year!==2026)) continue;
-   const selection={year,frequency,markets:[market]};const actual=await loader.load(selection);
-   const expected=original.views[frequency].filter(r=>r.year===year&&r.mercado===market);
-   assert.deepEqual(actual.rows,expected,JSON.stringify(selection)+' exact row order/content');
-   ctx.testFilters={year:[String(year)],mercado:[market],mes:['TODOS'],rubro:['TODOS'],especie:['TODOS'],variedad:['TODOS'],procedencia:['TODOS'],unidad:['TODOS'],envase:['TODOS'],calidadMCBA:['TODOS'],tamanoMCBA:['TODOS'],gradoMCBA:['TODOS'],unidadComparable:'comparables'};
-   const compute=rows=>{
-    ctx.testRows=rows;ctx.testFrequency=frequency;
-    return JSON.parse(vm.runInContext(`validPriceData=testRows;priceFrequency=testFrequency;priceDeliveryActive=true;getPriceFilters=()=>testFilters;
-      const_equivalence_rows=getFilteredPriceData();
-      JSON.stringify({rows:const_equivalence_rows.length,
-        average:const_equivalence_rows.reduce((s,r)=>s+getPriceValue(r),0)/const_equivalence_rows.length,
-        minimum:Math.min(...const_equivalence_rows.map(getPriceValue)),maximum:Math.max(...const_equivalence_rows.map(getPriceValue)),
-        species:[...new Set(const_equivalence_rows.map(r=>r.especie))],varieties:[...new Set(const_equivalence_rows.map(r=>r.variedad))],
-        latest:const_equivalence_rows.map(r=>r.fecha).sort().at(-1),
-        evolution:preparePriceEvolutionData(const_equivalence_rows,priceFrequency,testFilters),
-        ranking:preparePriceIncreaseRankingData(const_equivalence_rows,priceFrequency),
-        decrease:preparePriceDecreaseRankingData(const_equivalence_rows,priceFrequency),
-        variation:preparePriceVariationData(const_equivalence_rows,priceFrequency,testFilters),
-        semaphore:buildMonthlyPriceSemaphoreMatrix(const_equivalence_rows,testFilters)})`,ctx));
-   };
-   const before=compute(expected),after=compute(actual.rows);
-   assert.deepEqual(after,before,JSON.stringify(selection)+' calculations');
-   controls.push({...selection,rows:after.rows,average:after.average,minimum:after.minimum,maximum:after.maximum,latest:after.latest,exact_equal:true,sha256:digest(after)});
-  }
+ const cases = [[index.markets[0],'diaria',[2026]],[index.markets[0],'mensual',[2024,2025,2026]],[index.markets[1],'mensual',[2025,2026]],[index.markets[1],'diaria',[2025,2026]],[index.markets[0],'anual',[2024,2025,2026]]].flatMap(([market,frequency,years])=>years.map(year=>({market,frequency,year})));
+ const selectedCases = process.env.MAYORISTAS_CANDIDATE_SMOKE==='1' ? cases.filter(c=>c.market===index.markets[0] && c.frequency==='mensual' && c.year===2026) : cases;
+ {
+  const {spawnSync}=require('node:child_process');const os=require('node:os');const folder=fs.mkdtempSync(path.join(os.tmpdir(),'mayoristas-equivalence-'));const controls=[], failures=[];
+  try {
+   for(let i=0;i<selectedCases.length;i++) {
+    const report=path.join(folder,`${i}.json`);
+    const childEnv={...process.env,MAYORISTAS_CONTROL:JSON.stringify(selectedCases[i]),MAYORISTAS_EQUIVALENCE_REPORT:report};delete childEnv.NODE_TEST_CONTEXT;
+    const child=spawnSync(process.execPath,['--expose-gc','--max-old-space-size=1000',path.join(__dirname,'mayoristas-equivalence-control.cjs')],{cwd:root,encoding:'utf8',maxBuffer:4*1024*1024,env:childEnv});
+    if(child.status!==0 || !fs.existsSync(report)) { failures.push({selection:selectedCases[i],error:(child.stderr||child.stdout||'Sin informe').slice(0,3000)});console.log(`Control ${i+1}/${selectedCases.length}: ${JSON.stringify(selectedCases[i])} FAIL`);continue; }
+    const result=JSON.parse(fs.readFileSync(report,'utf8'));assert.equal(result.controls.length,1);controls.push({...result.controls[0],peak_rss_kb:result.peak_rss_kb});
+    console.log(`Control ${i+1}/${selectedCases.length}: ${JSON.stringify(selectedCases[i])} PASS · RSS máximo ${result.peak_rss_kb} KiB`);
+   }
+   assert.equal(controls.length+failures.length,process.env.MAYORISTAS_CANDIDATE_SMOKE==='1'?1:11);
+   if(process.env.MAYORISTAS_EQUIVALENCE_REPORT)fs.writeFileSync(process.env.MAYORISTAS_EQUIVALENCE_REPORT,JSON.stringify({controls,failures},null,2)+'\n');
+   assert.deepEqual(failures,[],'Controles económicos fallidos');
+  } finally {fs.rmSync(folder,{recursive:true,force:true});}
+  return;
  }
- assert.equal(controls.length,process.env.MAYORISTAS_CANDIDATE_SMOKE==='1' ? 1 : 11);
- if(process.env.MAYORISTAS_EQUIVALENCE_REPORT)fs.writeFileSync(process.env.MAYORISTAS_EQUIVALENCE_REPORT,JSON.stringify({controls},null,2)+'\n');
+
 });
 test('scope: wholesale opening cannot fetch integrated or upstream full source publications',()=>{
  const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
