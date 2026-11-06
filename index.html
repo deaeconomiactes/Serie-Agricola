@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <link rel="stylesheet" href="styles.css?v=carnes-pilot-20261023-5">
-    <link rel="stylesheet" href="mayoristas-ui.css?v=inicio-guiado-20261106">
+    <link rel="stylesheet" href="mayoristas-ui.css?v=selectores-mayoristas-20261106">
     <link rel="stylesheet" href="commodities-ui.css?v=ui-20261026-2">
     <link rel="stylesheet" href="cantidades-ui.css?v=1">
 </head>
@@ -411,8 +411,19 @@
         </section>
         <details id="priceAdvanced" class="sa-price-disclosure"><summary>Análisis avanzado</summary>
 <div id="priceComparisonStatus" class="price-inline-status" role="status" aria-live="polite"></div>
-<div id="priceComparisonControl" class="filter-group" hidden><label class="filter-label" for="priceComparisonChoice">Comparación disponible</label><select id="priceComparisonChoice" class="filter-select"></select></div>
-<div id="priceIndividualSeriesControl" class="filter-group" hidden><label class="filter-label" for="priceIndividualSeriesChoice">Serie individual disponible</label><select id="priceIndividualSeriesChoice" class="filter-select"></select></div>
+<div id="priceComparisonControl" class="filter-group sa-series-control" hidden><span class="filter-label" id="priceComparisonLabel">Comparación disponible</span><button type="button" id="priceComparisonTrigger" class="sa-series-trigger" aria-labelledby="priceComparisonLabel priceComparisonTrigger" aria-haspopup="dialog">Elegir comparación</button><select id="priceComparisonChoice" hidden aria-hidden="true" tabindex="-1"></select></div>
+<details id="priceComparisonDetail" class="sa-series-detail" hidden><summary>Detalle de la comparación</summary><dl id="priceComparisonDetailList"></dl></details>
+<div id="priceIndividualSeriesControl" class="filter-group sa-series-control" hidden>
+<label class="filter-label" id="priceIndividualSeriesLabel">Serie individual disponible</label>
+<button type="button" id="priceIndividualSeriesChoice" class="sa-series-trigger" aria-labelledby="priceIndividualSeriesLabel priceIndividualSeriesChoice" aria-haspopup="dialog">Elegir serie</button>
+</div>
+<dialog id="priceSeriesDialog" class="sa-series-dialog" aria-labelledby="priceSeriesDialogTitle">
+<div class="sa-series-dialog-header"><h3 id="priceSeriesDialogTitle">Elegir serie individual</h3><button type="button" id="priceSeriesClose" aria-label="Cerrar selector">×</button></div>
+<label for="priceSeriesSearch">Buscar por producto, procedencia, mercado o presentación</label>
+<input id="priceSeriesSearch" type="search" role="combobox" aria-expanded="true" aria-controls="priceSeriesList" aria-autocomplete="list" autocomplete="off">
+<p id="priceSeriesCount" role="status" aria-live="polite"></p><div id="priceSeriesList" role="listbox" aria-label="Series disponibles"></div>
+</dialog>
+<details id="priceSeriesDetail" class="sa-series-detail" hidden><summary>Detalle de la serie</summary><dl id="priceSeriesDetailList"></dl></details>
 <div id="priceSelectionSummary" class="price-inline-status" role="status" aria-live="polite"></div>
         <p class="sa-price-scope">Promedios simples por día y luego por mes y año; no representan una canasta ponderada ni un índice de mercado.</p>
         <p id="priceKpiScopeNote" class="sa-price-kpi-note" hidden></p>
@@ -606,7 +617,7 @@
     <script src="mcba-prices.js?v=mcba-status-v2"></script>
     <script src="commodity-history.js?v=1"></script>
     <script src="mayoristas-explore.js?v=20261105"></script>
-    <script src="app.js?v=inicio-guiado-20261106"></script>
+    <script src="app.js?v=selectores-mayoristas-20261106"></script>
     <script src="mayoristas-ui.js?v=productos-guiados-20261106"></script>
     <script src="commodities-ui.js?v=ui-20261026-2"></script>
     <script src="cantidades-analytics.js?v=1"></script>

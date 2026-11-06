@@ -39,3 +39,14 @@ test('los precios originales se separan por unidad y se descartan filas sin per�
     assert.ok(groups.some(group=>group.label.includes('/bolsa')));
     assert.ok(groups.some(group=>group.label.includes('/kg')));
 });
+
+test('la presentación permite buscar atributos sin cambiar la clave ni inventar datos', () => {
+    const ctx = context();
+    ctx.item = {key:'clave-estable',label:'fuente técnica',rows:[{productoNormalizado:'Tomate',variedad:'Redondo',procedencia:'Corrientes',mercado:'Mercado Central',envase:'Torito',kg_raw:18,moneda_normalizada:'ARS',calidadMCBA:'Primera',data_source:'MCBA'}]};
+    const view = JSON.parse(vm.runInContext("JSON.stringify(priceSeriesPresentation(item,'comparable','mensual'))", ctx));
+    assert.match(view.main, /Tomate Redondo.*Corrientes.*Torito 18 kg/);
+    assert.match(view.secondary, /Mercado Central.*ARS\/kg.*Primera/);
+    assert.ok(view.search.includes('CORRIENTES'));
+    assert.equal(view.details.find(([name]) => name === 'Grado')[1], '');
+    assert.equal(ctx.item.key, 'clave-estable');
+});

@@ -49,3 +49,15 @@ test('la misma intersección funciona con otros productos y conserva las fuentes
   assert.deepEqual(result.rows.map(r=>r.data_source).sort(),['LEGACY','MERCADO_CENTRAL']);
  }
 });
+
+
+test('la presentación conserva cobertura y atributos separados por mercado',()=>{
+ const ctx=context(),a=row('A',{calidadMCBA:'Primera',tamanoMCBA:'MEDIANO',gradoMCBA:'P/I'}),b=row('B');
+ const result=run(ctx,[a,b,row('B',{fecha:'2026-04-02'}),{...a,fecha:'2026-05-01'},row('B',{fecha:'2026-05-02'})]);
+ ctx.item=result;const view=JSON.parse(vm.runInContext('JSON.stringify(priceComparisonPresentation(item))',ctx));
+ assert.match(view.main,/Tomate Redondo.*Torito.*18 kg/i);assert.match(view.secondary,/A vs B.*ARS\/kg/);
+ assert.match(view.details.find(([k])=>k==='Meses comunes')[1],/2026/);
+ assert.match(view.details.find(([k])=>k==='A')[1],/Calidad: Primera.*Tamaño: MEDIANO.*Grado: P\/I.*2 registros/);
+ assert.match(view.details.find(([k])=>k==='B')[1],/Calidad: no informado.*Tamaño: no informado.*Grado: no informado.*3 registros/);
+ assert.equal(ctx.item.key,result.key);
+});

@@ -32,20 +32,30 @@ const {chromium}=require('playwright');
   variety:[...document.getElementById('priceFilterVariedad').options].map(o=>o.value),
   plot:!!priceCharts.evolution}));
  if(!result.counts['Mercado Central de Buenos Aires']||!result.counts['Mercado de Corrientes'])throw Error(JSON.stringify(result));
- if(!result.status.includes('Tomate Redondo')||!result.plot)throw Error(JSON.stringify(result));
+ if(!result.status.includes('5 comparaciones compatibles')||!result.plot)throw Error(JSON.stringify(result));
  if(!['Cherry','Perita','Redondo'].every(v=>result.variety.includes(v)))throw Error(JSON.stringify(result));
  const automatic=await page.evaluate(()=>({options:[...document.getElementById('priceComparisonChoice').options].map(o=>o.textContent),
   visible:!document.getElementById('priceComparisonControl').hidden,series:priceCharts.evolution?.data?.datasets?.map(x=>x.label)||[]}));
  if(automatic.options.length<2||!automatic.visible||automatic.series.length!==2)throw Error(JSON.stringify(automatic));
  if(process.env.MAYORISTAS_SCREENSHOT_DIR) await page.screenshot({path:require('path').join(process.env.MAYORISTAS_SCREENSHOT_DIR,'automatica.png')});
- const alternative=await page.evaluate(()=>{const el=document.getElementById('priceComparisonChoice');el.value=el.options[1].value;el.dispatchEvent(new Event('change',{bubbles:true}));return {selected:el.options[el.selectedIndex].textContent,status:document.getElementById('priceComparisonStatus').textContent,series:priceCharts.evolution?.data?.datasets?.length};});
- if(alternative.series!==2||!alternative.status.includes(alternative.selected))throw Error(JSON.stringify(alternative));
+ await page.locator('#priceAdvanced > summary').click();
+ await page.locator('#priceComparisonTrigger').click();
+ const dialog=page.locator('#priceSeriesDialog');await dialog.waitFor({state:'visible'});
+ const optionTexts=await page.locator('#priceSeriesList [role="option"]').allTextContents();
+ if(optionTexts.length!==5 || optionTexts.some(text=>!text.includes('Tomate Redondo')||!text.includes('Buenos Aires vs Corrientes')))throw Error(JSON.stringify(optionTexts));
+ if(await page.locator('#priceSeriesCount').textContent()!=='5 resultados')throw Error('Conteo incorrecto');
+ const keys=await page.evaluate(()=>[...document.querySelector('#priceComparisonChoice').options].map(o=>o.value));
+ await page.locator('#priceSeriesSearch').press('ArrowDown');await page.locator('#priceSeriesSearch').press('Enter');
+ const alternative=await page.evaluate(()=>({key:priceComparisonChoice,series:priceCharts.evolution?.data?.datasets?.length,focused:document.activeElement?.id}));
+ if(alternative.key!==keys[1]||alternative.series!==2||alternative.focused!=='priceComparisonTrigger')throw Error(JSON.stringify(alternative));
+ const details=await page.locator('#priceComparisonDetailList').textContent();
+ if(!details.includes('Mercado de Corrientes')||!details.includes('no informado')||!details.includes('Meses comunes'))throw Error(details);
  await select('priceFilterVariedad',['Redondo']);
  for(const [id,value] of [['priceFilterCalidad','Primera'],['priceFilterTamano','MEDIANO'],['priceFilterGrado','P/I']])
   await page.evaluate(({id,value})=>{const el=document.getElementById(id);el.value=value;el.dispatchEvent(new Event('change',{bubbles:true}));},{id,value});
  const pair=await page.evaluate(()=>({status:document.getElementById('priceComparisonStatus').textContent,
   series:priceCharts.evolution?.data?.datasets?.map(x=>x.label)||[]}));
- if(pair.series.length!==2||!pair.status.includes('TORITO'))throw Error(JSON.stringify(pair));
+ if(pair.series.length!==2||!pair.status.includes('comparaciones compatibles'))throw Error(JSON.stringify(pair));
  if(process.env.MAYORISTAS_SCREENSHOT_DIR) {
   await page.locator('#priceEvolutionPanel').scrollIntoViewIfNeeded();
   await page.screenshot({path:require('path').join(process.env.MAYORISTAS_SCREENSHOT_DIR,'comparacion.png')});
