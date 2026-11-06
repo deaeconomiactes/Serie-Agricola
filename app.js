@@ -1299,7 +1299,78 @@ function updatePriceDashboard() {
         filteredPriceData = availableRows;
         updatePriceCoverageMetadata(comparison.rows);
     } else { updatePriceKPIs(); renderPriceCharts(); }
+    renderMayoristasExplore(filters);
     if (priceDeliveryActive) priceDeliveryLastControls = priceDeliveryControls();
+}
+
+let exploreCharts = [];
+function renderMayoristasExplore(filters) {
+    const root = document.getElementById('priceExplore');
+    if (!root || typeof MayoristasExplore === 'undefined') return;
+    exploreCharts.forEach(chart => chart.destroy()); exploreCharts = [];
+    const status = document.getElementById('exploreStatus');
+    const cards = document.getElementById('exploreKpis');
+    const table = document.getElementById('exploreTable');
+    cards.replaceChildren(); table.replaceChildren();
+    const products = getFilterValues(filters.especie), origins = getFilterValues(filters.procedencia);
+    if (isAllSelected(products) || products.length !== 1 || isAllSelected(origins) || origins.length !== 1) {
+        status.textContent = 'Seleccioná un producto y una procedencia para explorar precios por mercado.';
+        return;
+    }
+    if (priceFrequency !== 'mensual') {
+        status.textContent = 'Elegí frecuencia mensual para comparar la evolución descriptiva por mercado. Las otras frecuencias están disponibles en Análisis avanzado.';
+        return;
+    }
+    // Use comparable rows independently of the advanced unit-display control.
+    const rows = getFilteredPriceData({frequency:'mensual',ignoreComparable:true});
+    const points = MayoristasExplore.summarize(rows);
+    const markets = ['Mercado Central de Buenos Aires','Mercado de Corrientes'];
+    const valid = points.filter(p => p.value !== null && markets.includes(p.market));
+    const excluded = points.filter(p => p.incompatible).length;
+    status.textContent = (valid.length ? markets.filter(m => !valid.some(p => p.market === m)).map(m => `Sin datos válidos: ${m}.`).join(' ') : 'No hay precios ARS/kg válidos para esta selección.') + (excluded ? ` ${excluded} períodos con fuentes o granularidades mezcladas se excluyeron.` : '');
+    const observedMonths = [...new Set(valid.map(p=>p.month))].sort();
+    const labels = [];
+    if (observedMonths.length) {
+        let year=Number(observedMonths[0].slice(0,4)), month=Number(observedMonths[0].slice(5));
+        while (`${year}-${String(month).padStart(2,'0')}` <= observedMonths.at(-1)) {
+            labels.push(`${year}-${String(month).padStart(2,'0')}`);
+            if (++month === 13) { month=1; year++; }
+        }
+    }
+    const byMarket = markets.map(m => valid.filter(p=>p.market===m));
+    const latest = byMarket.map(a=>a.at(-1));
+    const common = labels.filter(month => byMarket.every(a=>a.some(p=>p.month===month))).at(-1);
+    const commonPoints = common ? byMarket.map(a=>a.find(p=>p.month===common)) : [];
+    const difference = common ? (commonPoints[1].value/commonPoints[0].value-1)*100 : null;
+    const changes = byMarket.flatMap((a,i)=>a.slice(1).filter((p,j)=>MayoristasExplore.consecutive(a[j].month,p.month)).map((p,j)=>({market:markets[i],point:p, previous:a.find(q=>MayoristasExplore.consecutive(q.month,p.month)), index:j})));
+    changes.sort((a,b)=>b.point.month.localeCompare(a.point.month)||a.market.localeCompare(b.market));
+    const change=changes[0], variation=change ? (change.point.value/change.previous.value-1)*100 : null;
+    const coverage = p => p ? `${p.month} · ${p.observations} registros${p.days !== null ? ` · ${p.days} días` : ''}${p.month === currentDateISO().slice(0,7) ? ' · mes en curso' : ''}` : 'Sin datos válidos';
+    const entries = [
+        ['Buenos Aires · último precio',latest[0] ? `${formatCurrency(latest[0].value)} ARS/kg` : '–',coverage(latest[0])],
+        ['Corrientes · último precio',latest[1] ? `${formatCurrency(latest[1].value)} ARS/kg` : '–',coverage(latest[1])],
+        ['Diferencia orientativa',common ? formatPercent(difference) : '–',common ? `Corrientes frente a Buenos Aires · ${common} · ${commonPoints.map(p=>p.observations).join(' / ')} registros` : 'Sin mes común válido'],
+        ['Variación mensual reciente',change ? formatPercent(variation) : '–',change ? `${change.market} · ${change.previous.month} a ${change.point.month} · ${change.previous.observations} / ${change.point.observations} registros · ARS/kg${change.point.month === currentDateISO().slice(0,7) ? ' · mes en curso' : ''}` : 'Sin meses consecutivos']
+    ];
+    for (const [label,value,detail] of entries) {
+        const card=document.createElement('div'); card.className='kpi-card';
+        for (const [tag,cls,text] of [['span','kpi-label',label],['strong','kpi-value',value],['span','kpi-unit',detail]]) { const node=document.createElement(tag);node.className=cls;node.textContent=text;card.appendChild(node); }
+        cards.appendChild(card);
+    }
+    if (!labels.length) return;
+    const colors=['#2563eb','#16a34a'];
+    const datasets=byMarket.map((items,i)=>({label:markets[i],data:labels.map(month=>items.find(p=>p.month===month)?.value ?? null),borderColor:colors[i],backgroundColor:colors[i],tension:0,spanGaps:false,pointRadius:4}));
+    const options=priceChartOptions('ARS/kg');
+    options.plugins.legend.display=true;
+    options.plugins.tooltip={...tooltipConfig(),callbacks:{label:ctx=>{const p=byMarket[ctx.datasetIndex].find(x=>x.month===labels[ctx.dataIndex]);return p ? [`${p.market}: ${formatCurrency(p.value)} ARS/kg`,coverage(p),`Fuente: ${p.source} · ${p.precision}`,`Conversión: ${p.methods} · confianza ${p.confidence}`,p.days!==null?'Mediana de medianas diarias':'Mediana de registros mensuales'] : '';}}};
+    exploreCharts.push(new Chart(document.getElementById('exploreEvolution'),{type:'line',data:{labels,datasets},options}));
+    const variations=byMarket.map((items,i)=>({label:markets[i],backgroundColor:colors[i],data:labels.map(month=>{const p=items.find(q=>q.month===month),prev=items.find(q=>MayoristasExplore.consecutive(q.month,month));return p&&prev?(p.value/prev.value-1)*100:null;})}));
+    const variationOptions=priceChartOptions('Variación %');variationOptions.plugins.legend.display=true;variationOptions.scales.y.ticks.callback=value=>formatPercent(value);
+    exploreCharts.push(new Chart(document.getElementById('exploreVariation'),{type:'bar',data:{labels,datasets:variations},options:variationOptions}));
+    const t=document.createElement('table');t.className='price-semaphore-table';
+    const head=document.createElement('thead'); const tr=document.createElement('tr');
+    for(const h of ['Mes','Mercado','Mediana ARS/kg','Cobertura','Fuente']) {const th=document.createElement('th');th.textContent=h;tr.appendChild(th);}head.appendChild(tr);t.appendChild(head);
+    const body=document.createElement('tbody');for(const p of valid){const row=document.createElement('tr');for(const v of [p.month,p.market,formatCurrency(p.value),coverage(p),`${p.source} · ${p.precision}`]){const cell=document.createElement('td');cell.textContent=v;row.appendChild(cell);}body.appendChild(row);}t.appendChild(body);table.appendChild(t);
 }
 
 function updatePriceSourceStatus() {

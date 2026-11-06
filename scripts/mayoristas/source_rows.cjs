@@ -3,7 +3,9 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const {webcrypto} = require('node:crypto');
-async function readSources(root) {
+async function readSources(root, options = {}) {
+    const mark = label => { if (process.env.MAYORISTAS_MEMORY_TRACE) console.error('MEM',label,JSON.stringify(process.memoryUsage())); };
+    mark('inicio');
     const read = name => fs.readFileSync(path.join(root,name),'utf8');
     const mcba = require(path.join(root,'mcba-prices.js'));
     const monthly = require(path.join(root,'mcba-monthly.js'));
@@ -14,6 +16,7 @@ async function readSources(root) {
     ctx.integrated=read('PRECIOS_MAYORISTAS_INTEGRADO.csv');
     vm.runInContext(`priceSeriesData=parsePriceCSV(quality);priceQualityMap=new Map(priceSeriesData.map(row=>[priceSeriesKey(row),row.indicador_serie_utilizable||'']));
         legacyPriceData=processPriceData(parsePriceCSV(integrated),PRICE_CSV_PATH,true).map(row=>({...row,data_source:'LEGACY',source_status:'LEGACY',last_update:'',fechaPrecision:row.mercado===MCBAPrices.MCBA?String(row.fechaPrecision).toLowerCase():row.fechaPrecision,calidadMCBA:'',tamanoMCBA:'',gradoMCBA:''}));`,ctx);
+    mark('legado procesado');
     const base='data/magyp/dashboard/mcba/';
     const result=await mcba.verifyBundle({daily:read(base+'MCBA_MAGYP_DAILY.csv'),summary:read(base+'MCBA_MAGYP_SUMMARY.csv'),marker:JSON.parse(read(base+'_SUCCESS.json'))});
     const fresh=await monthly.verify(read(monthly.BASE+monthly.FILE),JSON.parse(read(monthly.BASE+'_SUCCESS.json')));
@@ -24,6 +27,25 @@ async function readSources(root) {
         mcbaMonthlyData=MCBAMonthly.adapt(monthlyRows,MONTHS_FULL,formatLabel);
         rawPriceData=legacyPriceData.concat(magypPriceData,mcbaMonthlyData);
         validPriceData=rawPriceData.filter(row=>isValidPrice(row.precioObservado));`,ctx);
+    // The test-only selection keeps the same source routing and full normalizer
+    // catalogue, but materializes only one control instead of all three views.
+    mark('fuentes adaptadas');
+    if (options.selection) {
+        ctx.integrated = null; ctx.quality = null;
+        ctx.dailyRows = null; ctx.monthlyRows = null;
+        const routed = {};
+        for (const frequency of ['diaria','mensual','anual'])
+            routed[frequency] = Array.from(vm.runInContext(`getPriceSourceRows('${frequency}')`, ctx));
+        mark('vistas ruteadas');
+        const normalize = require(path.join(root,'scripts/mayoristas/normalize.cjs')).makeNormalizer(root,routed);
+        const {year, frequency, market} = options.selection;
+        const chosen = routed[frequency].filter(row => row.year === year && row.mercado === market);
+        mark('selección preparada');
+        const views = {[frequency]: chosen.map(row => normalize(JSON.parse(JSON.stringify(row))))};
+        mark('selección normalizada');
+        vm.runInContext(`legacyPriceData=[];magypPriceData=[];mcbaMonthlyData=[];rawPriceData=[];validPriceData=[];priceSeriesData=[];priceQualityMap.clear();`,ctx);
+        return {views,metadata:{magypPriceInfo:result.info,magypUpdateMetadata:update},context:ctx};
+    }
     // Future dates are filtered at runtime, exactly as before; the build has no calendar-dependent output.
     const views={};
     for(const frequency of ['diaria','mensual','anual']) views[frequency]=JSON.parse(vm.runInContext(`JSON.stringify(getPriceSourceRows('${frequency}'))`,ctx));
