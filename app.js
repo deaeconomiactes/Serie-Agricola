@@ -1239,7 +1239,7 @@ function updatePriceDashboard() {
     }).join(' | ');
     const comparisonStatus = document.getElementById('priceComparisonStatus');
     if (comparisonStatus) {
-        comparisonStatus.textContent = [comparisonMessage, individual ? `Serie individual, no es comparación entre mercados.${individualSeries.length < 2 ? ` ${individual.label}.` : ' Elegí otra serie para explorarla.'} Los atributos no informados se conservan como tales.` : '', comparison.rows ? `Comparaciones compatibles encontradas: ${comparison.combinations.length}. Comparación utilizada: ${comparison.label}. ${comparison.note}${comparison.unavailableVarieties.length ? ` Sin combinación compatible para: ${comparison.unavailableVarieties.join(', ')}.` : ''}` : '', marketCounts].filter(Boolean).join(' ');
+        comparisonStatus.textContent = comparison.rows ? `${comparison.combinations.length} comparaciones compatibles disponibles.` : [comparisonMessage, individual ? 'Serie individual disponible para explorar.' : '', marketCounts].filter(Boolean).join(' ');
         comparisonStatus.classList.toggle('is-visible', Boolean(comparisonStatus.textContent));
     }
     const comparisonControl = document.getElementById('priceComparisonControl');
@@ -1253,17 +1253,8 @@ function updatePriceDashboard() {
         if (comparison.rows) comparisonSelect.value = comparison.key;
         comparisonSelect.onchange = () => { priceComparisonChoice = comparisonSelect.value; updatePriceDashboard(); };
     }
-    const individualControl = document.getElementById('priceIndividualSeriesControl');
-    const individualSelect = document.getElementById('priceIndividualSeriesChoice');
-    if (individualControl && individualSelect) {
-        individualControl.hidden = !individual || individualSeries.length < 2;
-        individualSelect.replaceChildren();
-        for (const item of individualSeries) {
-            const option = document.createElement('option'); option.value = item.key; option.textContent = item.label; individualSelect.appendChild(option);
-        }
-        if (individual) individualSelect.value = individual.key;
-        individualSelect.onchange = () => { priceIndividualSeriesChoice = individualSelect.value; updatePriceDashboard(); };
-    }
+    updateIndividualSeriesControl(individualSeries, individual, priceUnitMode, priceFrequency);
+    updateComparisonSeriesControl(comparison, comparisonMessage);
     const unitStatus = document.getElementById('priceUnitStatus');
     if (unitStatus) {
         const nonComparableIncluded = priceUnitMode !== 'comparable' && filteredPriceData.some(row => !isComparablePriceRow(row));
@@ -1543,6 +1534,84 @@ function getIndividualPriceSeries(rows, mode, frequency) {
         const group = groups.get(key); group.rows.push(row); group.periods.add(period);
     }
     return [...groups.values()].sort((a,b) => b.periods.size - a.periods.size || b.rows.length - a.rows.length || a.label.localeCompare(b.label, 'es'));
+}
+
+// Presentation only: the original series key and grouping remain unchanged.
+function priceSeriesPresentation(item, mode, frequency) {
+    const row = item.rows[0];
+    const known = value => String(value ?? '').trim();
+    const product = [getPriceProduct(row), row.variedad].map(known).filter(Boolean).join(' ');
+    const origin = known(row.procedencia);
+    const packageLabel=known(row.envase),weight=known(row.kg_raw || row.kgBulto);
+    const declared=packageLabel.match(/\b(\d+(?:[.,]\d+)?)\s*kg\b/i);
+    const sameWeight=declared && Number(declared[1].replace(',','.'))===Number(weight);
+    const presentation=[packageLabel,weight && !sameWeight ? `${weight} kg` : ''].filter(Boolean).join(' ');
+    const currency = known(row.moneda_normalizada || row.currency);
+    const unit = mode === 'comparable' ? 'kg' : known(row.unidadPrecioObservado || row.unidad || row.unidad_normalizada);
+    const priceUnit = `${currency || 'Moneda no informada'}/${unit || 'unidad no informada'}`;
+    const main = [product || 'Producto no informado', origin || 'Procedencia no informada', presentation || 'Presentación no informada'].join(' · ');
+    const secondary = [known(row.mercado) || 'Mercado no informado', priceUnit, known(row.calidadMCBA), known(row.tamanoMCBA)].filter(Boolean).join(' · ');
+    const details = [['Producto y variedad', product], ['Procedencia', origin], ['Mercado', known(row.mercado)],
+        ['Presentación y peso', presentation], ['Calidad', known(row.calidadMCBA)], ['Tamaño', known(row.tamanoMCBA)],
+        ['Grado', known(row.gradoMCBA)], ['Moneda y unidad', priceUnit], ['Frecuencia', known(row.fechaPrecision) || frequency],
+        ['Fuente', known(row.data_source || row.fuente)]];
+    return {main, secondary, details, search: normalizeText([main, secondary, item.label].join(' '))};
+}
+
+let priceSeriesUI;
+function initPriceSeriesUI() {
+    if (priceSeriesUI) return priceSeriesUI;
+    const dialog=document.getElementById('priceSeriesDialog'),search=document.getElementById('priceSeriesSearch'),list=document.getElementById('priceSeriesList'),count=document.getElementById('priceSeriesCount');
+    if(!dialog||!search||!list||!count)return null;
+    const ui=priceSeriesUI={items:[],visible:[],active:0,mode:'individual',trigger:null,selectedKey:''};
+    const close=()=>{if(dialog.open)dialog.close();ui.trigger?.focus();};
+    const render=()=>{
+        const terms=normalizeText(search.value).split(/\s+/).filter(Boolean),matches=ui.items.filter(item=>terms.every(term=>item.view.search.includes(term)));
+        ui.visible=matches.slice(0,100);ui.active=Math.min(ui.active,Math.max(0,ui.visible.length-1));list.replaceChildren();
+        count.textContent=matches.length>100?`${matches.length} resultados; se muestran 100. Refiná la búsqueda.`:`${matches.length} resultados`;
+        ui.visible.forEach((item,index)=>{const option=document.createElement('div');option.id=`priceSeriesOption${index}`;option.setAttribute('role','option');option.setAttribute('aria-selected',String(item.key===ui.selectedKey));option.className='sa-series-option';if(index===ui.active)option.classList.add('is-active');const main=document.createElement('strong'),secondary=document.createElement('small');main.textContent=item.view.main;secondary.textContent=item.view.secondary;option.append(main,secondary);option.addEventListener('click',()=>choose(index));list.appendChild(option);});
+        if(ui.visible.length)search.setAttribute('aria-activedescendant',`priceSeriesOption${ui.active}`);else search.removeAttribute('aria-activedescendant');
+    };
+    const choose=index=>{const item=ui.visible[index];if(!item)return;if(ui.mode==='comparison')priceComparisonChoice=item.key;else priceIndividualSeriesChoice=item.key;close();updatePriceDashboard();};
+    ui.render=render;
+    ui.open=(mode,trigger)=>{ui.mode=mode;ui.trigger=trigger;const model=ui.models[mode];ui.items=model.items;ui.selectedKey=model.selectedKey;ui.active=Math.max(0,ui.items.findIndex(item=>item.key===ui.selectedKey));search.value='';document.getElementById('priceSeriesDialogTitle').textContent=mode==='comparison'?'Elegir comparación':'Elegir serie individual';list.setAttribute('aria-label',mode==='comparison'?'Comparaciones disponibles':'Series disponibles');render();dialog.showModal();search.focus();document.getElementById(`priceSeriesOption${ui.active}`)?.scrollIntoView({block:'nearest'});};
+    ui.models={};document.getElementById('priceSeriesClose').addEventListener('click',close);dialog.addEventListener('cancel',event=>{event.preventDefault();close();});dialog.addEventListener('click',event=>{if(event.target===dialog)close();});search.addEventListener('input',()=>{ui.active=0;render();});search.addEventListener('keydown',event=>{if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();ui.active=Math.max(0,Math.min(ui.visible.length-1,ui.active+(event.key==='ArrowDown'?1:-1)));render();document.getElementById(`priceSeriesOption${ui.active}`)?.scrollIntoView({block:'nearest'});}else if(event.key==='Enter'){event.preventDefault();choose(ui.active);}});
+    for(const [mode,id] of [['individual','priceIndividualSeriesChoice'],['comparison','priceComparisonTrigger']]){const trigger=document.getElementById(id);if(trigger)trigger.addEventListener('click',()=>ui.open(mode,trigger));}
+    return ui;
+}
+function renderPriceChoiceTrigger(trigger,view) {
+    const main=document.createElement('strong'),secondary=document.createElement('small');main.textContent=view.main;secondary.textContent=view.secondary;trigger.replaceChildren(main,secondary);trigger.title=[view.main,view.secondary].filter(Boolean).join(' · ');
+}
+function renderPriceChoiceDetail(node, details) {
+    node.replaceChildren();for(const [label,value] of details){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value||'No informado';node.append(dt,dd);}
+}
+function updateIndividualSeriesControl(series, selected, mode, frequency) {
+    const control=document.getElementById('priceIndividualSeriesControl'),trigger=document.getElementById('priceIndividualSeriesChoice'),detail=document.getElementById('priceSeriesDetail');
+    if(!control||!trigger||!detail)return;const ui=initPriceSeriesUI();if(!ui)return;
+    control.hidden=!selected||series.length<2;detail.hidden=!selected;
+    if(!selected){if(ui.mode==='individual'&&document.getElementById('priceSeriesDialog').open)document.getElementById('priceSeriesDialog').close();return;}
+    const items=series.map(item=>({...item,view:priceSeriesPresentation(item,mode,frequency)})).sort((a,b)=>a.view.main.localeCompare(b.view.main,'es')||a.view.secondary.localeCompare(b.view.secondary,'es')||a.key.localeCompare(b.key));
+    ui.models.individual={items,selectedKey:selected.key};const view=priceSeriesPresentation(selected,mode,frequency);renderPriceChoiceTrigger(trigger,view);renderPriceChoiceDetail(document.getElementById('priceSeriesDetailList'),view.details);
+}
+function priceComparisonPresentation(item) {
+    const row=item.rows[0],product=getPriceProduct(row),variety=formatLabel(item.variety),[presentation,weight]=item.presentation.split('|');
+    const main=[`${product} ${variety}`.trim(),`${formatLabel(presentation)} ${weight} kg`].join(' · ');
+    const months=item.months.map(month=>formatPeriodLabel(month,'mensual'));
+    const period=months.length>1?`${months[0]} – ${months.at(-1)}`:(months[0]||'Sin período');
+    const markets=[...new Set(item.rows.map(r=>r.mercado))];const currency=row.moneda_normalizada||row.currency||'No informada';
+    const shortMarket=market=>market==='Mercado Central de Buenos Aires'?'Buenos Aires':market==='Mercado de Corrientes'?'Corrientes':market;
+    const qualifiers=markets.map(market=>{const group=item.rows.filter(r=>r.mercado===market);const values=['calidadMCBA','tamanoMCBA','gradoMCBA'].map(key=>[...new Set(group.map(r=>String(r[key]||'').trim()).filter(Boolean))].join('/')).filter(Boolean);return `${shortMarket(market)}: ${values.length?values.join(' / '):'atributos no informados'}`;}).join(' · ');
+    const secondary=`${markets.map(shortMarket).join(' vs ')} · ${currency}/kg · ${period} · ${item.months.length} ${item.months.length===1?'mes':'meses'} · ${qualifiers}`;
+    const details=[['Variedad',variety],['Presentación y peso',`${formatLabel(presentation)} · ${weight} kg`],['Meses comunes',months.join(', ')],['Moneda y unidad',`${currency}/kg`]];
+    for(const market of markets){const group=item.rows.filter(r=>r.mercado===market), attributes=[['Calidad','calidadMCBA'],['Tamaño','tamanoMCBA'],['Grado','gradoMCBA']].map(([label,key])=>{const values=[...new Set(group.map(r=>String(r[key]||'').trim()).filter(Boolean))];return `${label}: ${values.length?values.join(', '):'no informado'}`;});const sources=[...new Set(group.map(r=>r.data_source||r.fuente||'No informada'))],precision=[...new Set(group.map(r=>r.fechaPrecision||'No informada'))];details.push([market,`${attributes.join(' · ')} · ${group.length} registros · ${sources.join(', ')} · ${precision.join(', ')}`]);}
+    details.push(['Metodología','Registros diarios: promedios por día y por mes; registros mensuales: valores publicados de cada mes. Sólo períodos comunes, sin ponderación por volumen. Los atributos no informados no se consideran confirmados.']);
+    return {main,secondary,details,search:normalizeText([main,secondary,item.label,...details.flat()].join(' '))};
+}
+function updateComparisonSeriesControl(comparison, message) {
+    const control=document.getElementById('priceComparisonControl'),trigger=document.getElementById('priceComparisonTrigger'),detail=document.getElementById('priceComparisonDetail');if(!control||!trigger||!detail)return;
+    const ui=initPriceSeriesUI();if(!ui)return;const selected=comparison.rows?comparison:null;detail.hidden=!selected;control.hidden=!selected||!comparison.combinations||comparison.combinations.length<2||Boolean(message);
+    if(!selected){if(ui.mode==='comparison'&&document.getElementById('priceSeriesDialog').open)document.getElementById('priceSeriesDialog').close();return;}
+    const items=comparison.combinations.map(item=>({...item,view:priceComparisonPresentation(item)}));ui.models.comparison={items,selectedKey:comparison.key};const view=priceComparisonPresentation(comparison);renderPriceChoiceTrigger(trigger,view);renderPriceChoiceDetail(document.getElementById('priceComparisonDetailList'),view.details);
 }
 
 function comparablePresentation(row) {

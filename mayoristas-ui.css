@@ -200,3 +200,29 @@ body:has(#priceView.is-active) .mayoristas-footer { display:block; }
 #priceView #guidedProductStatus { color:var(--sa-secondary);font-size:12px; }
 @media(max-width:1100px){#priceView #overviewKpis {grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(max-width:700px){#priceView .sa-price-guide {align-items:flex-start;flex-direction:column;}#priceView .sa-overview-grid {grid-template-columns:1fr;}#priceView #guidedProductKpis {grid-template-columns:1fr;}}
+
+/* Selector de series: el diálogo permanece dentro del viewport y la lista desplaza internamente. */
+#priceView .sa-series-control { max-width:520px;min-width:0;margin:12px 0; }
+#priceView .sa-series-trigger { display:block;width:100%;overflow-wrap:anywhere;white-space:normal;text-align:left;padding:10px 32px 10px 12px;border:1px solid var(--sa-border);border-radius:4px;background:var(--sa-control);color:var(--sa-text);font:inherit;cursor:pointer; }
+#priceView .sa-series-dialog { box-sizing:border-box;width:min(560px,calc(100vw - 24px));max-width:none;max-height:calc(100dvh - 24px);padding:16px;border:1px solid var(--sa-border);border-radius:8px;background:var(--sa-panel);color:var(--sa-text); }
+#priceView .sa-series-dialog::backdrop { background:#0009; }
+#priceView .sa-series-dialog-header { display:flex;align-items:center;justify-content:space-between;gap:12px; }
+#priceView .sa-series-dialog-header h3 { margin:0 0 12px;font-size:16px; }
+#priceView .sa-series-dialog-header button { border:0;background:transparent;color:inherit;font-size:24px;cursor:pointer; }
+#priceView .sa-series-dialog label { display:block;margin-bottom:6px;font-size:12px;color:var(--sa-secondary); }
+#priceView .sa-series-dialog input { box-sizing:border-box;width:100%;padding:10px;border:1px solid var(--sa-border);border-radius:4px;background:var(--sa-control);color:var(--sa-text);font:inherit; }
+#priceView #priceSeriesCount { margin:8px 0;color:var(--sa-secondary);font-size:12px; }
+#priceView #priceSeriesList { max-height:min(360px,calc(100dvh - 210px));overflow-y:auto;overscroll-behavior:contain; }
+#priceView .sa-series-option { padding:10px 12px;border-radius:4px;cursor:pointer;overflow-wrap:anywhere; }
+#priceView .sa-series-option strong,#priceView .sa-series-option small { display:block;line-height:1.4; }
+#priceView .sa-series-option small { margin-top:3px;color:var(--sa-secondary); }
+#priceView .sa-series-option.is-active { outline:2px solid var(--sa-mint);outline-offset:-2px; }
+#priceView .sa-series-option[aria-selected="true"] { background:var(--sa-inset); }
+#priceView .sa-series-detail { max-width:520px;margin:8px 0;color:var(--sa-secondary);font-size:12px; }
+#priceView .sa-series-detail summary { cursor:pointer; }
+#priceView .sa-series-detail dl { display:grid;grid-template-columns:max-content minmax(0,1fr);gap:5px 12px; }
+#priceView .sa-series-detail dt { font-weight:600; }
+#priceView .sa-series-detail dd { margin:0;overflow-wrap:anywhere; }
+
+#priceView .sa-series-trigger strong,#priceView .sa-series-trigger small { display:block;line-height:1.4; }
+#priceView .sa-series-trigger small { margin-top:3px;color:var(--sa-secondary); }
