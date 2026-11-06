@@ -11,21 +11,35 @@
         if(event.key==='Escape'){more.open=false;more.querySelector('summary').focus();}
     });
     const nav=[...root.querySelectorAll('[data-price-target]')];
+    function navigationTarget(button){
+        if(button.dataset.priceDynamic!=='products')return document.getElementById(button.dataset.priceTarget);
+        const overview=document.getElementById('priceOverview');
+        const product=document.getElementById('guidedProduct');
+        const comparison=document.getElementById('priceExplore');
+        if(overview && !overview.hidden)return document.getElementById('priceProductsPanel');
+        if(product && !product.hidden)return product;
+        if(comparison && !comparison.hidden)return comparison;
+        return document.getElementById('priceGuide');
+    }
     function syncNavigation(){
-        for(const button of nav){const target=document.getElementById(button.dataset.priceTarget);button.disabled=Boolean(target?.hidden);}
+        for(const button of nav){
+            if(button.dataset.priceDynamic==='products'){button.disabled=false;continue;}
+            const target=navigationTarget(button);button.disabled=Boolean(target?.hidden);
+        }
     }
     for(const button of nav){
-        const target=document.getElementById(button.dataset.priceTarget);
         button.addEventListener('click',()=>{
+            const target=navigationTarget(button);
             if(!target||target.hidden)return;
             for(let parent=target.parentElement;parent && parent!==root;parent=parent.parentElement) if(parent instanceof HTMLDetailsElement) parent.open=true;
             if(target instanceof HTMLDetailsElement)target.open=true;
-            const focus=target.querySelector('summary,h2,h3')||target;
+            const focus=[...target.querySelectorAll('summary,h2,h3')].find(node=>node.getClientRects().length)||target;
             if(!focus.matches('summary'))focus.tabIndex=-1;
             target.scrollIntoView({block:'start'});focus.focus({preventScroll:true});
             for(const peer of nav)peer.removeAttribute('aria-current');button.setAttribute('aria-current','location');
         });
-        if(target)new MutationObserver(syncNavigation).observe(target,{attributes:true,attributeFilter:['hidden']});
+        const target=document.getElementById(button.dataset.priceTarget);
+        if(target && button.dataset.priceDynamic!=='products')new MutationObserver(syncNavigation).observe(target,{attributes:true,attributeFilter:['hidden']});
     }
     syncNavigation();
     const movements=document.getElementById('priceMovements');
