@@ -58,9 +58,11 @@ test('exact economic equivalence: rows, KPIs, evolution, rankings, variation, se
  {
   const {spawnSync}=require('node:child_process');const os=require('node:os');const folder=fs.mkdtempSync(path.join(os.tmpdir(),'mayoristas-equivalence-'));const controls=[], failures=[];
   try {
+   const reference=process.env.MAYORISTAS_DELIVERY_ROOT ? {states:[],overrides:{}} : require('../../scripts/mayoristas/validation_sources.cjs').materializeReferences(root,index,folder);
+   for(const source of reference.states.filter(item=>item.state==='SOURCE_CHANGED'))console.log(`SOURCE_CHANGED: ${source.path} · el shard conserva la fuente identificada por su hash`);
    for(let i=0;i<selectedCases.length;i++) {
     const report=path.join(folder,`${i}.json`);
-    const childEnv={...process.env,MAYORISTAS_CONTROL:JSON.stringify(selectedCases[i]),MAYORISTAS_EQUIVALENCE_REPORT:report};delete childEnv.NODE_TEST_CONTEXT;
+    const childEnv={...process.env,MAYORISTAS_CONTROL:JSON.stringify(selectedCases[i]),MAYORISTAS_EQUIVALENCE_REPORT:report,MAYORISTAS_SOURCE_OVERRIDES:JSON.stringify(reference.overrides)};delete childEnv.NODE_TEST_CONTEXT;
     const child=spawnSync(process.execPath,['--expose-gc','--max-old-space-size=1000',path.join(__dirname,'mayoristas-equivalence-control.cjs')],{cwd:root,encoding:'utf8',maxBuffer:4*1024*1024,env:childEnv});
     if(child.status!==0 || !fs.existsSync(report)) { failures.push({selection:selectedCases[i],error:(child.stderr||child.stdout||'Sin informe').slice(0,3000)});console.log(`Control ${i+1}/${selectedCases.length}: ${JSON.stringify(selectedCases[i])} FAIL`);continue; }
     const result=JSON.parse(fs.readFileSync(report,'utf8'));assert.equal(result.controls.length,1);controls.push({...result.controls[0],peak_rss_kb:result.peak_rss_kb});
@@ -73,6 +75,24 @@ test('exact economic equivalence: rows, KPIs, evolution, rankings, variation, se
   return;
  }
 
+});
+test('source freshness is reported independently and the current monthly publication has valid integrity',async()=>{
+ const sourceCheck=require('../../scripts/mayoristas/validation_sources.cjs'),states=sourceCheck.inspectInputs(root,index);
+ global.MCBAPrices=require('../../mcba-prices.js');
+ const monthly=require('../../mcba-monthly.js'),name=monthly.BASE+monthly.FILE,markerName=monthly.BASE+'_SUCCESS.json';
+ const read=name=>fs.readFileSync(path.join(root,name),'utf8');
+ const rows=await monthly.verify(read(name),JSON.parse(read(markerName)));assert.ok(rows.length);
+ const changed=states.filter(s=>s.state==='SOURCE_CHANGED');
+ if(!changed.length){console.log('CURRENT: fuentes y shard coinciden');return;}
+ const monthlyChanged=changed.some(s=>s.path===name||s.path===markerName);
+ if(monthlyChanged){
+  const os=require('node:os'),folder=fs.mkdtempSync(path.join(os.tmpdir(),'mayoristas-freshness-'));
+  try{const reference=sourceCheck.materializeReferences(root,index,folder),oldRead=name=>fs.readFileSync(reference.overrides[name]||path.join(root,name),'utf8');
+   const prior=await monthly.verify(oldRead(name),JSON.parse(oldRead(markerName)));const status=sourceCheck.classifyMonthlyFreshness(prior,rows);
+   console.log(`${status.state}: cobertura MCBA ${status.indexedDate} → ${status.currentDate}; ambas publicaciones coinciden con sus marcadores`);
+  }finally{fs.rmSync(folder,{recursive:true,force:true});}
+ }
+ console.log(`SOURCE_CHANGED: ${changed.map(s=>s.path).join(', ')}`);
 });
 test('scope: wholesale opening cannot fetch integrated or upstream full source publications',()=>{
  const app=fs.readFileSync(path.join(root,'app.js'),'utf8');

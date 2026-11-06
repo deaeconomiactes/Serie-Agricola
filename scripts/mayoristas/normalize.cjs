@@ -4,8 +4,8 @@ const path = require('node:path');
 const key = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .toLocaleUpperCase('es-AR').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().replace(/\s+/g, ' ');
 
-function makeNormalizer(root, views) {
-    const read = name => JSON.parse(fs.readFileSync(path.join(root, 'data/mayoristas/config', name), 'utf8'));
+function makeNormalizer(root, views, options = {}) {
+    const read = name => JSON.parse(options.readConfig ? options.readConfig(name) : fs.readFileSync(path.join(root, 'data/mayoristas/config', name), 'utf8'));
     const origins = read('procedencia_aliases.json');
     const products = read('producto_variedad_aliases.json');
     const sources = read('fuentes.json').sources;

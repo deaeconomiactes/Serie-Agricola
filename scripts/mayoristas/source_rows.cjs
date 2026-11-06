@@ -6,7 +6,7 @@ const {webcrypto} = require('node:crypto');
 async function readSources(root, options = {}) {
     const mark = label => { if (process.env.MAYORISTAS_MEMORY_TRACE) console.error('MEM',label,JSON.stringify(process.memoryUsage())); };
     mark('inicio');
-    const read = name => fs.readFileSync(path.join(root,name),'utf8');
+    const read = name => fs.readFileSync(options.sourceOverrides?.[name] || path.join(root,name),'utf8');
     const mcba = require(path.join(root,'mcba-prices.js'));
     const monthly = require(path.join(root,'mcba-monthly.js'));
     global.crypto=webcrypto;global.MCBAPrices=mcba;
@@ -37,7 +37,7 @@ async function readSources(root, options = {}) {
         for (const frequency of ['diaria','mensual','anual'])
             routed[frequency] = Array.from(vm.runInContext(`getPriceSourceRows('${frequency}')`, ctx));
         mark('vistas ruteadas');
-        const normalize = require(path.join(root,'scripts/mayoristas/normalize.cjs')).makeNormalizer(root,routed);
+        const normalize = require(path.join(root,'scripts/mayoristas/normalize.cjs')).makeNormalizer(root,routed,{readConfig:name=>read('data/mayoristas/config/'+name)});
         const {year, frequency, market} = options.selection;
         const chosen = routed[frequency].filter(row => row.year === year && row.mercado === market);
         mark('selección preparada');

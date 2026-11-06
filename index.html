@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <link rel="stylesheet" href="styles.css?v=carnes-pilot-20261023-5">
-    <link rel="stylesheet" href="mayoristas-ui.css?v=explorar-precios-20261105">
+    <link rel="stylesheet" href="mayoristas-ui.css?v=inicio-guiado-20261106">
     <link rel="stylesheet" href="commodities-ui.css?v=ui-20261026-2">
     <link rel="stylesheet" href="cantidades-ui.css?v=1">
 </head>
@@ -292,9 +292,9 @@
       <aside class="sa-price-rail" aria-label="Secciones de Precios mayoristas">
         <p class="sa-rail-label">Mayoristas</p>
         <nav aria-label="Análisis de precios">
-          <button type="button" data-price-target="priceEvolutionPanel" aria-current="location"><img src="assets/carnes/icons/chart-bar.svg" alt="">Evolución</button>
-          <button type="button" data-price-target="priceRankingCard"><img src="assets/carnes/icons/list-bullets.svg" alt="">Productos</button>
-          <button type="button" data-price-target="priceMarketCard"><img src="assets/carnes/icons/database.svg" alt="">Mercados / fuentes</button>
+          <button type="button" data-price-target="priceGuide" aria-current="location"><img src="assets/carnes/icons/chart-bar.svg" alt="">Explorar</button>
+          <button type="button" data-price-target="priceProductsPanel" data-price-dynamic="products"><img src="assets/carnes/icons/list-bullets.svg" alt="">Productos</button>
+          <button type="button" data-price-target="priceSources"><img src="assets/carnes/icons/database.svg" alt="">Mercados / fuentes</button>
           <button type="button" data-price-target="priceObservations"><img src="assets/carnes/icons/file-text.svg" alt="">Detalle mensual</button>
         </nav>
         <p class="sa-rail-label">Contexto</p>
@@ -389,6 +389,7 @@
             </div>
         </details></div></details><button id="priceFilterReset" type="button" aria-label="Limpiar filtros y volver a la vista inicial">Limpiar filtros</button></div>
         </div>
+        <div class="sa-price-guide" id="priceGuide" role="region" aria-label="Guía para explorar precios"><div><strong>¿Qué querés analizar?</strong><span id="priceGuideText">Elegí un producto para conocer la evolución de su precio. Para comparar mercados, seleccioná también una procedencia.</span></div><button type="button" id="priceGuideAction">Explorar precios</button></div>
         <div id="priceFrequencyStatus" class="price-inline-status" role="status" aria-live="polite"></div>
 <div id="priceDeliveryStatus" class="price-inline-status" role="status" aria-live="polite"></div>
 <div id="priceSourceStatus" class="price-inline-status" role="status" aria-live="polite"></div>
@@ -397,12 +398,14 @@
         <details id="priceSources" class="sa-price-disclosure"><summary>Fuentes y actualización de la selección</summary><div id="corrientesUpdateStatus" class="source-update-status" role="status" aria-live="polite" hidden></div>
 <div id="mcbaMonthlyUpdateStatus" class="source-update-status" role="status" aria-live="polite" hidden></div>
 <div id="mcbaUpdateStatus" class="source-update-status" role="status" aria-live="polite" hidden></div></details>
+        <section id="priceOverview" aria-label="Panorama de precios"><div class="sa-overview-heading"><div><h2>Panorama de precios</h2><p>Información disponible para los filtros seleccionados.</p></div></div><div id="overviewKpis" class="price-kpi-grid"></div><div class="sa-overview-grid"><div id="priceProductsPanel" class="chart-card sa-overview-card"><h3>Productos para explorar</h3><p>Elegí un producto para ver su evolución.</p><div id="overviewProducts" class="sa-overview-products"></div></div><div id="overviewCoverageCard" class="chart-card sa-overview-card"><h3>Productos relevados por mercado</h3><p>Productos distintos en el período seleccionado.</p><div class="sa-overview-chart"><canvas id="overviewCoverage" role="img" aria-label="Cantidad de productos relevados por mercado"></canvas></div></div></div><div class="chart-card sa-overview-card"><h3>Precios recientes por producto</h3><p>Un registro reciente por producto y mercado, con conversión válida a ARS/kg. Deslizá la tabla para ver todos los datos.</p><div id="overviewTable" class="sa-overview-table"></div></div></section>
+        <section id="guidedProduct" aria-label="Evolución por procedencia" hidden><p class="sa-price-scope">Cada línea corresponde a un mercado y una procedencia. Elegí una procedencia para comparar mercados.</p><div id="guidedProductKpis" class="price-kpi-grid"></div><p id="guidedProductStatus" role="status"></p><div id="guidedProductCharts" class="sa-price-analysis"><div class="chart-card price-chart-card full-width"><div class="chart-header"><h2 class="chart-title">Evolución mensual por mercado y procedencia</h2><p class="chart-desc">Mediana descriptiva · ARS/kg · seleccioná una leyenda para ocultar la línea</p></div><div class="chart-body price-chart-canvas"><canvas id="guidedProductEvolution" role="img" aria-label="Evolución por mercado y procedencia"></canvas></div></div><div id="guidedProductVariationCard" class="chart-card price-chart-card full-width"><div class="chart-header"><h2 class="chart-title">Variación mensual</h2><p class="chart-desc">Cambio entre meses consecutivos para cada procedencia.</p></div><div class="chart-body price-chart-canvas"><canvas id="guidedProductVariation" role="img" aria-label="Variación por mercado y procedencia"></canvas></div></div></div></section>
         <section id="priceExplore" aria-label="Exploración por mercado">
-          <p class="sa-price-scope">Mediana descriptiva en ARS/kg. Comparación orientativa: las variedades y presentaciones pueden diferir entre mercados.</p>
+          <p class="sa-price-scope">Mediana descriptiva en ARS/kg. Los precios pueden corresponder a distintas variedades y presentaciones.</p>
           <p id="exploreStatus" class="price-inline-status" role="status"></p>
           <div id="exploreKpis" class="price-kpi-grid"></div>
-          <div class="sa-price-analysis"><div class="chart-card price-chart-card full-width"><div class="chart-header"><h2 class="chart-title">Evolución mensual de precios por mercado</h2><p class="chart-desc">Mediana descriptiva · ARS/kg · pulsá la leyenda para ocultar o mostrar un mercado</p></div><div class="chart-body price-chart-canvas"><canvas id="exploreEvolution" role="img" aria-label="Evolución mensual por mercado"></canvas></div></div>
-          <div class="chart-card price-chart-card full-width"><div class="chart-header"><h2 class="chart-title">Variación mensual por mercado</h2><p class="chart-desc">Cambio entre meses calendario consecutivos</p></div><div class="chart-body price-chart-canvas"><canvas id="exploreVariation" role="img" aria-label="Variación mensual por mercado"></canvas></div></div></div>
+          <div id="exploreChartGroup" class="sa-price-analysis"><div class="chart-card price-chart-card full-width"><div class="chart-header"><h2 class="chart-title">Evolución mensual de precios por mercado</h2><p class="chart-desc">Mediana descriptiva · ARS/kg · pulsá la leyenda para ocultar o mostrar un mercado</p></div><div class="chart-body price-chart-canvas"><canvas id="exploreEvolution" role="img" aria-label="Evolución mensual por mercado"></canvas></div></div>
+          <div id="exploreVariationCard" class="chart-card price-chart-card full-width"><div class="chart-header"><h2 class="chart-title">Variación mensual por mercado</h2><p class="chart-desc">Cambio entre meses calendario consecutivos</p></div><div class="chart-body price-chart-canvas"><canvas id="exploreVariation" role="img" aria-label="Variación mensual por mercado"></canvas></div></div></div>
           <details class="sa-price-disclosure"><summary>Ver precios mensuales resumidos</summary><div id="exploreTable" class="price-semaphore-wrap"></div></details>
           <details class="sa-price-disclosure"><summary>Método y cobertura</summary><p>Corrientes: mediana de registros válidos por día y mediana de los días de cada mes. Buenos Aires: mediana de los registros mensuales publicados por serie; cada registro puede resumir observaciones diarias. Los registros mensuales históricos conservan su interpretación de origen. No se pondera por transacciones. Se excluyen precios sin moneda ARS o conversión válida a kg y meses con fuentes o granularidades mezcladas. La composición puede cambiar entre meses; no es una cotización homogénea ni un índice.</p></details>
         </section>
@@ -603,8 +606,8 @@
     <script src="mcba-prices.js?v=mcba-status-v2"></script>
     <script src="commodity-history.js?v=1"></script>
     <script src="mayoristas-explore.js?v=20261105"></script>
-    <script src="app.js?v=mayoristas-explorar-precios-20261105"></script>
-    <script src="mayoristas-ui.js?v=explorar-precios-20261105"></script>
+    <script src="app.js?v=inicio-guiado-20261106"></script>
+    <script src="mayoristas-ui.js?v=productos-guiados-20261106"></script>
     <script src="commodities-ui.js?v=ui-20261026-2"></script>
     <script src="cantidades-analytics.js?v=1"></script>
     <script src="cantidades-ui.js?v=1"></script>
