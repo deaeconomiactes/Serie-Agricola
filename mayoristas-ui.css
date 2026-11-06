@@ -175,3 +175,28 @@ body:has(#priceView.is-active) .mayoristas-footer { display:block; }
 #priceView .sa-price-metadata { display: none; }
 @media (max-width: 1100px) { #priceView #exploreKpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { #priceView #exploreKpis { grid-template-columns: 1fr; } }
+#priceView .sa-price-guide { display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;margin:12px 0;background:#153238;border:1px solid #2e625f;border-radius:6px; }
+#priceView .sa-price-guide div { display:grid;gap:4px; }
+#priceView .sa-price-guide strong { color:#d7f5e8;font-size:13px; }
+#priceView .sa-price-guide span { color:var(--sa-secondary);font-size:12px;line-height:1.5; }
+#priceView .sa-price-guide button,#priceView .sa-product-link { border:1px solid #559887;background:#193f3b;color:#d2f5e6;border-radius:5px;padding:9px 13px;font:inherit;font-size:12px;cursor:pointer; }
+#priceView .sa-price-guide button { flex:none; }
+#priceView .sa-overview-heading h2 { font-size:18px;margin:18px 0 4px; }
+#priceView .sa-overview-heading p,#priceView .sa-overview-card p { color:var(--sa-secondary);font-size:12px;margin:4px 0 12px;line-height:1.5; }
+#priceView #overviewKpis,#priceView #guidedProductKpis { grid-template-columns:repeat(4,minmax(0,1fr)); }
+#priceView #guidedProductKpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
+#priceView .sa-guided-kpi { display:flex;flex-direction:column;gap:7px;min-width:0; }
+#priceView .sa-guided-kpi .kpi-value { font-size:17px!important;overflow-wrap:normal; }
+#priceView .sa-overview-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px; }
+#priceView .sa-overview-card { padding:16px;margin-bottom:12px; }
+#priceView .sa-overview-card h3 { color:var(--sa-text);font-size:14px;margin:0; }
+#priceView .sa-overview-products { display:flex;flex-wrap:wrap;gap:8px; }
+#priceView .sa-product-link:hover,#priceView .sa-price-guide button:hover { background:#24564c; }
+#priceView .sa-overview-chart { height:145px; }
+#priceView .sa-overview-table { overflow:auto; }
+#priceView .sa-overview-table table { border-collapse:collapse;width:100%;min-width:640px;font-size:12px; }
+#priceView .sa-overview-table :is(th,td) { padding:9px;text-align:left;border-bottom:1px solid var(--sa-rule); }
+#priceView .sa-overview-table th { color:var(--sa-secondary);font-weight:500; }
+#priceView #guidedProductStatus { color:var(--sa-secondary);font-size:12px; }
+@media(max-width:1100px){#priceView #overviewKpis {grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:700px){#priceView .sa-price-guide {align-items:flex-start;flex-direction:column;}#priceView .sa-overview-grid {grid-template-columns:1fr;}#priceView #guidedProductKpis {grid-template-columns:1fr;}}

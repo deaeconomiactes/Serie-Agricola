@@ -19,7 +19,7 @@ class CandidateUpdateTests(unittest.TestCase):
             root = Path(temp) / 'repo'
             files = [*INPUTS, 'app.js', 'mcba-prices.js', 'mcba-monthly.js', 'mayoristas-loader.js',
                      'scripts/mayoristas/source_rows.cjs', 'scripts/mayoristas/normalize.cjs',
-                     'scripts/mayoristas/validate_delivery.cjs', 'tests/magyp_frontend/mayoristas-delivery.test.cjs',
+                     'scripts/mayoristas/validate_delivery.cjs', 'scripts/mayoristas/validation_sources.cjs', 'tests/magyp_frontend/mayoristas-delivery.test.cjs',
                      'tests/magyp_frontend/mayoristas-equivalence-control.cjs']
             for name in files:
                 target = root / name

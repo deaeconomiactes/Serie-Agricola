@@ -4,7 +4,7 @@ const fetcher=()=>async url=>{const body=fs.readFileSync(path.join(folder,path.b
 (async()=>{
  const selected=JSON.parse(process.env.MAYORISTAS_CONTROL);assert.ok(selected);
  const mark = label => {if(process.env.MAYORISTAS_MEMORY_TRACE)console.error('MEM',label,JSON.stringify(process.memoryUsage()));};
- const original=await readSources(root,{selection:selected});const ctx=original.context;ctx.console=quiet;ctx.document.getElementById=()=>({value:"TODOS"});
+ const original=await readSources(root,{selection:selected,sourceOverrides:JSON.parse(process.env.MAYORISTAS_SOURCE_OVERRIDES||'{}')});const ctx=original.context;ctx.console=quiet;ctx.document.getElementById=()=>({value:"TODOS"});
  mark('referencia lista');if(global.gc)global.gc();mark('gc referencia');
  const loader=new delivery.Loader(fetcher());await loader.init();
  const controls=[];

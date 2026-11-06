@@ -1193,7 +1193,7 @@ function updatePriceDashboard() {
     console.log('Registros luego del filtro precio:', filteredPriceData.length);
     const hasData = filteredPriceData.length > 0;
     const availableOriginalRows = getFilteredPriceData({ignoreComparable:true});
-    setPriceStatus(hasData ? '' : availableOriginalRows.length ? 'Hay precios disponibles únicamente en unidad original o sin conversión verificable.' : (priceData.length ? 'No hay precios disponibles para la combinación seleccionada. Revisá año, mercado, producto o mes.' : 'No se pudo cargar la base de precios mayoristas.'), !hasData);
+    setPriceStatus(hasData ? '' : availableOriginalRows.length ? 'Hay precios disponibles únicamente en unidad original o sin conversión verificable.' : (priceData.length ? 'No encontramos precios para esta selección. Probá con otro año o mercado.' : 'No se pudo cargar la base de precios mayoristas.'), !hasData);
     let comparison = comparableMarketSelection(filteredPriceData, filters, priceFrequency) || comparePriceMarkets(filteredPriceData, filters, priceUnitMode);
     if (comparison.status === 'COMPARABLE' && priceUnitMode !== 'comparable') comparison = {...comparison,status:'NO_COMPARABLE_UNIT'};
     if (comparison.status === 'NO_DATA' && !isAllSelected(getFilterValues(filters.variedad)) &&
@@ -1304,10 +1304,83 @@ function updatePriceDashboard() {
 }
 
 let exploreCharts = [];
+let overviewChart = null;
+function guidedText(parent, tag, value, className = '') {
+    const node = document.createElement(tag); node.textContent = value;
+    if (className) node.className = className;
+    parent.appendChild(node); return node;
+}
+function guidedCard(parent, label, value, detail) {
+    const card = document.createElement('div'); card.className = 'kpi-card sa-guided-kpi';
+    guidedText(card, 'span', label, 'kpi-label'); guidedText(card, 'strong', value, 'kpi-value');
+    guidedText(card, 'span', detail, 'kpi-unit'); parent.appendChild(card);
+}
+function renderGuidedMayoristas(filters) {
+    const overview = document.getElementById('priceOverview'), productView = document.getElementById('guidedProduct');
+    if (!overview || !productView) return false;
+    if (overviewChart) { overviewChart.destroy(); overviewChart = null; }
+    const products = getFilterValues(filters.especie), origins = getFilterValues(filters.procedencia);
+    const noProduct = isAllSelected(products), oneProduct = !noProduct && products.length === 1;
+    const separateOrigins = oneProduct && (isAllSelected(origins) || origins.length !== 1);
+    overview.hidden = !noProduct; productView.hidden = !separateOrigins;
+    document.getElementById('priceExplore').hidden = noProduct || separateOrigins || !oneProduct;
+    const guide = document.getElementById('priceGuideText');
+    guide.textContent = noProduct ? 'Elegí un producto para conocer la evolución de su precio. Para comparar mercados, seleccioná también una procedencia.' : separateOrigins ? 'Elegí una procedencia para comparar Buenos Aires y Corrientes.' : oneProduct ? 'Explorá los precios y la diferencia entre mercados para la selección.' : 'Elegí un producto para ver su evolución.';
+    const action = document.getElementById('priceGuideAction');
+    action.textContent = separateOrigins ? 'Elegir procedencia' : 'Explorar precios';
+    action.onclick = event => { event.stopPropagation(); const target = document.getElementById(separateOrigins ? 'priceFilterProcedenciaTrigger' : 'priceFilterEspecieTrigger'); target.click(); target.focus(); };
+    const sourceStatus = document.getElementById('priceSourceStatus'); if (sourceStatus) sourceStatus.hidden = noProduct;
+    const unitStatus = document.getElementById('priceUnitStatus'); if (unitStatus) unitStatus.hidden = noProduct;
+    if (!noProduct && !separateOrigins) return !oneProduct;
+    const rows = getFilteredPriceData({frequency:priceFrequency,ignoreComparable:true});
+    const markets = ['Mercado Central de Buenos Aires','Mercado de Corrientes'];
+    if (noProduct) {
+        const cards=document.getElementById('overviewKpis'), links=document.getElementById('overviewProducts'), table=document.getElementById('overviewTable');
+        cards.replaceChildren(); links.replaceChildren(); table.replaceChildren();
+        const validDates=rows.map(r=>r.fecha).filter(Boolean).sort();
+        const last=markets.map(m=>{const dates=rows.filter(r=>r.mercado===m).map(r=>r.fechaPrecision==='mensual'?r.fecha?.slice(0,7):r.fecha).filter(Boolean).sort();return `${m===markets[0]?'Buenos Aires':'Corrientes'}: ${dates.at(-1)||'sin datos'}`;}).join(' · ');
+        guidedCard(cards,'Últimos períodos observados',last,'No indican la fecha de actualización');
+        const names=[...new Set(rows.map(getPriceProduct).filter(Boolean))];
+        const provinces=[...new Set(rows.map(r=>r.procedencia).filter(Boolean))];
+        guidedCard(cards,'Productos relevados',String(names.length),'Con información en la selección');
+        guidedCard(cards,'Procedencias',String(provinces.length),'Informadas en la selección');
+        guidedCard(cards,'Cobertura temporal',validDates.length ? `${validDates[0].slice(0,7)} – ${validDates.at(-1).slice(0,7)}` : 'Sin datos','Períodos observados');
+        const preferred=['Tomate','Papa','Cebolla'];const ranked=names.sort((a,b)=>{const ia=preferred.indexOf(a),ib=preferred.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib)||a.localeCompare(b,'es');}).slice(0,8);
+        for(const name of ranked){const button=guidedText(links,'button',name,'sa-product-link');button.type='button';button.onclick=()=>{const select=document.getElementById('priceFilterEspecie');[...select.options].forEach(o=>{o.selected=o.value===name;});select.dispatchEvent(new Event('change',{bubbles:true}));document.getElementById('guidedProduct').scrollIntoView({block:'start'});};}
+        if(!ranked.length)guidedText(links,'p','No hay productos para esta selección.');
+        const counts=markets.map(m=>new Set(rows.filter(r=>r.mercado===m).map(getPriceProduct).filter(Boolean)).size);
+        document.getElementById('overviewCoverageCard').hidden=!counts.some(Boolean);
+        if(counts.some(Boolean)){const options=priceChartOptions('Productos',true);options.plugins.legend.display=false;options.scales.x.beginAtZero=true;options.scales.x.ticks.callback=value=>formatNumber(value);overviewChart=new Chart(document.getElementById('overviewCoverage'),{type:'bar',data:{labels:['Buenos Aires','Corrientes'],datasets:[{label:'Productos relevados',data:counts,backgroundColor:['#2563eb','#16a34a']}]},options});}
+        const latest=new Map();for(const r of rows){if(!isComparablePriceRow(r)||(r.moneda_normalizada||r.currency)!=='ARS'||!r.fecha)continue;const key=JSON.stringify([getPriceProduct(r),r.mercado]);const prev=latest.get(key);if(!prev||r.fecha>prev.fecha)latest.set(key,r);}
+        const recent=markets.flatMap(m=>[...latest.values()].filter(r=>r.mercado===m).sort((a,b)=>b.fecha.localeCompare(a.fecha)||getPriceProduct(a).localeCompare(getPriceProduct(b),'es')).slice(0,4));
+        if(recent.length){const t=document.createElement('table');const head=document.createElement('thead'),tr=document.createElement('tr');for(const h of ['Producto / variedad','Mercado','Procedencia','Presentación','Precio','Período'])guidedText(tr,'th',h);head.appendChild(tr);t.appendChild(head);const body=document.createElement('tbody');for(const r of recent){const tr=document.createElement('tr');for(const v of [[getPriceProduct(r),r.variedad].filter(Boolean).join(' · '),r.mercado,r.procedencia||'No informada',r.envase||r.unidad||'No informada',`${formatCurrency(r.precioKgEstimado)} ARS/kg`,r.fechaPrecision==='mensual'?r.fecha.slice(0,7):r.fecha])guidedText(tr,'td',v);body.appendChild(tr);}t.appendChild(body);table.appendChild(t);}else guidedText(table,'p','No encontramos precios convertibles para esta selección.');
+        return true;
+    }
+    const cards=document.getElementById('guidedProductKpis'), status=document.getElementById('guidedProductStatus'), chartGroup=document.getElementById('guidedProductCharts');cards.replaceChildren();
+    if(priceFrequency!=='mensual'){status.textContent='Elegí frecuencia mensual para ver esta evolución. Las demás frecuencias están en Análisis avanzado.';chartGroup.hidden=true;return true;}
+    const groups=new Map();for(const row of rows){const origin=row.procedencia||'No informada',key=JSON.stringify([row.mercado,origin]);if(!groups.has(key))groups.set(key,{market:row.mercado,origin,rows:[]});groups.get(key).rows.push(row);}
+    const series=[...groups.values()].map(g=>({...g,points:MayoristasExplore.summarize(g.rows).filter(p=>p.value!==null)})).filter(g=>g.points.length).sort((a,b)=>b.points.length-a.points.length||a.market.localeCompare(b.market,'es')||a.origin.localeCompare(b.origin,'es'));
+    for(const market of markets){const candidates=series.filter(g=>g.market===market).map(g=>({origin:g.origin,point:g.points.at(-1)})).sort((a,b)=>b.point.month.localeCompare(a.point.month)||a.origin.localeCompare(b.origin,'es'));const item=candidates[0];guidedCard(cards,`${market===markets[0]?'Buenos Aires':'Corrientes'} · último precio`,item?`${formatCurrency(item.point.value)} ARS/kg`:'–',item?`${item.point.month} · ${item.origin} · ${item.point.observations} registros${item.point.month===currentDateISO().slice(0,7)?' · mes en curso':''}`:'Sin datos para esta selección');}
+    status.textContent=series.length ? (series.length>8?`Se muestran 8 de ${series.length} series. Elegí una procedencia para profundizar.`:'Seleccioná una procedencia para comparar precios entre mercados.') : 'No encontramos precios para esta selección. Probá con otro año o mercado.';
+    chartGroup.hidden=!series.length;if(!series.length)return true;
+    const displayed=[]; for(const market of markets){const first=series.find(g=>g.market===market);if(first)displayed.push(first);}
+    for(const item of series)if(displayed.length<8&&!displayed.includes(item))displayed.push(item);
+    const months=[...new Set(displayed.flatMap(g=>g.points.map(p=>p.month)))].sort(), labels=[];
+    let year=Number(months[0].slice(0,4)),month=Number(months[0].slice(5));while(`${year}-${String(month).padStart(2,'0')}`<=months.at(-1)){labels.push(`${year}-${String(month).padStart(2,'0')}`);if(++month===13){month=1;year++;}}
+    const colors={'Mercado Central de Buenos Aires':'#2563eb','Mercado de Corrientes':'#16a34a'};
+    const datasets=displayed.map((g,i)=>({label:`${g.market} · ${g.origin}`,data:labels.map(m=>g.points.find(p=>p.month===m)?.value??null),borderColor:colors[g.market]||'#a78bfa',backgroundColor:colors[g.market]||'#a78bfa',borderDash:i%3===1?[6,4]:i%3===2?[2,3]:[],pointRadius:3,tension:0,spanGaps:false}));
+    const options=priceChartOptions('ARS/kg');options.plugins.legend.display=true;options.plugins.tooltip={...tooltipConfig(),callbacks:{label:ctx=>{const g=displayed[ctx.datasetIndex],p=g.points.find(x=>x.month===labels[ctx.dataIndex]);return p?[`${g.market} · ${g.origin}: ${formatCurrency(p.value)} ARS/kg`,`${p.month} · ${p.observations} registros${p.days!==null?` · ${p.days} días`:''}`,`Fuente: ${p.source} · ${p.precision}`]:'';}}};
+    exploreCharts.push(new Chart(document.getElementById('guidedProductEvolution'),{type:'line',data:{labels,datasets},options}));
+    const variations=displayed.map((g,i)=>({label:datasets[i].label,backgroundColor:datasets[i].borderColor,data:labels.map(m=>{const p=g.points.find(q=>q.month===m),prev=g.points.find(q=>MayoristasExplore.consecutive(q.month,m));return p&&prev?(p.value/prev.value-1)*100:null;})}));
+    const opts=priceChartOptions('Variación %');opts.plugins.legend.display=true;opts.scales.y.ticks.callback=value=>formatPercent(value);
+    const hasVariation=variations.some(series=>series.data.some(Number.isFinite));document.getElementById('guidedProductVariationCard').hidden=!hasVariation;
+    if(hasVariation)exploreCharts.push(new Chart(document.getElementById('guidedProductVariation'),{type:'bar',data:{labels,datasets:variations},options:opts}));return true;
+}
 function renderMayoristasExplore(filters) {
     const root = document.getElementById('priceExplore');
     if (!root || typeof MayoristasExplore === 'undefined') return;
     exploreCharts.forEach(chart => chart.destroy()); exploreCharts = [];
+    if (renderGuidedMayoristas(filters)) return;
     const status = document.getElementById('exploreStatus');
     const cards = document.getElementById('exploreKpis');
     const table = document.getElementById('exploreTable');
@@ -1317,6 +1390,8 @@ function renderMayoristasExplore(filters) {
         status.textContent = 'Seleccioná un producto y una procedencia para explorar precios por mercado.';
         return;
     }
+    document.getElementById('exploreChartGroup').hidden = true;
+    root.querySelectorAll('details').forEach(node=>{node.hidden=true;});
     if (priceFrequency !== 'mensual') {
         status.textContent = 'Elegí frecuencia mensual para comparar la evolución descriptiva por mercado. Las otras frecuencias están disponibles en Análisis avanzado.';
         return;
@@ -1327,7 +1402,7 @@ function renderMayoristasExplore(filters) {
     const markets = ['Mercado Central de Buenos Aires','Mercado de Corrientes'];
     const valid = points.filter(p => p.value !== null && markets.includes(p.market));
     const excluded = points.filter(p => p.incompatible).length;
-    status.textContent = (valid.length ? markets.filter(m => !valid.some(p => p.market === m)).map(m => `Sin datos válidos: ${m}.`).join(' ') : 'No hay precios ARS/kg válidos para esta selección.') + (excluded ? ` ${excluded} períodos con fuentes o granularidades mezcladas se excluyeron.` : '');
+    status.textContent = (valid.length ? markets.filter(m => !valid.some(p => p.market === m)).map(m => `Sin datos válidos: ${m}.`).join(' ') : 'No encontramos precios para esta selección. Probá con otro año o mercado.') + (excluded ? ` ${excluded} períodos con fuentes o granularidades mezcladas se excluyeron.` : '');
     const observedMonths = [...new Set(valid.map(p=>p.month))].sort();
     const labels = [];
     if (observedMonths.length) {
@@ -1349,7 +1424,7 @@ function renderMayoristasExplore(filters) {
     const entries = [
         ['Buenos Aires · último precio',latest[0] ? `${formatCurrency(latest[0].value)} ARS/kg` : '–',coverage(latest[0])],
         ['Corrientes · último precio',latest[1] ? `${formatCurrency(latest[1].value)} ARS/kg` : '–',coverage(latest[1])],
-        ['Diferencia orientativa',common ? formatPercent(difference) : '–',common ? `Corrientes frente a Buenos Aires · ${common} · ${commonPoints.map(p=>p.observations).join(' / ')} registros` : 'Sin mes común válido'],
+        ['Diferencia orientativa',common ? formatPercent(difference) : '–',common ? `Corrientes frente a Buenos Aires · ${common} · ${commonPoints.map(p=>p.observations).join(' / ')} registros` : (byMarket.every(a=>a.length) ? 'Hay precios en ambos mercados, pero no corresponden al mismo período.' : 'Sin mes común válido')],
         ['Variación mensual reciente',change ? formatPercent(variation) : '–',change ? `${change.market} · ${change.previous.month} a ${change.point.month} · ${change.previous.observations} / ${change.point.observations} registros · ARS/kg${change.point.month === currentDateISO().slice(0,7) ? ' · mes en curso' : ''}` : 'Sin meses consecutivos']
     ];
     for (const [label,value,detail] of entries) {
@@ -1358,6 +1433,8 @@ function renderMayoristasExplore(filters) {
         cards.appendChild(card);
     }
     if (!labels.length) return;
+    document.getElementById('exploreChartGroup').hidden = false;
+    root.querySelectorAll('details').forEach(node=>{node.hidden=false;});
     const colors=['#2563eb','#16a34a'];
     const datasets=byMarket.map((items,i)=>({label:markets[i],data:labels.map(month=>items.find(p=>p.month===month)?.value ?? null),borderColor:colors[i],backgroundColor:colors[i],tension:0,spanGaps:false,pointRadius:4}));
     const options=priceChartOptions('ARS/kg');
@@ -1366,7 +1443,8 @@ function renderMayoristasExplore(filters) {
     exploreCharts.push(new Chart(document.getElementById('exploreEvolution'),{type:'line',data:{labels,datasets},options}));
     const variations=byMarket.map((items,i)=>({label:markets[i],backgroundColor:colors[i],data:labels.map(month=>{const p=items.find(q=>q.month===month),prev=items.find(q=>MayoristasExplore.consecutive(q.month,month));return p&&prev?(p.value/prev.value-1)*100:null;})}));
     const variationOptions=priceChartOptions('Variación %');variationOptions.plugins.legend.display=true;variationOptions.scales.y.ticks.callback=value=>formatPercent(value);
-    exploreCharts.push(new Chart(document.getElementById('exploreVariation'),{type:'bar',data:{labels,datasets:variations},options:variationOptions}));
+    const hasVariation=variations.some(series=>series.data.some(Number.isFinite));document.getElementById('exploreVariationCard').hidden=!hasVariation;
+    if(hasVariation)exploreCharts.push(new Chart(document.getElementById('exploreVariation'),{type:'bar',data:{labels,datasets:variations},options:variationOptions}));
     const t=document.createElement('table');t.className='price-semaphore-table';
     const head=document.createElement('thead'); const tr=document.createElement('tr');
     for(const h of ['Mes','Mercado','Mediana ARS/kg','Cobertura','Fuente']) {const th=document.createElement('th');th.textContent=h;tr.appendChild(th);}head.appendChild(tr);t.appendChild(head);
