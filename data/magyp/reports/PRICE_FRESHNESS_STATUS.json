@@ -382,9 +382,9 @@
         "kg"
       ],
       "requested_date": "2026-11-10",
-      "attempted_at": "2026-11-10T16:35:59.561829Z",
+      "attempted_at": "2026-11-10T18:28:49.993034Z",
       "diagnostic_note": null,
-      "evidence": "https://github.com/deaeconomiactes/Serie-Agricola/actions/runs/39354603566"
+      "evidence": null
     },
     {
       "source_family": "corrientes",
