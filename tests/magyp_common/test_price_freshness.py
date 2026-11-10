@@ -38,6 +38,22 @@ class FreshnessTests(unittest.TestCase):
         self.assertEqual(current['status'],'SOURCE_UNAVAILABLE')
         self.assertEqual(current['last_successful_update'],previous['last_successful_update'])
         self.assertEqual(current['last_observation_date'],previous['last_observation_date'])
+        self.assertIsNone(current['evidence'])
+
+    def test_mcba_does_not_reuse_unattributed_evidence_for_same_attempt(self):
+        original=freshness.read_json
+        def read(path,default):
+            value=original(path,default)
+            if path == freshness.ROOT/freshness.REPORT:
+                value=json.loads(json.dumps(value))
+                row=next(r for r in value['sources'] if r['source_family']=='mcba')
+                row['attempted_at']='2099-01-01T00:00:00Z'
+                row['evidence']='https://example.invalid/old-run'
+            return value
+        state={'status':'PIPELINE_ERROR','attempted_at':'2099-01-01T00:00:00Z'}
+        with patch.object(freshness,'read_json',side_effect=read),patch.object(freshness,'atomic_write'):
+            result=freshness.build(mcba_status=state)
+        self.assertIsNone(next(r for r in result['sources'] if r['source_family']=='mcba')['evidence'])
 
     def test_reference_states_are_independent_and_outputs_preserved(self):
         unavailable=references.Error('HTTP unavailable');unavailable.source_unavailable=True

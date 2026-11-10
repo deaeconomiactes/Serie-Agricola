@@ -97,6 +97,9 @@ def build(root=ROOT,mcba_status=None,sio_status=None):
     state=mcba_status or read_json(root/'data/magyp/dashboard/mcba/MCBA_MAGYP_UPDATE_STATUS.json',{})
     if not (state.get('result') or state.get('status')) and state.get('source_status')=='MAGYP_LAST_VALID':
         state={**state,'status':'MAGYP_LAST_VALID'}
+    # A run link from an earlier report is not evidence for this attempt.
+    if state.get('attempted_at') and 'evidence' not in state:
+        state={**state,'evidence':None}
     add('mcba','MAGyP','Mercado Central de Buenos Aires','diaria cuando publica',summary['date_max'],summary['updated_at'],True,
         'update-magyp-mcba.yml','Edge Windows; fecha civil argentina; último bundle válido ante indisponibilidad.',['ARS'],['kg'],state)
     legacy=read_csv(root/'PRECIOS_MAYORISTAS_INTEGRADO.csv')
