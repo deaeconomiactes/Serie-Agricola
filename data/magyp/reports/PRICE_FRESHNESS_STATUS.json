@@ -371,7 +371,7 @@
       "frequency": "diaria cuando publica",
       "last_observation_date": "2026-10-05",
       "last_successful_update": "2026-10-06T13:34:47.388718Z",
-      "status": "PIPELINE_ERROR",
+      "status": "NO_PUBLICATION",
       "automatic_update": true,
       "workflow": "update-magyp-mcba.yml",
       "notes": "Edge Windows; fecha civil argentina; último bundle válido ante indisponibilidad.",
@@ -382,7 +382,7 @@
         "kg"
       ],
       "requested_date": "2026-11-10",
-      "attempted_at": "2026-11-10T18:28:49.993034Z",
+      "attempted_at": "2026-11-10T19:03:52.250611Z",
       "diagnostic_note": null,
       "evidence": null
     },

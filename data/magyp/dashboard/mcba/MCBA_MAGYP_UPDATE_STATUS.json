@@ -1,9 +1,9 @@
 {
-  "attempted_at": "2026-11-10T18:28:49.993034Z",
+  "attempted_at": "2026-11-10T19:03:52.250611Z",
   "last_observation_date": "2026-10-05",
   "last_successful_update": "2026-10-06T13:34:47.388718Z",
   "requested_date": "2026-11-10",
-  "result": "PIPELINE_ERROR",
+  "result": "NO_PUBLICATION",
   "source": "MAGyP",
   "source_status": "MAGYP_LAST_VALID",
   "source_url": "https://ssma.magyp.gob.ar/frutas.precios.aspx"
