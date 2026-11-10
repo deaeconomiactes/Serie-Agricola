@@ -126,7 +126,9 @@ def run_productive(day, raw_root, published, allow_web=False, browser_channel="a
                 stage = diag.get("acquisition_stage")
                 if kind == "NO_PUBLICATION":
                     outcome = "NO_PUBLICATION"
-                elif stage != "validate_xlsx" and kind in {
+                # A filtered-grid timeout may mean an empty result, a stale grid,
+                # or a UI regression. HTTP success alone cannot distinguish them.
+                elif stage not in {"validate_xlsx", "filtered_grid"} and kind in {
                     "TIMEOUT", "CONNECTION", "HTTP_5XX", "HTTP_401", "HTTP_403", "HTTP_404",
                     "HTTP_429", "NAVIGATION_NO_RESPONSE"}:
                     outcome = "SOURCE_UNAVAILABLE"

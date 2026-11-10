@@ -25,6 +25,7 @@ class AvailabilityTests(unittest.TestCase):
         for kind, stage, expected in [
             ("NO_PUBLICATION", "validate_xlsx", "NO_PUBLICATION"),
             ("TIMEOUT", "initial_get", "SOURCE_UNAVAILABLE"),
+            ("TIMEOUT", "filtered_grid", "PIPELINE_ERROR"),
             ("HTTP_5XX", "initial_get", "SOURCE_UNAVAILABLE"),
             ("VALIDATION_ERROR", "validate_xlsx", "PIPELINE_ERROR")]:
             with self.subTest(kind=kind), tempfile.TemporaryDirectory() as tmp:
