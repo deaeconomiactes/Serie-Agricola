@@ -24,6 +24,7 @@ class AvailabilityTests(unittest.TestCase):
     def test_absence_and_errors_preserve_csv(self):
         for kind, stage, expected in [
             ("NO_PUBLICATION", "validate_xlsx", "NO_PUBLICATION"),
+            ("NO_PUBLICATION", "filtered_grid", "NO_PUBLICATION"),
             ("TIMEOUT", "initial_get", "SOURCE_UNAVAILABLE"),
             ("TIMEOUT", "filtered_grid", "PIPELINE_ERROR"),
             ("HTTP_5XX", "initial_get", "SOURCE_UNAVAILABLE"),
