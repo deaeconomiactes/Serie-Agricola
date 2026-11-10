@@ -2,9 +2,9 @@ name: MAGyP MCBA - productivo Windows self-hosted
 
 # Configuración del host (fuera del repositorio, sin credenciales en archivos del proyecto):
 # Windows 11 x64 / Windows Server 2022 x64, PowerShell 7.4+, Git for Windows con Bash,
-# GitHub CLI (gh) y 7-Zip en PATH para la cuenta que ejecuta el runner.
-# Python 3.12 x64 y Node 24 se preparan con setup-python/setup-node; la cuenta
-# del servicio necesita escritura en la tool cache (NETWORK SERVICE suele ser suficiente).
+# GitHub CLI (gh) en PATH y Python 3.12 x64 instalado para todos los usuarios en
+# C:\Program Files\Python312\python.exe, accesible a la cuenta del servicio.
+# Node 24 se prepara con setup-node; la cuenta necesita escritura en su tool cache.
 # Reiniciar terminal/servicio tras instalar herramientas para actualizar PATH.
 # Usar Actions Runner actualizado; registrar desde Settings > Actions > Runners > New self-hosted runner.
 # Elegir Windows x64, descargar/verificar el paquete según la UI oficial y ejecutar, en C:\actions-runner:
@@ -64,10 +64,14 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-          architecture: 'x64'
+      - name: Comprobar Python 3.12 x64 del sistema
+        run: |
+          $python = 'C:\Program Files\Python312\python.exe'
+          try {
+            if (!(Test-Path -LiteralPath $python -PathType Leaf -ErrorAction Stop)) { throw 'Archivo inexistente' }
+            & $python -c "import struct, sys; print('Python:', sys.executable, sys.version, 'bits:', struct.calcsize('P') * 8); assert sys.version_info[:2] == (3, 12) and struct.calcsize('P') == 8"
+            if ($LASTEXITCODE -ne 0) { throw "El intérprete devolvió código $LASTEXITCODE; se requiere Python 3.12 x64" }
+          } catch { throw "No se puede usar $python desde la cuenta del runner: $_" }
       - name: Preparar temporales y herramientas Windows en runtime
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
@@ -76,8 +80,7 @@ jobs:
             "MCBA_DATE=$day" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           }
           if ($PSVersionTable.PSVersion -lt [version]'7.4') { throw 'Se requiere PowerShell 7.4 o posterior' }
-          foreach ($tool in @('git', 'gh', 'python', 'node')) { Get-Command $tool -ErrorAction Stop | Out-Null }
-          python -c "import sys; assert sys.version_info[:2] == (3, 12)"
+          foreach ($tool in @('git', 'gh', 'node')) { Get-Command $tool -ErrorAction Stop | Out-Null }
           $gitRoot = Split-Path (Split-Path (Get-Command git).Source)
           $bashCandidates = @((Join-Path $gitRoot 'bin/bash.exe'), (Join-Path (Split-Path $gitRoot) 'bin/bash.exe'))
           $bash = $bashCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
@@ -93,31 +96,32 @@ jobs:
             PLAYWRIGHT_BROWSERS_PATH = Join-Path $root 'browsers'
             TEMP = Join-Path $root 'tmp'
             TMP = Join-Path $root 'tmp'
+            MCBA_PYTHON = (Join-Path $root 'venv/Scripts/python.exe').Replace('\', '/')
           }
           foreach ($key in $values.Keys) { "$key=$($values[$key])" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append }
           (Split-Path $bash) | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          python -m venv (Join-Path $root 'venv')
+          & 'C:\Program Files\Python312\python.exe' -m venv (Join-Path $root 'venv')
           (Join-Path $root 'venv/Scripts') | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - name: Verificar Python del entorno de ejecución
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
-          python -c "import os, struct, sys; print(sys.executable); assert sys.version_info[:2] == (3, 12) and struct.calcsize('P') == 8; assert os.path.normcase(sys.prefix) == os.path.normcase(os.path.join(os.environ['MCBA_JOB_ROOT'], 'venv'))"
+          & "$env:MCBA_PYTHON" -c "import os, struct, sys; print(sys.executable); assert sys.version_info[:2] == (3, 12) and struct.calcsize('P') == 8; assert os.path.normcase(sys.prefix) == os.path.normcase(os.path.join(os.environ['MCBA_JOB_ROOT'], 'venv'))"
       - name: Registrar baseline MCBA antes de adquirir
-        run: python scripts/ci/mcba_candidate.py baseline --published-dir data/magyp/dashboard/mcba --output "$env:MCBA_CAPTURE_ROOT/reports/PUBLICATION_BASELINE.json"
+        run: '& "$env:MCBA_PYTHON" scripts/ci/mcba_candidate.py baseline --published-dir data/magyp/dashboard/mcba --output "$env:MCBA_CAPTURE_ROOT/reports/PUBLICATION_BASELINE.json"'
       - name: Dependencias fijadas y verificación de Edge
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
-          python -m pip install -r scripts/magyp/requirements-browser.txt
-          $channel = python -c "from scripts.magyp.mcba.acquisition import preferred_browser_channel; print(preferred_browser_channel())"
+          & "$env:MCBA_PYTHON" -m pip install -r scripts/magyp/requirements-browser.txt
+          $channel = & "$env:MCBA_PYTHON" -c "from scripts.magyp.mcba.acquisition import preferred_browser_channel; print(preferred_browser_channel())"
           if ($channel -ne 'msedge') { throw 'Microsoft Edge es requerido para la captura productiva MCBA' }
           "MCBA_BROWSER_CHANNEL=$channel" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Output "[FETCH] MCBA browser=chromium channel=$channel"
       - name: Tests offline antes de la captura
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
-          python -m unittest discover -s tests/magyp_common -v
-          python -m unittest discover -s tests/magyp_mcba -v
-          python -m unittest discover -s tests/ci -v
+          & "$env:MCBA_PYTHON" -m unittest discover -s tests/magyp_common -v
+          & "$env:MCBA_PYTHON" -m unittest discover -s tests/magyp_mcba -v
+          & "$env:MCBA_PYTHON" -m unittest discover -s tests/ci -v
           $frontendTests = @(Get-ChildItem -LiteralPath tests/magyp_frontend -Filter '*.test.cjs' | ForEach-Object FullName)
           node --test @frontendTests
       - name: Captura, normalización, analytical y publicación local validada
@@ -125,7 +129,7 @@ jobs:
         timeout-minutes: 8
         continue-on-error: true
         run: >-
-          python scripts/magyp/mcba/update_mcba_dashboard.py
+          & "$env:MCBA_PYTHON" scripts/magyp/mcba/update_mcba_dashboard.py
           --date "$env:MCBA_DATE" --data-root "$env:MCBA_CAPTURE_ROOT" --allow-web
           --browser-channel "$env:MCBA_BROWSER_CHANNEL"
       - name: Consolidar estado del intento MCBA
@@ -144,15 +148,15 @@ jobs:
         run: |
           flags=()
           if [ "$CAPTURE_OUTCOME" != success ]; then flags+=(--capture-failed); fi
-          python scripts/magyp/mcba/validate_production_mcba.py --requested-date "$MCBA_DATE" "${flags[@]}"
-          python -m unittest discover -s tests/magyp_mcba -v
+          "$MCBA_PYTHON" scripts/magyp/mcba/validate_production_mcba.py --requested-date "$MCBA_DATE" "${flags[@]}"
+          "$MCBA_PYTHON" -m unittest discover -s tests/magyp_mcba -v
           node --test tests/magyp_frontend/*.test.cjs
           git diff --check
       - name: Preparar candidato cerrado, sin frescura ajena ni RAW
         id: candidate
         if: always() && steps.freshness.outcome == 'success' && (steps.capture.outputs.result != 'UPDATED' || steps.validated.outcome == 'success')
         run: >-
-          python scripts/ci/mcba_candidate.py pack
+          & "$env:MCBA_PYTHON" scripts/ci/mcba_candidate.py pack
           --published-dir data/magyp/dashboard/mcba
           --baseline "$env:MCBA_CAPTURE_ROOT/reports/PUBLICATION_BASELINE.json"
           --status "$env:MCBA_CAPTURE_ROOT/reports/MCBA_RUN_STATUS.json"
@@ -168,7 +172,7 @@ jobs:
           path: ${{ env.MCBA_JOB_ROOT }}/candidate/
       - name: Resultado operativo de adquisición
         if: always() && env.MCBA_CAPTURE_ROOT != ''
-        run: python scripts/ci/workflow_status.py summary --source MAGyP_MCBA --status-file "$env:MCBA_CAPTURE_ROOT/reports/MCBA_RUN_STATUS.json"
+        run: '& "$env:MCBA_PYTHON" scripts/ci/workflow_status.py summary --source MAGyP_MCBA --status-file "$env:MCBA_CAPTURE_ROOT/reports/MCBA_RUN_STATUS.json"'
       - name: Respaldo RAW sin estado de sesión, separado de Pages
         if: ${{ always() && env.MCBA_CAPTURE_ROOT != '' }}
         uses: actions/upload-artifact@v5
