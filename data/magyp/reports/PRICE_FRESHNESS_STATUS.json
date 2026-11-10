@@ -13,7 +13,7 @@
       ],
       "frequency": "mensual",
       "last_observation_date": "2026-10-01",
-      "last_successful_update": "2026-11-07T02:31:26.486888Z",
+      "last_successful_update": "2026-11-10T04:28:57.591952Z",
       "status": "UPDATED",
       "automatic_update": true,
       "workflow": "magyp-commodities-review.yml",
@@ -24,8 +24,8 @@
       "unit": [
         "TN"
       ],
-      "requested_date": "2026-11-06",
-      "attempted_at": "2026-11-07T02:31:26.528164+00:00",
+      "requested_date": "2026-11-10",
+      "attempted_at": "2026-11-10T04:28:57.620359+00:00",
       "diagnostic_note": null,
       "evidence": null,
       "historical_coverage": {
@@ -65,7 +65,7 @@
       ],
       "history_automation": "Reproducible CLI; periodic current-family workflow remains independent",
       "effective_data_last_observation_date": "2026-10-01",
-      "effective_data_last_capture": "2026-11-07T02:31:26.486888Z"
+      "effective_data_last_capture": "2026-11-10T04:28:57.591952Z"
     },
     {
       "source_family": "magyp_board",
@@ -90,8 +90,8 @@
       "unit": [
         "TN"
       ],
-      "requested_date": "2026-11-06",
-      "attempted_at": "2026-11-07T02:31:28.600736+00:00",
+      "requested_date": "2026-11-10",
+      "attempted_at": "2026-11-10T04:28:59.728895+00:00",
       "diagnostic_note": "Precio pizarra inválido",
       "evidence": null,
       "historical_coverage": {
@@ -140,7 +140,7 @@
       ],
       "frequency": "diaria cuando publica",
       "last_observation_date": "2026-11-06",
-      "last_successful_update": "2026-11-07T02:31:32.195598Z",
+      "last_successful_update": "2026-11-10T04:29:03.341560Z",
       "status": "UPDATED",
       "automatic_update": true,
       "workflow": "magyp-commodities-review.yml",
@@ -153,8 +153,8 @@
         "Sin identificar",
         "TN"
       ],
-      "requested_date": "2026-11-06",
-      "attempted_at": "2026-11-07T02:31:32.249220+00:00",
+      "requested_date": "2026-11-10",
+      "attempted_at": "2026-11-10T04:29:03.389522+00:00",
       "diagnostic_note": null,
       "evidence": null,
       "historical_coverage": {
@@ -194,7 +194,7 @@
       ],
       "history_automation": "Reproducible CLI; periodic current-family workflow remains independent",
       "effective_data_last_observation_date": "2026-11-06",
-      "effective_data_last_capture": "2026-11-07T02:31:32.195598Z"
+      "effective_data_last_capture": "2026-11-10T04:29:03.341560Z"
     },
     {
       "source_family": "magyp_fob",
@@ -205,7 +205,7 @@
       "frequency": "diaria cuando publica",
       "last_observation_date": "2026-11-06",
       "last_successful_update": "2026-11-07T02:31:34.558709Z",
-      "status": "UPDATED",
+      "status": "NO_PUBLICATION",
       "automatic_update": true,
       "workflow": "magyp-commodities-review.yml",
       "notes": "Familia independiente; sin interpolación.",
@@ -215,8 +215,8 @@
       "unit": [
         "Sin identificar"
       ],
-      "requested_date": "2026-11-06",
-      "attempted_at": "2026-11-07T02:31:34.924564+00:00",
+      "requested_date": "2026-11-10",
+      "attempted_at": "2026-11-10T04:29:05.551504+00:00",
       "diagnostic_note": null,
       "evidence": null,
       "historical_coverage": {
@@ -313,7 +313,7 @@
       ],
       "frequency": "diaria cuando publica",
       "last_observation_date": "2026-11-06",
-      "last_successful_update": "2026-11-07T02:31:36.998936Z",
+      "last_successful_update": "2026-11-10T04:29:07.594420Z",
       "status": "UPDATED",
       "automatic_update": true,
       "workflow": "magyp-commodities-review.yml",
@@ -324,8 +324,8 @@
       "unit": [
         "TN"
       ],
-      "requested_date": "2026-11-06",
-      "attempted_at": "2026-11-07T02:31:37.155571+00:00",
+      "requested_date": "2026-11-10",
+      "attempted_at": "2026-11-10T04:29:07.735334+00:00",
       "diagnostic_note": null,
       "evidence": null,
       "historical_coverage": {
@@ -362,7 +362,7 @@
       ],
       "history_automation": "Reproducible CLI; periodic current-family workflow remains independent",
       "effective_data_last_observation_date": "2026-11-06",
-      "effective_data_last_capture": "2026-11-07T02:31:36.998936Z"
+      "effective_data_last_capture": "2026-11-10T04:29:07.594420Z"
     },
     {
       "source_family": "mcba",
