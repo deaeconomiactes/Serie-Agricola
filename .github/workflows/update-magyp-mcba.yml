@@ -2,8 +2,9 @@ name: MAGyP MCBA - productivo Windows self-hosted
 
 # Configuración del host (fuera del repositorio, sin credenciales en archivos del proyecto):
 # Windows 11 x64 / Windows Server 2022 x64, PowerShell 7.4+, Git for Windows con Bash,
-# Python 3.12 x64 y GitHub CLI (gh) en PATH para la cuenta que ejecuta el runner.
-# Node 24 se prepara con setup-node; la cuenta necesita escritura en su tool cache.
+# GitHub CLI (gh) y 7-Zip en PATH para la cuenta que ejecuta el runner.
+# Python 3.12 x64 y Node 24 se preparan con setup-python/setup-node; la cuenta
+# del servicio necesita escritura en la tool cache (NETWORK SERVICE suele ser suficiente).
 # Reiniciar terminal/servicio tras instalar herramientas para actualizar PATH.
 # Usar Actions Runner actualizado; registrar desde Settings > Actions > Runners > New self-hosted runner.
 # Elegir Windows x64, descargar/verificar el paquete según la UI oficial y ejecutar, en C:\actions-runner:
@@ -63,6 +64,10 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          architecture: 'x64'
       - name: Preparar temporales y herramientas Windows en runtime
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
@@ -93,6 +98,10 @@ jobs:
           (Split-Path $bash) | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           python -m venv (Join-Path $root 'venv')
           (Join-Path $root 'venv/Scripts') | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Verificar Python del entorno de ejecución
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          python -c "import os, struct, sys; print(sys.executable); assert sys.version_info[:2] == (3, 12) and struct.calcsize('P') == 8; assert os.path.normcase(sys.prefix) == os.path.normcase(os.path.join(os.environ['MCBA_JOB_ROOT'], 'venv'))"
       - name: Registrar baseline MCBA antes de adquirir
         run: python scripts/ci/mcba_candidate.py baseline --published-dir data/magyp/dashboard/mcba --output "$env:MCBA_CAPTURE_ROOT/reports/PUBLICATION_BASELINE.json"
       - name: Dependencias fijadas y verificación de Edge
