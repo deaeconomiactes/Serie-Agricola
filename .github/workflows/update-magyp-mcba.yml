@@ -43,7 +43,9 @@ jobs:
     defaults:
       run:
         shell: pwsh
-    timeout-minutes: 15
+    # Las pruebas completas pueden ocupar 15 min; reservar además hasta 8 min
+    # para captura y tiempo para validación, artefactos y limpieza.
+    timeout-minutes: 35
     permissions:
       contents: read
     outputs:
