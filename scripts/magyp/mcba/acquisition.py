@@ -139,6 +139,45 @@ def wait_for_genexus_controls(page, timeout):
         page.remove_listener('framenavigated', navigated)
 
 
+def initial_grid_has_rows(page):
+    """Require a visible transition from an initially populated grid."""
+    try:
+        notice = page.locator('#GRIDPAGINATIONBARContainer_DVPaginationBar').get_by_text(
+            'No se encontraron registros', exact=True)
+        return (page.locator("#GridContainerTbl tr[id^='GridContainerRow_']").count() > 0
+                and (notice.count() == 0 or not notice.is_visible()))
+    except Exception:
+        return False
+
+
+def confirmed_empty_filtered_grid(page, start, end, had_rows, filter_response, errors):
+    """Recognize only the observed explicit GeneXus empty-result state."""
+    if not had_rows or errors or filter_response.status != 200:
+        return False
+    try:
+        data = filter_response.request.post_data_json
+        if not isinstance(data, dict) or 'DDO_GRID.ONOPTIONCLICKED' not in data.get('events', []):
+            return False
+        # Check the request in memory only; never persist its session fields.
+        encoded = json.dumps(data, ensure_ascii=False)
+        requested = [date.fromisoformat(day).strftime('%d/%m/%Y') for day in (start, end)]
+        if any(encoded.count(value) < requested.count(value) for value in set(requested)):
+            return False
+        if page.locator('#GridContainerTbl').count() != 1:
+            return False
+        if page.locator("#GridContainerTbl tr[id^='GridContainerRow_']").count() != 0:
+            return False
+        for selector, day in (('#vDDO_FRUTAS_PRECIOS_FECHAAUXDATE', start),
+                              ('#vDDO_FRUTAS_PRECIOS_FECHAAUXDATETO', end)):
+            if page.locator(selector).input_value() != date.fromisoformat(day).strftime('%d/%m/%Y'):
+                return False
+        notice = page.locator('#GRIDPAGINATIONBARContainer_DVPaginationBar').get_by_text(
+            'No se encontraron registros', exact=True)
+        return notice.count() == 1 and notice.is_visible()
+    except Exception:
+        return False
+
+
 def validate_window(start, end):
     try:
         a, b = date.fromisoformat(start), date.fromisoformat(end)
@@ -308,6 +347,7 @@ def _browser_fetch_once(start, end, timeout=60, max_requests=80, channel="msedge
     initial = {}
     stage_error = None
     stage_status = None
+    empty_grid_confirmed = False
     navigation = {}
     # Perfil/contexto no persistente, sin certificados ignorados ni almacenamiento de estado.
     with sync_playwright() as p:
@@ -434,6 +474,7 @@ def _browser_fetch_once(start, end, timeout=60, max_requests=80, channel="msedge
             stage = "date_controls"
             wait_for_genexus_controls(page, timeout)
             protocol = describe_genexus(page.content())
+            had_rows_before_filter = initial_grid_has_rows(page)
             page.locator("#vDDO_FRUTAS_PRECIOS_FECHAAUXDATE").fill(a.strftime("%d/%m/%Y"))
             page.locator("#vDDO_FRUTAS_PRECIOS_FECHAAUXDATETO").fill(b.strftime("%d/%m/%Y"))
             filtered = True
@@ -448,10 +489,18 @@ def _browser_fetch_once(start, end, timeout=60, max_requests=80, channel="msedge
                 stage_error = initial_error_type(None, stage_status)
                 raise PipelineError("Filtro GeneXus no exitoso")
             stage = "filtered_grid"
-            page.wait_for_function("([start,end]) => {const t=document.querySelector('#GridContainerTbl'); "
-                                   "const dates=t?.innerText.match(/\\d{2}\\/\\d{2}\\/\\d{4}/g)||[]; "
-                                   "return dates.length && dates.every(d=>{const v=d.split('/').reverse().join('-'); "
-                                   "return v>=start && v<=end;});}", arg=[start, end])
+            try:
+                page.wait_for_function("([start,end]) => {const t=document.querySelector('#GridContainerTbl'); "
+                                       "const dates=t?.innerText.match(/\\d{2}\\/\\d{2}\\/\\d{4}/g)||[]; "
+                                       "return dates.length && dates.every(d=>{const v=d.split('/').reverse().join('-'); "
+                                       "return v>=start && v<=end;});}", arg=[start, end])
+            except Exception as error:
+                if (type(error).__name__ == 'TimeoutError' and
+                        confirmed_empty_filtered_grid(page, start, end, had_rows_before_filter, filter_response, errors)):
+                    stage_error = 'NO_PUBLICATION'
+                    empty_grid_confirmed = True
+                    raise PipelineError('La fuente confirmó que el filtro no encontró registros') from None
+                raise
             table_rows = page.locator("#GridContainerTbl tr[id^='GridContainerRow_']").all()
             for tr in table_rows:
                 cells = tr.locator("td:visible").all_text_contents()
@@ -526,6 +575,11 @@ def _browser_fetch_once(start, end, timeout=60, max_requests=80, channel="msedge
                              "error_type": stage_error or 'VALIDATION_ERROR',
                              "http_status": stage_status,
                              "requests": network, "errors": errors, "protocol": protocol}
+            if empty_grid_confirmed:
+                e.diagnostics['empty_grid_confirmation'] = {
+                    'message': 'No se encontraron registros', 'visible_rows': 0,
+                    'filter_dates_match': True, 'request_dates_match': True, 'previous_grid_had_rows': True,
+                    'filter_event': 'DDO_GRID.ONOPTIONCLICKED', 'filter_http_status': 200}
             if stage == 'initial_get':
                 # Keep only fixed public metadata, without GXState, cookie names or session paths.
                 safe_requests = [{k: (safe_initial_url(v) if k == 'endpoint' else v)

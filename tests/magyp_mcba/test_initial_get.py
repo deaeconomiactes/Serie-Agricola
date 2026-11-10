@@ -88,6 +88,21 @@ class InitialGetTests(unittest.TestCase):
             self.assertNotIn('private-state', json.dumps(result.diagnostics))
             sessions[0][1].cookies.assert_not_called()
 
+    def test_explicit_empty_filtered_grid_reports_no_publication_without_export(self):
+        with self.scenario([200]) as (sessions, _, sleep, _), \
+                patch('scripts.magyp.mcba.acquisition.initial_grid_has_rows', return_value=True), \
+                patch('scripts.magyp.mcba.acquisition.confirmed_empty_filtered_grid', return_value=True):
+            page = sessions[0][2]
+            page.wait_for_function.side_effect = TimeoutError('grid timeout')
+            with self.assertRaises(PipelineError) as failure:
+                browser_fetch(DAY, DAY, channel='chromium')
+            self.assertEqual(failure.exception.diagnostics['error_type'], 'NO_PUBLICATION')
+            self.assertEqual(failure.exception.diagnostics['acquisition_stage'], 'filtered_grid')
+            self.assertEqual(failure.exception.diagnostics['empty_grid_confirmation']['visible_rows'], 0)
+            self.assertTrue(failure.exception.diagnostics['empty_grid_confirmation']['filter_dates_match'])
+            page.fixture_download.path.assert_not_called()
+            sleep.assert_not_called()
+
     def test_auto_channel_launches_selected_engine_and_validates_xlsx(self):
         for channel in ('msedge', 'chromium'):
             with self.subTest(channel=channel), self.scenario([200]) as (sessions, _, sleep, logs), \
