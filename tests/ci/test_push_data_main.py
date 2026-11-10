@@ -28,7 +28,10 @@ class PushTests(unittest.TestCase):
         self.env = {**os.environ, 'GIT_TERMINAL_PROMPT': '0', 'GIT_CONFIG_NOSYSTEM': '1',
             'GIT_CONFIG_GLOBAL': os.devnull, 'GIT_AUTHOR_NAME': 'Fixture',
             'GIT_AUTHOR_EMAIL': 'fixture@example.invalid', 'GIT_COMMITTER_NAME': 'Fixture',
-            'GIT_COMMITTER_EMAIL': 'fixture@example.invalid'}
+            'GIT_COMMITTER_EMAIL': 'fixture@example.invalid',
+            # These isolated local remotes model a production main publication,
+            # independently of the branch on which the test suite itself runs.
+            'GITHUB_ACTIONS': 'true', 'GITHUB_REF': 'refs/heads/main'}
         self.git('init', '--bare', '--initial-branch=main', self.remote.as_posix(), cwd=self.root)
         self.git('clone', self.remote.as_posix(), self.work.as_posix(), cwd=self.root)
         self.git('config', 'core.autocrlf', 'false')
