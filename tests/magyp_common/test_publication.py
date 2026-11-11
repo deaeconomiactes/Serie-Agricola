@@ -1,6 +1,8 @@
 import tempfile
+import gzip
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 from scripts.magyp.grains import references as r
 from scripts.magyp.grains import validate_publication as p
 
@@ -42,6 +44,21 @@ class PublicationTests(unittest.TestCase):
                 'data/magyp/dashboard/mcba/MCBA_MAGYP_DAILY.csv', 'temp.csv']:
             with self.subTest(path=path), self.assertRaises(r.Error):
                 p.validate_staged_paths([*p.PUBLICATION_FILES, path])
+
+    def test_compressed_fob_is_lossless_and_corruption_fails_closed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp); self.seed(root)
+            legacy=root/'dashboard/commodities/fob.csv'
+            compressed=legacy.with_suffix('.csv.gz')
+            original=legacy.read_bytes()
+            compressed.write_bytes(gzip.compress(original,mtime=0))
+            self.assertEqual(r.read_dashboard(root,'fob'),original)
+            p.validate_outputs(root)
+            with patch.object(r,'MAX_EXPANDED_DASHBOARD_BYTES',len(original)-1):
+                with self.assertRaises(r.Error): p.validate_outputs(root)
+            compressed.write_bytes(b'not gzip')
+            with self.assertRaises(r.Error): p.validate_outputs(root)
+            self.assertEqual(legacy.read_bytes(),original)
 
 
 if __name__ == '__main__':

@@ -10,15 +10,19 @@ if __package__ in {None, ''}:
 from scripts.magyp.grains import references as r
 
 MAX_DASHBOARD_BYTES = 5 * 1024 * 1024
-PUBLICATION_FILES = tuple(f'data/magyp/dashboard/commodities/{source}.csv' for source in r.SOURCES)
+PUBLICATION_FILES = tuple(f'data/magyp/dashboard/commodities/{source}.csv' for source in r.SOURCES if source != 'fob') + ('data/magyp/dashboard/commodities/fob.csv.gz',)
 
 
 def validate_outputs(root, max_bytes=MAX_DASHBOARD_BYTES):
     for source in r.SOURCES:
-        path = root / 'dashboard' / 'commodities' / f'{source}.csv'
-        if not path.is_file() or path.is_symlink() or not 0 < path.stat().st_size <= max_bytes:
-            raise r.Error('Output ausente, vacío o demasiado pesado; publicación rechazada')
-        r.validate_bundle(path.read_bytes(), source)
+        path = r.dashboard_path(root, source)
+        if not path.is_file() or path.is_symlink():
+            raise r.Error(f'{source}: output ausente o enlace; publicación rechazada')
+        size=path.stat().st_size
+        if not 0 < size <= max_bytes:
+            raise r.Error(f'{source}: tamaño {size} fuera del límite {max_bytes}; publicación rechazada')
+        try: r.validate_bundle(r.read_dashboard(root, source), source)
+        except r.Error as error: raise r.Error(f'{source}: {error}') from error
     report=root/'reports/PRICE_FRESHNESS_STATUS.json'
     if report.exists():
         from scripts.magyp.build_price_freshness import validate_report
@@ -42,8 +46,9 @@ def main():
             validate_staged_paths(paths.decode('utf-8').rstrip('\0').split('\0') if paths else [])
         print('[VALIDATE] Cinco CSV dashboard válidos; publicación limitada al allowlist')
         return 0
-    except (r.Error, OSError, UnicodeError, ValueError, KeyError, TypeError, subprocess.CalledProcessError):
-        print('[VALIDATE] Publicación rechazada; conservar última versión publicada')
+    except (r.Error, OSError, UnicodeError, ValueError, KeyError, TypeError, subprocess.CalledProcessError) as error:
+        detail=str(error) if isinstance(error,r.Error) else type(error).__name__
+        print(f'[VALIDATE] Publicación rechazada ({detail}); conservar última versión publicada')
         return 1
 
 

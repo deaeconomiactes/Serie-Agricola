@@ -30,7 +30,7 @@ const MAGYP_REFERENCE_CONFIG = {
         note: 'Pizarra provisional por plaza en ARS/TN, sujeta a ajuste. Los ceros no se interpretan como precios. No equivale a operaciones SIO.' },
     magyp_fas: { label: 'FAS teórico — MAGyP', file: 'fas.csv',
         note: 'Paridad teórica por régimen D.E.C./D.E.R. ARS/TN corroborados para granos; aceites sin unidad/moneda identificadas. D.E.R. conserva su fecha histórica y no se presenta como vigente.' },
-    magyp_fob: { label: 'FOB oficial — MAGyP', file: 'fob.csv',
+    magyp_fob: { label: 'FOB oficial — MAGyP', file: 'fob.csv.gz',
         note: 'API MAGyP: posición textual, circular y embarque; moneda/unidad sin identificar. Histórico SSPM: series descriptivas en USD/TN con índice calendario, que no confirma fecha de publicación MAGyP. Son referencias separadas, sin equivalencias entre posiciones y productos.' },
     magyp_futures: { label: 'Futuros externos — MAGyP', file: 'futures.csv',
         note: 'Chicago y Kansas en USD/TN por producto y vencimiento. Las matrices históricas publicadas se distinguen de los cierres actuales mediante Tipo de precio. La fecha de cotización es la observación; Vencimiento / Posición identifica el contrato. No hay serie continua ni roll automático.' }
@@ -2333,7 +2333,10 @@ async function loadCommoditySource(sourceKey) {
         try {
             const response = await fetch(`${config.path}${config.bundleFile}`);
             if (!response.ok) throw new Error(`Referencia MAGyP: HTTP ${response.status}`);
-            current = parseReferenceCommodityBundle(await response.text(), sourceKey);
+            const text = config.bundleFile.endsWith('.gz')
+                ? await new Response(new Blob([await response.arrayBuffer()]).stream().pipeThrough(new DecompressionStream('gzip'))).text()
+                : await response.text();
+            current = parseReferenceCommodityBundle(text, sourceKey);
         } catch (error) { currentError = error; }
         commodityCurrentData[sourceKey] = current;
         const family = sourceKey.replace('magyp_', '');
