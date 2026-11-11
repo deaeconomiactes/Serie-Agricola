@@ -19,7 +19,7 @@
     const unit = row => UNITS[row?.unit] || row?.unit || '';
     const date = value => /^\d{4}-\d{2}-\d{2}$/.test(value || '') ? value.split('-').reverse().join('/') : 'No informada';
     const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value || '') && Number.isFinite(Date.parse(value+'T00:00:00Z')) && new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value;
-    const caption = row => row.frequency === 'year_to_date' ? `Acumulado enero–${MONTHS[Number(row.period_end.slice(5,7))-1]} ${row.period_end.slice(0,4)}` :
+    const caption = row => row.frequency === 'daily' ? date(row.observation_date) : row.frequency === 'year_to_date' ? `Acumulado enero–${MONTHS[Number(row.period_end.slice(5,7))-1]} ${row.period_end.slice(0,4)}` :
         row.frequency === 'annual' ? `Año completo ${row.observation_date.slice(0,4)}` : `${MONTHS[Number(row.observation_date.slice(5,7))-1]} ${row.observation_date.slice(0,4)}`;
     const isTotal = row => row.entity_type === 'total' || row.entity_type === 'national_total' || ['Total general','TOTAL'].includes(row.category);
     const label = row => `${row.category}${row.age_class ? ' · '+row.age_class : ''}`;
@@ -44,8 +44,11 @@
         if(rows.length!==descriptor.rows || !rows.length) throw new Error('Cantidad de registros inválida');
         const seen=new Set();
         for(const row of rows) {
+            const provenanceValid=entry.capture_mode==='multi_capture'?
+                /^[0-9T:-]+Z_[a-f0-9]{12}$/.test(row.capture_id) && /^[a-f0-9]{64}$/.test(row.raw_sha256) && /^\d{4}-\d{2}-\d{2}T[^\s]+Z$/.test(row.capture_date):
+                row.raw_sha256===entry.raw_sha256 && row.capture_id===entry.capture_id;
             if(row.schema_version!==VERSION || row.source_id!==entry.source_id || row.source_url!==entry.source_url ||
-                row.raw_sha256!==entry.raw_sha256 || row.capture_id!==entry.capture_id || row.family!==descriptor.family ||
+                !provenanceValid || row.family!==descriptor.family ||
                 row.frequency!==descriptor.frequency || row.observation_date.slice(0,4)!==descriptor.year ||
                 !validDate(row.observation_date) || !validDate(row.period_end) ||
                 row.period_end<row.observation_date || !row.unit || !row.currency || !row.source_locator ||
@@ -72,7 +75,7 @@
             const index=JSON.parse(new TextDecoder().decode(await this.response(BASE+'index.json')));
             if(index.schema_version!==VERSION || !index.sources || !Object.keys(index.sources).length)throw new Error('Índice Carnes inválido');
             for(const [id,entry] of Object.entries(index.sources)) {
-                if(entry.source_id!==id || !Array.isArray(entry.files) || !/^https:\/\/(www\.magyp\.gob\.ar|datos\.magyp\.gob\.ar|infra\.datos\.gob\.ar)\//.test(entry.source_url))throw new Error('Origen inválido');
+                if(entry.source_id!==id || !Array.isArray(entry.files) || !/^https:\/\/(www\.magyp\.gob\.ar|datos\.magyp\.gob\.ar|infra\.datos\.gob\.ar|mercadoagroganadero\.com\.ar)\//.test(entry.source_url))throw new Error('Origen inválido');
                 for(const file of entry.files) if(!/^[a-z0-9_-]+-[a-f0-9]{16}\.csv\.gz$/.test(file.path) || !/^[a-f0-9]{64}$/.test(file.sha256) || file.bytes>5000000)throw new Error('Fragmento inválido');
             }
             this.index=index;
@@ -99,7 +102,8 @@
             return this.cache.get(file.sha256);
         }
         entries(group) {
-            return Object.values(this.index.sources).filter(e=>group==='detail' ? e.source_id.startsWith('magyp_slaughter_') :
+            return Object.values(this.index.sources).filter(e=>group==='prices' ? /^mag_prices_history_/.test(e.source_id) || e.source_id==='mag_prices_detail' :
+                group==='inmag' ? e.source_id==='mag_inmag' : group==='detail' ? e.source_id.startsWith('magyp_slaughter_') :
                 group==='production' ? e.source_id==='magyp_production_current' : group==='sspm' ? e.source_id.startsWith('sspm_40_') : e.source_id==='magyp_indicators_archive');
         }
         descriptors(group,family,frequency,year) {
@@ -274,7 +278,7 @@
             this.state={family:'slaughter',group:'detail',frequency:'monthly',year:'',month:'',province:'Argentina',category:'TOTAL',age:'',method:'resolution_32_2018_dentition'};}
         async mount() {
             this.container.replaceChildren();this.notice=element('p','carnes-notice','Cargando datos oficiales…');this.notice.setAttribute('role','status');this.container.append(this.notice);
-            try {await this.loader.init();this.build();await this.update('family');}
+            try {await this.loader.init();this.build();if(this.loader.entries('prices').some(e=>e.source_id.startsWith('mag_prices_history_')))await this.showPrices();else await this.update('family');}
             catch(error){this.notice.textContent='No se pudo cargar Carnes: '+error.message;const retry=element('button','filter-select','Reintentar');retry.type='button';retry.onclick=()=>this.mount();this.container.append(retry);}
         }
         build() {
@@ -284,8 +288,9 @@
             rail.append(element('p','carnes-rail-label','Carnes'));
             const overview=element('header','carnes-overview');c.append(overview);const heading=element('div','carnes-heading');const moduleTitle=c.closest('.prices-section').querySelector('#carnesTitle');this.familyTitle=element('h2','carnes-family-title');this.badge=element('span','source-update-status__badge');heading.append(moduleTitle,element('span','carnes-heading-divider','/'),this.familyTitle,this.badge);overview.append(heading);heading.prepend(glyph('cow'));
             this.metadata=element('div','carnes-metadata');this.metaText=element('div','carnes-meta-items');this.sourceLink=element('a','','Ver fuente institucional');this.sourceLink.target='_blank';this.sourceLink.rel='noopener noreferrer';this.metadata.append(this.metaText);overview.append(this.metadata);
-            const context=element('div','carnes-context');c.append(context);const nav=element('nav','carnes-family-nav');nav.setAttribute('aria-label','Familias de Carnes');this.familyButtons=new Map();
-            for(const [key,title] of Object.entries(FAMILIES)){const button=element('button','',title);button.type='button';button.onclick=()=>{this.state.family=key;reconcile(this.state,'family');this.update('family');};nav.append(button);this.familyButtons.set(key,button);}rail.append(nav);for(const [key,button] of this.familyButtons){button.prepend(glyph(key==='carcass_weight'?'scales':key==='production'?'database':'cow'));}rail.append(element('p','carnes-rail-label','Fuentes y consulta'),this.sourceLink);
+            const context=element('div','carnes-context');c.append(context);const nav=element('nav','carnes-family-nav');nav.setAttribute('aria-label','Secciones de Carnes');this.familyButtons=new Map();
+            const priceButton=element('button','','Precios ganaderos');priceButton.type='button';priceButton.onclick=()=>this.showPrices();nav.append(priceButton);this.familyButtons.set('prices',priceButton);
+            for(const [key,title] of Object.entries(FAMILIES)){const button=element('button','',title);button.type='button';button.onclick=()=>this.showLegacy(key);nav.append(button);this.familyButtons.set(key,button);}rail.append(nav);for(const [key,button] of this.familyButtons){button.prepend(glyph(key==='carcass_weight'?'scales':key==='production'?'database':key==='prices'?'chart-line':'cow'));}rail.append(element('p','carnes-rail-label','Fuentes y consulta'),this.sourceLink);
             const toolbar=element('div','carnes-toolbar');context.append(toolbar);const filters=element('div','filters-grid carnes-filters');filters.setAttribute('aria-label','Filtros de Carnes');toolbar.append(filters);this.controls={};
             this.contextFilters=element('details','carnes-context-filters');this.contextSummary=element('summary','','Más filtros');this.contextFilters.append(this.contextSummary);const contextual=element('div','filters-grid');this.contextFilters.append(contextual);toolbar.append(this.contextFilters);
             this.contextFilters.addEventListener('keydown',event=>{if(event.key==='Escape'){this.contextFilters.open=false;this.contextSummary.focus();}});
@@ -308,6 +313,82 @@
             const history=element('div','carnes-history-content');details.append(history);c.append(details);
             history.append(element('p','chart-desc','Liniers 1998–2019 y exportaciones 1998–2019 · Series históricas finalizadas. No representan indicadores corrientes.'));
             const historyAction=element('button','carnes-rail-action','Series finalizadas');historyAction.type='button';historyAction.prepend(glyph('archive'));historyAction.onclick=()=>{details.open=true;details.scrollIntoView({block:'start'});summary.focus({preventScroll:true});};rail.append(historyAction);const railFoot=element('div','carnes-rail-foot');railFoot.append(glyph('database'),element('strong','','Datos institucionales'),element('span','','Observaciones publicadas y trazabilidad de origen'));rail.append(railFoot);this.historyContainer=history;details.addEventListener('toggle',()=>{if(details.open && !this.historyBuilt){this.historyBuilt=true;this.buildHistory();}});
+            priceButton.prepend(glyph('chart-bar'));this.buildPricePanel(c);
+            this.legacyNodes=[...c.children].filter(node=>node!==overview && node!==this.pricePanel);
+        }
+        buildPricePanel(parent) {
+            this.pricePanel=element('section','carnes-prices-panel');this.pricePanel.hidden=true;
+            this.pricePanel.append(element('h3','chart-title','Precios ganaderos'));
+            this.pricePanel.append(element('p','chart-desc','Precios diarios publicados por el Mercado Agroganadero de Cañuelas. La serie comienza el 17/05/2022, fecha de operación en Cañuelas. Liniers 1998–2019 permanece como histórico independiente.'));
+            const controls=element('div','filters-grid carnes-price-controls');this.priceCategory=select(controls,'carnes-price-category','Categoría',['Novillos','Novillitos','Vaquillonas','Terneros','Vacas','Toros','M.E.J.'].map(v=>[v,v]));this.priceCategory.addEventListener('change',()=>this.loadPrices(this.priceCategory.value));this.pricePanel.append(controls);
+            this.priceMeta=element('p','chart-desc carnes-price-meta','Cargando precios oficiales…');this.pricePanel.append(this.priceMeta);
+            this.priceChart=chartCard(this.pricePanel,'Precio promedio diario');this.priceChart.node.classList.add('carnes-price-chart');
+            const detail=element('section','chart-card carnes-price-detail');detail.append(element('h3','chart-title','Precios por clasificación · última publicación disponible'));
+            this.detailMeta=element('p','chart-desc','');detail.append(this.detailMeta);
+            this.detailDownload=element('button','carnes-export','Descargar tabla CSV');this.detailDownload.type='button';detail.append(this.detailDownload);
+            const wrap=element('div','carnes-table-wrap'),table=element('table','carnes-table');table.append(element('caption','carnes-table-caption','Incluye las métricas publicadas por categoría y clasificación; el original del mercado conserva sus valores literales.'));
+            const head=element('thead'),tr=element('tr');for(const title of ['Clasificación publicada','Mínimo ARS/kg vivo','Máximo ARS/kg vivo','Promedio ARS/kg vivo','Mediana ARS/kg vivo','Cabezas','Importe ARS','Kilos','Kilos/cabeza']){const th=element('th','',title);th.scope='col';tr.append(th);}head.append(tr);this.detailBody=element('tbody');table.append(head,this.detailBody);wrap.append(table);wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Precios diarios por clasificación');detail.append(wrap);this.pricePanel.append(detail);
+            const indexBlock=element('section','carnes-inmag');indexBlock.append(element('h3','chart-title','I.N.M.A.G. · índice oficial independiente'));
+            this.inmagMeta=element('p','chart-desc','');this.inmagSourceLink=element('a','carnes-inmag-source','Consultar totales diarios e I.N.M.A.G.');this.inmagSourceLink.href='https://mercadoagroganadero.com.ar/dll/hacienda2.dll/haciinfo000011';this.inmagSourceLink.target='_blank';this.inmagSourceLink.rel='noopener noreferrer';indexBlock.append(this.inmagMeta,this.inmagSourceLink);this.inmagChart=chartCard(indexBlock,'Evolución del I.N.M.A.G. · puntos de índice');this.pricePanel.append(indexBlock);
+            this.pricePanel.append(element('p','method-note carnes-price-method','El gráfico diario usa el promedio publicado por categoría y la tabla conserva mínimo, máximo, promedio, mediana, cabezas, importe, kilos y kilos por cabeza del informe detallado. El I.N.M.A.G. es un índice distinto; no se interpreta como promedio de precios por categoría. La unidad ARS/kg vivo se atribuye según el tablero oficial SAGyP para los precios MAG y se mantiene señalada en la ficha de fuente. SAGyP mensual se conserva como referencia separada por sus conceptos compuestos y formato PDF.'));
+            parent.append(this.pricePanel);
+        }
+        async showPrices() {
+            this.mode='prices';this.notice.textContent='';this.legacyNodes?.forEach(node=>node.hidden=true);this.pricePanel.hidden=false;this.priceCategory.parentElement.hidden=false;
+            this.familyTitle.textContent='Precios ganaderos';this.setActiveSection('prices');
+            await this.loadPrices(this.priceCategory.value || 'Novillos');
+        }
+        async showLegacy(family) {
+            this.mode='legacy';this.pricePanel.hidden=true;this.legacyNodes?.forEach(node=>node.hidden=false);this.state.family=family;reconcile(this.state,'family');this.setActiveSection(family);await this.update('family');
+        }
+        setActiveSection(active) {for(const [key,button] of this.familyButtons)button.setAttribute('aria-pressed',String(key===active));}
+        async loadPrices(category) {
+            const revision=this.priceRevision=(this.priceRevision || 0)+1;this.container.setAttribute('aria-busy','true');this.pricePanel.setAttribute('aria-busy','true');this.priceMeta.textContent=`Cargando datos oficiales para ${category}…`;
+            try {
+                const historyDescriptors=this.loader.descriptors('prices','livestock_price','daily').filter(x=>x.entry.source_id===`mag_prices_history_${category.toLowerCase()}`);
+                const parts=await Promise.all(historyDescriptors.map(x=>this.loader.shard(x.entry,x.file)));if(revision!==this.priceRevision)return;
+                const history=parts.flat().filter(r=>r.metric==='price_average' && r.category===category).sort((a,b)=>a.observation_date.localeCompare(b.observation_date));
+                const detailDescriptors=this.loader.descriptors('prices','livestock_price','daily').filter(x=>x.entry.source_id==='mag_prices_detail');
+                const detailParts=await Promise.all(detailDescriptors.map(x=>this.loader.shard(x.entry,x.file)));if(revision!==this.priceRevision)return;
+                this.priceHistory=history;this.priceDetails=detailParts.flat();
+                const indexDescriptors=this.loader.descriptors('inmag','livestock_index','daily');
+                const indexParts=await Promise.all(indexDescriptors.map(x=>this.loader.shard(x.entry,x.file)));if(revision!==this.priceRevision)return;
+                this.inmagRows=indexParts.flat().filter(r=>r.metric==='inmag_index').sort((a,b)=>a.observation_date.localeCompare(b.observation_date));
+                const detailEntry=this.loader.entries('prices').find(e=>e.source_id==='mag_prices_detail');
+                const entry=historyDescriptors[0]?.entry || detailEntry;if(!entry)throw new Error('No hay una publicación MAG preparada para esta selección');
+                this.renderPrices(category,entry);
+            } catch(error) {if(revision===this.priceRevision)this.priceMeta.textContent='No se pudo cargar la serie ganadera: '+error.message+'. Se conserva el último dashboard publicado.';}
+            finally {if(revision===this.priceRevision){this.pricePanel.setAttribute('aria-busy','false');this.container.setAttribute('aria-busy','false');}}
+        }
+        renderPrices(category,entry) {
+            const series=this.priceHistory || [],last=[...series].reverse().find(r=>number(r.value)!==null),status=sourceState(entry,this.loader.states);
+            this.badge.textContent=STATUS_LABELS[status.status] || 'Estado no informado';this.badge.dataset.status=status.status;this.badge.className='source-update-status__badge carnes-state carnes-state--'+(status.status==='PIPELINE_ERROR'?'error':status.status==='UPDATED'?'success':['SOURCE_UNAVAILABLE','NO_PUBLICATION'].includes(status.status)?'warning':'neutral');
+            this.familyTitle.textContent='Precios ganaderos';this.metaText.replaceChildren();
+            for(const [title,value] of [['Fuente',entry.source],['Última fecha con precio',last?date(last.observation_date):'Sin dato publicado'],['Unidad','ARS/kg vivo'],['Cobertura',`${date(entry.first_observation)}–${date(entry.last_observation)}`]]){const item=element('span');item.append(element('span','carnes-meta-label',title),element('strong','',value));this.metaText.append(item);}
+            this.sourceLink.href='https://mercadoagroganadero.com.ar/dll/hacienda1.dll/haciinfo000502';this.sourceLink.title='Fecha de captura: '+entry.last_successful_capture;
+            this.priceMeta.textContent=`${category} · ${last?`último promedio publicado ${format(number(last.value))} ARS/kg vivo el ${date(last.observation_date)}`:category==='M.E.J.'?'el informe detallado publica clasificaciones sin una serie gráfica diaria equivalente':'sin promedio publicado en la serie gráfica'} · estado de actualización: ${STATUS_LABELS[status.status] || status.status}. La serie de precios por categoría empieza en Cañuelas el 17/05/2022.`;
+            this.draw(this.priceChart,'line',series.map(caption),series,`${category} · promedio diario publicado por MAG`,'ARS/kg vivo');
+            this.renderPriceTable(category);
+            const indexEntry=this.loader.entries('inmag').find(e=>e.source_id==='mag_inmag'),indexStatus=indexEntry?sourceState(indexEntry,this.loader.states):{status:'NOT_REPORTED'};
+            const indexLast=[...(this.inmagRows || [])].reverse().find(r=>number(r.value)!==null),latestIndexDay=this.inmagRows?.at(-1);
+            const indexNote=latestIndexDay?.flags?.includes('index_not_closed')?`La observación del ${date(latestIndexDay.observation_date)} está pendiente de cierre.`:
+                latestIndexDay?.flags?.includes('index_not_calculated')?`MAG no calculó el índice del ${date(latestIndexDay.observation_date)} (marcador publicado: ${latestIndexDay.value_raw}).`:'';
+            this.inmagMeta.textContent=`${indexLast?`Último valor cerrado: ${format(number(indexLast.value))} puntos el ${date(indexLast.observation_date)}.`:'Sin valor cerrado publicado.'} ${indexNote} Estado de actualización: ${STATUS_LABELS[indexStatus.status] || indexStatus.status}. Es un índice oficial independiente de los promedios por categoría.`;
+            this.draw(this.inmagChart,'line',(this.inmagRows || []).map(caption),this.inmagRows || [],'I.N.M.A.G. · serie oficial','puntos de índice');
+        }
+        renderPriceTable(category) {
+            const rows=(this.priceDetails || []).filter(r=>r.category===category && ['category','category_rollup'].includes(r.entity_type));
+            const latest=rows.reduce((value,row)=>row.observation_date>value?row.observation_date:value,'');
+            const selected=rows.filter(r=>r.observation_date===latest);const metricNames=['price_min','price_max','price_average','price_median','heads','amount_ARS','kilos','average_kilos'];
+            const groups=new Map();for(const row of selected){const key=row.entity_type+'|'+row.age_class;const group=groups.get(key) || {categoryRaw:row.category_raw,ageClass:row.age_class,entityType:row.entity_type,rows:{},flags:row.flags};group.rows[row.metric]=row;groups.set(key,group);}
+            const provisional=selected.some(r=>r.flags?.includes('provisional_source_statement'));
+            this.detailMeta.textContent=latest?`Fecha de observación: ${date(latest)} · ${provisional?'Precios provisorios':'Precios definitivos'} según encabezado de MAG · captura ${selected[0]?.capture_date || 'no informada'}.`:'No hay una tabla detallada publicada para esta categoría.';
+            this.detailBody.replaceChildren();for(const group of groups.values()){
+                const tr=element('tr');tr.append(element('td','',group.ageClass || group.categoryRaw));
+                for(const metric of metricNames){const row=group.rows[metric];const value=row?.value_status==='observed'?format(number(row.value)):row?.value_raw || 'Sin dato publicado';tr.append(element('td','',value));}this.detailBody.append(tr);
+            }
+            if(!groups.size){const tr=element('tr'),td=element('td','','Sin detalle publicado para esta categoría.');td.colSpan=9;tr.append(td);this.detailBody.append(tr);}
+            this.detailDownload.onclick=()=>{const columns=['fecha_observacion','categoria','clasificacion_publicada',...metricNames,'unidades_originales_json','unidades_normalizadas_json','quality_flags_json','condicion','fuente','url_fuente','fecha_captura','capture_id','raw_sha256'];const csv=[columns.join(','),...Array.from(groups.values(),group=>{const first=group.rows.price_average || group.rows.price_min || Object.values(group.rows)[0];const values=[latest,category,group.categoryRaw,...metricNames.map(metric=>group.rows[metric]?.value_raw ?? ''),JSON.stringify(Object.fromEntries(metricNames.map(metric=>[metric,group.rows[metric]?.unit_raw ?? '']))),JSON.stringify(Object.fromEntries(metricNames.map(metric=>[metric,group.rows[metric]?.unit ?? '']))),JSON.stringify([...new Set(Object.values(group.rows).flatMap(row=>row.flags || []))]),provisional?'PROVISORIO':'DEFINITIVO',first?.source,first?.source_url,first?.capture_date,first?.capture_id,first?.raw_sha256];return values.map(v=>'"'+String(v ?? '').replaceAll('"','""')+'"').join(',');})].join('\n');const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));const a=element('a');a.href=url;a.download=`mag-${category.toLowerCase()}-${latest || 'sin-fecha'}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
         }
         groups() {return this.state.family==='slaughter' ? [['detail','MAGyP / DNCCA · detalle publicado'],['sspm','SAGyP / SSPM · nacional']] :
             this.state.family==='production' ? [['production','MAGyP / DNCCA · producción'],['sspm','SAGyP / SSPM · nacional']] :

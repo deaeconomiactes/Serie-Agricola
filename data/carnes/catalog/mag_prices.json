@@ -1,0 +1,67 @@
+{
+  "schema_version": "mag-carnes-v1",
+  "provider": "Mercado Agroganadero S.A.",
+  "market": "Mercado Agroganadero de Cañuelas",
+  "market_start": "2022-05-17",
+  "sources": {
+    "category_daily": {
+      "url": "https://mercadoagroganadero.com.ar/dll/hacienda1.dll/haciinfo000502",
+      "frequency": "daily",
+      "classification": "RESOL-2018-32-APN-SGA#MPYT",
+      "fields": ["minimum", "maximum", "average", "median", "heads", "amount", "kilos", "average_kilos"],
+      "provisional_marker": "PRECIOS PROVISORIOS",
+      "definitive_marker": "PRECIOS DEFINITIVOS",
+      "unit": "ARS/kg vivo",
+      "unit_raw": null,
+      "unit_attribution": "Inferred from the institutional SAGyP same-market indicator; the MAG report does not print a price unit",
+      "authentication": "No credentials or cookies used by the public date query",
+      "license": "Not specified by provider"
+    },
+    "category_history": {
+      "url": "https://mercadoagroganadero.com.ar/php/hacigraf000110.chartjs.php",
+      "view_url": "https://mercadoagroganadero.com.ar/dll/hacienda2.dll/hacigraf000016",
+      "frequency": "daily",
+      "categories": {
+        "1": "Novillos",
+        "2": "Novillitos",
+        "3": "Vaquillonas",
+        "4": "Terneros",
+        "5": "Vacas",
+        "6": "Toros"
+      },
+      "metrics": ["Precio Promedio", "Cabezas"],
+      "price_unit_raw": null,
+      "price_unit_attribution": "Inferred from the institutional SAGyP same-market indicator; the MAG chart does not state a price unit",
+      "authentication": "No credentials or cookies used by the public query",
+      "license": "Not specified by provider"
+    },
+    "totals_inmag": {
+      "url": "https://mercadoagroganadero.com.ar/dll/hacienda2.dll/haciinfo000011",
+      "frequency": "daily",
+      "fields": ["heads_entered", "amount_ARS", "INMAG", "variation_percent"],
+      "index_definition": "I.N.M.A.G. is the MAG index and remains separate from category price averages",
+      "authentication": "No credentials or cookies used by the public date query",
+      "license": "Not specified by provider"
+    }
+  },
+  "unit_evidence": {
+    "source": "https://www.magyp.gob.ar/sitio/areas/bovinos/informacion_sectorial/",
+    "note": "SAGyP sectoral indicators label Mercado Agroganadero prices as pesos per kg live. The MAG daily category table also publishes amount and kilos; average-price examples reconcile to amount divided by kilos. The MAG HTML itself does not print a unit on the price table, so the unit attribution is documented as an inference from the same-market institutional indicator and published table fields."
+  },
+  "source_access": {
+    "authentication": "The current public endpoints are queried without credentials or cookies",
+    "rate_limit": "No public request quota or formal API contract was located; this pipeline is capped at ten GETs per run with at least one second between requests",
+    "stability": "Legacy public HTML/JSON endpoints without a published schema version or service-level guarantee; parsers fail closed on unexpected changes",
+    "license": "No license or redistribution terms were located on the MAG pages; provider attribution is preserved"
+  },
+  "historical_scope": {
+    "start": "2022-05-17",
+    "note": "The MAG chart endpoint also returns dates before the Cañuelas market opened. Those rows are excluded from the MAG dashboard and are not combined with the independent Mercado de Liniers 1998–2019 series."
+  },
+  "monthly_candidate": {
+    "url": "https://www.magyp.gob.ar/sitio/areas/bovinos/informacion_sectorial/",
+    "format": "PDF reports",
+    "decision": "Evaluated, not integrated",
+    "note": "The page publishes monthly sectoral price boards with composite categories and nominal/constant measures. They are not a machine-readable daily MAG category table and remain a separate candidate pending a comparability and structured-extraction design."
+  }
+}

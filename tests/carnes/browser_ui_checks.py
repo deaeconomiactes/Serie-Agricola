@@ -35,6 +35,37 @@ def run(url, channel, output):
                 if not page.locator('.carnes-context-filters').evaluate('n=>n.open'):page.locator('.carnes-context-filters > summary').click()
             page.locator('#carnes-'+key).select_option(value);ready()
         ready()
+        assert page.get_by_role('button',name='Precios ganaderos',exact=True).get_attribute('aria-pressed')=='true'
+        assert page.locator('.carnes-prices-panel').is_visible()
+        assert page.locator('.carnes-prices-panel .carnes-price-meta').inner_text().startswith('Novillos · último promedio publicado')
+        detail_condition=page.locator('.carnes-price-detail .chart-desc').inner_text().lower()
+        assert 'precios provisorios' in detail_condition or 'precios definitivos' in detail_condition
+        inmag_status=page.locator('.carnes-inmag > .chart-desc').inner_text().lower()
+        assert 'no calculó el índice' in inmag_status or 'pendiente de cierre' in inmag_status
+        assert page.locator('.carnes-inmag-source').get_attribute('href')=='https://mercadoagroganadero.com.ar/dll/hacienda2.dll/haciinfo000011'
+        assert page.locator('.carnes-price-chart canvas').evaluate('(canvas)=>!!Chart.getChart(canvas)')
+        assert page.locator('.carnes-inmag canvas').evaluate('(canvas)=>!!Chart.getChart(canvas)')
+        with page.expect_download() as price_download:
+            page.get_by_role('button',name='Descargar tabla CSV',exact=True).click()
+        price_rows=list(csv.DictReader(io.StringIO(Path(price_download.value.path()).read_text(encoding='utf-8-sig'))))
+        assert price_rows and price_rows[0]['condicion']==('PROVISORIO' if 'precios provisorios' in detail_condition else 'DEFINITIVO')
+        assert {'fecha_observacion','categoria','clasificacion_publicada','unidades_originales_json',
+            'unidades_normalizadas_json','quality_flags_json','raw_sha256'}.issubset(price_rows[0])
+        original_units=json.loads(price_rows[0]['unidades_originales_json'])
+        normalized_units=json.loads(price_rows[0]['unidades_normalizadas_json'])
+        assert original_units['price_average']=='' and normalized_units['price_average']=='ARS/kg vivo'
+        page.locator('#carnes-price-category').select_option('Vacas');ready()
+        assert 'Vacas · último promedio publicado' in page.locator('.carnes-prices-panel .carnes-price-meta').inner_text()
+        page.locator('#carnes-price-category').select_option('Terneros');ready()
+        assert '09/01/2026' in page.locator('.carnes-prices-panel .carnes-price-meta').inner_text(), 'Sparse official category history must show its real last date'
+        assert page.locator('#carnesView .carnes-state').inner_text()=='Sin nueva publicación'
+        assert 'No hay una tabla detallada' in page.locator('.carnes-price-detail .chart-desc').inner_text()
+        page.locator('#carnes-price-category').select_option('M.E.J.');ready()
+        assert 'sin una serie gráfica diaria equivalente' in page.locator('.carnes-prices-panel .carnes-price-meta').inner_text()
+        assert '11/11/2026' in page.locator('.carnes-price-detail .chart-desc').inner_text()
+        page.locator('#carnes-price-category').select_option('Novillos');ready()
+        page.screenshot(path=str(output/f'{channel}-prices.png'),full_page=True)
+        page.get_by_role('button',name='Faena bovina',exact=True).click();ready()
         assert page.get_by_role('button',name='Faena bovina',exact=True).get_attribute('aria-pressed')=='true'
         assert page.locator('#carnes-year').is_visible() and page.locator('#carnes-group').is_visible()
         assert not page.locator('#carnes-category').is_visible(), 'Contextual filters start collapsed'
@@ -169,7 +200,8 @@ def run(url, channel, output):
         assert page.locator('#commodityView').evaluate("n=>n.classList.contains('is-active')")
         assert not page.locator('.header-summary').is_visible()
         page.locator('[data-module="quantityView"]').click()
-        assert page.locator('.header-summary').is_visible()
+        assert page.locator('#quantityView').evaluate("n=>n.classList.contains('is-active')")
+        assert not page.locator('#carnesView').evaluate("n=>n.classList.contains('is-active')")
         report={'browser':channel,'initial_carnes_payload':initial,'javascript_errors':errors,
             'checks':'PASS: lazy, filters, province/category, annual/YTD, provisional, weight missing, rapid selection, statuses, history, responsive, existing tabs'}
         (output/f'{channel}-report.json').write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')

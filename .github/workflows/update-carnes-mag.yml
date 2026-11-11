@@ -1,0 +1,101 @@
+name: Actualizar precios ganaderos MAG
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 18:30 Argentina (UTC-3), tras el cierre habitual del mercado.
+    - cron: "30 21 * * 1-5"
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: serie-agricola-data-writer
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  update-mag-carnes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run MAG capture and publication pipeline
+        id: update
+        continue-on-error: true
+        timeout-minutes: 12
+        run: python -m scripts.carnes.mag_prices update --allow-web
+
+      - name: Validate complete Carnes dashboard
+        id: validate
+        if: always() && steps.update.outcome != 'skipped'
+        continue-on-error: true
+        run: python scripts/carnes/validate.py
+
+      - name: Test Carnes transformations and interface
+        id: tests
+        if: always() && steps.update.outcome != 'skipped'
+        continue-on-error: true
+        run: |
+          python -m unittest discover -s tests/carnes -v
+          node --test tests/magyp_frontend/carnes.test.cjs tests/magyp_frontend/carnes-analytics.test.cjs tests/magyp_frontend/carnes-prices.test.cjs
+          git diff --check
+
+      - name: Preserve MAG RAW evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: carnes-mag-raw-${{ github.run_id }}
+          path: data/carnes/raw/mag_*/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Publish only light Carnes outputs
+        id: publication
+        if: always() && github.ref == 'refs/heads/main' && steps.validate.outcome == 'success' && steps.tests.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add data/carnes/dashboard/index.json data/carnes/reports/CARNES_UPDATE_STATUS.json
+          if compgen -G 'data/carnes/dashboard/mag_*.csv.gz' > /dev/null; then
+            git add -f data/carnes/dashboard/mag_*.csv.gz
+          fi
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No hay cambios en las salidas livianas de Carnes."
+            exit 0
+          fi
+          echo "Archivos MAG candidatos a publicar:"
+          git diff --cached --name-only
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: actualizar precios ganaderos MAG"
+          git push origin HEAD:main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy updated dashboard explicitly
+        if: github.ref == 'refs/heads/main' && steps.publication.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main
+
+      - name: Fail visibly on a pipeline, validation, or test error
+        if: always() && (steps.update.outcome == 'failure' || steps.validate.outcome == 'failure' || steps.tests.outcome == 'failure')
+        run: exit 1

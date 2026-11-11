@@ -4,25 +4,29 @@ Para las métricas y comparaciones añadidas en el piloto posterior, consultar
 [Carnes: tercera iteración analítica](CARNES_ANALYTICS_PILOT.md). Esta guía
 describe la primera implementación productiva.
 
-Implementación del 22/10/2026 basada en `CARNES_UI_PLAN.md` (nombre real de la
-propuesta aprobada en main; el adjunto la menciona como `CARNES_UI_PROPOSAL.md`).
-No cambia datos ni pipelines. No activa cron. Los módulos existentes conservan
-sus controles y lógica; sus KPIs globales de Cantidades se ocultan únicamente
-mientras Carnes está activo, para no atribuirlos a las nuevas familias.
+Interfaz implementada el 22/10/2026 y ampliada el 11/11/2026 para precios MAG.
+Los módulos existentes conservan sus controles y lógica; sus KPIs globales de
+Cantidades se ocultan únicamente mientras Carnes está activo, para no atribuirlos
+a las nuevas familias.
 
 ## Superficie y archivos
 
 - `index.html`: pestaña y contenedor Carnes; ningún CSV Carnes se carga al inicio.
 - `app.js`: registro de la pestaña y carga de `carnes.js` al primer acceso.
 - `carnes.js`: loader validado, estado, filtros, KPIs, gráficos, tablas y descarga
-  de selección. Sin dependencias de adquisición ni consultas a APIs externas.
+  de selección. Carga fragmentos publicados y no consulta APIs externas.
 - `styles.css`: extensiones acotadas a Carnes que reutilizan los componentes
   institucionales; no cambia las reglas de los otros módulos.
+- `scripts/carnes/mag_prices.py`: captura pública de MAG, evidencia RAW inmutable,
+  validación y bundle de dashboard.
+- `.github/workflows/update-carnes-mag.yml`: actualización diaria hábil del módulo;
+  la ejecución productiva se habilita cuando el PR se integre.
 - `.gitignore`: permite versionar el nuevo módulo JavaScript.
 
 ## Familias, filtros y métricas
 
-Principales: faena bovina, producción bovina y peso medio. Año, mes, fuente y
+La sección principal es **Precios ganaderos**. Faena bovina, producción bovina y
+peso medio conservan sus vistas anteriores. Año, mes, fuente y
 frecuencia dependen de los fragmentos existentes. Provincia sólo aparece para la
 tabla provincial de faena. Categoría/dentición sólo aparecen si existen; elegir
 provincia restablece categoría/dentición, que quedan deshabilitadas. Explorar una
@@ -34,6 +38,7 @@ categorías antiguas de peso/sexo con categorías nuevas por dentición.
 
 | Familia | KPIs | Gráficos |
 |---|---|---|
+| Precios ganaderos | Último promedio publicado por categoría, fecha y estado de actualización | Evolución diaria MAG desde 17/05/2022; tabla descargable de estadísticas por clasificación; I.N.M.A.G. en tarjeta separada |
 | Faena | Cabezas, interanual compatible, participación provincial, categoría/dentición principal cuando aplica | Evolución del año, ranking provincial, composición nacional |
 | Producción | Toneladas publicadas e interanual compatible | Evolución; sin mapa o distribución provincial inventada |
 | Peso | Media publicada por categoría e interanual compatible | Evolución y comparación de categorías |
@@ -84,6 +89,29 @@ para Liniers 1998–2019 y exportaciones 1998–2019. No modifica la familia pri
 Precios ARS y USD tienen selectores de magnitud separados; las exportaciones
 distinguen volumen RCH, valor en miles USD y valor unitario USD/t RCH.
 No hay empalme con Cañuelas, conversión de moneda ni de kg producto a RCH.
+
+La vista de precios corrientes usa seis categorías del gráfico diario oficial MAG:
+Novillos, Novillitos, Vaquillonas, Terneros, Vacas y Toros. El servicio también
+devuelve etiquetas anteriores a la apertura del mercado en Cañuelas; el pipeline
+empieza el 17/05/2022 y descarta las fechas anteriores para que el historial de
+Liniers no aparezca como MAG Cañuelas. El promedio gráfico y los estadísticos del
+informe diario detallado tienen `methodology` distintos. La tabla muestra la
+última fecha disponible y distingue precios provisorios de definitivos por el
+encabezado original; se descarga junto con categoría/clasificación, captura y
+hash RAW.
+
+La consulta de totales publica cabezas, importe e I.N.M.A.G. El índice se visualiza
+por separado en puntos; no se deriva de los promedios por categoría. `Falta Cerrar`
+y `- *` permanecen como valores faltantes con el texto original. El I.N.M.A.G. puede
+quedar sin valor cerrado aunque los totales diarios ya estén publicados.
+
+La tabla de precios MAG no imprime unidad. La UI muestra ARS/kg vivo porque el
+tablero sectorial SAGyP oficial identifica los precios MAG con esa unidad; el
+catálogo y cada fila marcan esta asignación como inferencia documentada. `unit_raw`
+queda vacío para el precio cuando MAG no imprime unidad; la exportación descarga
+por separado unidades originales/normalizadas y flags de calidad. La publicación
+MAG no declara licencia de redistribución; el acceso público no confirma términos
+de uso.
 
 El estado visual proviene de `CARNES_UPDATE_STATUS.json` y `source_lifecycle` del
 índice: UPDATED (incluye NO_OP_ALREADY_CURRENT), HISTORICAL_ENDED,
@@ -162,14 +190,19 @@ una actualización legítima del avance corriente rompa el test. Las pruebas bro
 sí inspeccionan los outputs productivos del checkout. Requieren Node 20 o posterior
 para WebCrypto, Blob y descompresión nativa en la suite Node.
 
-### Resultado ejecutado
+### Verificación de la actualización MAG · 11/11/2026
 
-- Suite frontend: 79 aprobadas, incluyendo 16 de Carnes.
-- Python Carnes: 29 aprobadas; Python común: 74 aprobadas.
-- Edge y Chrome: recorridos completos aprobados, sin errores JavaScript ni
-  overflow horizontal a 900 px. Screenshots desktop 1440 px y ancho intermedio
-  900 px inspeccionados; las imágenes y reportes quedan fuera de Git.
-- La carga de un fragmento sintético corrupto conserva la vista válida y muestra
-  una advertencia; cambios rápidos no publican una selección anterior.
-- actionlint y `git diff --check` sin errores. Workflows, adquisición y datasets
-  oficiales permanecen sin modificaciones.
+- Python Carnes: 41 pruebas aprobadas, incluidas captura RAW, decimales argentinos,
+  fechas, clasificaciones, provisorios/definitivos, `NO_PUBLICATION`, caída de
+  fuente y protección del último bundle válido. Empaquetado Pages: 1 prueba aprobada.
+- Suite frontend del repositorio: 152 pruebas aprobadas.
+- Edge sobre el paquete preparado para Pages: recorrido completo aprobado, 466.840
+  bytes iniciales de Carnes en 24 solicitudes, sin errores JavaScript ni overflow
+  horizontal en 1440, 1000, 900 y 640 px. Capturas y reportes quedan fuera de Git.
+- El paquete Pages valida 21.832 observaciones y excluye `raw`, `normalized` y
+  `analytical`. El bundle MAG comprimido de esta captura ocupa 1.056.109 bytes.
+- La captura oficial del 11/11 registró datos definitivos para cinco categorías;
+  Terneros conserva 09/01/2026 como último promedio gráfico (`NO_PUBLICATION`). El
+  I.N.M.A.G. del 11/11 fue publicado como `- *`, distinto de un valor cerrado.
+- La ejecución productiva de GitHub Actions y la URL final de Pages quedan para
+  después de integrar el PR y recibir autorización del usuario.
