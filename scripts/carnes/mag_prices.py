@@ -674,6 +674,11 @@ def status_record(status, reason=None, last_valid_preserved=False):
         last_valid_preserved=bool(last_valid_preserved))
 
 
+def pipeline_exit_code(outcomes):
+    """Only technical pipeline errors fail Actions; publication states remain data states."""
+    return int('PIPELINE_ERROR' in outcomes)
+
+
 def update(root=DATA, as_of=None, allow_web=False):
     global _last_request_at, _requests_this_run
     root = Path(root); as_of = as_of or local_today()
@@ -806,7 +811,7 @@ def update(root=DATA, as_of=None, allow_web=False):
         record('mag_prices_validation', 'PIPELINE_ERROR', f'{type(error).__name__}: {error}')
     except Exception as error:
         record('mag_prices_validation', 'PIPELINE_ERROR', f'{type(error).__name__}: {error}')
-    return int('PIPELINE_ERROR' in outcomes)
+    return pipeline_exit_code(outcomes)
 
 
 def main():

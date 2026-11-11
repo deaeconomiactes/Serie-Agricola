@@ -54,6 +54,7 @@ jobs:
         continue-on-error: true
         run: |
           python -m unittest discover -s tests/carnes -v
+          python -m unittest tests.ci.test_update_carnes_workflow -v
           node --test tests/magyp_frontend/carnes.test.cjs tests/magyp_frontend/carnes-analytics.test.cjs tests/magyp_frontend/carnes-prices.test.cjs
           git diff --check
 
@@ -68,7 +69,7 @@ jobs:
 
       - name: Publish only light Carnes outputs
         id: publication
-        if: always() && github.ref == 'refs/heads/main' && steps.validate.outcome == 'success' && steps.tests.outcome == 'success'
+        if: always() && github.ref == 'refs/heads/main' && steps.update.outcome == 'success' && steps.validate.outcome == 'success' && steps.tests.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
