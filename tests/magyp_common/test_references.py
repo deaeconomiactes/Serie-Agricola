@@ -1,11 +1,13 @@
 import json
 import io
+import gzip
 import tempfile
 import unittest
 from datetime import date
 from pathlib import Path
 from contextlib import redirect_stdout
 from email.message import Message
+from urllib.error import HTTPError
 from unittest.mock import patch
 from scripts.magyp.grains import references as r
 
@@ -42,6 +44,16 @@ def enrich(rows,capture='c1',stamp='2026-10-09T12:00:00Z'):
 
 
 class ReferencesTests(unittest.TestCase):
+    def test_http_rejection_is_not_always_reported_as_source_unavailable(self):
+        for code,unavailable in [(302,False),(400,False),(403,True),(404,True),(429,True),(503,True)]:
+            with self.subTest(code=code), tempfile.TemporaryDirectory() as temp:
+                error=HTTPError('https://example.invalid',code,'',None,None)
+                with patch.object(r,'build_opener') as opener:
+                    opener.return_value.open.side_effect=error
+                    with self.assertRaises(r.Error) as failure:
+                        r.fetch('board',DAY.isoformat(),DAY,Path(temp))
+                self.assertEqual(getattr(failure.exception,'source_unavailable',False),unavailable)
+
     def test_historical_fob_query_does_not_set_current_family_validation_clock(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)
@@ -148,7 +160,7 @@ class ReferencesTests(unittest.TestCase):
                 with patch.object(r,'build_opener') as opener:
                     opener.return_value.open.return_value=FobResponse(r.encoded(fob()))
                     r.run('fob',root,DAY,DAY.isoformat(),True)
-                rows=r.validate_bundle(out.read_bytes(),'fob')
+                rows=r.validate_bundle(r.read_dashboard(root,'fob'),'fob')
                 observed=[row for row in rows if row['row_kind']=='observation']
                 self.assertEqual(len(observed),1)
                 self.assertEqual(observed[0]['price'],'290')
@@ -156,6 +168,25 @@ class ReferencesTests(unittest.TestCase):
                     (root/'raw'/'commodities'/'fob').glob('*/manifest.json')]
                 self.assertEqual({m['publication_status'] for m in manifests},
                     {'PUBLISHED','NO_PUBLICATION'})
+
+    def test_fob_compressed_update_preserves_history_and_empty_response_preserves_bytes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp); legacy=root/'dashboard/commodities/fob.csv'
+            prior=r.bundle(enrich(r.parse(fob(),'fob',DAY,DAY.isoformat())),'fob')
+            r.atomic(legacy,prior)
+            latest=fob();latest['posts'][0]['fecha']='2026-10-09 00:00:00.000'
+            with patch.object(r,'build_opener') as opener:
+                opener.return_value.open.return_value=FobResponse(r.encoded(latest))
+                r.run('fob',root,date(2026,10,9),'2026-10-09',True)
+            compressed=legacy.with_suffix('.csv.gz'); before=compressed.read_bytes()
+            rows=r.validate_bundle(gzip.decompress(before),'fob')
+            self.assertEqual({row['fecha'] for row in rows if row['row_kind']=='observation'},
+                             {'2026-10-08','2026-10-09'})
+            self.assertEqual(legacy.read_bytes(),prior)
+            with patch.object(r,'build_opener') as opener:
+                opener.return_value.open.return_value=FobResponse(b'[]')
+                self.assertEqual(r.run('fob',root,date(2026,10,10),'2026-10-10',True),'NO_PUBLICATION')
+            self.assertEqual(compressed.read_bytes(),before)
 
     def test_fob_no_publication_success_and_unknown_schema_error_keep_output_and_other_families_publish(self):
         for body,diagnostic,exit_code in [(b'[]','NO_PUBLICATION',0),
@@ -253,6 +284,21 @@ class ReferencesTests(unittest.TestCase):
         self.assertTrue(all(row['tipo_precio']=='Pizarra provisional' for row in rows))
         body=r.bundle(enrich(rows),'board');parsed=r.validate_bundle(body,'board')
         self.assertEqual(len([x for x in parsed if x['row_kind']=='diario']),6)
+
+    def test_board_detects_consistent_argentine_or_us_decimal_notation(self):
+        obj=board('316.519,00')
+        for row in obj['rows'][1:]: row[1:]=['0,00','0,00','0,00','316.519,00','0,00']
+        rows=r.parse(obj,'board',DAY)
+        rosario=next(row for row in rows if row['mercado']=='ROSARIO')
+        self.assertEqual((rosario['price_raw'],rosario['price'],rosario['unidad']),('316.519,00','316519.00','TN'))
+        self.assertEqual(sum(row['value_status']=='zero' for row in rows),24)
+        original=next(row for row in r.parse(board(),'board',DAY) if row['mercado']=='ROSARIO')
+        self.assertEqual((original['price_raw'],original['price']),('342,300.00','342300.00'))
+        obj['rows'][1][1]='342,300.00'
+        with self.assertRaises(r.Error):r.parse(obj,'board',DAY)
+        obj=board('1,234')
+        for row in obj['rows'][1:]: row[1:]=['0','0','0','1,234','0']
+        with self.assertRaises(r.Error):r.parse(obj,'board',DAY)
 
     def test_board_schema_future_stale_no_positive(self):
         obj=board();obj['rows'][0][1]='NEW PLAZA'

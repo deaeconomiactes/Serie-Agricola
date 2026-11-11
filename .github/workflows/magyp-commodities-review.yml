@@ -84,7 +84,7 @@ jobs:
           git add -- data/magyp/dashboard/commodities/internal.csv \
             data/magyp/dashboard/commodities/board.csv \
             data/magyp/dashboard/commodities/fas.csv \
-            data/magyp/dashboard/commodities/fob.csv \
+            data/magyp/dashboard/commodities/fob.csv.gz \
             data/magyp/dashboard/commodities/futures.csv \
             data/magyp/reports/PRICE_FRESHNESS_STATUS.json
           python scripts/magyp/grains/validate_publication.py --check-staged

@@ -78,8 +78,8 @@ def build(root=ROOT,mcba_status=None,sio_status=None):
             diagnostic_note=state.get('diagnostic_note'),evidence=state.get('evidence',before.get('evidence'))))
     for family,file,frequency in [('magyp_internal','internal','mensual'),('magyp_board','board','diaria'),
         ('magyp_fas','fas','diaria cuando publica'),('magyp_fob','fob','diaria cuando publica'),('magyp_futures','futures','diaria cuando publica')]:
-        from scripts.magyp.grains.references import validate_bundle
-        rows=validate_bundle((root/f'data/magyp/dashboard/commodities/{file}.csv').read_bytes(),file)
+        from scripts.magyp.grains.references import read_dashboard, validate_bundle
+        rows=validate_bundle(read_dashboard(root/'data/magyp',file),file)
         summary=next(r for r in rows if r['row_kind']=='resumen')
         observations=[r for r in rows if r['row_kind']=='observation' and (file!='fas' or r['regime']=='D.E.C.')]
         # D.E.R. is retained in its CSV but never sets freshness of D.E.C.

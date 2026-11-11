@@ -2,6 +2,7 @@
 from __future__ import annotations
 import argparse
 import csv
+import gzip
 import hashlib
 import io
 import json
@@ -10,6 +11,7 @@ import re
 import tempfile
 import time
 import uuid
+import zlib
 from collections import defaultdict
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta, timezone
@@ -215,18 +217,34 @@ def parse_board(obj):
     if '$/Tn' not in obj['text'] or 'provisorias' not in obj['text']: raise Error('Contexto pizarra cambió')
     day=spanish_date(obj['text']); header=['PRODUCTO','BUENOS AIRES','BAHIA BLANCA','QUEQUEN','ROSARIO','CORDOBA']
     expected={'GIRASOL','TRIGO PAN','MAIZ','SOJA','SORGO','CEBADA FORRAJERA'}
-    active=False; seen=set(); out=[]
+    active=False; seen=set(); source_rows=[]
     for cells in obj['rows']:
         if cells==header: active=True;continue
         if active and cells and cells[0] in expected:
             if len(cells)!=6: raise Error('Schema pizarra cambió')
             seen.add(cells[0])
-            for plaza,raw in zip(header[1:],cells[1:]):
-                out.append(observation('board',day,cells[0],plaza,'Pizarra provisional','ARS','TN',raw,'us',
-                                       currency_evidence='contextual'))
+            source_rows.append(cells)
         elif active and len(cells)==6:
             raise Error('Producto pizarra desconocido')
     if seen!=expected: raise Error('Productos pizarra cambiados')
+    # The official page has published both 342,300.00 and 316.519,00.
+    # Infer one convention for the complete table, never one per cell.
+    styles={'ar','us'}; ambiguous=False
+    for cells in source_rows:
+        for raw in cells[1:]:
+            valid={}
+            for style in ('ar','us'):
+                try: valid[style]=number(raw,style)
+                except Error: pass
+            styles.intersection_update(valid)
+            if len(valid)==2 and valid['ar']!=valid['us']: ambiguous=True
+    if not styles or (len(styles)==2 and ambiguous): raise Error('Formato decimal pizarra ambiguo o inconsistente')
+    style=next(iter(styles)) if len(styles)==1 else 'us'
+    out=[]
+    for cells in source_rows:
+        for plaza,raw in zip(header[1:],cells[1:]):
+            out.append(observation('board',day,cells[0],plaza,'Pizarra provisional','ARS','TN',raw,style,
+                                   currency_evidence='contextual'))
     return out
 
 
@@ -334,6 +352,15 @@ class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self,*args,**kwargs): return None
 
 
+def http_failure(exc, context):
+    # A changed endpoint or invalid request is a pipeline problem, not an outage.
+    if isinstance(exc,HTTPError) and exc.code not in {401,403,404,408,429} and not 500 <= exc.code <= 599:
+        return Error(f'{context}: HTTP inesperado {exc.code}')
+    error=Error(f'{context} no disponible; última salida preservada')
+    error.source_unavailable=True
+    return error
+
+
 def fetch(source,requested,as_of,root):
     url=SOURCES[source]
     if source=='fob': url+='?'+urlencode({'Fecha':date.fromisoformat(requested).strftime('%d/%m/%Y')})
@@ -342,9 +369,7 @@ def fetch(source,requested,as_of,root):
             body=response.read(MAX_BYTES+1); status=response.status
             ctype=response.headers.get('Content-Type','');encoding=response.headers.get_content_charset() or 'utf-8'
     except (HTTPError,URLError,OSError) as exc:
-        error=Error('Servicio HTTP no disponible; última salida preservada')
-        error.source_unavailable=True
-        raise error from exc
+        raise http_failure(exc,'Servicio HTTP') from exc
     print(f'[FETCH] {source} HTTP {status}')
     if status!=200 or len(body)>MAX_BYTES: raise Error('Status/tamaño inválido')
     obj=project(body,source,encoding)
@@ -358,8 +383,7 @@ def fetch(source,requested,as_of,root):
             if columns!=list(zip(FAS_CODES,FAS_LABELS)): raise Error('Orden/etiquetas FAS cambiaron')
             obj['columns']=columns; dictionary_hash=digest(dictionary)
         except (HTTPError,URLError,OSError) as exc:
-            error=Error('Diccionario FAS no disponible');error.source_unavailable=True
-            raise error from exc
+            raise http_failure(exc,'Diccionario FAS') from exc
         except UnicodeError: raise Error('Diccionario FAS inválido')
     no_publication=source=='fob' and (obj==[] or obj=={'posts':[]})
     rows=[] if no_publication else parse(obj,source,as_of,requested)
@@ -427,6 +451,25 @@ def csv_read(body):
     return list(csv.DictReader(io.StringIO(body.decode('utf-8-sig')),delimiter=';'))
 
 
+MAX_EXPANDED_DASHBOARD_BYTES = 100 * 1024 * 1024
+
+
+def dashboard_path(root, source):
+    folder=root/'dashboard'/'commodities'
+    compressed=folder/'fob.csv.gz'
+    return compressed if source=='fob' and compressed.exists() else folder/(source+'.csv')
+
+
+def read_dashboard(root, source):
+    path=dashboard_path(root,source)
+    if path.suffix!='.gz': return path.read_bytes()
+    try:
+        with gzip.open(path,'rb') as stream: body=stream.read(MAX_EXPANDED_DASHBOARD_BYTES+1)
+    except (OSError,EOFError,zlib.error) as error: raise Error('Dashboard comprimido inválido') from error
+    if len(body)>MAX_EXPANDED_DASHBOARD_BYTES: raise Error('Dashboard descomprimido demasiado grande')
+    return body
+
+
 def analytical(source,root):
     """Latest entire day/month capture, retaining withdrawals and zero/missing cells."""
     paths=sorted((root/'normalized'/'commodities'/source).glob('*.json'))
@@ -438,12 +481,12 @@ def analytical(source,root):
             rank=(part[0]['updated_at_utc'],part[0]['capture_id'])
             if day not in partitions or rank>partitions[day][0]: partitions[day]=(rank,part)
     if not partitions: raise Error('No hay NORMALIZED válido')
-    output=root/'dashboard'/'commodities'/(source+'.csv')
+    output=dashboard_path(root,source)
     # Dashboard observation rows are the small persistent analytical memory across Actions runs.
     # Current partitions replace the COMPLETE period; old dates are kept without cross-source filling.
     old=[]
     if output.exists():
-        old=validate_bundle(output.read_bytes(),source)
+        old=validate_bundle(read_dashboard(root,source),source)
     current=[r for _,part in partitions.values() for r in part]
     previous=[r for r in old if r['row_kind']=='observation' and r['fecha'] not in partitions]
     rows=sorted(previous+current,key=lambda r:(r['fecha'],r['series_id']))
@@ -546,7 +589,10 @@ def run(source,root,as_of,requested,allow_web=False):
                 normalize(folder,root,as_of)
         rows=analytical(source,root)
         body=bundle(rows,source)
-        atomic(root/'dashboard'/'commodities'/(source+'.csv'),body)
+        if source=='fob':
+            atomic(root/'dashboard'/'commodities'/'fob.csv.gz',gzip.compress(body,mtime=0))
+        else:
+            atomic(root/'dashboard'/'commodities'/(source+'.csv'),body)
         print(f'[PUBLISH] {source} actualizado; {sum(r["value_status"]=="positive" for r in rows)} precios positivos')
         return 'UPDATED'
 

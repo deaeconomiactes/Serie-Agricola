@@ -10,6 +10,19 @@ function context(code=current) {
     vm.runInContext(code,ctx);return ctx;
 }
 
+test('FOB comprimido carga el bundle íntegro y rechaza corrupción',async()=>{
+    const ctx=context();
+    Object.assign(ctx,{Blob,Response,DecompressionStream,fetch:async url=>{
+        assert.ok(url.endsWith('/fob.csv.gz'));
+        return new Response(fs.readFileSync('data/magyp/dashboard/commodities/fob.csv.gz'));
+    }});
+    const result=await vm.runInContext("loadCommoditySource('magyp_fob')",ctx);
+    assert.ok(result.diario.length>0);
+    assert.equal(result.resumen.length,1);
+    ctx.fetch=async()=>new Response(Buffer.from('corrupt'));
+    await assert.rejects(vm.runInContext("loadCommoditySource('magyp_fob')",ctx));
+});
+
 test('initial MAGyP internal source and source switches set frequency and KPI semantics',()=>{
     const ctx=context();
     assert.equal(vm.runInContext('commoditySource',ctx),'magyp_internal');
