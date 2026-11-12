@@ -7,8 +7,17 @@
 - [Validación y cantidades verificadas](reports/CARNES_VALIDATION_REPORT.json)
 - [Catálogo de descargas verificadas](catalog/sources.json)
 - [Candidatos no integrados](catalog/candidates.json)
+- [Catálogo de precios MAG, endpoints y unidad atribuida](catalog/mag_prices.json)
 - [Índice de datos preparados](dashboard/index.json)
 
 RAW, NORMALIZED y ANALYTICAL permanecen fuera de Git. DASHBOARD contiene fragmentos
 comprimidos y trazables, sin establecimientos/usuarios. No sumar tablas redundantes
-ni familias/unidades diferentes. No hay cron ni cambios a otros módulos.
+ni familias/unidades diferentes. El workflow `update-carnes-mag.yml` actualiza sólo
+las fuentes MAG de este módulo; Caa Guazú, MCBA y Commodities mantienen sus flujos.
+
+Los precios corrientes provienen del Mercado Agroganadero de Cañuelas desde el
+17/05/2022. Los promedios diarios de seis categorías y el detalle más reciente de
+precios mínimos/máximos/promedio/mediana, cabezas, importe y kilos permanecen
+separados. El estado provisorio/definitivo se toma del encabezado del informe de
+categorías. El I.N.M.A.G. es un índice distinto y se entrega en una familia separada.
+La serie Liniers 1998–2019 continúa como histórica, sin empalme.

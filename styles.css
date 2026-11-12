@@ -180,6 +180,20 @@ body:has(#carnesView.is-active) .module-tab.is-active::after { display:none; }
 #carnesView .carnes-pagination { display:flex;justify-content:end;gap:10px; }
 #carnesView .carnes-pagination button:disabled { opacity:.45;cursor:default; }
 #carnesView .carnes-search { max-width:420px;margin-bottom:10px;background-image:none; }
+#carnesView .carnes-prices-panel { display:grid;gap:12px;margin:12px 0 24px; }
+#carnesView .carnes-prices-panel > .chart-title { font-size:20px;margin:0; }
+#carnesView .carnes-prices-panel > .chart-desc { max-width:1000px;margin:0;color:var(--text-secondary); }
+#carnesView .carnes-price-controls { display:grid;grid-template-columns:minmax(180px,280px);gap:8px;padding:12px;background:var(--carnes-surface);border:1px solid var(--border-soft);border-radius:6px; }
+#carnesView .carnes-price-meta,#carnesView .carnes-price-method { margin:0;color:var(--text-secondary);font-size:11px;line-height:1.6; }
+#carnesView .carnes-price-chart .carnes-chart { height:320px; }
+#carnesView .carnes-price-detail { padding:14px; }
+#carnesView .carnes-price-detail > .chart-title { margin:0 0 6px; }
+#carnesView .carnes-price-detail > .carnes-export { margin-top:10px; }
+#carnesView .carnes-price-detail .carnes-table { min-width:1100px; }
+#carnesView .carnes-price-detail .carnes-table :is(td,th):nth-child(n+2) { text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums; }
+#carnesView .carnes-inmag { display:grid;gap:8px; }
+#carnesView .carnes-inmag > .chart-title { margin:0; }
+#carnesView .carnes-inmag .carnes-chart { height:280px; }
 @media(min-width:1101px) {
  #carnesView .carnes-analysis:has(.carnes-breakdown[hidden]):has(.carnes-highlights[hidden]):has(.carnes-composition:not([hidden])) .carnes-timeline { grid-column:1; }
  #carnesView .carnes-analysis:has(.carnes-breakdown[hidden]):has(.carnes-highlights[hidden]):has(.carnes-composition:not([hidden])) .carnes-composition { grid-column:2;grid-row:1; }

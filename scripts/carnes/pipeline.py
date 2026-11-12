@@ -33,7 +33,7 @@ DATA=ROOT/'data/carnes'
 SSPM='https://infra.datos.gob.ar/catalog/sspm/data.json'
 MAGYP='https://www.magyp.gob.ar/sitio/areas/gestion/bovinos.php?accion=imp'
 INDICATORS='https://datos.magyp.gob.ar/dataset/indicadores-mensuales-sector-bovino/archivo/7afe10d1-e9bc-4383-9e3c-c8066bc21f65'
-HOSTS={'infra.datos.gob.ar','www.magyp.gob.ar','datos.magyp.gob.ar'}
+HOSTS={'infra.datos.gob.ar','www.magyp.gob.ar','datos.magyp.gob.ar','mercadoagroganadero.com.ar'}
 IDENTITY=['source_id','table_id','family','metric','species','observation_date','period_end','frequency',
     'category','age_class','geography','geography_level','market','entity_type','entity_id',
     'entity_name','entity_tax_id','entity_activity','currency','unit','weight_basis','methodology']

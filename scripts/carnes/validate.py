@@ -36,7 +36,12 @@ def validate_entry(folder,entry):
             if row['family']!=item['family'] or row['frequency']!=item['frequency'] or row['observation_date'][:4]!=item['year']:
                 raise DataError('Prepared partition mismatch')
             date.fromisoformat(row['observation_date']);date.fromisoformat(row['period_end'])
-            if row['raw_sha256']!=entry['raw_sha256'] or row['capture_id']!=entry['capture_id']:
+            if entry.get('capture_mode')=='multi_capture':
+                if not re.fullmatch(r'[0-9T:-]+Z_[a-f0-9]{12}',row['capture_id']) or not re.fullmatch(r'[a-f0-9]{64}',row['raw_sha256']):
+                    raise DataError('Prepared multi-capture RAW provenance mismatch')
+                if not re.fullmatch(r'\d{4}-\d{2}-\d{2}T[^\s]+Z',row['capture_date']):
+                    raise DataError('Prepared multi-capture date mismatch')
+            elif row['raw_sha256']!=entry['raw_sha256'] or row['capture_id']!=entry['capture_id']:
                 raise DataError('Prepared RAW provenance mismatch')
             if row['observation_id'] in seen:raise DataError('Duplicate prepared observation')
             seen.add(row['observation_id'])

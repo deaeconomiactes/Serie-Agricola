@@ -33,6 +33,8 @@ def prepare(source, destination):
         if wholesale and folder == wholesale_index.parent:
             return [name for name in names if name not in runtime]
         excluded = [name for name in names if folder / name in retired or folder / name in audit_only]
+        if folder == source / 'data/carnes':
+            excluded.extend(name for name in ('raw', 'normalized', 'analytical') if name in names)
         if folder == source / 'data' and 'commodities_local_mensual' in names:
             excluded.append('commodities_local_mensual')
         if folder == source and '.git' in names:

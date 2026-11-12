@@ -1,24 +1,7 @@
 {
   "schema_version": "carnes-v1",
-  "review_date": "2026-10-22",
+  "review_date": "2026-11-11",
   "sources": [
-    {
-      "family": "livestock_price",
-      "source": "Mercado Agroganadero / mercado institucional",
-      "source_id": "mag_daily_candidate",
-      "source_url": "https://www.mercadoagroganadero.com.ar/dll/hacienda1.dll/haciinfo000002?CP=&LISTADO=SI&txtFECHAFIN=21%2F10%2F2026&txtFECHAINI=21%2F10%2F2026",
-      "oldest_date": "2005-12-09",
-      "latest_date": "2026-10-21",
-      "frequency": "daily",
-      "rows": null,
-      "categories": ["Novillo", "Novillito", "Vaca", "Vaquillona", "Toro"],
-      "geography": ["Mercado de Liniers histórico / MAG Cañuelas; sin empalme validado"],
-      "currency": "Sin identificar",
-      "unit": "Sin identificar",
-      "automation_status": "PUBLIC_HTML_DATE_QUERY; NOT_INTEGRATED",
-      "quality_status": "PENDING_UNIT_METHOD_HISTORY_TERMS_VALIDATION",
-      "notes": "Tres consultas controladas con datos: 09/12/2005, 01/06/2010 y 21/10/2026. Fechas muestrales, no límites absolutos del archivo ni descarga completa. Tabla con min/max/promedio/mediana/cabezas/kilos/importes. No inferir ARS/kg vivo por aritmética. No se habilita backfill diario masivo."
-    },
     {
       "family": "meat_price",
       "source": "IPCVA",
@@ -29,7 +12,9 @@
       "frequency": "monthly",
       "rows": null,
       "categories": [],
-      "geography": ["Cobertura del relevamiento pendiente de validación primaria"],
+      "geography": [
+        "Cobertura del relevamiento pendiente de validación primaria"
+      ],
       "currency": "Sin identificar",
       "unit": "Sin identificar",
       "automation_status": "MONTHLY_REPORTS; NOT_INTEGRATED",
@@ -45,8 +30,12 @@
       "latest_date": null,
       "frequency": "monthly",
       "rows": null,
-      "categories": ["NCM / país de destino"],
-      "geography": ["Argentina / destinos de exportación"],
+      "categories": [
+        "NCM / país de destino"
+      ],
+      "geography": [
+        "Argentina / destinos de exportación"
+      ],
       "currency": "USD",
       "unit": "USD y kg producto; magnitudes separadas",
       "automation_status": "INTERACTIVE_QUERY; NOT_INTEGRATED",
@@ -63,12 +52,14 @@
       "frequency": "monthly",
       "rows": null,
       "categories": [],
-      "geography": ["Argentina / cobertura según cada indicador"],
+      "geography": [
+        "Argentina / cobertura según cada indicador"
+      ],
       "currency": "No unificada: nominales y constantes según indicador",
       "unit": "kg vivo / kg carne según indicador; no combinables",
       "automation_status": "PDF_REPORTS; NOT_INTEGRATED",
       "quality_status": "PENDING_TABULAR_SOURCE; MIXED_REFERENCE_CONCEPTS",
-      "notes": "El índice publica tableros de hacienda, carne minorista y comercio. No se usa la fecha del título o del portal como última observación; no se validó descarga tabular corriente equivalente. No confundir índice/precio constante con precio nominal observado."
+      "notes": "El índice publica tableros mensuales de hacienda, carne minorista y comercio. Se evaluaron los informes sectoriales vigentes: son PDFs con conceptos compuestos y medidas nominales/constantes, sin un archivo tabular homogéneo que permita sustituir las observaciones diarias por categoría de MAG. Permanecen separados; no se toma la fecha del título del PDF como fecha de observación."
     }
   ]
 }

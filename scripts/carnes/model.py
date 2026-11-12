@@ -3,7 +3,7 @@ import hashlib
 import json
 
 VERSION = 'carnes-v1'
-FAMILIES = {'livestock_price', 'slaughter', 'production', 'carcass_weight', 'live_weight', 'exports', 'meat_price'}
+FAMILIES = {'livestock_price', 'livestock_index', 'market_activity', 'slaughter', 'production', 'carcass_weight', 'live_weight', 'exports', 'meat_price'}
 FIELDS = ['observation_id','record_id','source_id','source','source_url','family','metric','species',
     'observation_date','period_end','frequency','category','category_raw','age_class','geography','geography_raw',
     'geography_level','market','table_id','entity_type','entity_id','entity_name','entity_tax_id','entity_activity','currency','unit','unit_raw',
@@ -36,6 +36,7 @@ def observation(**values):
         value_status='missing' if values.get('value') is None else 'observed',quality_flags=[])
     row.update(values)
     if row['family'] not in FAMILIES:raise DataError('Unknown economic family')
-    for raw,normal in [('category_raw','category'),('geography_raw','geography'),('unit_raw','unit')]:
+    for raw,normal in [('category_raw','category'),('geography_raw','geography')]:
         if not row[raw]:row[raw]=row[normal]
+    if 'unit_raw' not in values:row['unit_raw']=row['unit']
     return row
