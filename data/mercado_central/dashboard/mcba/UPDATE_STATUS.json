@@ -1,11 +1,11 @@
 {
   "source": "Mercado Central de Buenos Aires",
-  "requested_date": "2026-11-11",
-  "attempted_at": "2026-11-11T21:56:38.467141Z",
-  "status": "NO_OP_ALREADY_CURRENT",
-  "last_observation_date": "2026-11-10",
-  "last_successful_update": "2026-11-10T21:20:00.999958Z",
-  "row_count": 4071,
+  "requested_date": "2026-11-12",
+  "attempted_at": "2026-11-12T21:52:34.824264Z",
+  "status": "UPDATED",
+  "last_observation_date": "2026-11-12",
+  "last_successful_update": "2026-11-12T21:53:05.488199Z",
+  "row_count": 4072,
   "frequency": "mensual derivada de observaciones diarias",
   "source_url": "https://www.mercadocentral.gob.ar/informaci%C3%B3n/precios-mayoristas"
 }
