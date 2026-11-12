@@ -9,9 +9,13 @@ ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / '.github/workflows/update-carnes-mag.yml'
 
 
-def step_condition(workflow, name):
+def step_block(workflow, name):
     marker = f'- name: {name}'
-    step = workflow.split(marker, 1)[1].split('\n      - name:', 1)[0]
+    return workflow.split(marker, 1)[1].split('\n      - name:', 1)[0]
+
+
+def step_condition(workflow, name):
+    step = step_block(workflow, name)
     match = re.search(r'^\s*if:\s*(.+)$', step, re.MULTILINE)
     if not match:
         raise AssertionError(f'Workflow step has no condition: {name}')
@@ -44,6 +48,14 @@ def evaluate_condition(condition, *, ref, outcomes, outputs=None):
 
 
 class CarnesWorkflowPublicationTests(unittest.TestCase):
+    def test_pinned_carnes_test_dependencies_are_installed_before_unittest(self):
+        workflow = WORKFLOW.read_text(encoding='utf-8')
+        test_step = step_block(workflow, 'Test Carnes transformations and interface')
+        dependency_install = 'python -m pip install --disable-pip-version-check -r scripts/carnes/requirements.txt'
+        test_suite = 'python -m unittest discover -s tests/carnes -v'
+        self.assertIn(dependency_install, test_step)
+        self.assertLess(test_step.index(dependency_install), test_step.index(test_suite))
+
     def test_failed_capture_cannot_publish_after_successful_validation_and_tests(self):
         workflow = WORKFLOW.read_text(encoding='utf-8')
         publish = step_condition(workflow, 'Publish only light Carnes outputs')
