@@ -1,6 +1,7 @@
 import io, json, tempfile, unittest
 from datetime import datetime
 from pathlib import Path
+import re
 from urllib.error import URLError
 from openpyxl import Workbook
 from scripts.carnes import exportaciones_magyp as e
@@ -12,6 +13,28 @@ def fixture():
     out=io.BytesIO();w.save(out);return out.getvalue()
 
 class ExportsTests(unittest.TestCase):
+    def test_workflow_gate_blocks_failed_capture_after_successful_checks(self):
+        workflow=Path(__file__).resolve().parents[2]/'.github/workflows/update-carnes-exportaciones.yml'
+        text=workflow.read_text('utf8')
+        upload=text.split('      - uses: actions/upload-artifact@v4',1)[1].split('      - name: Publicar salidas validadas',1)[0]
+        publish=text.split('      - name: Publicar salidas validadas',1)[1]
+        gate=re.search(r"(?m)^        if: (.+)$",publish)
+        self.assertIsNotNone(gate)
+        self.assertEqual(gate.group(1),"success() && github.ref == 'refs/heads/main' && steps.capture.outcome == 'success'")
+        self.assertIn('if: always() && steps.capture.outcome != \'skipped\'',upload)
+        self.assertIn('data/carnes/raw/exportaciones_magyp/',upload)
+        self.assertIn('data/carnes/reports/EXPORTACIONES_MAGYP_STATUS.json',upload)
+        self.assertIn('git commit -m',publish)
+        self.assertIn('gh workflow run deploy.yml --ref main',publish)
+
+        # Passing earlier checks does not override a failed capture; the same gate
+        # still admits successful capture runs that report legitimate source states.
+        for checks_passed,capture_outcome,allowed in [
+            (True,'failure',False),(True,'success',True),
+            (False,'success',False),(True,'skipped',False),
+        ]:
+            self.assertEqual(checks_passed and capture_outcome=='success',allowed)
+
     def test_initial_publication_matches_official_september_2026_report(self):
         path=Path(__file__).resolve().parents[2]/'data/carnes/dashboard/exportaciones_magyp.json'
         document=json.loads(path.read_text('utf8'))

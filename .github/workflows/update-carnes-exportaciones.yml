@@ -25,14 +25,16 @@ jobs:
         id: capture
         run: python -m scripts.carnes.exportaciones_magyp --allow-web
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.capture.outcome != 'skipped'
         with:
-          name: carnes-exportaciones-raw-${{ github.run_id }}
-          path: data/carnes/raw/exportaciones_magyp/
+          name: carnes-exportaciones-evidence-${{ github.run_id }}
+          path: |
+            data/carnes/raw/exportaciones_magyp/
+            data/carnes/reports/EXPORTACIONES_MAGYP_STATUS.json
           if-no-files-found: warn
           retention-days: 90
       - name: Publicar salidas validadas
-        if: always() && github.ref == 'refs/heads/main' && steps.capture.outcome != 'skipped'
+        if: success() && github.ref == 'refs/heads/main' && steps.capture.outcome == 'success'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
