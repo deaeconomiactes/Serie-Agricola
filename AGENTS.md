@@ -9,14 +9,12 @@ Commodities agrícolas es un módulo separado de las cantidades y los precios ma
 ## Cómo trabajar
 
 - Antes de editar, identifica el pipeline y la documentación que corresponden a la tarea. Lee sólo las guías pertinentes; no es necesario releer todo el repositorio para cambios acotados.
-- El agente raíz define el alcance y los criterios de aceptación, e intenta resolver directamente las tareas pequeñas o bien delimitadas antes de delegar.
-- Delega sólo cuando el trabajo sea realmente independiente y el beneficio esperado supere el costo de contexto y coordinación. No crees una cadena fija de planner, explorer, implementer, reviewer y tester.
-- Por defecto, no delegues. Si hace falta, usa como máximo un subagente activo y una sola ronda de delegación por tarea. No pidas a agentes distintos que repitan el mismo análisis; asigna un único responsable por archivo y fija objetivo, alcance, restricciones y resultado esperado.
-- Usa `explorer` para búsquedas acotadas de código, contexto y estructura; `researcher` para verificar una pregunta concreta en fuentes oficiales; `worker` con Luna para una implementación independiente y bien acotada. El agente raíz integra la entrega y valida el diff.
-- Escala a `sol_specialist` con GPT-6.1 Sol Medium sólo para decisiones arquitectónicas, cambios transversales, pipelines complejos, debugging persistente o cuando Terra no alcance una solución satisfactoria. No uses Sol como paso obligatorio.
-- No invoques `reviewer` con Astra automáticamente. Resérvalo para una petición manual del usuario o un problema excepcionalmente complejo que siga sin resolverse después de Sol.
-- Los subagentes heredan los permisos de la sesión principal: el perfil del agente no crea un entorno aislado ni garantiza acceso de sólo lectura. Elige los permisos de la sesión antes de delegar; si una exploración o revisión debe ser técnicamente de sólo lectura, usa una sesión principal de sólo lectura.
-- `.codex/config.toml` define el modelo predeterminado del proyecto y los valores iniciales de subagentes; los perfiles personalizados pueden fijar su propio modelo. Si el usuario selecciona manualmente otro modelo en Codex, respeta esa selección y no intentes volver al predeterminado.
+- El agente principal conserva la responsabilidad de comprender, implementar, integrar, verificar y reportar.
+- Implementa directamente cuando el objetivo esté claro. Delega sólo cuando el trabajo sea independiente y el beneficio esperado supere el costo de contexto y coordinación; no uses una cadena fija de planner, explorer, implementer, reviewer y tester.
+- La delegación es opcional, no automática. Cuando aporte valor, usa hasta dos subagentes concurrentes y evita duplicar análisis o asignar varios agentes al mismo archivo.
+- Usa `explorer` con Luna Low para búsquedas acotadas y lectura del repositorio; `critical-reviewer` con Sol High para revisar bajo demanda cambios de riesgo elevado; y `ui-reviewer` con Terra Medium cuando una revisión visual o de UX sea material para la tarea. Ningún perfil se invoca por rutina.
+- Los perfiles son instrucciones para el agente, no límites técnicos de permisos. Los subagentes heredan los permisos de la sesión principal; usa permisos de solo lectura en la sesión si se requiere aislamiento técnico de escritura.
+- `.codex/config.toml` limita la concurrencia, pero no fija el modelo principal ni un modelo global para subagentes. Respeta el modelo que el usuario seleccione manualmente en Codex.
 - Conserva el contexto: no leas el repositorio completo sin una razón concreta; localiza primero los archivos relevantes y devuelve síntesis breves. Al delegar, pasa sólo objetivo, archivos, estado, restricciones, hallazgos y pregunta específica necesarios.
 - Ajusta la verificación al riesgo: cambios pequeños requieren comprobaciones específicas; cambios transversales, una revisión más amplia. No ejecutes un reviewer independiente en cada modificación.
 - No implementes una API cuando la tarea sea investigar o preparar arquitectura. Distingue hechos verificados, hipótesis y cuestiones pendientes.
@@ -24,10 +22,9 @@ Commodities agrícolas es un módulo separado de las cantidades y los precios ma
 
 ## Política de modelos y eficiencia
 
-- Modelo principal predeterminado: GPT-6.1 Terra Medium para el trabajo cotidiano del repositorio.
-- Luna es la opción habitual para búsquedas, triage, recopilación de contexto, documentación y cambios mecánicos o acotados.
-- Sol es un escalamiento selectivo para las tareas complejas descritas arriba; Astra no se inicia automáticamente.
-- Esta política busca reducir consumo innecesario, pero no garantiza una duración fija de sesión: los límites de uso dependen de la cuenta y del consumo acumulado en todos sus proyectos.
+- El modelo principal depende de la selección manual del usuario en Codex; este repositorio no fuerza uno.
+- Usa Luna Low para exploración acotada, Sol High para revisión de riesgos elevados y Terra Medium para revisión visual bajo demanda.
+- No crees agentes para cambios triviales ni repitas verificaciones sin una razón basada en el riesgo.
 
 ## Integridad de series de precios
 
