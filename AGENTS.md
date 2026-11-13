@@ -9,10 +9,22 @@ Commodities agrícolas es un módulo separado de las cantidades y los precios ma
 ## Cómo trabajar
 
 - Antes de editar, identifica el pipeline y la documentación que corresponden a la tarea. Lee sólo las guías pertinentes; no es necesario releer todo el repositorio para cambios acotados.
-- El agente raíz conserva la responsabilidad de definir el alcance, asignar un único responsable por subtarea, integrar cambios y hacer la validación final.
-- Delega sólo trabajo independiente que se beneficie de un especialista. Evita que dos agentes editen los mismos archivos a la vez. Los roles de lectura no modifican archivos.
+- El agente principal conserva la responsabilidad de comprender, implementar, integrar, verificar y reportar.
+- Implementa directamente cuando el objetivo esté claro. Delega sólo cuando el trabajo sea independiente y el beneficio esperado supere el costo de contexto y coordinación; no uses una cadena fija de planner, explorer, implementer, reviewer y tester.
+- La delegación es opcional, no automática. Cuando aporte valor, usa hasta dos subagentes concurrentes y evita duplicar análisis o asignar varios agentes al mismo archivo.
+- Usa `explorer` con Luna Low para búsquedas acotadas y lectura del repositorio; `critical-reviewer` con Sol High para revisar bajo demanda cambios de riesgo elevado; y `ui-reviewer` con Terra Medium cuando una revisión visual o de UX sea material para la tarea. Ningún perfil se invoca por rutina.
+- Los perfiles son instrucciones para el agente, no límites técnicos de permisos. Los subagentes heredan los permisos de la sesión principal; usa permisos de solo lectura en la sesión si se requiere aislamiento técnico de escritura.
+- `.codex/config.toml` limita la concurrencia, pero no fija el modelo principal ni un modelo global para subagentes. Respeta el modelo que el usuario seleccione manualmente en Codex.
+- Conserva el contexto: no leas el repositorio completo sin una razón concreta; localiza primero los archivos relevantes y devuelve síntesis breves. Al delegar, pasa sólo objetivo, archivos, estado, restricciones, hallazgos y pregunta específica necesarios.
+- Ajusta la verificación al riesgo: cambios pequeños requieren comprobaciones específicas; cambios transversales, una revisión más amplia. No ejecutes un reviewer independiente en cada modificación.
 - No implementes una API cuando la tarea sea investigar o preparar arquitectura. Distingue hechos verificados, hipótesis y cuestiones pendientes.
 - En una implementación, añade o actualiza verificaciones específicas para las transformaciones y ejecuta las comprobaciones pertinentes antes de integrar.
+
+## Política de modelos y eficiencia
+
+- El modelo principal depende de la selección manual del usuario en Codex; este repositorio no fuerza uno.
+- Usa Luna Low para exploración acotada, Sol High para revisión de riesgos elevados y Terra Medium para revisión visual bajo demanda.
+- No crees agentes para cambios triviales ni repitas verificaciones sin una razón basada en el riesgo.
 
 ## Integridad de series de precios
 

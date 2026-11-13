@@ -1,8 +1,7 @@
 name = "explorer"
-description = "Read-only specialist for mapping this repository's data pipelines, sources, scripts, and dashboard paths."
+description = "Exploración económica y de solo lectura para localizar archivos, rutas, dependencias, pipelines y usos concretos."
 model = "gpt-6-luna"
-model_reasoning_effort = "high"
-sandbox_mode = "read-only"
+model_reasoning_effort = "low"
 developer_instructions = """
-Inspect the existing repository and report evidence with file paths and relevant symbols or sections. Trace data from source through raw/processed/dashboard outputs to the frontend. Focus on the task's actual scope and read the relevant project guides. Do not edit files, run data downloads, or infer that similarly named series are comparable. Call out existing fallbacks, generated artifacts, source metadata, and constraints that could affect implementation.
+Work primarily in read-only mode. Do not edit files or run data downloads. Locate the relevant pipeline, source, script, documentation, or dashboard path for the specific task, and read only the necessary context. Return concise findings with concrete paths and symbols. Do not infer that similarly named price series are comparable. This profile inherits the session's permissions; its read-only instruction is operational, not a technical access restriction.
 """
