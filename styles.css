@@ -180,9 +180,9 @@ body:has(#carnesView.is-active) .module-tab.is-active::after { display:none; }
 #carnesView .carnes-pagination { display:flex;justify-content:end;gap:10px; }
 #carnesView .carnes-pagination button:disabled { opacity:.45;cursor:default; }
 #carnesView .carnes-search { max-width:420px;margin-bottom:10px;background-image:none; }
-#carnesView .carnes-prices-panel { display:grid;gap:12px;margin:12px 0 24px; }
+#carnesView .carnes-prices-panel, #carnesView .carnes-exports-panel { display:grid;gap:12px;margin:12px 0 24px; }
 #carnesView .carnes-prices-panel > .chart-title { font-size:20px;margin:0; }
-#carnesView .carnes-prices-panel > .chart-desc { max-width:1000px;margin:0;color:var(--text-secondary); }
+#carnesView .carnes-prices-panel > .chart-desc, #carnesView .carnes-exports-panel > .chart-desc { max-width:1000px;margin:0;color:var(--text-secondary); }
 #carnesView .carnes-price-controls { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:8px;padding:12px;background:var(--carnes-surface);border:1px solid var(--border-soft);border-radius:6px; }
 #carnesView .carnes-price-meta,#carnesView .carnes-price-method { margin:0;color:var(--text-secondary);font-size:11px;line-height:1.6; }
 #carnesView .carnes-price-chart .carnes-chart { height:320px; }
