@@ -19,6 +19,13 @@ test('range totals require complete compatible months and compare the same prior
  assert.equal(C.rangeTotal([current[0],{...current[1],methodology:'changed'},current[2]],'2025-11','2026-01'),null);
  assert.equal(C.rangeTotal(current,'2025-11','2026-01',current).variation,null);
 });
+test('weight defaults to the source with the latest observed month rather than an empty newer file',async()=>{
+ const observed=(year,month,group)=>row(year,month,200,{source_id:group, family:'carcass_weight',metric:'mean_carcass_weight',table_id:'carcass_weight/category_age',category:'Novillito',entity_type:'category'});
+ const data={production:[observed(2025,12,'magyp_production_current'),{...observed(2026,9,'magyp_production_current'),value:'',value_status:'missing'}],archive:[observed(2019,8,'magyp_indicators_archive')]};
+ const loader={descriptors:(group)=>[...new Set(data[group].map(r=>r.observation_date.slice(0,4)))].map(year=>({file:{year},entry:{source_lifecycle:group==='archive'?'HISTORICAL_ENDED':'CURRENT_PUBLICATION'}})),load:async(group,family,frequency,year)=>data[group].filter(r=>r.observation_date.startsWith(year))};
+ const view=new C.View(null,loader);view.state.family='carcass_weight';assert.equal((await view.latestGroup('carcass_weight')).latest,'2025-12-01');
+ data.production=[{...observed(2026,9,'magyp_production_current'),value:'',value_status:'missing'}];assert.equal((await view.latestGroup('carcass_weight')).group,'archive');
+});
 test('YTD compares equal Jan–closure spans, and never published YTD or category weights',()=>{
  const data=[...months(2025,10),...months(2026,20).slice(0,9)],anchor=data.at(-1),r=A.derivedYTD(data,anchor);
  assert.equal(r.value,180);assert.equal(r.base,90);assert.equal(r.variation,100);assert.equal(r.count,9);

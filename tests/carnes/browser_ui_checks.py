@@ -71,6 +71,7 @@ def run(url, channel, output):
         observed=next(row for row in converted if row['value'] and row['fx_ars_per_usd'])
         assert observed['currency']=='USD' and observed['fx_date']<=observed['observation_date']
         assert abs(float(observed['value'])-float(observed['original_ars_kg'])/float(observed['fx_ars_per_usd']))<1e-9
+        page.screenshot(path=str(output/f'{channel}-usd.png'),full_page=True)
         page.locator('#carnes-price-currency').select_option('ARS')
         page.locator('#carnes-price-category').select_option('Vacas');ready()
         assert 'Vacas · último promedio del período' in page.locator('.carnes-prices-panel .carnes-price-meta').inner_text()
@@ -83,33 +84,34 @@ def run(url, channel, output):
         page.locator('#carnes-price-category').select_option('Novillos');ready()
         page.screenshot(path=str(output/f'{channel}-prices.png'),full_page=True)
         page.get_by_role('button',name='Faena bovina',exact=True).click();ready()
+        main_records=page.locator('.carnes-main > .carnes-observations .carnes-records')
         assert page.get_by_role('button',name='Faena bovina',exact=True).get_attribute('aria-pressed')=='true'
         assert page.locator('#carnes-year').is_visible() and page.locator('#carnes-group').is_visible()
         assert not page.locator('#carnes-category').is_visible(), 'Contextual filters start collapsed'
-        assert not page.locator('.carnes-records').first.is_visible(), 'Observation table starts closed'
+        assert not main_records.is_visible(), 'Observation table starts closed'
         page.locator('.carnes-rail').get_by_role('button',name='Metodología',exact=True).click()
         assert page.locator('.carnes-methodology').evaluate('n=>n.open')
         page.locator('.carnes-methodology > summary').click()
         page.locator('.carnes-rail').get_by_role('button',name='Observaciones',exact=True).click()
-        assert page.locator('.carnes-records').first.is_visible()
+        assert main_records.is_visible()
         page.keyboard.press('Enter')
-        assert not page.locator('.carnes-records').first.is_visible()
+        assert not main_records.is_visible()
         page.locator('.carnes-rail').get_by_role('button',name='Observaciones',exact=True).click()
-        assert page.locator('.carnes-records').first.is_visible()
+        assert main_records.is_visible()
         assert page.locator('.carnes-main > .carnes-observations > summary').evaluate('e=>e===document.activeElement')
         page.keyboard.press('Enter')
-        assert not page.locator('.carnes-records').first.is_visible()
+        assert not main_records.is_visible()
         page.locator('.carnes-main > .carnes-observations > summary').click()
         page.keyboard.press('Enter')
-        assert not page.locator('.carnes-records').first.is_visible(), 'Keyboard can close the table'
+        assert not main_records.is_visible(), 'Keyboard can close the table'
         page.keyboard.press('Enter')
-        page.locator('.carnes-records .carnes-detail-button').first.click()
+        main_records.locator('.carnes-detail-button').first.click()
         assert page.get_by_role('dialog').is_visible()
         page.locator('.carnes-technical > summary').click()
         assert 'raw_sha256' in page.get_by_role('dialog').inner_text()
         page.keyboard.press('Escape')
         assert not page.get_by_role('dialog').is_visible()
-        assert page.locator('.carnes-records .carnes-detail-button').first.evaluate('n=>n===document.activeElement')
+        assert main_records.locator('.carnes-detail-button').first.evaluate('n=>n===document.activeElement')
         page.locator('.carnes-main > .carnes-observations > summary').click()
         assert not page.locator('.header-summary').is_visible(), 'Quantity KPIs must not appear as meat KPIs'
         page.locator('.carnes-context-filters > summary').click()
@@ -120,7 +122,7 @@ def run(url, channel, output):
         assert page.locator('#carnesView .kpi-value').first.inner_text()=='1.045.293'
         assert page.locator('#carnesView .carnes-state').inner_text()=='Actualizado'
         assert 'Dato provisorio' in page.locator('.carnes-selection-note').inner_text()
-        assert page.locator('#carnesView canvas').first.evaluate('(canvas)=>!!Chart.getChart(canvas)')
+        assert page.locator('#carnesView .carnes-timeline canvas').evaluate('(canvas)=>!!Chart.getChart(canvas)')
         assert not any('indicators_archive' in r for r in requests)
         initial=page.evaluate('document.getElementById("carnesRoot")._carnesView.loader.metrics')
         page.locator('#carnesView').scroll_into_view_if_needed()
@@ -176,6 +178,25 @@ def run(url, channel, output):
         assert main_records.locator('tbody tr').count()==1
         main_records.get_by_label('Buscar observaciones',exact=True).fill('')
         assert main_records.locator('tbody tr').count()==10
+        page.locator('.carnes-main > .carnes-observations > summary').click()
+        page.locator('.carnes-range > summary').click()
+        page.wait_for_function("document.querySelector('#carnes-range-start').options.length>12",timeout=90000)
+        page.locator('#carnes-range-start').select_option('1980-01')
+        page.locator('#carnes-range-end').select_option('1981-12');ready()
+        page.wait_for_function("document.querySelector('.carnes-range > .chart-desc').textContent.includes('24 observaciones')",timeout=90000)
+        assert page.locator('#carnes-year').input_value()=='1981' and page.locator('#carnes-month').input_value()=='12'
+        assert 'Acumulado calculado del rango' in page.locator('#carnesView .kpi-label').nth(2).inner_text()
+        page.locator('.carnes-range .carnes-observations > summary').click()
+        with page.expect_download() as range_download:
+            page.locator('.carnes-range .carnes-export').click()
+        range_rows=list(csv.DictReader(io.StringIO(Path(range_download.value.path()).read_text(encoding='utf-8-sig'))))
+        assert len(range_rows)==24 and range_rows[0]['observation_date']=='1980-01-01' and range_rows[-1]['observation_date']=='1981-12-01'
+        page.locator('.carnes-range .carnes-observations > summary').click()
+        page.set_viewport_size({'width':390,'height':900})
+        assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'), 'El rango no debe desbordar en móvil'
+        page.screenshot(path=str(output/f'{channel}-range-mobile.png'),full_page=True)
+        page.set_viewport_size({'width':1440,'height':1050})
+        page.locator('.carnes-range > summary').click()
         change('frequency','annual')
         assert 'Año completo' in page.locator('#carnesView .kpi-unit').first.inner_text()
         change('group','detail');change('frequency','monthly');change('year','2026')
@@ -184,7 +205,7 @@ def run(url, channel, output):
             page.evaluate('''status=>{const v=document.getElementById('carnesRoot')._carnesView;
                 v.loader.states.magyp_slaughter_current.status=status;v.render();}''',status)
             assert label in page.locator('#carnesView .carnes-state').inner_text()
-        before_history=len([r for r in requests if 'indicators_archive' in r]);assert before_history==0
+        before_history=len([r for r in requests if 'indicators_archive-livestock_price' in r or 'indicators_archive-exports' in r]);assert before_history==0
         # A corrupt new shard must not replace the rendered last-valid selection.
         prior=page.locator('#carnesView .kpi-value').first.inner_text()
         pattern='**/magyp_slaughter_2024-slaughter-monthly-2024-*.csv.gz'
@@ -204,7 +225,7 @@ def run(url, channel, output):
         page.locator('#carnes-history-family').select_option('exports')
         page.wait_for_function("document.querySelector('.carnes-history-content tbody').innerText.includes('toneladas equivalentes')")
         page.locator('.carnes-history > summary').click()
-        for width in [1440,1000,900,640]:
+        for width in [1440,1000,900,640,390]:
             page.set_viewport_size({'width':width,'height':1000})
             page.locator('#carnesView').scroll_into_view_if_needed()
             page.screenshot(path=str(output/f'{channel}-{width}.png'),full_page=True)

@@ -3,9 +3,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '15 22 * * 1-5'
-  push:
-    branches: [codex/mejoras-integrales-carnes]
-    paths: ['scripts/carnes/bcra_rates.py', '.github/workflows/update-carnes-bcra.yml']
 permissions:
   contents: write
   actions: write
@@ -38,11 +35,14 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
       - name: Publicar únicamente salidas BCRA
-        if: github.ref == 'refs/heads/main' && steps.capture.outcome == 'success'
+        if: always() && github.ref == 'refs/heads/main' && steps.capture.outcome != 'skipped'
         shell: bash
         run: |
           set -euo pipefail
-          git add data/carnes/dashboard/bcra_a3500.json data/carnes/reports/BCRA_A3500_STATUS.json
+          git add data/carnes/reports/BCRA_A3500_STATUS.json
+          if [ "${{ steps.capture.outcome }}" = 'success' ]; then
+            git add data/carnes/dashboard/bcra_a3500.json
+          fi
           git diff --cached --check
           if git diff --cached --quiet; then exit 0; fi
           git config user.name 'github-actions[bot]'

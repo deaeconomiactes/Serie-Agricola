@@ -1,4 +1,5 @@
 import json
+import hashlib
 import tempfile
 import unittest
 from datetime import date
@@ -43,6 +44,26 @@ class BCRARatesTests(unittest.TestCase):
             raw = list((root / 'raw/bcra_a3500').glob('*/manifest.json'))
             self.assertEqual(len(raw), 1)
             self.assertEqual(json.loads(raw[0].read_text('utf-8'))['bytes'], 7)
+
+    def test_missing_historical_date_cannot_replace_previous_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory); target=root/'dashboard/bcra_a3500.json';target.parent.mkdir(parents=True)
+            old={'schema_version':b.VERSION,'rates':[['2022-05-17',117.0],['2022-05-18',118.0],['2022-05-19',119.0]],'raw_sha256':'a'*64}
+            target.write_text(json.dumps(old),encoding='utf-8')
+            with patch.object(b,'parse_workbook',return_value=[['2022-05-17',117.0],['2022-05-19',119.0]]):
+                result=b.update(root,lambda:b'changed workbook')
+            self.assertEqual(result['status'],'PIPELINE_ERROR')
+            self.assertEqual(json.loads(target.read_text('utf-8')),old)
+
+    def test_identical_workbook_reports_no_publication_and_keeps_last_capture(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory); target=root/'dashboard/bcra_a3500.json';target.parent.mkdir(parents=True)
+            payload=b'unchanged workbook';rows=[['2022-05-17',117.0],['2022-05-18',118.0]]
+            old={'schema_version':b.VERSION,'rates':rows,'raw_sha256':hashlib.sha256(payload).hexdigest(),'capture_id':'original'}
+            target.write_text(json.dumps(old),encoding='utf-8')
+            with patch.object(b,'parse_workbook',return_value=rows): result=b.update(root,lambda:payload)
+            self.assertEqual(result['status'],'NO_PUBLICATION')
+            self.assertEqual(json.loads(target.read_text('utf-8')),old)
 
 
 if __name__ == '__main__': unittest.main()

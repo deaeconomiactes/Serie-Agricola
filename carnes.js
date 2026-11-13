@@ -36,7 +36,7 @@
     }
     function convertPrice(row,fx) {
         const match=rateForDate(fx.rates,row.observation_date),original=number(row.value);
-        return {...row,value:match && original!==null?String(original/match[1]):'',value_status:match && original!==null?'observed':'missing',currency:'USD',unit:'USD/kg vivo',original_ars_kg:row.value,fx_date:match?.[0] || '',fx_ars_per_usd:match?.[1] ?? '',fx_source:fx.source,fx_capture_date:fx.capture_date,fx_raw_sha256:fx.raw_sha256};
+        return {...row,value:match && original!==null?String(original/match[1]):'',value_status:match && original!==null?'observed':'missing',currency:'USD',unit:'USD/kg vivo',original_ars_kg:row.value,derivation:'USD/kg vivo = ARS/kg vivo / BCRA A3500 (ARS/USD)',fx_date:match?.[0] || '',fx_ars_per_usd:match?.[1] ?? '',fx_source:fx.source,fx_capture_date:fx.capture_date,fx_raw_sha256:fx.raw_sha256};
     }
     const caption = row => row.frequency === 'daily' ? date(row.observation_date) : row.frequency === 'year_to_date' ? `Acumulado enero–${MONTHS[Number(row.period_end.slice(5,7))-1]} ${row.period_end.slice(0,4)}` :
         row.frequency === 'annual' ? `Año completo ${row.observation_date.slice(0,4)}` : `${MONTHS[Number(row.observation_date.slice(5,7))-1]} ${row.observation_date.slice(0,4)}`;
@@ -212,11 +212,17 @@
         const result=[];
         for(const row of rows) {
             const prior=result.at(-1);
-            if(prior && (monthIndex(row)!==monthIndex(prior)+1 || !sameSeries(prior,row)))
-                result.push({...row,observation_date:row.observation_date,value:'',value_status:'missing'});
+            if(prior){
+                const first=monthIndex(prior),last=monthIndex(row);
+                for(let i=first+1;i<last;i++){const year=Math.floor(i/12),month=String(i%12+1).padStart(2,'0');result.push({...row,observation_date:`${year}-${month}-01`,value:'',value_status:'missing'});}
+                if(last===first+1 && !sameSeries(prior,row))result.push({...row,value:'',value_status:'missing'});
+            }
             result.push(row);
         }
         return result;
+    }
+    function dailyChartRows(rows) {
+        const result=[];for(const row of rows){const previous=result.at(-1),end=Date.parse(row.observation_date+'T00:00:00Z');if(previous){for(let t=Date.parse(previous.observation_date+'T00:00:00Z')+86400000;t<end;t+=86400000)result.push({...row,observation_date:new Date(t).toISOString().slice(0,10),value:'',value_status:'missing'});}result.push(row);}return result;
     }
     function rangeTotal(rows,start,end,universe=rows) {
         if(!rows.length || !['slaughter','production'].includes(rows[0].family) || rows.some(r=>!usable(r) || !sameSeries(r,rows[0])))return null;
@@ -346,11 +352,11 @@
             this.rangeSection=element('details','carnes-range');this.rangeSection.append(element('summary','','Explorar un período personalizado'));
             const rangeControls=element('div','filters-grid');this.rangeStart=select(rangeControls,'carnes-range-start','Desde',[]);this.rangeEnd=select(rangeControls,'carnes-range-end','Hasta',[]);this.rangeSection.append(rangeControls);
             const presets=element('div','filters-grid');for(const [label,months] of [['Últimos 12 meses',12],['Últimos 3 años',36],['Últimos 5 años',60],['Todo el histórico',0]]){const button=element('button','carnes-detail-button',label);button.type='button';button.onclick=()=>this.rangePreset(months);presets.append(button);}this.rangeSection.append(presets);
-            this.rangeStatus=element('p','chart-desc','');this.rangeStatus.setAttribute('role','status');this.rangeSection.append(this.rangeStatus);this.rangeChart=chartCard(this.rangeSection,'Evolución del período');this.rangeTable=this.makeTable(this.rangeSection,'Observaciones del período');
+            this.rangeStatus=element('p','chart-desc','');this.rangeStatus.setAttribute('role','status');this.rangeSection.append(this.rangeStatus);this.rangeChart=chartCard(this.rangeSection,'Evolución del período');this.rangeChart.node.hidden=true;const rangeDetail=element('details','carnes-observations');rangeDetail.append(element('summary','','Ver y descargar observaciones del período'));this.rangeSection.append(rangeDetail);this.rangeTable=this.makeTable(rangeDetail,'Observaciones del período');context.append(this.rangeSection);
             this.rangeStart.onchange=()=>this.renderRange('start');this.rangeEnd.onchange=()=>this.renderRange('end');this.rangeSection.addEventListener('toggle',()=>{if(this.rangeSection.open)this.loadRange();else if(this.mode==='legacy' && this.rows)this.render();});
             this.referenceSection=element('details','carnes-references');this.referenceSection.append(element('summary','','Estacionalidad y rango histórico · misma serie'));this.referenceStatus=element('p','chart-desc');this.referenceSection.append(this.referenceStatus);this.seasonality=chartCard(this.referenceSection,'Estacionalidad mensual');this.heatmap=element('div','carnes-heatmap');this.referenceSection.append(this.heatmap);c.append(this.referenceSection);
             this.referenceSection.addEventListener('toggle',()=>{if(this.referenceSection.open)this.loadReferences();});
-            c.append(methodology);this.observations=element('details','carnes-observations');this.observations.append(element('summary','','Ver detalle de observaciones'));c.append(this.observations);this.table=this.makeTable(this.observations,'Detalle de observaciones');c.append(this.rangeSection);this.buildDetail(c);const recordsAction=element('button','carnes-rail-action','Observaciones');recordsAction.type='button';recordsAction.prepend(glyph('list-bullets'));recordsAction.onclick=openObservations;rail.append(recordsAction);
+            c.append(methodology);this.observations=element('details','carnes-observations');this.observations.append(element('summary','','Ver detalle de observaciones'));c.append(this.observations);this.table=this.makeTable(this.observations,'Detalle de observaciones');this.buildDetail(c);const recordsAction=element('button','carnes-rail-action','Observaciones');recordsAction.type='button';recordsAction.prepend(glyph('list-bullets'));recordsAction.onclick=openObservations;rail.append(recordsAction);
             const details=element('details','chart-card carnes-history');const summary=element('summary','','Series históricas finalizadas');details.append(summary);
             const history=element('div','carnes-history-content');details.append(history);c.append(details);
             history.append(element('p','chart-desc','Liniers 1998–2019 y exportaciones 1998–2019 · Series históricas finalizadas. No representan indicadores corrientes.'));
@@ -423,7 +429,7 @@
             const indexNote=latestIndexDay?.flags?.includes('index_not_closed')?`La observación del ${date(latestIndexDay.observation_date)} está pendiente de cierre.`:
                 latestIndexDay?.flags?.includes('index_not_calculated')?`MAG no calculó el índice del ${date(latestIndexDay.observation_date)} (marcador publicado: ${latestIndexDay.value_raw}).`:'';
             this.inmagMeta.textContent=`${indexLast?`Último valor cerrado: ${format(number(indexLast.value))} puntos el ${date(indexLast.observation_date)}.`:'Sin valor cerrado publicado.'} ${indexNote} Estado de actualización: ${STATUS_LABELS[indexStatus.status] || indexStatus.status}. Es un índice oficial independiente de los promedios por categoría.`;
-            this.draw(this.inmagChart,'line',(this.inmagRows || []).map(caption),this.inmagRows || [],'I.N.M.A.G. · serie oficial','puntos de índice');
+            const indexChart=dailyChartRows(this.inmagRows || []);this.draw(this.inmagChart,'line',indexChart.map(caption),indexChart,'I.N.M.A.G. · serie oficial','puntos de índice');
         }
         pricePreset(months) {
             const dates=[...new Set((this.priceHistory || []).filter(r=>number(r.value)!==null).map(r=>r.observation_date))];if(!dates.length)return;
@@ -447,11 +453,11 @@
             const last=[...selected].reverse().find(r=>number(r.value)!==null),status=sourceState(this.priceEntry,this.loader.states);
             this.priceMeta.textContent=`${this.priceCategory.value} · ${last?`último promedio del período ${format(number(last.value))} ${usd?'USD':'ARS'}/kg vivo el ${date(last.observation_date)}`:'sin precio disponible para este período'} · estado de actualización: ${STATUS_LABELS[status.status] || status.status}. La serie comienza en Cañuelas el 17/05/2022.`;
             const unitItem=[...this.metaText.children].find(item=>item.querySelector('.carnes-meta-label')?.textContent==='Unidad');if(unitItem)unitItem.querySelector('strong').textContent=usd?'USD/kg vivo':'ARS/kg vivo';
-            this.draw(this.priceChart,'line',selected.map(caption),selected,`${this.priceCategory.value} · promedio diario ${usd?'convertido':'publicado por MAG'}`,usd?'USD/kg vivo':'ARS/kg vivo',false,{tooltip:r=>usd?[`Original: ${format(number(r.original_ars_kg))} ARS/kg vivo`,`BCRA A3500: ${r.fx_date?format(number(r.fx_ars_per_usd))+' ARS/USD · '+date(r.fx_date):'sin referencia válida'}`]:[]});this.fillTable(this.priceTable,selected);
+            const chart=dailyChartRows(selected);this.draw(this.priceChart,'line',chart.map(caption),chart,`${this.priceCategory.value} · promedio diario ${usd?'convertido':'publicado por MAG'}`,usd?'USD/kg vivo':'ARS/kg vivo',false,{tooltip:r=>usd?[`Original: ${format(number(r.original_ars_kg))} ARS/kg vivo`,`BCRA A3500: ${r.fx_date?format(number(r.fx_ars_per_usd))+' ARS/USD · '+date(r.fx_date):'sin referencia válida'}`]:[]});this.fillTable(this.priceTable,selected);
             const latestDetail=(this.priceDetails || []).filter(r=>r.category===this.priceCategory.value).reduce((a,r)=>r.observation_date>a?r.observation_date:a,'');
             this.priceDetailSection.hidden=!!latestDetail && (latestDetail<this.priceStart.value || latestDetail>this.priceEnd.value);
             this.priceChart.desc.textContent=selected.length?`${selected.length} observaciones del período seleccionado · ${usd?'USD/kg = ARS/kg ÷ A3500 (ARS/USD). Se usa la última referencia anterior hasta 7 días, dentro de la cobertura BCRA; sin referencia, el valor queda vacío.':'precios originales ARS/kg vivo.'}`:'Sin observaciones para el período seleccionado.';
-            if(this.inmagRows){const index=this.inmagRows.filter(r=>r.observation_date>=this.priceStart.value && r.observation_date<=this.priceEnd.value);this.draw(this.inmagChart,'line',index.map(caption),index,'I.N.M.A.G. · serie oficial','puntos de índice');}
+            if(this.inmagRows){const index=dailyChartRows(this.inmagRows.filter(r=>r.observation_date>=this.priceStart.value && r.observation_date<=this.priceEnd.value));this.draw(this.inmagChart,'line',index.map(caption),index,'I.N.M.A.G. · serie oficial','puntos de índice');}
         }
         renderPriceTable(category) {
             const rows=(this.priceDetails || []).filter(r=>r.category===category && ['category','category_rollup'].includes(r.entity_type));
@@ -472,19 +478,33 @@
         groups() {return this.state.family==='slaughter' ? [['detail','MAGyP / DNCCA · detalle publicado'],['sspm','SAGyP / SSPM · nacional']] :
             this.state.family==='production' ? [['production','MAGyP / DNCCA · producción'],['sspm','SAGyP / SSPM · nacional']] :
             [['production','MAGyP / DNCCA · peso por categoría'],['archive','MAGyP · indicadores históricos finalizados']];}
+        async latestObservation(group,family) {
+            const descriptors=this.loader.descriptors(group,family,'monthly');const years=[...new Set(descriptors.map(d=>d.file.year))].sort().reverse();
+            for(const year of years){const rows=await this.loader.load(group,family,'monthly',year);const found=canonical(rows,{group,family,frequency:'monthly'}).filter(usable).map(r=>r.observation_date).sort();if(found.length)return found.at(-1);}
+            return '';
+        }
+        async latestGroup(family) {
+            const scored=[];
+            for(const [index,[group]] of this.groups().entries()){
+                const descriptors=this.loader.descriptors(group,family,'monthly');const latest=await this.latestObservation(group,family);
+                const active=descriptors.some(d=>d.entry.source_lifecycle!=='HISTORICAL_ENDED');scored.push({group,index,latest,active});
+            }
+            scored.sort((a,b)=>b.latest.localeCompare(a.latest) || Number(b.active)-Number(a.active) || a.index-b.index);return scored[0];
+        }
         async update(changed) {
             const revision=++this.revision;this.container.setAttribute('aria-busy','true');this.notice.textContent='Cargando selección…';
             try {
-                if(changed==='family') {const groups=this.groups();const scored=groups.map(([id],index)=>{const descriptors=this.loader.descriptors(id,this.state.family);const latest=descriptors.map(d=>d.file.year).sort().at(-1) || '';const active=descriptors.some(d=>d.entry.source_lifecycle!=='HISTORICAL_ENDED');return {id,index,latest,active};});scored.sort((a,b)=>b.latest.localeCompare(a.latest) || Number(b.active)-Number(a.active) || a.index-b.index);this.state.group=scored[0].id;this.state.category='TOTAL';this.state.age='';this.state.province='Argentina';}
-                if(changed==='group'){this.state.category='TOTAL';this.state.age='';this.state.province='Argentina';}
-                const sourceOptions=this.groups().map(([id,name])=>{const files=this.loader.descriptors(id,this.state.family);const years=files.map(({file})=>file.year).sort();return [id,years.length?`${name} · ${years[0]}–${years.at(-1)}`:name];});
+                let latest='';
+                if(changed==='family') {const choice=await this.latestGroup(this.state.family);if(revision!==this.revision)return;this.state.group=choice.group;latest=choice.latest;this.state.category='TOTAL';this.state.age='';this.state.province='Argentina';}
+                if(changed==='group'){latest=await this.latestObservation(this.state.group,this.state.family);if(revision!==this.revision)return;this.state.category='TOTAL';this.state.age='';this.state.province='Argentina';}
+                const sourceOptions=this.groups().map(([id,name])=>{const files=this.loader.descriptors(id,this.state.family);const years=files.map(({file})=>file.year).sort();return [id,years.length?`${name} · archivos ${years[0]}–${years.at(-1)}`:name];});
                 setOptions(this.controls.family,Object.entries(FAMILIES),this.state.family);setOptions(this.controls.group,sourceOptions,this.state.group);
                 const available=this.loader.descriptors(this.state.group,this.state.family);
                 const frequencies=Object.keys(FREQUENCIES).filter(f=>available.some(x=>x.file.frequency===f));
                 if(!frequencies.includes(this.state.frequency))this.state.frequency=frequencies[0];
                 setOptions(this.controls.frequency,frequencies.map(f=>[f,FREQUENCIES[f]]),this.state.frequency);
                 const years=[...new Set(available.filter(x=>x.file.frequency===this.state.frequency).map(x=>x.file.year))].sort().reverse();
-                if(!years.includes(this.state.year) || ['family','group','frequency'].includes(changed))this.state.year=years[0];
+                if(!years.includes(this.state.year) || ['family','group','frequency'].includes(changed))this.state.year=years.includes(latest.slice(0,4))?latest.slice(0,4):years[0];
                 if(!this.state.year)throw new Error('No hay períodos publicados para esta selección');
                 setOptions(this.controls.year,years.map(y=>[y,y]),this.state.year);
                 const snapshot={...this.state};
@@ -502,10 +522,10 @@
             const months=[...new Set(this.rows.map(r=>r.observation_date.slice(5,7)))].sort();
             if(!months.includes(s.month) || ['family','group','year','frequency'].includes(changed))s.month=months.at(-1);
             setOptions(c.month,months.map(m=>[m,MONTHS[Number(m)-1]]),s.month);c.month.parentElement.hidden=s.frequency!=='monthly';
-            const provinces=[...new Set(this.rows.filter(r=>r.entity_type==='province').map(r=>r.geography))].sort();
+            const provinces=[...new Set(this.rows.filter(r=>r.entity_type==='province' && number(r.value)!==null).map(r=>r.geography))].sort();
             if(!provinces.includes(s.province))s.province='Argentina';
             setOptions(c.province,[['Argentina','Total nacional'],...provinces.map(p=>[p,p])],s.province);c.province.parentElement.hidden=!provinces.length;
-            const categories=this.rows.filter(r=>['category','category_rollup'].includes(r.entity_type) && !isTotal(r));
+            const categories=this.rows.filter(r=>['category','category_rollup'].includes(r.entity_type) && !isTotal(r) && number(r.value)!==null);
             const methods=[...new Set(categories.map(r=>r.methodology))];
             if(!methods.includes(s.method))s.method=methods.at(-1) || '';
             setOptions(c.method,methods.map(m=>[m,METHODS[m] || m]),s.method);c.method.parentElement.hidden=methods.length<2;
@@ -699,12 +719,13 @@
             this.charts.get(card.canvas)?.destroy();this.charts.delete(card.canvas);card.heading.textContent=title;card.canvas.setAttribute('aria-label',title+' · '+unitLabel);
             const observed=rows.some(r=>number(r.value)!==null);card.body.hidden=!observed;card.empty.hidden=observed;card.empty.textContent='Sin valores publicados para esta selección.';
             if(!observed || !root.Chart)return;
-            const tickIndexes=new Set(labels.length<=6?labels.map((_,i)=>i):Array.from({length:6},(_,i)=>Math.round(i*(labels.length-1)/5)));
-            const chart=new root.Chart(card.canvas,{type,data:{labels,datasets:[{label:unitLabel,data:extra.values || rows.map(r=>number(r.value)),borderColor:'#68c29e',backgroundColor:type==='line'?'#68c29e33':'#77a9d7bb',pointRadius:3,tension:0,spanGaps:false},...(extra.datasets || [])]},
+            const tickVisible=index=>{const count=(root.innerWidth || 1024)<600?3:6;return labels.length<=count || Array.from({length:count},(_,i)=>Math.round(i*(labels.length-1)/(count-1))).includes(index);};
+            const tickLabel=label=>{const value=String(label || '');return (root.innerWidth || 1024)<600?value.replace(/^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre) /,month=>month.trim().slice(0,3)+' '):value;};
+            const chart=new root.Chart(card.canvas,{type,data:{labels,datasets:[{label:unitLabel,data:extra.values || rows.map(r=>number(r.value)),borderColor:'#68c29e',backgroundColor:type==='line'?'#68c29e33':'#77a9d7bb',pointRadius:rows.length>100?1:3,pointHoverRadius:5,pointHitRadius:6,tension:0,spanGaps:false},...(extra.datasets || [])]},
                 options:{responsive:true,maintainAspectRatio:false,indexAxis:horizontal?'y':'x',animation:false,plugins:{legend:{display:!!extra.datasets?.length,labels:{color:'#b7c1ce',boxWidth:18}},datalabels:{display:false},tooltip:{backgroundColor:'#101a27',titleColor:'#eef3f7',bodyColor:'#eef3f7',padding:12,callbacks:{label:context=>{
                     const r=rows[context.dataIndex];if(context.datasetIndex>0){const original=context.dataset._observations?.[context.dataIndex];return [`${context.dataset.label}: ${format(number(context.raw))} ${unitLabel}`,...(original?[caption(original),'Fuente: '+original.source]:[])];}
                     return [...(extra.values?[`${format(extra.values[context.dataIndex])} ${unitLabel}`]:[]),`${format(number(r.value))} ${unit(r)}`,caption(r),`Fuente: ${r.source}`,r.category==='Total general'?'Total publicado':label(r),...(extra.tooltip?.(r,context.dataIndex) || [])];}}}},
-                    scales:{x:{title:{display:true,text:horizontal?unitLabel:type==='line'?'Fecha':'Categoría',color:'#b2c0cd'},ticks:{color:'#b2c0cd',maxRotation:0,...(!horizontal?{autoSkip:false,callback:value=>tickIndexes.has(Number(value))?labels[Number(value)]:''}:{maxTicksLimit:6})},grid:{display:false},beginAtZero:horizontal},y:{title:{display:!horizontal,text:unitLabel,color:'#b2c0cd'},ticks:{color:'#b2c0cd',autoSkip:false},grid:{color:'#2e435855'},beginAtZero:type==='bar'}}}});
+                    scales:{x:{title:{display:true,text:horizontal?unitLabel:type==='line'?'Fecha':'Categoría',color:'#b2c0cd'},ticks:{color:'#b2c0cd',maxRotation:0,...(!horizontal?{autoSkip:false,callback:value=>tickVisible(Number(value))?tickLabel(labels[Number(value)]):''}:{maxTicksLimit:6})},grid:{display:false},beginAtZero:horizontal},y:{title:{display:!horizontal,text:unitLabel,color:'#b2c0cd'},ticks:{color:'#b2c0cd',autoSkip:false},grid:{color:'#2e435855'},beginAtZero:type==='bar'}}}});
             this.charts.set(card.canvas,chart);
         }
         makeTable(parent,title) {
@@ -730,7 +751,7 @@
             if(!found.length){const tr=element('tr');const cell=element('td','','Sin observaciones para la búsqueda');cell.colSpan=6;tr.append(cell);table.body.append(tr);}
             table.count.textContent=`${found.length?table.page*10+1:0}–${Math.min(found.length,(table.page+1)*10)} de ${found.length} resultados · ${rows.length} observaciones en la selección. La descarga incluye toda la selección.`;
             table.more.disabled=(table.page+1)*10>=found.length;table.back.disabled=table.page===0;table.more.onclick=()=>{table.page++;this.fillTable(table,rows);};table.back.onclick=()=>{table.page--;this.fillTable(table,rows);};
-            table.exportButton.onclick=()=>{const fields=rows.some(r=>Object.hasOwn(r,'original_ars_kg'))?[...FIELDS,'original_ars_kg','fx_date','fx_ars_per_usd','fx_source','fx_capture_date','fx_raw_sha256']:FIELDS;const esc=v=>'"'+String(v ?? '').replaceAll('"','""')+'"';const csv=[fields.join(','),...rows.map(r=>fields.map(k=>esc(r[k])).join(','))].join('\n');const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));const a=element('a');a.href=url;a.download='carnes-seleccion.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+            table.exportButton.onclick=()=>{const fields=rows.some(r=>Object.hasOwn(r,'original_ars_kg'))?[...FIELDS,'original_ars_kg','derivation','fx_date','fx_ars_per_usd','fx_source','fx_capture_date','fx_raw_sha256']:FIELDS;const esc=v=>'"'+String(v ?? '').replaceAll('"','""')+'"';const csv=[fields.join(','),...rows.map(r=>fields.map(k=>esc(r[k])).join(','))].join('\n');const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));const a=element('a');a.href=url;a.download='carnes-seleccion.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
         }
         buildDetail(parent) {
             this.detail=element('dialog','carnes-detail');this.detail.setAttribute('aria-labelledby','carnes-detail-title');
@@ -767,7 +788,7 @@
             family.onchange=()=>update('family');year.onchange=()=>update('year');metric.onchange=()=>update('metric');update('family');
         }
     }
-    const api={Loader,View,Analytics,parseCSV,validateRows,canonical,selectedSeries,reconcile,yearAgo,point,sourceState,classificationRows,provincialShare,monthlyChartRows,rangeTotal,validateRates,rateForDate,convertPrice,caption,number,FIELDS,
+    const api={Loader,View,Analytics,parseCSV,validateRows,canonical,selectedSeries,reconcile,yearAgo,point,sourceState,classificationRows,provincialShare,monthlyChartRows,dailyChartRows,rangeTotal,validateRates,rateForDate,convertPrice,caption,number,FIELDS,
         mount(container){if(!container._carnesView){container._carnesView=new View(container);return container._carnesView.mount();}return Promise.resolve();}};
     if(typeof module!=='undefined' && module.exports)module.exports=api;else root.Carnes=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

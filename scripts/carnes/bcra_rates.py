@@ -87,7 +87,7 @@ def update(data_root=DATA, fetch=None, today=None):
         rows = parse_workbook(payload, today)
         if out.exists():
             old = json.loads(out.read_text('utf-8'))
-            if old.get('schema_version') != VERSION or not old.get('rates') or rows[-1][0] < old['rates'][-1][0] or rows[0][0] > old['rates'][0][0]:
+            if old.get('schema_version') != VERSION or not old.get('rates') or rows[-1][0] < old['rates'][-1][0] or rows[0][0] > old['rates'][0][0] or not {r[0] for r in old['rates']}.issubset({r[0] for r in rows}):
                 raise ValueError('La nueva captura reduce la cobertura válida')
             if old.get('raw_sha256') == digest:
                 status.update(status='NO_PUBLICATION', last_observation=rows[-1][0], capture_id=capture, raw_sha256=digest)
