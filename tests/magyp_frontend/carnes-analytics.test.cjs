@@ -5,6 +5,27 @@ const fs=require('node:fs'),zlib=require('node:zlib');
 const row=(year,month,value,change={})=>({source_id:'magyp_slaughter_'+(year===2026?'current':year),capture_id:'capture',source:'DNCCA',source_url:'https://www.magyp.gob.ar/',family:'slaughter',metric:'slaughter_heads',species:'bovinos',table_id:'slaughter/category_age',entity_type:'total',geography:'Argentina',category:'Total general',age_class:'',currency:'NOT_APPLICABLE',unit:'heads',weight_basis:'NOT_APPLICABLE',methodology:'published_all_classifications_total',frequency:'monthly',market:'',entity_id:'',entity_name:'',entity_activity:'',observation_date:`${year}-${String(month).padStart(2,'0')}-01`,period_end:`${year}-${String(month).padStart(2,'0')}-${new Date(Date.UTC(year,month,0)).getUTCDate()}`,value:String(value),value_status:'observed',...change});
 const months=(year,value,change={})=>Array.from({length:12},(_,i)=>row(year,i+1,typeof value==='function'?value(i):value,change));
 const state={family:'slaughter',group:'detail',frequency:'monthly',province:'Argentina',category:'TOTAL',method:'resolution_32_2018_dentition'};
+test('multi-year chart breaks on missing months and changes in statistical series',()=>{
+ const jan=row(2025,1,10),feb=row(2025,2,11),apr=row(2025,4,12),may=row(2025,5,13,{methodology:'another classification'});
+ const plotted=C.monthlyChartRows([jan,feb,apr,may]);
+ assert.deepEqual(plotted.map(r=>r.value),['10','11','','12','','13']);
+ assert.deepEqual([jan,feb,apr,may].map(r=>r.value),['10','11','12','13']);
+});
+test('range totals require complete compatible months and compare the same prior interval',()=>{
+ const prior=[row(2024,11,10),row(2024,12,10),row(2025,1,10)],current=[row(2025,11,20),row(2025,12,20),row(2026,1,20)];
+ assert.deepEqual(C.rangeTotal(current,'2025-11','2026-01',[...prior,...current]),{value:60,base:30,variation:100});
+ assert.equal(C.rangeTotal([current[0],current[2]],'2025-11','2026-01'),null);
+ assert.equal(C.rangeTotal(current.map(r=>({...r,family:'carcass_weight'})),'2025-11','2026-01'),null);
+ assert.equal(C.rangeTotal([current[0],{...current[1],methodology:'changed'},current[2]],'2025-11','2026-01'),null);
+ assert.equal(C.rangeTotal(current,'2025-11','2026-01',current).variation,null);
+});
+test('weight defaults to the source with the latest observed month rather than an empty newer file',async()=>{
+ const observed=(year,month,group)=>row(year,month,200,{source_id:group, family:'carcass_weight',metric:'mean_carcass_weight',table_id:'carcass_weight/category_age',category:'Novillito',entity_type:'category'});
+ const data={production:[observed(2025,12,'magyp_production_current'),{...observed(2026,9,'magyp_production_current'),value:'',value_status:'missing'}],archive:[observed(2019,8,'magyp_indicators_archive')]};
+ const loader={descriptors:(group)=>[...new Set(data[group].map(r=>r.observation_date.slice(0,4)))].map(year=>({file:{year},entry:{source_lifecycle:group==='archive'?'HISTORICAL_ENDED':'CURRENT_PUBLICATION'}})),load:async(group,family,frequency,year)=>data[group].filter(r=>r.observation_date.startsWith(year))};
+ const view=new C.View(null,loader);view.state.family='carcass_weight';assert.equal((await view.latestGroup('carcass_weight')).latest,'2025-12-01');
+ data.production=[{...observed(2026,9,'magyp_production_current'),value:'',value_status:'missing'}];assert.equal((await view.latestGroup('carcass_weight')).group,'archive');
+});
 test('YTD compares equal Jan–closure spans, and never published YTD or category weights',()=>{
  const data=[...months(2025,10),...months(2026,20).slice(0,9)],anchor=data.at(-1),r=A.derivedYTD(data,anchor);
  assert.equal(r.value,180);assert.equal(r.base,90);assert.equal(r.variation,100);assert.equal(r.count,9);

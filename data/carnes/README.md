@@ -8,12 +8,15 @@
 - [Catálogo de descargas verificadas](catalog/sources.json)
 - [Candidatos no integrados](catalog/candidates.json)
 - [Catálogo de precios MAG, endpoints y unidad atribuida](catalog/mag_prices.json)
+- [Referencia diaria BCRA A3500](dashboard/bcra_a3500.json) y [estado de actualización](reports/BCRA_A3500_STATUS.json)
+- [Fuentes, conversión y revisión de exportaciones](../../docs/CARNES_REVISION_FUENTES_2026-11-13.md)
 - [Índice de datos preparados](dashboard/index.json)
 
 RAW, NORMALIZED y ANALYTICAL permanecen fuera de Git. DASHBOARD contiene fragmentos
 comprimidos y trazables, sin establecimientos/usuarios. No sumar tablas redundantes
 ni familias/unidades diferentes. El workflow `update-carnes-mag.yml` actualiza sólo
-las fuentes MAG de este módulo; Caa Guazú, MCBA y Commodities mantienen sus flujos.
+las fuentes MAG y `update-carnes-bcra.yml` la referencia cambiaria de este módulo;
+Caa Guazú, MCBA y Commodities mantienen sus flujos.
 
 Los precios corrientes provienen del Mercado Agroganadero de Cañuelas desde el
 17/05/2022. Los promedios diarios de seis categorías y el detalle más reciente de

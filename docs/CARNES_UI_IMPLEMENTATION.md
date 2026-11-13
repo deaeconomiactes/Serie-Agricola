@@ -4,7 +4,9 @@ Para las métricas y comparaciones añadidas en el piloto posterior, consultar
 [Carnes: tercera iteración analítica](CARNES_ANALYTICS_PILOT.md). Esta guía
 describe la primera implementación productiva.
 
-Interfaz implementada el 22/10/2026 y ampliada el 11/11/2026 para precios MAG.
+Interfaz implementada el 22/10/2026 y ampliada para precios MAG y exploración
+multianual. La revisión de fuentes y conversión BCRA está en
+[CARNES_REVISION_FUENTES_2026-11-13.md](CARNES_REVISION_FUENTES_2026-11-13.md).
 Los módulos existentes conservan sus controles y lógica; sus KPIs globales de
 Cantidades se ocultan únicamente mientras Carnes está activo, para no atribuirlos
 a las nuevas familias.
@@ -43,8 +45,12 @@ categorías antiguas de peso/sexo con categorías nuevas por dentición.
 | Producción | Toneladas publicadas e interanual compatible | Evolución; sin mapa o distribución provincial inventada |
 | Peso | Media publicada por categoría e interanual compatible | Evolución y comparación de categorías |
 
-El mes determina KPIs/desgloses; la evolución y tabla muestran la serie del año
-seleccionado, con ese alcance indicado en el gráfico y título de tabla.
+El mes determina los indicadores de nivel y desgloses. La exploración mensual
+personalizada carga los años de la fuente elegida, ofrece sólo meses observados y
+actualiza el gráfico principal, tabla y descarga al rango elegido. Su acumulado
+calculado se muestra sólo para faena o producción con meses completos y la misma
+serie; su comparación exige el mismo rango completo del año anterior. No se suma
+el peso medio. Las opciones anuales y los acumulados publicados siguen separados.
 Las tablas conservan unidades, condición provisoria, fuente, captura, localizador,
 hash RAW y flags; se puede descargar la selección completa aunque la tabla pagine.
 Las URLs completas permanecen en los enlaces, no en los tooltips.
@@ -88,7 +94,9 @@ Las URLs completas permanecen en los enlaces, no en los tooltips.
 para Liniers 1998–2019 y exportaciones 1998–2019. No modifica la familia principal.
 Precios ARS y USD tienen selectores de magnitud separados; las exportaciones
 distinguen volumen RCH, valor en miles USD y valor unitario USD/t RCH.
-No hay empalme con Cañuelas, conversión de moneda ni de kg producto a RCH.
+No hay empalme de Liniers con Cañuelas ni conversión de kg producto a RCH. La
+vista corriente de MAG ofrece una conversión explícita a USD con BCRA A3500; no
+altera los datos originales ni convierte I.N.M.A.G.
 
 La vista de precios corrientes usa seis categorías del gráfico diario oficial MAG:
 Novillos, Novillitos, Vaquillonas, Terneros, Vacas y Toros. El servicio también
@@ -125,9 +133,10 @@ métrica tenga valores en todos sus años: los faltantes permanecen explícitos.
 
 ## Carga y performance
 
-El frontend sólo solicita el índice, metadata de estado y fragmentos DASHBOARD
-por familia/frecuencia/año. El año anterior se solicita únicamente para la
-comparación interanual dentro de la misma publicación y si el índice lo contiene.
+El frontend solicita el índice, metadata y fragmentos DASHBOARD necesarios para
+la selección. Al explorar un rango mensual carga los años disponibles de la fuente;
+al entrar en una familia revisa la última observación válida de fuentes candidatas.
+La serie BCRA se carga sólo cuando se selecciona USD.
 No solicita RAW/NORMALIZED/ANALYTICAL ni detalle de establecimientos/usuarios.
 
 Cada fragmento se valida por SHA-256, tamaño, schema, conteo, origen y grano.

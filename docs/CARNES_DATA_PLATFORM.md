@@ -210,7 +210,9 @@ mediante `HISTORICAL_ENDED`, no se clasifican como fallidas por su antigüedad.
 Mantener familias, especies, fuentes y frecuencias separadas; no crear un KPI
 global. Mostrar fuente, cobertura, último dato, captura, moneda/unidad y estado.
 No empalmar archivos SSPM/MAGyP o histórico/corriente sin validación de solapamiento
-y metodología. No convertir kg producto a RCH, monedas ni escalas por inferencia.
+y metodología. No convertir kg producto a RCH ni escalas por inferencia. La
+conversión opcional de precios MAG a USD usa la referencia diaria BCRA A3500 y
+su regla explícita, documentada en [la revisión de fuentes](CARNES_REVISION_FUENTES_2026-11-13.md).
 La vista muestra el último dato y el estado de actualización, selección de seis
 categorías, evolución diaria, tabla descargable de las clasificaciones detalladas e
 I.N.M.A.G. por separado. Los promedios del gráfico y los estadísticos del detalle

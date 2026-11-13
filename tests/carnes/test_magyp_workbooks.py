@@ -66,6 +66,14 @@ def production(year=2026):
 
 
 class MagypWorkbookTests(unittest.TestCase):
+    def test_fractional_province_cell_is_not_rounded_or_recomputed(self):
+        book=slaughter()
+        book['POR PROVINCIA']['B3']=9114.5
+        rows=parse_workbook(encoded(book),'slaughter_detail',ASOF,2026)
+        row=next(r for r in rows if r['entity_type']=='province' and r['frequency']=='monthly' and r['observation_date']=='2026-01-01')
+        self.assertEqual((row['value'],row['value_raw'],row['source_locator']),('9114.5','9114.5','POR PROVINCIA!B3'))
+        self.assertIn('fractional_published_value',row['quality_flags'])
+
     def test_fractional_heads_entity_ids_activity_and_source_cells_are_preserved(self):
         rows=parse_workbook(encoded(slaughter()),'slaughter_detail',ASOF,2026)
         establishment=next(r for r in rows if r['entity_type']=='establishment' and r['observation_date']=='2026-01-01')
