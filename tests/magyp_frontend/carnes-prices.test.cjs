@@ -2,6 +2,16 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const C=require('../../carnes.js');
 
+test('A3500 conversion uses the dated prior quote, never extrapolates or bridges long gaps',()=>{
+ const fx={schema_version:'bcra-a3500-v1',source:'https://www.bcra.gob.ar/tipo-cambio-referencia-comunicacion-a-3500-tcnpm/',raw_sha256:'a'.repeat(64),capture_date:'2026-11-13T12:20:03Z',rates:[['2026-11-06',1500],['2026-11-10',1510],['2026-11-12',1544.432]]};
+ C.validateRates(fx);assert.deepEqual(C.rateForDate(fx.rates,'2026-11-09'),['2026-11-06',1500]);assert.equal(C.rateForDate(fx.rates,'2026-11-13'),null);assert.equal(C.rateForDate(fx.rates,'2026-11-05'),null);
+ const row={observation_date:'2026-11-09',value:'4500',value_status:'observed',currency:'ARS',unit:'ARS/kg vivo'};const converted=C.convertPrice(row,fx);
+ assert.equal(converted.value,'3');assert.equal(converted.fx_date,'2026-11-06');assert.equal(converted.original_ars_kg,'4500');assert.equal(row.currency,'ARS');
+ assert.equal(C.convertPrice({...row,observation_date:'2026-11-13'},fx).value,'');
+ assert.throws(()=>C.validateRates({...fx,rates:[...fx.rates,fx.rates[0]]}));
+ assert.equal(C.rateForDate([['2026-01-01',1],['2026-02-01',2]],'2026-01-20'),null);
+});
+
 test('daily MAG prices are discoverable separately from INMAG and finished Liniers history',()=>{
     const sources={
         mag_prices_history_novillos:{source_id:'mag_prices_history_novillos',files:[{family:'livestock_price',frequency:'daily',year:'2026',path:'novillos.csv.gz'}]},

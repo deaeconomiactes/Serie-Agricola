@@ -4,6 +4,11 @@
     const BASE = 'data/carnes/dashboard/';
     const VERSION = 'carnes-v1';
     const FAMILIES = {slaughter:'Faena bovina', production:'Producción bovina', carcass_weight:'Peso medio'};
+    const DESCRIPTIONS = {
+        slaughter:'Indica cuántos animales bovinos fueron faenados en establecimientos registrados. La provincia de faena no necesariamente coincide con la provincia donde se criaron los animales.',
+        production:'Mide el volumen de carne obtenido a partir de la faena. Permite analizar la oferta física y su evolución, diferenciándola de la cantidad de animales procesados.',
+        carcass_weight:'Indica el peso promedio de las reses obtenidas por animal faenado. No equivale al peso vivo del animal ni mide por sí solo la productividad de una explotación ganadera.'
+    };
     const STATUS_LABELS={UPDATED:'Actualizado',HISTORICAL_ENDED:'Serie histórica finalizada',SOURCE_UNAVAILABLE:'Último dato válido · fuente no disponible',NO_PUBLICATION:'Sin nueva publicación',PIPELINE_ERROR:'Error de actualización',NOT_REPORTED:'Estado no informado'};
     const FREQUENCIES = {monthly:'Mensual', annual:'Anual', year_to_date:'Acumulado publicado'};
     const UNITS = {heads:'cabezas', Cabezas:'cabezas', Toneladas:'toneladas (base de peso no identificada)',
@@ -19,6 +24,20 @@
     const unit = row => UNITS[row?.unit] || row?.unit || '';
     const date = value => /^\d{4}-\d{2}-\d{2}$/.test(value || '') ? value.split('-').reverse().join('/') : 'No informada';
     const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value || '') && Number.isFinite(Date.parse(value+'T00:00:00Z')) && new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value;
+    const BCRA_SOURCE='https://www.bcra.gob.ar/tipo-cambio-referencia-comunicacion-a-3500-tcnpm/';
+    function validateRates(data) {
+        if(data?.schema_version!=='bcra-a3500-v1' || data.source!==BCRA_SOURCE || !/^[a-f0-9]{64}$/.test(data.raw_sha256 || '') || !Array.isArray(data.rates) || !data.rates.length)throw new Error('Serie BCRA inválida');
+        let previous='';for(const row of data.rates){if(!Array.isArray(row) || row.length!==2 || !validDate(row[0]) || row[0]<=previous || typeof row[1]!=='number' || !Number.isFinite(row[1]) || row[1]<=0)throw new Error('Cotización BCRA inválida');previous=row[0];}return data;
+    }
+    function rateForDate(rates,day) {
+        if(!validDate(day) || !rates.length || day<rates[0][0] || day>rates.at(-1)[0])return null;
+        let lo=0,hi=rates.length-1;while(lo<hi){const mid=Math.ceil((lo+hi)/2);if(rates[mid][0]<=day)lo=mid;else hi=mid-1;}
+        const match=rates[lo],age=(Date.parse(day+'T00:00:00Z')-Date.parse(match[0]+'T00:00:00Z'))/86400000;return age>=0 && age<=7?match:null;
+    }
+    function convertPrice(row,fx) {
+        const match=rateForDate(fx.rates,row.observation_date),original=number(row.value);
+        return {...row,value:match && original!==null?String(original/match[1]):'',value_status:match && original!==null?'observed':'missing',currency:'USD',unit:'USD/kg vivo',original_ars_kg:row.value,fx_date:match?.[0] || '',fx_ars_per_usd:match?.[1] ?? '',fx_source:fx.source,fx_capture_date:fx.capture_date,fx_raw_sha256:fx.raw_sha256};
+    }
     const caption = row => row.frequency === 'daily' ? date(row.observation_date) : row.frequency === 'year_to_date' ? `Acumulado enero–${MONTHS[Number(row.period_end.slice(5,7))-1]} ${row.period_end.slice(0,4)}` :
         row.frequency === 'annual' ? `Año completo ${row.observation_date.slice(0,4)}` : `${MONTHS[Number(row.observation_date.slice(5,7))-1]} ${row.observation_date.slice(0,4)}`;
     const isTotal = row => row.entity_type === 'total' || row.entity_type === 'national_total' || ['Total general','TOTAL'].includes(row.category);
@@ -189,6 +208,23 @@
     const monthIndex=row=>Number(row.observation_date.slice(0,4))*12+Number(row.observation_date.slice(5,7))-1;
     const usable=row=>row?.frequency==='monthly' && row.value_status==='observed' && number(row.value)!==null && Number.isFinite(number(row.value)) && number(row.value)>=0 &&
         validDate(row.observation_date) && validDate(row.period_end) && row.observation_date.endsWith('-01') && row.period_end===new Date(Date.UTC(Number(row.observation_date.slice(0,4)),Number(row.observation_date.slice(5,7)),0)).toISOString().slice(0,10);
+    function monthlyChartRows(rows) {
+        const result=[];
+        for(const row of rows) {
+            const prior=result.at(-1);
+            if(prior && (monthIndex(row)!==monthIndex(prior)+1 || !sameSeries(prior,row)))
+                result.push({...row,observation_date:row.observation_date,value:'',value_status:'missing'});
+            result.push(row);
+        }
+        return result;
+    }
+    function rangeTotal(rows,start,end,universe=rows) {
+        if(!rows.length || !['slaughter','production'].includes(rows[0].family) || rows.some(r=>!usable(r) || !sameSeries(r,rows[0])))return null;
+        const first=monthIndex(rows[0]),last=monthIndex(rows.at(-1));
+        if(rows[0].observation_date.slice(0,7)!==start || rows.at(-1).observation_date.slice(0,7)!==end || rows.length!==last-first+1 || rows.some((r,i)=>monthIndex(r)!==first+i))return null;
+        const prior=rows.map(r=>{const wanted=monthIndex(r)-12;const matches=universe.filter(p=>sameSeries(p,r) && usable(p) && monthIndex(p)===wanted);return matches.length===1?matches[0]:null;});
+        const value=sum(rows),base=prior.every(Boolean)?sum(prior):null;return {value,base,variation:base>0?(value/base-1)*100:null};
+    }
     const sum=rows=>rows.reduce((total,row)=>total+number(row.value),0);
     function monthlyWindow(rows,anchor,count,offset=0) {
         if(!usable(anchor))return null;
@@ -287,6 +323,7 @@
             const glyph=name=>{const node=element('span','carnes-glyph');node.setAttribute('aria-hidden','true');node.style.maskImage=`url(assets/carnes/icons/${name}.svg)`;node.style.webkitMaskImage=node.style.maskImage;return node;};
             rail.append(element('p','carnes-rail-label','Carnes'));
             const overview=element('header','carnes-overview');c.append(overview);const heading=element('div','carnes-heading');const moduleTitle=c.closest('.prices-section').querySelector('#carnesTitle');this.familyTitle=element('h2','carnes-family-title');this.badge=element('span','source-update-status__badge');heading.append(moduleTitle,element('span','carnes-heading-divider','/'),this.familyTitle,this.badge);overview.append(heading);heading.prepend(glyph('cow'));
+            this.description=element('p','chart-desc carnes-section-description');overview.append(this.description);
             this.metadata=element('div','carnes-metadata');this.metaText=element('div','carnes-meta-items');this.sourceLink=element('a','','Ver fuente institucional');this.sourceLink.target='_blank';this.sourceLink.rel='noopener noreferrer';this.metadata.append(this.metaText);overview.append(this.metadata);
             const context=element('div','carnes-context');c.append(context);const nav=element('nav','carnes-family-nav');nav.setAttribute('aria-label','Secciones de Carnes');this.familyButtons=new Map();
             const priceButton=element('button','','Precios ganaderos');priceButton.type='button';priceButton.onclick=()=>this.showPrices();nav.append(priceButton);this.familyButtons.set('prices',priceButton);
@@ -306,9 +343,14 @@
             this.highlights=element('section','carnes-highlights');this.highlights.append(element('h3','chart-title','Cambios destacados'));this.highlightList=element('ul');this.highlights.append(this.highlightList);this.analyticNote=element('p','chart-desc carnes-analytic-note');c.append(this.analyticNote);
             const analysis=element('div','carnes-analysis');c.append(analysis);this.timeline=chartCard(analysis,'Evolución temporal');const breakdown=element('div','carnes-breakdown');analysis.append(breakdown);this.ranking=chartCard(breakdown,'Ranking provincial');this.composition=chartCard(analysis,'Composición nacional por categoría / dentición');analysis.append(this.highlights);
             this.timeline.node.classList.add('carnes-timeline');this.breakdown=breakdown;this.ranking.node.classList.add('carnes-ranking');this.composition.node.classList.add('carnes-composition');
+            this.rangeSection=element('details','carnes-range');this.rangeSection.append(element('summary','','Explorar un período personalizado'));
+            const rangeControls=element('div','filters-grid');this.rangeStart=select(rangeControls,'carnes-range-start','Desde',[]);this.rangeEnd=select(rangeControls,'carnes-range-end','Hasta',[]);this.rangeSection.append(rangeControls);
+            const presets=element('div','filters-grid');for(const [label,months] of [['Últimos 12 meses',12],['Últimos 3 años',36],['Últimos 5 años',60],['Todo el histórico',0]]){const button=element('button','carnes-detail-button',label);button.type='button';button.onclick=()=>this.rangePreset(months);presets.append(button);}this.rangeSection.append(presets);
+            this.rangeStatus=element('p','chart-desc','');this.rangeStatus.setAttribute('role','status');this.rangeSection.append(this.rangeStatus);this.rangeChart=chartCard(this.rangeSection,'Evolución del período');this.rangeTable=this.makeTable(this.rangeSection,'Observaciones del período');
+            this.rangeStart.onchange=()=>this.renderRange('start');this.rangeEnd.onchange=()=>this.renderRange('end');this.rangeSection.addEventListener('toggle',()=>{if(this.rangeSection.open)this.loadRange();else if(this.mode==='legacy' && this.rows)this.render();});
             this.referenceSection=element('details','carnes-references');this.referenceSection.append(element('summary','','Estacionalidad y rango histórico · misma serie'));this.referenceStatus=element('p','chart-desc');this.referenceSection.append(this.referenceStatus);this.seasonality=chartCard(this.referenceSection,'Estacionalidad mensual');this.heatmap=element('div','carnes-heatmap');this.referenceSection.append(this.heatmap);c.append(this.referenceSection);
             this.referenceSection.addEventListener('toggle',()=>{if(this.referenceSection.open)this.loadReferences();});
-            c.append(methodology);this.observations=element('details','carnes-observations');this.observations.append(element('summary','','Ver detalle de observaciones'));c.append(this.observations);this.table=this.makeTable(this.observations,'Detalle de observaciones');this.buildDetail(c);const recordsAction=element('button','carnes-rail-action','Observaciones');recordsAction.type='button';recordsAction.prepend(glyph('list-bullets'));recordsAction.onclick=openObservations;rail.append(recordsAction);
+            c.append(methodology);this.observations=element('details','carnes-observations');this.observations.append(element('summary','','Ver detalle de observaciones'));c.append(this.observations);this.table=this.makeTable(this.observations,'Detalle de observaciones');c.append(this.rangeSection);this.buildDetail(c);const recordsAction=element('button','carnes-rail-action','Observaciones');recordsAction.type='button';recordsAction.prepend(glyph('list-bullets'));recordsAction.onclick=openObservations;rail.append(recordsAction);
             const details=element('details','chart-card carnes-history');const summary=element('summary','','Series históricas finalizadas');details.append(summary);
             const history=element('div','carnes-history-content');details.append(history);c.append(details);
             history.append(element('p','chart-desc','Liniers 1998–2019 y exportaciones 1998–2019 · Series históricas finalizadas. No representan indicadores corrientes.'));
@@ -321,13 +363,18 @@
             this.pricePanel.append(element('h3','chart-title','Precios ganaderos'));
             this.pricePanel.append(element('p','chart-desc','Precios diarios publicados por el Mercado Agroganadero de Cañuelas. La serie comienza el 17/05/2022, fecha de operación en Cañuelas. Liniers 1998–2019 permanece como histórico independiente.'));
             const controls=element('div','filters-grid carnes-price-controls');this.priceCategory=select(controls,'carnes-price-category','Categoría',['Novillos','Novillitos','Vaquillonas','Terneros','Vacas','Toros','M.E.J.'].map(v=>[v,v]));this.priceCategory.addEventListener('change',()=>this.loadPrices(this.priceCategory.value));this.pricePanel.append(controls);
+            this.priceStart=select(controls,'carnes-price-start','Desde',[]);this.priceEnd=select(controls,'carnes-price-end','Hasta',[]);this.priceStart.onchange=()=>this.renderPriceRange('start');this.priceEnd.onchange=()=>this.renderPriceRange('end');
+            this.priceCurrency=select(controls,'carnes-price-currency','Moneda',[['ARS','ARS/kg vivo'],['USD','USD/kg vivo']]);this.priceCurrency.onchange=()=>this.changeCurrency();
+            const pricePresets=element('div','filters-grid');for(const [label,months] of [['Últimos 12 meses',12],['Últimos 3 años',36],['Últimos 5 años',60],['Todo el histórico',0]]){const button=element('button','carnes-detail-button',label);button.type='button';button.onclick=()=>this.pricePreset(months);pricePresets.append(button);}this.pricePanel.append(pricePresets);
             this.priceMeta=element('p','chart-desc carnes-price-meta','Cargando precios oficiales…');this.pricePanel.append(this.priceMeta);
+            this.fxNote=element('p','chart-desc');this.fxNote.hidden=true;this.pricePanel.append(this.fxNote);
             this.priceChart=chartCard(this.pricePanel,'Precio promedio diario');this.priceChart.node.classList.add('carnes-price-chart');
-            const detail=element('section','chart-card carnes-price-detail');detail.append(element('h3','chart-title','Precios por clasificación · última publicación disponible'));
+            const priceObservations=element('details','carnes-observations');priceObservations.append(element('summary','','Ver y descargar precios del período'));this.priceTable=this.makeTable(priceObservations,'Precios diarios del período');this.pricePanel.append(priceObservations);
+            const detail=element('section','chart-card carnes-price-detail');this.priceDetailSection=detail;detail.append(element('h3','chart-title','Precios por clasificación · última publicación disponible'));
             this.detailMeta=element('p','chart-desc','');detail.append(this.detailMeta);
             this.detailDownload=element('button','carnes-export','Descargar tabla CSV');this.detailDownload.type='button';detail.append(this.detailDownload);
             const wrap=element('div','carnes-table-wrap'),table=element('table','carnes-table');table.append(element('caption','carnes-table-caption','Incluye las métricas publicadas por categoría y clasificación; el original del mercado conserva sus valores literales.'));
-            const head=element('thead'),tr=element('tr');for(const title of ['Clasificación publicada','Mínimo ARS/kg vivo','Máximo ARS/kg vivo','Promedio ARS/kg vivo','Mediana ARS/kg vivo','Cabezas','Importe ARS','Kilos','Kilos/cabeza']){const th=element('th','',title);th.scope='col';tr.append(th);}head.append(tr);this.detailBody=element('tbody');table.append(head,this.detailBody);wrap.append(table);wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Precios diarios por clasificación');detail.append(wrap);this.pricePanel.append(detail);
+            const head=element('thead'),tr=element('tr');this.detailHead=tr;for(const title of ['Clasificación publicada','Mínimo ARS/kg vivo','Máximo ARS/kg vivo','Promedio ARS/kg vivo','Mediana ARS/kg vivo','Cabezas','Importe ARS','Kilos','Kilos/cabeza']){const th=element('th','',title);th.scope='col';tr.append(th);}head.append(tr);this.detailBody=element('tbody');table.append(head,this.detailBody);wrap.append(table);wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Precios diarios por clasificación');detail.append(wrap);this.pricePanel.append(detail);
             const indexBlock=element('section','carnes-inmag');indexBlock.append(element('h3','chart-title','I.N.M.A.G. · índice oficial independiente'));
             this.inmagMeta=element('p','chart-desc','');this.inmagSourceLink=element('a','carnes-inmag-source','Consultar totales diarios e I.N.M.A.G.');this.inmagSourceLink.href='https://mercadoagroganadero.com.ar/dll/hacienda2.dll/haciinfo000011';this.inmagSourceLink.target='_blank';this.inmagSourceLink.rel='noopener noreferrer';indexBlock.append(this.inmagMeta,this.inmagSourceLink);this.inmagChart=chartCard(indexBlock,'Evolución del I.N.M.A.G. · puntos de índice');this.pricePanel.append(indexBlock);
             this.pricePanel.append(element('p','method-note carnes-price-method','El gráfico diario usa el promedio publicado por categoría y la tabla conserva mínimo, máximo, promedio, mediana, cabezas, importe, kilos y kilos por cabeza del informe detallado. El I.N.M.A.G. es un índice distinto; no se interpreta como promedio de precios por categoría. La unidad ARS/kg vivo se atribuye según el tablero oficial SAGyP para los precios MAG y se mantiene señalada en la ficha de fuente. SAGyP mensual se conserva como referencia separada por sus conceptos compuestos y formato PDF.'));
@@ -335,11 +382,11 @@
         }
         async showPrices() {
             this.mode='prices';this.notice.textContent='';this.legacyNodes?.forEach(node=>node.hidden=true);this.pricePanel.hidden=false;this.priceCategory.parentElement.hidden=false;
-            this.familyTitle.textContent='Precios ganaderos';this.setActiveSection('prices');
+            this.familyTitle.textContent='Precios ganaderos';this.description.textContent='Muestra la evolución de los precios de hacienda en pie publicados por el Mercado Agroganadero de Cañuelas. No representan precios de carnicería ni cotizaciones específicas de Corrientes.';this.setActiveSection('prices');
             await this.loadPrices(this.priceCategory.value || 'Novillos');
         }
         async showLegacy(family) {
-            this.mode='legacy';this.pricePanel.hidden=true;this.legacyNodes?.forEach(node=>node.hidden=false);this.state.family=family;reconcile(this.state,'family');this.setActiveSection(family);await this.update('family');
+            this.mode='legacy';this.pricePanel.hidden=true;this.legacyNodes?.forEach(node=>node.hidden=false);this.state.family=family;this.description.textContent=DESCRIPTIONS[family];reconcile(this.state,'family');this.setActiveSection(family);await this.update('family');
         }
         setActiveSection(active) {for(const [key,button] of this.familyButtons)button.setAttribute('aria-pressed',String(key===active));}
         async loadPrices(category) {
@@ -351,6 +398,8 @@
                 const detailDescriptors=this.loader.descriptors('prices','livestock_price','daily').filter(x=>x.entry.source_id==='mag_prices_detail');
                 const detailParts=await Promise.all(detailDescriptors.map(x=>this.loader.shard(x.entry,x.file)));if(revision!==this.priceRevision)return;
                 this.priceHistory=history;this.priceDetails=detailParts.flat();
+                const priceDates=[...new Set(history.filter(r=>number(r.value)!==null).map(r=>r.observation_date))];const options=priceDates.map(d=>[d,date(d)]);
+                setOptions(this.priceStart,options,priceDates[0]);setOptions(this.priceEnd,options,priceDates.at(-1));this.priceStart.disabled=!priceDates.length;this.priceEnd.disabled=!priceDates.length;
                 const indexDescriptors=this.loader.descriptors('inmag','livestock_index','daily');
                 const indexParts=await Promise.all(indexDescriptors.map(x=>this.loader.shard(x.entry,x.file)));if(revision!==this.priceRevision)return;
                 this.inmagRows=indexParts.flat().filter(r=>r.metric==='inmag_index').sort((a,b)=>a.observation_date.localeCompare(b.observation_date));
@@ -361,13 +410,13 @@
             finally {if(revision===this.priceRevision){this.pricePanel.setAttribute('aria-busy','false');this.container.setAttribute('aria-busy','false');}}
         }
         renderPrices(category,entry) {
-            const series=this.priceHistory || [],last=[...series].reverse().find(r=>number(r.value)!==null),status=sourceState(entry,this.loader.states);
+            this.priceEntry=entry;const series=this.priceHistory || [],last=[...series].reverse().find(r=>number(r.value)!==null),status=sourceState(entry,this.loader.states);
             this.badge.textContent=STATUS_LABELS[status.status] || 'Estado no informado';this.badge.dataset.status=status.status;this.badge.className='source-update-status__badge carnes-state carnes-state--'+(status.status==='PIPELINE_ERROR'?'error':status.status==='UPDATED'?'success':['SOURCE_UNAVAILABLE','NO_PUBLICATION'].includes(status.status)?'warning':'neutral');
             this.familyTitle.textContent='Precios ganaderos';this.metaText.replaceChildren();
             for(const [title,value] of [['Fuente',entry.source],['Última fecha con precio',last?date(last.observation_date):'Sin dato publicado'],['Unidad','ARS/kg vivo'],['Cobertura',`${date(entry.first_observation)}–${date(entry.last_observation)}`]]){const item=element('span');item.append(element('span','carnes-meta-label',title),element('strong','',value));this.metaText.append(item);}
             this.sourceLink.href='https://mercadoagroganadero.com.ar/dll/hacienda1.dll/haciinfo000502';this.sourceLink.title='Fecha de captura: '+entry.last_successful_capture;
             this.priceMeta.textContent=`${category} · ${last?`último promedio publicado ${format(number(last.value))} ARS/kg vivo el ${date(last.observation_date)}`:category==='M.E.J.'?'el informe detallado publica clasificaciones sin una serie gráfica diaria equivalente':'sin promedio publicado en la serie gráfica'} · estado de actualización: ${STATUS_LABELS[status.status] || status.status}. La serie de precios por categoría empieza en Cañuelas el 17/05/2022.`;
-            this.draw(this.priceChart,'line',series.map(caption),series,`${category} · promedio diario publicado por MAG`,'ARS/kg vivo');
+            this.renderPriceRange();
             this.renderPriceTable(category);
             const indexEntry=this.loader.entries('inmag').find(e=>e.source_id==='mag_inmag'),indexStatus=indexEntry?sourceState(indexEntry,this.loader.states):{status:'NOT_REPORTED'};
             const indexLast=[...(this.inmagRows || [])].reverse().find(r=>number(r.value)!==null),latestIndexDay=this.inmagRows?.at(-1);
@@ -376,19 +425,49 @@
             this.inmagMeta.textContent=`${indexLast?`Último valor cerrado: ${format(number(indexLast.value))} puntos el ${date(indexLast.observation_date)}.`:'Sin valor cerrado publicado.'} ${indexNote} Estado de actualización: ${STATUS_LABELS[indexStatus.status] || indexStatus.status}. Es un índice oficial independiente de los promedios por categoría.`;
             this.draw(this.inmagChart,'line',(this.inmagRows || []).map(caption),this.inmagRows || [],'I.N.M.A.G. · serie oficial','puntos de índice');
         }
+        pricePreset(months) {
+            const dates=[...new Set((this.priceHistory || []).filter(r=>number(r.value)!==null).map(r=>r.observation_date))];if(!dates.length)return;
+            const end=dates.at(-1),cutoff=new Date(end+'T00:00:00Z');cutoff.setUTCMonth(cutoff.getUTCMonth()-months);
+            const threshold=cutoff.toISOString().slice(0,10);this.priceEnd.value=end;this.priceStart.value=months?dates.find(d=>d>threshold) || end:dates[0];this.renderPriceRange();
+        }
+        async changeCurrency() {
+            if(this.priceCurrency.value==='USD' && !this.fxData){
+                try{this.priceCurrency.disabled=true;const response=await this.loader.response(BASE+'bcra_a3500.json');this.fxData=validateRates(JSON.parse(new TextDecoder().decode(response)));try{const state=await this.loader.response('data/carnes/reports/BCRA_A3500_STATUS.json');this.fxStatus=JSON.parse(new TextDecoder().decode(state));}catch(_){this.fxStatus=null;}}
+                catch(error){this.priceCurrency.value='ARS';this.priceMeta.textContent='Tipo de cambio BCRA no disponible: '+error.message+'. Se conservan los precios originales en pesos.';return;}
+                finally{this.priceCurrency.disabled=false;}
+            }
+            this.fxNote.hidden=this.priceCurrency.value!=='USD';this.fxNote.replaceChildren();if(!this.fxNote.hidden){const link=element('a','','BCRA · Comunicación A3500');link.href=BCRA_SOURCE;link.target='_blank';link.rel='noopener noreferrer';this.fxNote.append(link,document.createTextNode(` · última referencia ${date(this.fxData.rates.at(-1)[0])} · captura ${this.fxData.capture_date} · estado ${STATUS_LABELS[this.fxStatus?.status] || 'no informado'}.`));}
+            this.renderPriceRange();this.renderPriceTable(this.priceCategory.value);
+        }
+        renderPriceRange(changed) {
+            const series=this.priceHistory || [];if(!series.length){this.priceDetailSection.hidden=false;this.draw(this.priceChart,'line',[],[],'Precio promedio diario','ARS/kg vivo');this.fillTable(this.priceTable,[]);return;}
+            if(this.priceStart.value>this.priceEnd.value){if(changed==='start')this.priceEnd.value=this.priceStart.value;else this.priceStart.value=this.priceEnd.value;}
+            const originals=series.filter(r=>r.observation_date>=this.priceStart.value && r.observation_date<=this.priceEnd.value),usd=this.priceCurrency.value==='USD' && this.fxData;
+            const selected=usd?originals.map(r=>convertPrice(r,this.fxData)):originals;
+            const last=[...selected].reverse().find(r=>number(r.value)!==null),status=sourceState(this.priceEntry,this.loader.states);
+            this.priceMeta.textContent=`${this.priceCategory.value} · ${last?`último promedio del período ${format(number(last.value))} ${usd?'USD':'ARS'}/kg vivo el ${date(last.observation_date)}`:'sin precio disponible para este período'} · estado de actualización: ${STATUS_LABELS[status.status] || status.status}. La serie comienza en Cañuelas el 17/05/2022.`;
+            const unitItem=[...this.metaText.children].find(item=>item.querySelector('.carnes-meta-label')?.textContent==='Unidad');if(unitItem)unitItem.querySelector('strong').textContent=usd?'USD/kg vivo':'ARS/kg vivo';
+            this.draw(this.priceChart,'line',selected.map(caption),selected,`${this.priceCategory.value} · promedio diario ${usd?'convertido':'publicado por MAG'}`,usd?'USD/kg vivo':'ARS/kg vivo',false,{tooltip:r=>usd?[`Original: ${format(number(r.original_ars_kg))} ARS/kg vivo`,`BCRA A3500: ${r.fx_date?format(number(r.fx_ars_per_usd))+' ARS/USD · '+date(r.fx_date):'sin referencia válida'}`]:[]});this.fillTable(this.priceTable,selected);
+            const latestDetail=(this.priceDetails || []).filter(r=>r.category===this.priceCategory.value).reduce((a,r)=>r.observation_date>a?r.observation_date:a,'');
+            this.priceDetailSection.hidden=!!latestDetail && (latestDetail<this.priceStart.value || latestDetail>this.priceEnd.value);
+            this.priceChart.desc.textContent=selected.length?`${selected.length} observaciones del período seleccionado · ${usd?'USD/kg = ARS/kg ÷ A3500 (ARS/USD). Se usa la última referencia anterior hasta 7 días, dentro de la cobertura BCRA; sin referencia, el valor queda vacío.':'precios originales ARS/kg vivo.'}`:'Sin observaciones para el período seleccionado.';
+            if(this.inmagRows){const index=this.inmagRows.filter(r=>r.observation_date>=this.priceStart.value && r.observation_date<=this.priceEnd.value);this.draw(this.inmagChart,'line',index.map(caption),index,'I.N.M.A.G. · serie oficial','puntos de índice');}
+        }
         renderPriceTable(category) {
             const rows=(this.priceDetails || []).filter(r=>r.category===category && ['category','category_rollup'].includes(r.entity_type));
             const latest=rows.reduce((value,row)=>row.observation_date>value?row.observation_date:value,'');
             const selected=rows.filter(r=>r.observation_date===latest);const metricNames=['price_min','price_max','price_average','price_median','heads','amount_ARS','kilos','average_kilos'];
+            const usd=this.priceCurrency.value==='USD' && this.fxData,exchange=usd?rateForDate(this.fxData.rates,latest):null;
+            for(const [i,name] of ['Mínimo','Máximo','Promedio','Mediana'].entries())this.detailHead.children[i+1].textContent=`${name} ${usd?'USD':'ARS'}/kg vivo`;
             const groups=new Map();for(const row of selected){const key=row.entity_type+'|'+row.age_class;const group=groups.get(key) || {categoryRaw:row.category_raw,ageClass:row.age_class,entityType:row.entity_type,rows:{},flags:row.flags};group.rows[row.metric]=row;groups.set(key,group);}
             const provisional=selected.some(r=>r.flags?.includes('provisional_source_statement'));
-            this.detailMeta.textContent=latest?`Fecha de observación: ${date(latest)} · ${provisional?'Precios provisorios':'Precios definitivos'} según encabezado de MAG · captura ${selected[0]?.capture_date || 'no informada'}.`:'No hay una tabla detallada publicada para esta categoría.';
+            this.detailMeta.textContent=latest?`Fecha de observación: ${date(latest)} · ${provisional?'Precios provisorios':'Precios definitivos'} según encabezado de MAG · captura ${selected[0]?.capture_date || 'no informada'}.${usd?exchange?` Conversión con BCRA A3500 ${format(exchange[1])} ARS/USD del ${date(exchange[0])}; importe permanece en ARS.`:' Sin cotización BCRA válida para convertir los precios.':''}`:'No hay una tabla detallada publicada para esta categoría.';
             this.detailBody.replaceChildren();for(const group of groups.values()){
                 const tr=element('tr');tr.append(element('td','',group.ageClass || group.categoryRaw));
-                for(const metric of metricNames){const row=group.rows[metric];const value=row?.value_status==='observed'?format(number(row.value)):row?.value_raw || 'Sin dato publicado';tr.append(element('td','',value));}this.detailBody.append(tr);
+                for(const metric of metricNames){const row=group.rows[metric];const amount=usd && metric.startsWith('price_')?row && exchange && number(row.value)!==null?number(row.value)/exchange[1]:null:number(row?.value);const value=amount!==null?format(amount):row?.value_status==='missing'?row.value_raw || 'Sin dato publicado':'Sin dato publicado';tr.append(element('td','',value));}this.detailBody.append(tr);
             }
             if(!groups.size){const tr=element('tr'),td=element('td','','Sin detalle publicado para esta categoría.');td.colSpan=9;tr.append(td);this.detailBody.append(tr);}
-            this.detailDownload.onclick=()=>{const columns=['fecha_observacion','categoria','clasificacion_publicada',...metricNames,'unidades_originales_json','unidades_normalizadas_json','quality_flags_json','condicion','fuente','url_fuente','fecha_captura','capture_id','raw_sha256'];const csv=[columns.join(','),...Array.from(groups.values(),group=>{const first=group.rows.price_average || group.rows.price_min || Object.values(group.rows)[0];const values=[latest,category,group.categoryRaw,...metricNames.map(metric=>group.rows[metric]?.value_raw ?? ''),JSON.stringify(Object.fromEntries(metricNames.map(metric=>[metric,group.rows[metric]?.unit_raw ?? '']))),JSON.stringify(Object.fromEntries(metricNames.map(metric=>[metric,group.rows[metric]?.unit ?? '']))),JSON.stringify([...new Set(Object.values(group.rows).flatMap(row=>row.flags || []))]),provisional?'PROVISORIO':'DEFINITIVO',first?.source,first?.source_url,first?.capture_date,first?.capture_id,first?.raw_sha256];return values.map(v=>'"'+String(v ?? '').replaceAll('"','""')+'"').join(',');})].join('\n');const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));const a=element('a');a.href=url;a.download=`mag-${category.toLowerCase()}-${latest || 'sin-fecha'}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+            this.detailDownload.onclick=()=>{const columns=['fecha_observacion','categoria','clasificacion_publicada',...metricNames,...(usd?['precio_min_ars','precio_max_ars','precio_promedio_ars','precio_mediana_ars','bcra_fecha','bcra_ars_por_usd','bcra_fuente','bcra_captura','bcra_sha256']:[]),'unidades_originales_json','unidades_normalizadas_json','quality_flags_json','condicion','fuente','url_fuente','fecha_captura','capture_id','raw_sha256'];const csv=[columns.join(','),...Array.from(groups.values(),group=>{const first=group.rows.price_average || group.rows.price_min || Object.values(group.rows)[0];const values=[latest,category,group.categoryRaw,...metricNames.map(metric=>{const row=group.rows[metric];return usd && metric.startsWith('price_')?exchange && number(row?.value)!==null?number(row.value)/exchange[1]:'':row?.value_raw ?? '';}),...(usd?[...metricNames.slice(0,4).map(metric=>group.rows[metric]?.value_raw ?? ''),exchange?.[0] || '',exchange?.[1] ?? '',this.fxData.source,this.fxData.capture_date,this.fxData.raw_sha256]:[]),JSON.stringify(Object.fromEntries(metricNames.map(metric=>[metric,group.rows[metric]?.unit_raw ?? '']))),JSON.stringify(Object.fromEntries(metricNames.map(metric=>[metric,usd && metric.startsWith('price_')?'USD/kg vivo':group.rows[metric]?.unit ?? '']))),JSON.stringify([...new Set(Object.values(group.rows).flatMap(row=>row.flags || []))]),provisional?'PROVISORIO':'DEFINITIVO',first?.source,first?.source_url,first?.capture_date,first?.capture_id,first?.raw_sha256];return values.map(v=>'"'+String(v ?? '').replaceAll('"','""')+'"').join(',');})].join('\n');const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));const a=element('a');a.href=url;a.download=`mag-${category.toLowerCase()}-${latest || 'sin-fecha'}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
         }
         groups() {return this.state.family==='slaughter' ? [['detail','MAGyP / DNCCA · detalle publicado'],['sspm','SAGyP / SSPM · nacional']] :
             this.state.family==='production' ? [['production','MAGyP / DNCCA · producción'],['sspm','SAGyP / SSPM · nacional']] :
@@ -396,9 +475,10 @@
         async update(changed) {
             const revision=++this.revision;this.container.setAttribute('aria-busy','true');this.notice.textContent='Cargando selección…';
             try {
-                if(changed==='family') {this.state.group=this.groups()[0][0];this.state.category='TOTAL';this.state.age='';this.state.province='Argentina';}
+                if(changed==='family') {const groups=this.groups();const scored=groups.map(([id],index)=>{const descriptors=this.loader.descriptors(id,this.state.family);const latest=descriptors.map(d=>d.file.year).sort().at(-1) || '';const active=descriptors.some(d=>d.entry.source_lifecycle!=='HISTORICAL_ENDED');return {id,index,latest,active};});scored.sort((a,b)=>b.latest.localeCompare(a.latest) || Number(b.active)-Number(a.active) || a.index-b.index);this.state.group=scored[0].id;this.state.category='TOTAL';this.state.age='';this.state.province='Argentina';}
                 if(changed==='group'){this.state.category='TOTAL';this.state.age='';this.state.province='Argentina';}
-                setOptions(this.controls.family,Object.entries(FAMILIES),this.state.family);setOptions(this.controls.group,this.groups(),this.state.group);
+                const sourceOptions=this.groups().map(([id,name])=>{const files=this.loader.descriptors(id,this.state.family);const years=files.map(({file})=>file.year).sort();return [id,years.length?`${name} · ${years[0]}–${years.at(-1)}`:name];});
+                setOptions(this.controls.family,Object.entries(FAMILIES),this.state.family);setOptions(this.controls.group,sourceOptions,this.state.group);
                 const available=this.loader.descriptors(this.state.group,this.state.family);
                 const frequencies=Object.keys(FREQUENCIES).filter(f=>available.some(x=>x.file.frequency===f));
                 if(!frequencies.includes(this.state.frequency))this.state.frequency=frequencies[0];
@@ -432,11 +512,16 @@
             const names=[...new Set(categories.filter(r=>r.methodology===s.method).map(r=>r.category))].sort();
             if(s.category!=='TOTAL' && !names.includes(s.category))s.category='TOTAL';
             // The source has no cached national mean: start with an explicitly selected published category.
-            if(changed==='family' && s.family==='carcass_weight' && s.group==='production')s.category=names.includes('Novillito')?'Novillito':names[0] || 'TOTAL';
+            if(['family','group'].includes(changed) && s.family==='carcass_weight' && s.group==='production')s.category=names.includes('Novillito')?'Novillito':names[0] || 'TOTAL';
             setOptions(c.category,[['TOTAL','Total publicado'],...names.map(n=>[n,n])],s.category);c.category.parentElement.hidden=!names.length;c.category.disabled=s.province!=='Argentina';
             const ages=[...new Set(categories.filter(r=>r.methodology===s.method && r.category===s.category).map(r=>r.age_class))].filter(Boolean).sort();
             if(!ages.includes(s.age))s.age=ages.find(a=>dentition(a)===dentition(s.age)) || ages[0] || '';
             setOptions(c.age,ages.map(a=>[a,a]),s.age);c.age.parentElement.hidden=!ages.length;c.age.disabled=s.province!=='Argentina';
+            if(s.frequency==='monthly'){
+                const observedMonths=[...new Set(selectedSeries(this.rows,s).filter(usable).map(r=>r.observation_date.slice(5,7)))].sort();
+                if(!observedMonths.includes(s.month))s.month=observedMonths.at(-1) || '';
+                setOptions(c.month,observedMonths.map(m=>[m,MONTHS[Number(m)-1]]),s.month);
+            }
             const species=[...new Set(this.rows.map(r=>r.species))];setOptions(c.species,species.map(v=>[v,v==='bovinos_y_bubalinos'?'Bovinos y bubalinos (no separables)':'Bovinos']));
             c.method.disabled=s.province!=='Argentina';
             for(const key of ['category','age','method'])if(c[key].disabled)c[key].parentElement.hidden=true;
@@ -453,14 +538,15 @@
             const missingMean=s.family==='carcass_weight' && s.category==='TOTAL' && series.every(r=>number(r.value)===null);
             this.methodNote.textContent=[dimension,provisional?'Dato provisorio':'Observaciones publicadas',
                 s.group==='sspm' && s.family==='production'?'Base de peso no identificada: no se atribuye RCH.':'',
+                series.some(r=>r.unit==='heads' && r.flags?.includes('fractional_published_value'))?'La fuente contiene valores fraccionarios de cabezas; se conservan sin redondear y su causa no está confirmada.':'',
                 s.province!=='Argentina'?'Categoría/dentición no aplican a la tabla provincial.':'',
                 s.year==='2019'?'Clasificaciones de 2019 separadas; sin empalme.':'',
                 series.some(r=>r.species==='bovinos_y_bubalinos')?'Bovinos y bubalinos publicados conjuntamente; no separables.':'',
                 missingMean?'Media total sin resultado publicado/cacheado; seleccioná una categoría.':'',
                 s.frequency==='year_to_date'?(anchor?.period_end.slice(5,7)!=='12'?'Acumulado parcial publicado; no es un año completo.':'Acumulado publicado enero–diciembre; frecuencia diferenciada del anual.'):''].filter(Boolean).join(' · ');
-            this.selectionNote.textContent=[dimension,provisional?'Dato provisorio':'Observaciones publicadas',missingMean?'Media total sin resultado publicado: seleccioná una categoría.':'',series.some(r=>r.species==='bovinos_y_bubalinos')?'Bovinos y bubalinos no separables':'',s.group==='sspm' && s.family==='production'?'Base de peso no identificada':'',s.frequency==='year_to_date' && (anchor || series[0])?caption(anchor || series[0]):''].filter(Boolean).join(' · ');
+            this.selectionNote.textContent=[dimension,provisional?'Dato provisorio':'Observaciones publicadas',missingMean?'Media total sin resultado publicado: seleccioná una categoría.':'',series.some(r=>r.unit==='heads' && r.flags?.includes('fractional_published_value'))?'La fuente publica cabezas fraccionarias; causa no confirmada':'',series.some(r=>r.species==='bovinos_y_bubalinos')?'Bovinos y bubalinos no separables':'',s.group==='sspm' && s.family==='production'?'Base de peso no identificada':'',s.frequency==='year_to_date' && (anchor || series[0])?caption(anchor || series[0]):''].filter(Boolean).join(' · ');
             this.kpis[0].heading.textContent=s.family==='slaughter'?'Cabezas publicadas':s.family==='production'?'Toneladas publicadas':'Peso medio publicado';
-            this.kpis[0].value.textContent=anchor?format(number(anchor.value)):'Seleccioná una serie';this.kpis[0].note.textContent=anchor?`${caption(anchor)} · ${unit(anchor)}`:'';
+            this.kpis[0].value.textContent=anchor?format(number(anchor.value)):missingMean?'Sin dato publicado':'Sin observaciones';this.kpis[0].note.textContent=anchor?`${caption(anchor)} · ${unit(anchor)}`:'';
             const variation=yearAgo(anchor,this.previous);this.kpis[1].value.textContent=variation===null?'Sin base comparable':format(variation)+' %';this.kpis[1].note.textContent='Mismo período, unidad y metodología';
             const pool=[...series,...selectedSeries(this.previous,s)];const ytd=derivedYTD(pool,anchor),rolling=rollingReference(pool,anchor),territory=territorialDistribution(this.rows,anchor);
             const currentComposition=compositionDistribution(this.rows,s,anchor),previousAnchor=point(selectedSeries(this.previous,s),s);
@@ -475,7 +561,7 @@
             const chosenProvince=territory?.items.find(i=>i.row.geography===s.province),chosenCategory=currentComposition?.items.find(i=>sameSeries(i.row,anchor));
             const concentration=s.province!=='Argentina'?chosenProvince?.share:s.category!=='TOTAL'?chosenCategory?.share:territory?.top3;
             this.kpis[3].node.hidden=concentration===null || concentration===undefined;this.kpis[3].heading.textContent=s.province!=='Argentina'?'Participación provincial':s.category!=='TOTAL'?'Participación de la categoría':'Concentración · Top 3 provincias';
-            this.kpis[3].value.textContent=format(concentration)+' %';this.kpis[3].note.textContent=s.province!=='Argentina'?s.province:s.category!=='TOTAL'?label(anchor):territory?.items.slice(0,3).map(i=>i.row.geography).join(' · ') || '';
+            this.kpis[3].value.textContent=format(concentration)+' %';this.kpis[3].note.textContent=s.province!=='Argentina'?`${s.province}${chosenProvince?' · puesto '+chosenProvince.rank+' de '+territory.items.length:''} · provincia de faena`:s.category!=='TOTAL'?label(anchor):territory?.items.slice(0,3).map(i=>i.row.geography).join(' · ') || '';
             const moving=series.map(r=>rollingReference(pool,r)?.mean ?? null);const overlays=moving.some(v=>v!==null)?[{label:'Media móvil 12 meses',data:moving,borderColor:'#b7c1ce',backgroundColor:'transparent',borderDash:[6,4],pointRadius:0,spanGaps:false}]:[];
             this.draw(this.timeline,'line',series.map(r=>caption(r)),series,`Evolución · ${dimension}`,unit(anchor || series[0]),false,{datasets:overlays});
             this.timeline.desc.textContent='Año seleccionado · el mes determina los KPIs y desgloses. Sin interpolar faltantes.';
@@ -505,7 +591,40 @@
             if(this.referenceSection.open)this.loadReferences();
             this.syncSecondary();
             this.fillTable(this.table,series);
+            this.rangeSection.hidden=s.frequency!=='monthly';if(!this.rangeSection.hidden && this.rangeSection.open)this.loadRange();
             for(const [key,button] of this.familyButtons)button.setAttribute('aria-pressed',String(key===s.family));
+        }
+        async loadRange() {
+            const request=this.rangeRevision=(this.rangeRevision || 0)+1,revision=this.revision,s={...this.state};
+            this.rangeStatus.textContent='Cargando períodos disponibles de la fuente y selección…';
+            try {
+                const years=[...new Set(this.loader.descriptors(s.group,s.family,'monthly').map(d=>d.file.year))].sort();
+                const batches=await Promise.all(years.map(y=>this.loader.load(s.group,s.family,'monthly',y)));
+                if(request!==this.rangeRevision || revision!==this.revision || !this.rangeSection.open)return;
+                this.rangeRows=selectedSeries(batches.flat(),s).filter(usable).sort((a,b)=>a.observation_date.localeCompare(b.observation_date));
+                const dates=[...new Set(this.rangeRows.map(r=>r.observation_date.slice(0,7)))];
+                if(!dates.length){this.rangeStatus.textContent='No hay valores publicados para esta fuente y selección.';this.fillTable(this.rangeTable,[]);this.draw(this.rangeChart,'line',[],[],'Evolución del período','');return;}
+                const options=dates.map(v=>[v,`${MONTHS[Number(v.slice(5))-1]} ${v.slice(0,4)}`]);
+                const oldStart=this.rangeStart.value,oldEnd=this.rangeEnd.value;setOptions(this.rangeStart,options,dates.includes(oldStart)?oldStart:dates[Math.max(0,dates.length-12)]);setOptions(this.rangeEnd,options,dates.includes(oldEnd)?oldEnd:dates.at(-1));
+                this.renderRange();
+            }catch(error){if(request===this.rangeRevision)this.rangeStatus.textContent='No se pudo cargar el período: '+error.message+'.';}
+        }
+        rangePreset(months) {
+            const dates=[...new Set((this.rangeRows || []).map(r=>r.observation_date.slice(0,7)))];if(!dates.length)return;
+            const end=dates.at(-1),endIndex=Number(end.slice(0,4))*12+Number(end.slice(5))-1;
+            this.rangeEnd.value=end;this.rangeStart.value=months?dates.find(d=>Number(d.slice(0,4))*12+Number(d.slice(5))-1>=endIndex-months+1) || end:dates[0];this.renderRange('end');
+        }
+        renderRange(changed) {
+            if(!this.rangeRows?.length)return;
+            if(this.rangeStart.value>this.rangeEnd.value){if(changed==='start')this.rangeEnd.value=this.rangeStart.value;else this.rangeStart.value=this.rangeEnd.value;}
+            const selected=this.rangeRows.filter(r=>r.observation_date.slice(0,7)>=this.rangeStart.value && r.observation_date.slice(0,7)<=this.rangeEnd.value);
+            const chart=monthlyChartRows(selected);this.draw(this.rangeChart,'line',chart.map(caption),chart,'Evolución del período seleccionado',unit(selected[0]));this.fillTable(this.rangeTable,selected);
+            const total=rangeTotal(selected,this.rangeStart.value,this.rangeEnd.value,this.rangeRows);
+            if(total){this.kpis[2].node.hidden=false;this.kpis[2].heading.textContent='Acumulado calculado del rango';this.kpis[2].value.textContent=format(total.value);this.kpis[2].note.textContent=`${unit(selected[0])} · ${total.variation===null?'Sin base interanual completa':format(total.variation)+' % frente al mismo rango del año anterior'}`;}
+            else{this.kpis[2].node.hidden=true;}
+            this.draw(this.timeline,'line',chart.map(caption),chart,`Evolución · período seleccionado`,unit(selected[0]));this.timeline.desc.textContent='Período seleccionado · cortes ante datos faltantes o cambios de serie.';this.fillTable(this.table,selected);
+            this.rangeStatus.textContent=`${selected.length} observaciones publicadas · Los cortes señalan meses ausentes o cambios de metodología. Los indicadores de nivel e interanual corresponden al mes indicado en los filtros. ${total?'El acumulado del rango es calculado por el dashboard.':'No se calcula acumulado para pesos, meses faltantes o series no comparables.'}`;
+            if(changed && selected.length){const end=selected.at(-1).observation_date;if(this.state.year!==end.slice(0,4) || this.state.month!==end.slice(5,7)){this.state.year=end.slice(0,4);this.state.month=end.slice(5,7);this.update('range-anchor');}}
         }
         syncSecondary() {
             this.breakdown.hidden=this.ranking.node.hidden;
@@ -516,7 +635,9 @@
             const items=distribution?.items || [...provinces].filter(r=>number(r.value)!==null).sort((a,b)=>number(b.value)-number(a.value)).map((row,i)=>({row,rank:i+1,share:null}));
             this.ranking.heading.textContent='Ranking provincial · '+caption(anchor);this.ranking.desc.textContent=`${this.rankExpanded?items.length:Math.min(6,items.length)} de ${items.length} provincias · cabezas${distribution?' y participación sobre total nacional publicado':' · sin participación comparable'}`;
             const list=element('div','carnes-ranked-bars');list.setAttribute('role','list');
-            for(const item of items.slice(0,this.rankExpanded?items.length:6)){
+            const visible=items.slice(0,this.rankExpanded?items.length:6),selected=items.find(item=>item.row.geography===this.state.province);
+            if(selected && !visible.includes(selected))visible.push(selected);
+            for(const item of visible){
                 const node=element('div','carnes-ranked-item');node.setAttribute('role','listitem');const button=element('button','carnes-rank-detail');button.type='button';button.onclick=()=>this.openDetail(item.row);
                 button.append(element('span','',`${item.rank}. ${item.row.geography}`),element('span','',`${format(number(item.row.value))}${item.share===null?'':' · '+format(item.share)+' %'}`));
                 const track=element('div','carnes-rank-track');const bar=element('div');bar.style.width=(number(items[0]?.row.value)>0?number(item.row.value)/number(items[0].row.value)*100:0)+'%';track.append(bar);node.append(button,track);list.append(node);
@@ -583,7 +704,7 @@
                 options:{responsive:true,maintainAspectRatio:false,indexAxis:horizontal?'y':'x',animation:false,plugins:{legend:{display:!!extra.datasets?.length,labels:{color:'#b7c1ce',boxWidth:18}},datalabels:{display:false},tooltip:{backgroundColor:'#101a27',titleColor:'#eef3f7',bodyColor:'#eef3f7',padding:12,callbacks:{label:context=>{
                     const r=rows[context.dataIndex];if(context.datasetIndex>0){const original=context.dataset._observations?.[context.dataIndex];return [`${context.dataset.label}: ${format(number(context.raw))} ${unitLabel}`,...(original?[caption(original),'Fuente: '+original.source]:[])];}
                     return [...(extra.values?[`${format(extra.values[context.dataIndex])} ${unitLabel}`]:[]),`${format(number(r.value))} ${unit(r)}`,caption(r),`Fuente: ${r.source}`,r.category==='Total general'?'Total publicado':label(r),...(extra.tooltip?.(r,context.dataIndex) || [])];}}}},
-                    scales:{x:{title:{display:true,text:unitLabel,color:'#b2c0cd'},ticks:{color:'#b2c0cd',maxRotation:0,...(!horizontal?{autoSkip:false,callback:value=>tickIndexes.has(Number(value))?labels[Number(value)]:''}:{maxTicksLimit:6})},grid:{display:false},beginAtZero:horizontal},y:{ticks:{color:'#b2c0cd',autoSkip:false},grid:{color:'#2e435855'},beginAtZero:type==='bar'}}}});
+                    scales:{x:{title:{display:true,text:horizontal?unitLabel:type==='line'?'Fecha':'Categoría',color:'#b2c0cd'},ticks:{color:'#b2c0cd',maxRotation:0,...(!horizontal?{autoSkip:false,callback:value=>tickIndexes.has(Number(value))?labels[Number(value)]:''}:{maxTicksLimit:6})},grid:{display:false},beginAtZero:horizontal},y:{title:{display:!horizontal,text:unitLabel,color:'#b2c0cd'},ticks:{color:'#b2c0cd',autoSkip:false},grid:{color:'#2e435855'},beginAtZero:type==='bar'}}}});
             this.charts.set(card.canvas,chart);
         }
         makeTable(parent,title) {
@@ -609,7 +730,7 @@
             if(!found.length){const tr=element('tr');const cell=element('td','','Sin observaciones para la búsqueda');cell.colSpan=6;tr.append(cell);table.body.append(tr);}
             table.count.textContent=`${found.length?table.page*10+1:0}–${Math.min(found.length,(table.page+1)*10)} de ${found.length} resultados · ${rows.length} observaciones en la selección. La descarga incluye toda la selección.`;
             table.more.disabled=(table.page+1)*10>=found.length;table.back.disabled=table.page===0;table.more.onclick=()=>{table.page++;this.fillTable(table,rows);};table.back.onclick=()=>{table.page--;this.fillTable(table,rows);};
-            table.exportButton.onclick=()=>{const esc=v=>'"'+String(v ?? '').replaceAll('"','""')+'"';const csv=[FIELDS.join(','),...rows.map(r=>FIELDS.map(k=>esc(r[k])).join(','))].join('\n');const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));const a=element('a');a.href=url;a.download='carnes-seleccion.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+            table.exportButton.onclick=()=>{const fields=rows.some(r=>Object.hasOwn(r,'original_ars_kg'))?[...FIELDS,'original_ars_kg','fx_date','fx_ars_per_usd','fx_source','fx_capture_date','fx_raw_sha256']:FIELDS;const esc=v=>'"'+String(v ?? '').replaceAll('"','""')+'"';const csv=[fields.join(','),...rows.map(r=>fields.map(k=>esc(r[k])).join(','))].join('\n');const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));const a=element('a');a.href=url;a.download='carnes-seleccion.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
         }
         buildDetail(parent) {
             this.detail=element('dialog','carnes-detail');this.detail.setAttribute('aria-labelledby','carnes-detail-title');
@@ -646,7 +767,7 @@
             family.onchange=()=>update('family');year.onchange=()=>update('year');metric.onchange=()=>update('metric');update('family');
         }
     }
-    const api={Loader,View,Analytics,parseCSV,validateRows,canonical,selectedSeries,reconcile,yearAgo,point,sourceState,classificationRows,provincialShare,caption,number,FIELDS,
+    const api={Loader,View,Analytics,parseCSV,validateRows,canonical,selectedSeries,reconcile,yearAgo,point,sourceState,classificationRows,provincialShare,monthlyChartRows,rangeTotal,validateRates,rateForDate,convertPrice,caption,number,FIELDS,
         mount(container){if(!container._carnesView){container._carnesView=new View(container);return container._carnesView.mount();}return Promise.resolve();}};
     if(typeof module!=='undefined' && module.exports)module.exports=api;else root.Carnes=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

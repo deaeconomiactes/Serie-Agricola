@@ -1,0 +1,54 @@
+name: Actualizar tipo de cambio BCRA para Carnes
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 22 * * 1-5'
+  push:
+    branches: [codex/mejoras-integrales-carnes]
+    paths: ['scripts/carnes/bcra_rates.py', '.github/workflows/update-carnes-bcra.yml']
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: serie-agricola-data-writer
+  queue: max
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar dependencias fijadas
+        run: python -m pip install -r scripts/carnes/requirements.txt
+      - name: Comprobar transformaciones BCRA
+        run: python -m unittest tests.carnes.test_bcra_rates -v
+      - name: Capturar y validar BCRA
+        id: capture
+        run: python -m scripts.carnes.bcra_rates --allow-web
+      - name: Preservar evidencia original
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: carnes-bcra-raw-${{ github.run_id }}
+          path: data/carnes/raw/bcra_a3500/
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Publicar únicamente salidas BCRA
+        if: github.ref == 'refs/heads/main' && steps.capture.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add data/carnes/dashboard/bcra_a3500.json data/carnes/reports/BCRA_A3500_STATUS.json
+          git diff --cached --check
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore: actualizar tipo de cambio BCRA para Carnes'
+          git push origin HEAD:main
+          gh workflow run deploy.yml --ref main
+        env:
+          GH_TOKEN: ${{ github.token }}

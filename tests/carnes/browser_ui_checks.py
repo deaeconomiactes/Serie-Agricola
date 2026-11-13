@@ -37,11 +37,18 @@ def run(url, channel, output):
         ready()
         assert page.get_by_role('button',name='Precios ganaderos',exact=True).get_attribute('aria-pressed')=='true'
         assert page.locator('.carnes-prices-panel').is_visible()
-        assert page.locator('.carnes-prices-panel .carnes-price-meta').inner_text().startswith('Novillos · último promedio publicado')
+        assert page.locator('.carnes-prices-panel .carnes-price-meta').inner_text().startswith('Novillos · último promedio del período')
         detail_condition=page.locator('.carnes-price-detail .chart-desc').inner_text().lower()
         assert 'precios provisorios' in detail_condition or 'precios definitivos' in detail_condition
         inmag_status=page.locator('.carnes-inmag > .chart-desc').inner_text().lower()
-        assert 'no calculó el índice' in inmag_status or 'pendiente de cierre' in inmag_status
+        index_state=page.evaluate("""() => {const rows=document.getElementById('carnesRoot')._carnesView.inmagRows;
+            const latest=rows.at(-1), closed=[...rows].reverse().find(r=>r.value!=='');
+            return {flags:latest?.flags || [], date:closed?.observation_date || null};} """)
+        assert 'índice oficial independiente' in inmag_status
+        if index_state['date']:
+            assert '/'.join(reversed(index_state['date'].split('-'))) in inmag_status
+        if 'index_not_closed' in index_state['flags']: assert 'pendiente de cierre' in inmag_status
+        if 'index_not_calculated' in index_state['flags']: assert 'no calculó el índice' in inmag_status
         assert page.locator('.carnes-inmag-source').get_attribute('href')=='https://mercadoagroganadero.com.ar/dll/hacienda2.dll/haciinfo000011'
         assert page.locator('.carnes-price-chart canvas').evaluate('(canvas)=>!!Chart.getChart(canvas)')
         assert page.locator('.carnes-inmag canvas').evaluate('(canvas)=>!!Chart.getChart(canvas)')
@@ -54,15 +61,25 @@ def run(url, channel, output):
         original_units=json.loads(price_rows[0]['unidades_originales_json'])
         normalized_units=json.loads(price_rows[0]['unidades_normalizadas_json'])
         assert original_units['price_average']=='' and normalized_units['price_average']=='ARS/kg vivo'
+        page.locator('#carnes-price-currency').select_option('USD')
+        page.locator('.carnes-prices-panel .carnes-price-meta').get_by_text('USD/kg vivo').wait_for()
+        assert 'BCRA' in page.locator('.carnes-prices-panel .carnes-price-detail .chart-desc').inner_text()
+        page.locator('.carnes-prices-panel .carnes-observations > summary').click()
+        with page.expect_download() as converted_download:
+            page.locator('.carnes-prices-panel .carnes-records .carnes-export').click()
+        converted=list(csv.DictReader(io.StringIO(Path(converted_download.value.path()).read_text(encoding='utf-8-sig'))))
+        observed=next(row for row in converted if row['value'] and row['fx_ars_per_usd'])
+        assert observed['currency']=='USD' and observed['fx_date']<=observed['observation_date']
+        assert abs(float(observed['value'])-float(observed['original_ars_kg'])/float(observed['fx_ars_per_usd']))<1e-9
+        page.locator('#carnes-price-currency').select_option('ARS')
         page.locator('#carnes-price-category').select_option('Vacas');ready()
-        assert 'Vacas · último promedio publicado' in page.locator('.carnes-prices-panel .carnes-price-meta').inner_text()
+        assert 'Vacas · último promedio del período' in page.locator('.carnes-prices-panel .carnes-price-meta').inner_text()
         page.locator('#carnes-price-category').select_option('Terneros');ready()
-        assert '09/01/2026' in page.locator('.carnes-prices-panel .carnes-price-meta').inner_text(), 'Sparse official category history must show its real last date'
-        assert page.locator('#carnesView .carnes-state').inner_text()=='Sin nueva publicación'
-        assert 'No hay una tabla detallada' in page.locator('.carnes-price-detail .chart-desc').inner_text()
+        last_calf=page.evaluate("() => [...document.getElementById('carnesRoot')._carnesView.priceHistory].reverse().find(r=>r.value!=='')?.observation_date")
+        if last_calf: assert '/'.join(reversed(last_calf.split('-'))) in page.locator('.carnes-prices-panel .carnes-price-meta').inner_text()
         page.locator('#carnes-price-category').select_option('M.E.J.');ready()
         assert 'sin una serie gráfica diaria equivalente' in page.locator('.carnes-prices-panel .carnes-price-meta').inner_text()
-        assert '11/11/2026' in page.locator('.carnes-price-detail .chart-desc').inner_text()
+        assert 'Fecha de observación:' in page.locator('.carnes-price-detail .chart-desc').inner_text()
         page.locator('#carnes-price-category').select_option('Novillos');ready()
         page.screenshot(path=str(output/f'{channel}-prices.png'),full_page=True)
         page.get_by_role('button',name='Faena bovina',exact=True).click();ready()
@@ -79,10 +96,10 @@ def run(url, channel, output):
         assert not page.locator('.carnes-records').first.is_visible()
         page.locator('.carnes-rail').get_by_role('button',name='Observaciones',exact=True).click()
         assert page.locator('.carnes-records').first.is_visible()
-        assert page.locator('.carnes-observations > summary').evaluate('e=>e===document.activeElement')
+        assert page.locator('.carnes-main > .carnes-observations > summary').evaluate('e=>e===document.activeElement')
         page.keyboard.press('Enter')
         assert not page.locator('.carnes-records').first.is_visible()
-        page.locator('.carnes-observations > summary').click()
+        page.locator('.carnes-main > .carnes-observations > summary').click()
         page.keyboard.press('Enter')
         assert not page.locator('.carnes-records').first.is_visible(), 'Keyboard can close the table'
         page.keyboard.press('Enter')
@@ -93,7 +110,7 @@ def run(url, channel, output):
         page.keyboard.press('Escape')
         assert not page.get_by_role('dialog').is_visible()
         assert page.locator('.carnes-records .carnes-detail-button').first.evaluate('n=>n===document.activeElement')
-        page.locator('.carnes-observations > summary').click()
+        page.locator('.carnes-main > .carnes-observations > summary').click()
         assert not page.locator('.header-summary').is_visible(), 'Quantity KPIs must not appear as meat KPIs'
         page.locator('.carnes-context-filters > summary').click()
         page.locator('#carnes-category').focus()
@@ -143,8 +160,9 @@ def run(url, channel, output):
         assert 'no identificada' in page.locator('.carnes-selection-note').inner_text()
         change('family','slaughter');change('group','sspm');change('year','1980')
         assert not page.locator('#carnes-province').is_visible()
-        assert page.locator('#carnesView .carnes-records tbody tr').count()==10
-        page.locator('.carnes-observations > summary').click()
+        main_records=page.locator('.carnes-main > .carnes-observations .carnes-records')
+        assert main_records.locator('tbody tr').count()==10
+        page.locator('.carnes-main > .carnes-observations > summary').click()
         with page.expect_download() as download_info:
             page.get_by_role('button',name='Descargar selección CSV',exact=True).click()
         downloaded=list(csv.DictReader(io.StringIO(Path(download_info.value.path()).read_text(encoding='utf-8-sig'))))
@@ -152,12 +170,12 @@ def run(url, channel, output):
         expected=page.evaluate('''()=>{const v=document.getElementById('carnesRoot')._carnesView;return v.series.map(r=>Object.fromEntries(Carnes.FIELDS.map(k=>[k,r[k]])));}''')
         assert downloaded==expected, 'Export retains all original values, units and trace fields'
         page.get_by_role('button',name='Siguiente',exact=True).click()
-        assert page.locator('#carnesView .carnes-records tbody tr').count()==2
+        assert main_records.locator('tbody tr').count()==2
         page.get_by_role('button',name='Anterior',exact=True).click()
-        page.get_by_label('Buscar observaciones',exact=True).fill('enero')
-        assert page.locator('#carnesView .carnes-records tbody tr').count()==1
-        page.get_by_label('Buscar observaciones',exact=True).fill('')
-        assert page.locator('#carnesView .carnes-records tbody tr').count()==10
+        main_records.get_by_label('Buscar observaciones',exact=True).fill('enero')
+        assert main_records.locator('tbody tr').count()==1
+        main_records.get_by_label('Buscar observaciones',exact=True).fill('')
+        assert main_records.locator('tbody tr').count()==10
         change('frequency','annual')
         assert 'Año completo' in page.locator('#carnesView .kpi-unit').first.inner_text()
         change('group','detail');change('frequency','monthly');change('year','2026')
@@ -178,7 +196,7 @@ def run(url, channel, output):
         page.unroute(pattern);change('year','2026')
         page.locator('.carnes-history > summary').click()
         if page.locator('.carnes-context-filters').evaluate('n=>n.open'):page.locator('.carnes-context-filters > summary').click()
-        page.locator('.carnes-observations > summary').click()
+        page.locator('.carnes-main > .carnes-observations > summary').click()
         page.wait_for_function("document.querySelector('#carnes-history-year') && document.querySelector('.carnes-history-content tbody tr')")
         assert 'Serie histórica finalizada' in page.locator('.carnes-history-content .carnes-metadata').inner_text()
         page.locator('#carnes-history-metric').select_option('novillo_price_USD')

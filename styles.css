@@ -217,7 +217,7 @@ body:has(#carnesView.is-active) .module-tab.is-active::after { display:none; }
  #carnesView .carnes-rail { position:static;min-height:0;padding:12px 0 0;border:0; }
  #carnesView .carnes-rail > :not(.carnes-family-nav) { display:none; }
  #carnesView .carnes-rail > a { display:block; margin:6px 0 0; padding:2px 8px; }
- #carnesView .carnes-family-nav { display:flex;margin:0;gap:8px; }
+ #carnesView .carnes-family-nav { display:flex;flex-wrap:wrap;margin:0;gap:8px; }
  #carnesView .carnes-family-nav button { width:auto;font-size:11px;padding:8px; }
  #carnesView .carnes-main { padding-top:12px; }
  #carnesView .carnes-overview { padding:12px; }
