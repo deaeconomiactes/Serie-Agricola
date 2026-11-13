@@ -10,6 +10,7 @@
 - [Catálogo de precios MAG, endpoints y unidad atribuida](catalog/mag_prices.json)
 - [Referencia diaria BCRA A3500](dashboard/bcra_a3500.json) y [estado de actualización](reports/BCRA_A3500_STATUS.json)
 - [Fuentes, conversión y revisión de exportaciones](../../docs/CARNES_REVISION_FUENTES_2026-11-13.md)
+- [Exportaciones mensuales MAGyP: definiciones y actualización](../../docs/CARNES_EXPORTACIONES_MAGYP.md)
 - [Índice de datos preparados](dashboard/index.json)
 
 RAW, NORMALIZED y ANALYTICAL permanecen fuera de Git. DASHBOARD contiene fragmentos

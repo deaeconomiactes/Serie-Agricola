@@ -1,0 +1,53 @@
+name: Actualizar exportaciones bovinas MAGyP
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '35 22 5 * *'
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: serie-agricola-data-writer
+  queue: max
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r scripts/carnes/requirements.txt
+      - run: python -m unittest tests.carnes.test_exportaciones_magyp -v
+      - name: Capturar planilla oficial
+        id: capture
+        run: python -m scripts.carnes.exportaciones_magyp --allow-web
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.capture.outcome != 'skipped'
+        with:
+          name: carnes-exportaciones-evidence-${{ github.run_id }}
+          path: |
+            data/carnes/raw/exportaciones_magyp/
+            data/carnes/reports/EXPORTACIONES_MAGYP_STATUS.json
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Publicar salidas validadas
+        if: success() && github.ref == 'refs/heads/main' && steps.capture.outcome == 'success'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git add data/carnes/reports/EXPORTACIONES_MAGYP_STATUS.json
+          if [ "${{ steps.capture.outcome }}" = 'success' ]; then
+            git add data/carnes/dashboard/exportaciones_magyp.json
+          fi
+          git diff --cached --check
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore: actualizar exportaciones bovinas MAGyP'
+          git push origin HEAD:main
+          gh workflow run deploy.yml --ref main
