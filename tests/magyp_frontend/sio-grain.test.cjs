@@ -89,10 +89,10 @@ test('quoted SIO delivery ranges preserve line breaks, escaped quotes, semicolon
  assert.throws(()=>vm.runInContext('parseCommodityCSV(input)',ctx),/comillas sin cerrar/);
 });
 
-test('other MAGyP reference family rows, series and latest values match the pre-SIO implementation',()=>{
+test('MAGyP families visibles conservan sus filas, series y últimos valores tras el ajuste de arroz',()=>{
  const baseline=execFileSync('git',['show','abe1249:app.js'],{encoding:'utf8'});
  const before=context(baseline).ctx,after=context().ctx;
- for(const family of ['internal','board','fas','fob','futures']) {
+ for(const family of ['internal','board','fas','futures']) {
   for(const ctx of [before,after])ctx.input=fs.readFileSync(`data/magyp/dashboard/commodities/${family}.csv`,'utf8');
   const expression=`commoditySource='magyp_${family}';commodityData=parseReferenceCommodityBundle(input);commodityFrequency='mensual';JSON.stringify({rows:getCommodityFilteredRows(),latest:getCommodityLatestRows(),keys:commodityData.mensual.map(r=>commoditySeriesKey(r))})`;
   assert.equal(vm.runInContext(expression,after),vm.runInContext(expression,before),family);

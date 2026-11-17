@@ -2,6 +2,16 @@ import unittest,subprocess,os,shutil,tempfile,textwrap,sys,json
 from pathlib import Path
 from scripts.ci.workflow_status import requires_deploy
 class WorkflowStatusTests(unittest.TestCase):
+    def test_rice_update_workflow_queries_and_publishes_only_internal_prices(self):
+        root=Path(__file__).resolve().parents[2]
+        workflow=(root/'.github/workflows/update-magyp-rice-prices.yml').read_text(encoding='utf-8')
+        self.assertIn('rice_prices.py --allow-web --source internal --as-of',workflow)
+        publication=workflow.split('- name: Publicar CSV y estado en main',1)[1].split('- name: Desplegar estado',1)[0]
+        self.assertIn('rice_internal.csv.gz',publication)
+        self.assertIn('RICE_INTERNAL_REVISIONS.json',publication)
+        self.assertNotIn('rice_fob.csv.gz',publication)
+        self.assertIn('rice_fob.csv.gz',workflow.split('- name: Conservar evidencia RAW y salidas de la consulta',1)[1])
+
     def test_branch_guard_blocks_before_any_git_operation(self):
         bash=shutil.which('bash') or 'C:/Program Files/Git/bin/bash.exe'
         result=subprocess.run([bash,str(Path(__file__).resolve().parents[2]/'scripts/ci/push_data_main.sh')],env={**os.environ,'GITHUB_ACTIONS':'true','GITHUB_REF':'refs/heads/review'},capture_output=True,text=True)
@@ -30,6 +40,13 @@ class WorkflowStatusTests(unittest.TestCase):
         self.assertFalse(requires_deploy('data/magyp/reports/PRICE_FRESHNESS_STATUS.json',old,new))
     def test_source_state_transition_is_visible_without_new_csv(self):
         self.assertTrue(requires_deploy('data/magyp/reports/PRICE_FRESHNESS_STATUS.json',b'{"status":"UPDATED"}',b'{"status":"SOURCE_UNAVAILABLE"}'))
+    def test_rice_source_state_changes_deploy_but_new_capture_ids_do_not(self):
+        old={"schema_version":"magyp-rice-prices-status-v1","checked_at_utc":"old","sources":{"rice_internal":{"status":"NO_PUBLICATION","publication_status":"NO_PUBLICATION","last_observation_date":"2026-10-01","raw_evidence":[{"capture_id":"old"}]}}}
+        newer_capture={"schema_version":"magyp-rice-prices-status-v1","checked_at_utc":"new","sources":{"rice_internal":{"status":"NO_PUBLICATION","publication_status":"NO_PUBLICATION","last_observation_date":"2026-10-01","raw_evidence":[{"capture_id":"new"}]}}}
+        unavailable={"schema_version":"magyp-rice-prices-status-v1","sources":{"rice_internal":{"status":"SOURCE_UNAVAILABLE","publication_status":"NOT_CHECKED","last_observation_date":"2026-10-01"}}}
+        path='data/magyp/reports/RICE_PRICES_STATUS.json'
+        self.assertFalse(requires_deploy(path,json.dumps(old).encode(),json.dumps(newer_capture).encode()))
+        self.assertTrue(requires_deploy(path,json.dumps(old).encode(),json.dumps(unavailable).encode()))
     def test_observation_capture_and_csv_changes_deploy(self):
         for field in ['last_observation_date','last_successful_update']:
             self.assertTrue(requires_deploy('data/magyp/reports/PRICE_FRESHNESS_STATUS.json',('{"'+field+'":"old"}').encode(),('{"'+field+'":"new"}').encode()))

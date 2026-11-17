@@ -7,7 +7,7 @@
     const section = $('commoditiesSection');
     const families = [
         ['magyp_internal','Precio interno MAGyP'], ['magyp_board','Pizarra / Cámara'],
-        ['magyp_fas','FAS'], ['magyp_fob','FOB'], ['magyp_futures','Futuros externos'], ['sio','SIO Granos']
+        ['magyp_fas','FAS'], ['magyp_futures','Futuros externos'], ['sio','SIO Granos']
     ];
     const rail = document.createElement('details');
     rail.className = 'co-rail'; rail.open = true;
@@ -25,7 +25,7 @@
     const sourceDetails = document.createElement('details'); sourceDetails.id = 'commoditySources'; sourceDetails.className = 'co-disclosure';
     sourceDetails.innerHTML = '<summary>Fuentes, cobertura y actualización</summary><div class="co-source-content"></div>';
     const sourceContent = sourceDetails.lastElementChild;
-    ['commodityDataFreshness','commodityDataLastOperation','commodityDataOperationRange','commodityHistoryCoverage'].forEach(id => sourceContent.append($(id)));
+    ['commodityDataFreshness','commodityDataLastOperation','commodityDataOperationRange','commodityHistoryCoverage','commodityPublicationStatus'].forEach(id => sourceContent.append($(id)));
     heading.append($('commodityUpdateStatus'));
     heading.append($('commodityDataStatus'));
     const filters = main.querySelector('.commodity-filters');
@@ -35,9 +35,11 @@
     filters.append(more);
     const hint = $('commodityFilterCommodityHint'); filters.after(hint);
     const scope = $('commodityPriceScope'); hint.after(scope);
+    const dateFilters = $('commodityDateRangeFilters'); filters.after(dateFilters);
+    dateFilters.after(hint);
     const method = document.createElement('details'); method.id = 'commodityMethodology'; method.className = 'co-disclosure';
     method.innerHTML = '<summary>Metodología y límites de comparación</summary>';
-    method.append($('commodityMethodNote'));
+    method.append($('commodityMethodNote'), $('commoditySourceCitation'));
     const kpis = main.querySelector('.commodity-kpi-grid');
     const coverage = document.createElement('div'); coverage.className = 'co-coverage';
     coverage.append(main.querySelector('.commodity-kpi-products'),main.querySelector('.commodity-kpi-currency'));
@@ -232,7 +234,7 @@
         compactCaption('commodityKpiMonthlyLabel',$('commodityFilterFrequency').value==='diaria'?'Var. 7 días':'Var. mensual');
         compactCaption('commodityKpiYoYLabel',$('commodityFilterFrequency').value==='diaria'?'Var. 30 días':'Var. interanual');
         compactCaption('commodityTrendTitle',sio?'Evolución de eventos':'Evolución de la referencia');
-        compactCaption('commodityRankingTitle',sio?'Medianas por serie':family==='magyp_fob'?'Referencias por posición':'Últimos valores');
+        compactCaption('commodityRankingTitle',sio?'Medianas por serie':'Últimos valores');
         compactCaption('commodityVolumeTitle',sio?'Volumen informado':'Observaciones publicadas');
         const multiple=text('commodityKpiMedian')==='Seleccioná una serie';root.classList.toggle('co-multiple-series',multiple);prompt.hidden=!multiple;
         for(const button of rail.querySelectorAll('[data-co-family]')){if(button.dataset.coFamily===family)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');}
@@ -242,8 +244,9 @@
         if(!sio && operations.parentElement!==coverage)coverage.append(operations);
         main.querySelector('.commodity-kpi-monthly').classList.toggle('co-secondary-kpi',sio);
         main.querySelector('.commodity-kpi-yoy').classList.toggle('co-secondary-kpi',sio);
-        context.hidden=!['sio','magyp_fob','magyp_futures'].includes(family);
-        context.textContent=sio?'SIO · operaciones/eventos informados. Lugar de entrega, procedencia y condiciones permanecen separados; no es precio spot ni precio de plaza.':family==='magyp_fob'?'FOB · Histórico SSPM y publicación API corriente son contextos separados. Tipo de precio, moneda y unidad identifican el contexto activo; no se construye continuidad entre metodologías.':family==='magyp_futures'?'Futuros · La fecha del gráfico es la observación. El vencimiento identifica el contrato y se consulta en Más filtros y en el detalle. No se crea un roll continuo.':'';
+        const riceSelected=family==='magyp_internal'&&text('commodityFilterCommoditySummary').toLowerCase().includes('arroz');
+        context.hidden=!['sio','magyp_futures'].includes(family)&&!riceSelected;
+        context.textContent=sio?'SIO · operaciones/eventos informados. Lugar de entrega, procedencia y condiciones permanecen separados; no es precio spot ni precio de plaza.':family==='magyp_futures'?'Futuros · La fecha del gráfico es la observación. El vencimiento identifica el contrato y se consulta en Más filtros y en el detalle. No se crea un roll continuo.':riceSelected?'Arroz cáscara del mercado interno · largo fino y largo ancho son referencias mensuales separadas. La fuente no informa provincia o plaza; no es arroz elaborado o minorista ni necesariamente una cotización específica de productores correntinos. ARS/QQ es la unidad publicada; ARS/KG es una conversión simple.':'';
         if(observations.querySelector('.co-technical').open)observations.querySelector('.co-technical').open=false;
         styleRanking();compactMatrixLabels();drawLabelKey();syncCurve();
     }

@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const zlib = require('node:zlib');
 const vm = require('node:vm');
 const {execFileSync} = require('node:child_process');
 const current = fs.readFileSync('app.js','utf8');
@@ -10,17 +11,100 @@ function context(code=current) {
     vm.runInContext(code,ctx);return ctx;
 }
 
-test('FOB comprimido carga el bundle íntegro y rechaza corrupción',async()=>{
+test('FOB permanece conservado en los archivos pero no se ofrece como fuente en el dashboard',()=>{
     const ctx=context();
-    Object.assign(ctx,{Blob,Response,DecompressionStream,fetch:async url=>{
-        assert.ok(url.endsWith('/fob.csv.gz'));
-        return new Response(fs.readFileSync('data/magyp/dashboard/commodities/fob.csv.gz'));
-    }});
-    const result=await vm.runInContext("loadCommoditySource('magyp_fob')",ctx);
-    assert.ok(result.diario.length>0);
+    assert.ok(fs.readFileSync('data/magyp/dashboard/commodities/fob.csv.gz').length>0);
+    const keys=JSON.parse(vm.runInContext('JSON.stringify(Object.keys(COMMODITY_SOURCE_CONFIG))',ctx));
+    assert.ok(!keys.some(key=>/fob|rice/i.test(key)));
+    const select={dataset:{},addEventListener(){},innerHTML:'',value:''};
+    ctx.document={getElementById:id=>id==='commodityFilterSource'?select:null};
+    vm.runInContext('initCommoditySourceFilter()',ctx);
+    assert.doesNotMatch(select.innerHTML,/FOB|Arroz/i);
+    assert.doesNotMatch(fs.readFileSync('commodities-ui.js','utf8'),/magyp_fob|magyp_rice_fob|Arroz FOB/i);
+});
+
+test('arroz interno se integra en Precio interno MAGyP sólo en ARS/QQ y ARS/KG',async()=>{
+    const ctx=context();
+    Object.assign(ctx,{Blob,Response,DecompressionStream});
+    const state=fs.readFileSync('data/magyp/reports/RICE_PRICES_STATUS.json');
+    ctx.fetch=async url=>{
+        if(url.endsWith('/RICE_PRICES_STATUS.json'))return new Response(state);
+        if(url.endsWith('/rice_internal.csv.gz'))return new Response(fs.readFileSync('data/magyp/dashboard/commodities/rice_internal.csv.gz'));
+        assert.ok(url.endsWith('/internal.csv'));
+        return new Response(fs.readFileSync('data/magyp/dashboard/commodities/internal.csv'));
+    };
+    const result=await vm.runInContext("loadCommoditySource('magyp_internal')",ctx);
+    ctx.result=result;
+    assert.ok(result.mensual.length);assert.ok(result.ultimos.length);assert.ok(result.semaforo.length);
     assert.equal(result.resumen.length,1);
-    ctx.fetch=async()=>new Response(Buffer.from('corrupt'));
-    await assert.rejects(vm.runInContext("loadCommoditySource('magyp_fob')",ctx));
+    const riceRows=JSON.parse(vm.runInContext("JSON.stringify(result.mensual.filter(row=>row.commodity.includes('Arroz cáscara')))",ctx));
+    assert.ok(riceRows.some(row=>row.unidad==='QQ'&&row.moneda==='ARS'));
+    assert.ok(riceRows.some(row=>row.unidad==='KG'&&row.moneda==='ARS'));
+    assert.ok(riceRows.every(row=>row.moneda==='ARS'&&['QQ','KG'].includes(row.unidad)));
+    assert.ok(riceRows.every(row=>!Object.keys(row).some(key=>key.startsWith('fx_a3500_'))));
+    const october=JSON.parse(vm.runInContext("JSON.stringify(result.mensual.filter(row=>row.periodo_ym==='2026-10'&&row.unidad==='QQ'&&row.moneda==='ARS').map(row=>[row.rice_variety_raw,Number(row.precio_mediana)]))",ctx));
+    assert.ok(october.some(([variety,price])=>variety==='LARGO FINO'&&price===40000));
+    assert.ok(october.some(([variety,price])=>variety==='LARGO ANCHO'&&price===48000));
+    ctx.riceRows=riceRows;
+    const visibleCsv=vm.runInContext('commodityRowsToCsv(riceRows)',ctx);
+    assert.doesNotMatch(visibleCsv,/fx_a3500|USD\/QQ|BCRA/);
+    assert.equal(vm.runInContext("priceFreshnessBySource.magyp_internal_rice.status",ctx),'NO_PUBLICATION');
+    assert.equal(vm.runInContext("ricePublicationStates.magyp_internal_rice.coverage_start",ctx),'1992-09-01');
+    const internal=zlib.gunzipSync(fs.readFileSync('data/magyp/dashboard/commodities/rice_internal.csv.gz')).toString('utf8');
+    const fob=zlib.gunzipSync(fs.readFileSync('data/magyp/dashboard/commodities/rice_fob.csv.gz')).toString('utf8');
+    ctx.internal=internal;ctx.fob=fob;
+    assert.ok(vm.runInContext("parseReferenceCommodityBundle(internal,'magyp_rice_internal').mensual.every(row=>row.tipo_precio.startsWith('Precio interno arroz cáscara'))",ctx));
+    assert.ok(vm.runInContext("parseReferenceCommodityBundle(fob,'magyp_rice_fob').mensual.every(row=>row.tipo_precio.startsWith('Referencia internacional FOB arroz'))",ctx));
+    assert.throws(()=>vm.runInContext("parseReferenceCommodityBundle(fob,'magyp_rice_internal')",ctx));
+});
+
+test('el filtro general de período limita observaciones y últimos valores de arroz sin rellenar huecos',async()=>{
+    const ctx=context();
+    Object.assign(ctx,{Blob,Response,DecompressionStream});
+    const state=fs.readFileSync('data/magyp/reports/RICE_PRICES_STATUS.json');
+    ctx.fetch=async url=>url.endsWith('/RICE_PRICES_STATUS.json')?new Response(state):url.endsWith('/rice_internal.csv.gz')
+        ?new Response(fs.readFileSync('data/magyp/dashboard/commodities/rice_internal.csv.gz'))
+        :new Response(fs.readFileSync('data/magyp/dashboard/commodities/internal.csv'));
+    ctx.data=await vm.runInContext("loadCommoditySource('magyp_internal')",ctx);
+    ctx.document={getElementById:()=>({value:'TODOS'})};
+    const result=JSON.parse(vm.runInContext(`commoditySource='magyp_internal';commodityFrequency='mensual';commodityHistoryMetadata.magyp_internal={};commodityData=data;
+        commoditySelectedValues=['Arroz cáscara — largo fino'];
+        commodityDateRangeApplied={from:'2026-01',to:'2026-05'};
+        JSON.stringify({rows:getCommodityFilteredRows().filter(row=>row.commodity.includes('Arroz')).map(row=>row.periodo_ym),latest:getCommodityLatestRows().filter(row=>row.commodity.includes('Arroz')).map(row=>row.periodo_ultimo)})`,ctx));
+    assert.ok(result.rows.length>0);
+    assert.ok(result.rows.every(period=>period>='2026-01'&&period<='2026-05'));
+    assert.ok(result.latest.every(period=>period==='2026-05'));
+});
+
+test('al seleccionar arroz se usa ARS/QQ y todas las plazas, con ARS/KG seleccionable',()=>{
+    const ctx=context();
+    const values={
+        commodityFilterCurrency:['TODOS','ARS','USD'],
+        commodityFilterUnit:['TODOS','TN','QQ','KG'],
+        commodityFilterMarket:['TODOS','Rosario','Mercado interno — plaza no informada'],
+        commodityFilterType:['TODOS','Precio interno mensual','Precio interno arroz cáscara']
+    };
+    const controls=Object.fromEntries(Object.entries(values).map(([id,options])=>[id,{value:'TODOS',options:options.map(value=>({value}))}]));
+    ctx.document={getElementById:id=>controls[id]||null};
+    vm.runInContext("commoditySource='magyp_internal';commoditySelectedValues=['Arroz cáscara largo fino'];adaptInternalCommoditySelection(['SOJA'])",ctx);
+    assert.equal(controls.commodityFilterCurrency.value,'ARS');
+    assert.equal(controls.commodityFilterUnit.value,'QQ');
+    assert.equal(controls.commodityFilterMarket.value,'TODOS');
+    assert.equal(controls.commodityFilterType.value,'TODOS');
+    controls.commodityFilterUnit.value='KG';
+    vm.runInContext("commoditySelectedValues=['Arroz cáscara largo fino','Arroz cáscara largo ancho'];adaptInternalCommoditySelection(['Arroz cáscara largo fino'])",ctx);
+    assert.equal(controls.commodityFilterUnit.value,'KG');
+});
+
+test('la descarga general conserva fuente y hashes y omite la conversión USD/A3500',()=>{
+    const ctx=context();
+    ctx.rows=[{periodo_ym:'2026-10',commodity:'Arroz cáscara — largo fino',moneda:'ARS',unidad:'QQ',price:'40000.00',raw_sha256:'a'.repeat(64),source_url:'https://www.magyp.gob.ar/source',note:'valor; "original"'}];
+    const csv=vm.runInContext('commodityRowsToCsv(rows)',ctx);
+    assert.ok(csv.startsWith('\uFEFF'));
+    assert.match(csv,/"raw_sha256"/);
+    assert.doesNotMatch(csv,/fx_a3500|USD\/QQ|BCRA/);
+    assert.match(csv,/"a{64}"/);
+    assert.match(csv,/"valor; ""original"""/);
 });
 
 test('initial MAGyP internal source and source switches set frequency and KPI semantics',()=>{
@@ -34,7 +118,7 @@ test('initial MAGyP internal source and source switches set frequency and KPI se
     }};
     vm.runInContext('initCommodityFilters=()=>{};updateCommoditySourceStatus=()=>{};updateCommodityDashboard=()=>{};',ctx);
     const frequencies={magyp_internal:'mensual',magyp_board:'diaria',magyp_fas:'diaria',
-        magyp_fob:'diaria',magyp_futures:'diaria',sio:'mensual'};
+        magyp_futures:'diaria',sio:'mensual'};
     for(const [source,frequency] of Object.entries(frequencies)) {
         vm.runInContext(`setCommoditySource('${source}')`,ctx);
         assert.equal(vm.runInContext('commodityFrequency',ctx),frequency);
@@ -144,12 +228,12 @@ test('empty, wrong schema, count mismatch and invalid trace rejected',()=>{
     ctx.input=fs.readFileSync('data/magyp/dashboard/commodities/fob.csv','utf8');
     assert.throws(()=>vm.runInContext("parseReferenceCommodityBundle(input, 'magyp_board')",ctx));
 });
-test('FOB windows/circulars remain separate at monthly frequency',()=>{
+test('el archivo FOB conserva etiquetas y series originales para revisión posterior',()=>{
     const ctx=context();
-    const result=vm.runInContext(`commoditySource='magyp_fob';commodityFrequency='mensual';
-      [commoditySeriesKey({commodity:'Posición A',series_id:'one',condicion_comercial:'2026-10/2026-10'}),
-       commoditySeriesKey({commodity:'Posición A',series_id:'two',condicion_comercial:'2026-11/2026-11'})]`,ctx);
-    assert.notEqual(result[0],result[1]);
+    const bundle=zlib.gunzipSync(fs.readFileSync('data/magyp/dashboard/commodities/fob.csv.gz')).toString('utf8');
+    ctx.bundle=bundle;
+    const labels=JSON.parse(vm.runInContext(`JSON.stringify([...new Set(parseReferenceCommodityBundle(bundle,'magyp_fob').mensual.map(row=>row.condicion_comercial).filter(Boolean))])`,ctx));
+    assert.ok(labels.length>1);
 });
 test('daily latest is the last closing observation, not the monthly median',()=>{
     const ctx=context();

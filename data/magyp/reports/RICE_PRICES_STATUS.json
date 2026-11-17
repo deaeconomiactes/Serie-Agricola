@@ -1,0 +1,136 @@
+{
+  "checked_at_utc": "2026-11-17T19:06:33Z",
+  "schema_version": "magyp-rice-prices-status-v1",
+  "sources": {
+    "rice_fob": {
+      "attempted_at": "2026-11-17T15:08:43Z",
+      "automatic_update": true,
+      "currency": [
+        "USD"
+      ],
+      "diagnostic_note": null,
+      "frequency": "mensual",
+      "last_observation_date": "2026-10-01",
+      "last_successful_update": "2026-11-17T15:08:43Z",
+      "last_valid_date": "2026-10-01",
+      "market": "Mercado internacional FOB",
+      "notes": "Serie mensual separada; conserva origen/calidad según la etiqueta de MAGyP.",
+      "publication_status": "NO_PUBLICATION",
+      "raw_evidence": [
+        {
+          "bytes": 19180,
+          "capture_id": "20261117T150843Z_7db59a0a48bc",
+          "label": "actual",
+          "raw_sha256": "c2b703d02dde20acdaf78ac35268eecc2920ae6e422445fb74a592cc527b3026",
+          "source_url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/regionales/_archivos/000020_Precios%20Internacionales/000052_Arroz/000001_Arroz%20Mensual%20U%24S%20x%20Ton%20FOB.php"
+        },
+        {
+          "bytes": 6336,
+          "capture_id": "20261117T150843Z_76fe4771ab2c",
+          "label": "2017",
+          "raw_sha256": "12f005e151ae0ea1ee6eacf55daa55f5ae4dc54e1446d6d384211a91fe764625",
+          "source_url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/regionales/_archivos/000020_Precios%20Internacionales/000052_Arroz/000002_Hist%C3%B3ricos/999992_2017.php"
+        },
+        {
+          "bytes": 6270,
+          "capture_id": "20261117T150843Z_3bca951bac1d",
+          "label": "2018",
+          "raw_sha256": "ad678f094a715c624468fa6c60f86f97525b06285e8058b31b18041a479034b5",
+          "source_url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/regionales/_archivos/000020_Precios%20Internacionales/000052_Arroz/000002_Hist%C3%B3ricos/999991_2018.php"
+        },
+        {
+          "bytes": 6338,
+          "capture_id": "20261117T150843Z_889d564bc9f7",
+          "label": "2019",
+          "raw_sha256": "3085135053c466ff916c74edfc90301b8a447d441e887dfc71490da85052ec2c",
+          "source_url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/regionales/_archivos/000020_Precios%20Internacionales/000052_Arroz/000002_Hist%C3%B3ricos/999990_2019.php"
+        },
+        {
+          "bytes": 6581,
+          "capture_id": "20261117T150843Z_b72d430f06dd",
+          "label": "2020",
+          "raw_sha256": "c17b77a469b3c4176e7bf95284c3328c6af73b8b61b78867161f57089a040601",
+          "source_url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/regionales/_archivos/000020_Precios%20Internacionales/000052_Arroz/000002_Hist%C3%B3ricos/888889_2020.php"
+        },
+        {
+          "bytes": 6663,
+          "capture_id": "20261117T150843Z_9854a669221d",
+          "label": "2021",
+          "raw_sha256": "b4bdbf0ea39470be5340ee5655b2a381a10bc0bfb9318bc8ad0e0741e81b7af1",
+          "source_url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/regionales/_archivos/000020_Precios%20Internacionales/000052_Arroz/000002_Hist%C3%B3ricos/888888_2021.php"
+        },
+        {
+          "bytes": 6663,
+          "capture_id": "20261117T150843Z_a7a4045a8c6a",
+          "label": "2022",
+          "raw_sha256": "b95cce1eca99629c385b4243d8660d1387de629ed395e2d1dca9870f276aaaf7",
+          "source_url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/regionales/_archivos/000020_Precios%20Internacionales/000052_Arroz/000002_Hist%C3%B3ricos/888887_2022.php"
+        },
+        {
+          "bytes": 6672,
+          "capture_id": "20261117T150843Z_28bc7e6eb6ff",
+          "label": "2023",
+          "raw_sha256": "e2e5d08a71c1459eb747fd6cc0795497a2fe75b2b9212e76c60230e3c691d70a",
+          "source_url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/regionales/_archivos/000020_Precios%20Internacionales/000052_Arroz/000002_Hist%C3%B3ricos/888886_2023.php"
+        },
+        {
+          "bytes": 6663,
+          "capture_id": "20261117T150843Z_ef9c6e125352",
+          "label": "2024",
+          "raw_sha256": "6cf513e02042c4f710210d8a5c8e673a16a66cd0f07f94394fe0f7647919e747",
+          "source_url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/regionales/_archivos/000020_Precios%20Internacionales/000052_Arroz/000002_Hist%C3%B3ricos/888885_2024.php"
+        },
+        {
+          "bytes": 6399,
+          "capture_id": "20261117T150843Z_4a2588cabeb3",
+          "label": "2025",
+          "raw_sha256": "7810a7257a4b991bde4f2451bdc6dd6160cd4e1a93907c0833aef7a01d49ab63",
+          "source_url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/regionales/_archivos/000020_Precios%20Internacionales/000052_Arroz/000002_Hist%C3%B3ricos/888884_2025.php"
+        }
+      ],
+      "requested_date": "2026-11-17",
+      "source": "MAGyP",
+      "source_family": "rice_fob",
+      "source_url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/regionales/_archivos/000020_Precios%20Internacionales/000052_Arroz/000001_Arroz%20Mensual%20U%24S%20x%20Ton%20FOB.php",
+      "status": "UPDATED",
+      "unit": [
+        "TN"
+      ]
+    },
+    "rice_internal": {
+      "attempted_at": "2026-11-17T19:06:31Z",
+      "automatic_update": true,
+      "currency": [
+        "ARS"
+      ],
+      "diagnostic_note": null,
+      "frequency": "mensual",
+      "historical_revisions_recorded": 0,
+      "identical_duplicate_source_rows": 1,
+      "last_observation_date": "2026-10-01",
+      "last_successful_update": "2026-11-17T19:06:31Z",
+      "last_valid_date": "2026-10-01",
+      "market": "Mercado interno · plaza no informada",
+      "notes": "Arroz cáscara largo fino y largo ancho; ARS/KG es conversión simple de ARS/QQ (1 QQ = 100 KG). La tabla fuente contenía 1 fila(s) mensual(es) repetida(s) con valores idénticos; se deduplican y quedan localizables en RAW/CSV.",
+      "publication_status": "NO_PUBLICATION",
+      "raw_evidence": [
+        {
+          "bytes": 47065,
+          "capture_id": "20261117T190631Z_bba7d2006b39",
+          "label": "actual",
+          "raw_sha256": "fb45cf1ce00f99a9a229a64f5569154036051e003278282e0e1638bf027070e0",
+          "source_url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/regionales/_archivos/000010_Precios%20Locales/000020_Arroz/000001_Precios%20de%20Arroz%20C%C3%A1scara%20Internos.php?accion=imp"
+        }
+      ],
+      "requested_date": "2026-11-17",
+      "source": "MAGyP",
+      "source_family": "rice_internal",
+      "source_url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/regionales/_archivos/000010_Precios%20Locales/000020_Arroz/000001_Precios%20de%20Arroz%20C%C3%A1scara%20Internos.php?accion=imp",
+      "status": "UPDATED",
+      "unit": [
+        "QQ",
+        "KG"
+      ]
+    }
+  }
+}
