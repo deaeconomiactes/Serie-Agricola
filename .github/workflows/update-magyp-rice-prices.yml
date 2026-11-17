@@ -47,7 +47,7 @@ jobs:
       - name: Consultar, validar y preparar precios oficiales
         id: update
         continue-on-error: true
-        run: python scripts/magyp/rice_prices.py --allow-web --as-of "$RICE_AS_OF"
+        run: python scripts/magyp/rice_prices.py --allow-web --source internal --as-of "$RICE_AS_OF"
       - name: Validar bundles de precios y estados publicados
         run: |
           python scripts/magyp/rice_prices.py --validate
@@ -59,7 +59,7 @@ jobs:
         run: |
           set -euo pipefail
           git add -- data/magyp/dashboard/commodities/rice_internal.csv.gz \
-            data/magyp/dashboard/commodities/rice_fob.csv.gz \
+            data/magyp/reports/RICE_INTERNAL_REVISIONS.json \
             data/magyp/reports/RICE_PRICES_STATUS.json
           python scripts/magyp/rice_prices.py --validate
           git diff --cached --check
@@ -87,6 +87,7 @@ jobs:
             data/magyp/raw/rice_prices/
             data/magyp/dashboard/commodities/rice_internal.csv.gz
             data/magyp/dashboard/commodities/rice_fob.csv.gz
+            data/magyp/reports/RICE_INTERNAL_REVISIONS.json
             data/magyp/reports/RICE_PRICES_STATUS.json
       - name: Registrar resultado y hacer visibles errores técnicos
         if: always()
@@ -103,19 +104,20 @@ jobs:
               raise SystemExit('PIPELINE_ERROR: falta RICE_PRICES_STATUS.json')
           report = json.loads(path.read_text(encoding='utf-8'))
           records = report.get('sources', {})
-          if set(records) != {'rice_internal', 'rice_fob'}:
+          if 'rice_internal' not in records or 'rice_fob' not in records:
               raise SystemExit('PIPELINE_ERROR: falta el estado de una fuente de arroz')
           technical = False
-          for family, record in sorted(records.items()):
-              state = record.get('status', 'PIPELINE_ERROR')
-              summary('MAGyP_' + family.upper(), state, record.get('requested_date'),
-                      record.get('last_observation_date'), os.getenv('CHANGED', 'false'),
-                      os.getenv('DEPLOY', 'false'))
-              if state == 'SOURCE_UNAVAILABLE':
-                  print(f"::warning title=Fuente MAGyP no disponible::{family}; se conservó la última salida válida")
-              if state == 'PIPELINE_ERROR':
-                  print(f"::error title=Error técnico en precios de arroz::{family}: {record.get('diagnostic_note') or 'ver logs'}")
-                  technical = True
+          family = 'rice_internal'
+          record = records[family]
+          state = record.get('status', 'PIPELINE_ERROR')
+          summary('MAGyP_' + family.upper(), state, record.get('requested_date'),
+                  record.get('last_observation_date'), os.getenv('CHANGED', 'false'),
+                  os.getenv('DEPLOY', 'false'))
+          if state == 'SOURCE_UNAVAILABLE':
+              print(f"::warning title=Fuente MAGyP no disponible::{family}; se conservó la última salida válida")
+          if state == 'PIPELINE_ERROR':
+              print(f"::error title=Error técnico en precios de arroz::{family}: {record.get('diagnostic_note') or 'ver logs'}")
+              technical = True
           if technical:
               raise SystemExit('PIPELINE_ERROR: última salida válida preservada; revisar los diagnósticos')
           PY

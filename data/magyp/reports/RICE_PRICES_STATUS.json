@@ -1,5 +1,5 @@
 {
-  "checked_at_utc": "2026-11-17T15:08:47Z",
+  "checked_at_utc": "2026-11-17T19:06:33Z",
   "schema_version": "magyp-rice-prices-status-v1",
   "sources": {
     "rice_fob": {
@@ -98,25 +98,25 @@
       ]
     },
     "rice_internal": {
-      "attempted_at": "2026-11-17T15:08:42Z",
+      "attempted_at": "2026-11-17T19:06:31Z",
       "automatic_update": true,
       "currency": [
-        "ARS",
-        "USD"
+        "ARS"
       ],
       "diagnostic_note": null,
       "frequency": "mensual",
+      "historical_revisions_recorded": 0,
       "identical_duplicate_source_rows": 1,
       "last_observation_date": "2026-10-01",
-      "last_successful_update": "2026-11-17T15:08:42Z",
+      "last_successful_update": "2026-11-17T19:06:31Z",
       "last_valid_date": "2026-10-01",
       "market": "Mercado interno · plaza no informada",
-      "notes": "Arroz cáscara largo fino y largo ancho; USD es equivalencia A3500 derivada. La tabla fuente contenía 1 fila(s) mensual(es) repetida(s) con valores idénticos; se deduplican y quedan localizables en RAW/CSV.",
+      "notes": "Arroz cáscara largo fino y largo ancho; ARS/KG es conversión simple de ARS/QQ (1 QQ = 100 KG). La tabla fuente contenía 1 fila(s) mensual(es) repetida(s) con valores idénticos; se deduplican y quedan localizables en RAW/CSV.",
       "publication_status": "NO_PUBLICATION",
       "raw_evidence": [
         {
           "bytes": 47065,
-          "capture_id": "20261117T150842Z_8376bb64845b",
+          "capture_id": "20261117T190631Z_bba7d2006b39",
           "label": "actual",
           "raw_sha256": "fb45cf1ce00f99a9a229a64f5569154036051e003278282e0e1638bf027070e0",
           "source_url": "https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/regionales/_archivos/000010_Precios%20Locales/000020_Arroz/000001_Precios%20de%20Arroz%20C%C3%A1scara%20Internos.php?accion=imp"

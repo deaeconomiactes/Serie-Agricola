@@ -49,16 +49,6 @@ def fob_html(year, labels=None, options=False, omit_month=None):
     return "".join(rows).encode("utf-8")
 
 
-def rate_document():
-    return {
-        "schema_version": "bcra-a3500-v1", "source": rice.BCRA_LANDING,
-        "source_url": rice.BCRA_URL, "raw_sha256": "a" * 64,
-        "rates": [["2022-05-17", 100], ["2022-05-31", 110],
-                  ["2022-06-01", 120], ["2022-06-30", 180],
-                  ["2022-07-01", 200], ["2022-07-31", 300]],
-    }
-
-
 class RicePricesTests(unittest.TestCase):
     def test_internal_months_duplicates_and_original_markers_are_preserved(self):
         cells = rice.parse_internal(internal_html(), date(2026, 11, 17))
@@ -84,31 +74,17 @@ class RicePricesTests(unittest.TestCase):
         self.assertNotIn("Thai5", current[3])
         self.assertEqual([year for year, _ in current[2]], list(range(2017, 2027)))
 
-    def test_a3500_monthly_average_excludes_partial_start_and_in_progress_month(self):
-        with tempfile.TemporaryDirectory() as temp:
-            path = Path(temp) / "bcra.json"
-            path.write_text(json.dumps(rate_document()), encoding="utf-8")
-            averages, metadata = rice.monthly_a3500(path, date(2022, 7, 31))
-        self.assertEqual(list(averages), ["2022-06"])
-        self.assertEqual(averages["2022-06"]["average"], rice.Decimal("150.0000"))
-        self.assertEqual(averages["2022-06"]["count"], 2)
-        self.assertEqual((metadata["first_month"], metadata["latest_month"]), ("2022-05", "2022-07"))
-
-    def test_conversion_retains_original_ars_qq_and_applies_exact_unit_and_a3500_rules(self):
+    def test_internal_conversion_retains_ars_qq_and_applies_only_simple_unit_conversion(self):
         cell = {"fecha": "2022-06-01", "periodo_ym": "2022-06",
                 "source_locator": "table[1]/row[2]/2022/06", "duplicate_source_rows": [],
                 "values": [("LARGO FINO", "15.000,00*", "15000.00", "positive"),
                            ("LARGO ANCHO", "20.000,00", "20000.00", "positive")]}
         capture = {"captured_at_utc": "2026-11-17T12:00:00Z", "raw_sha256": "b" * 64,
                    "capture_id": "fixture", "source_url": rice.INTERNAL_URL}
-        fx = {"2022-06": {"average": rice.Decimal("150.0000"), "count": 2,
-                           "first_date": "2022-06-01", "last_date": "2022-06-30"}}
-        rows = rice._internal_rows([cell], capture, fx,
-            {"sha256": "c" * 64, "url": rice.BCRA_URL})
+        rows = rice._internal_rows([cell], capture)
         largo_fino = [row for row in rows if row["rice_variety_raw"] == "LARGO FINO"]
         values = {(row["moneda"], row["unidad"]): row["price"] for row in largo_fino}
-        self.assertEqual(values, {("ARS", "QQ"): "15000.00", ("ARS", "KG"): "150.00",
-                                   ("USD", "QQ"): "100.0000"})
+        self.assertEqual(values, {("ARS", "QQ"): "15000.00", ("ARS", "KG"): "150.00"})
         base = next(row for row in largo_fino if row["moneda"] == "ARS" and row["unidad"] == "QQ")
         self.assertEqual(base["price_raw_source"], "15.000,00*")
         self.assertEqual(base["source_marker"], "*")
@@ -127,31 +103,77 @@ class RicePricesTests(unittest.TestCase):
         with self.assertRaisesRegex(rice.RiceError, "celda vacía"):
             rice._check_history([base], [reduced], "rice_internal")
 
-    def test_internal_no_publication_and_source_outage_preserve_last_valid_bundle(self):
+    def test_internal_update_ignores_missing_or_invalid_bcra_and_records_positive_revisions(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp) / "magyp"
-            rates = Path(temp) / "bcra.json"
-            rates.write_text(json.dumps(rate_document()), encoding="utf-8")
-            cells = rice.parse_internal(internal_html(), date(2026, 11, 17))
-            fx, metadata = rice.monthly_a3500(rates, date(2026, 11, 17))
-            capture = {"captured_at_utc": "2026-11-17T12:00:00Z", "raw_sha256": "d" * 64,
-                       "capture_id": "initial", "source_url": rice.INTERNAL_URL}
-            valid = rice.build_bundle(rice._internal_rows(cells, capture, fx, metadata))
+            project_root = Path(temp) / "project"
             output = root / "dashboard" / "commodities" / "rice_internal.csv.gz"
-            packed = rice.gzip_bundle(valid)
-            rice.atomic_write(output, packed)
             fetcher = lambda url: rice.Download(internal_html(), 200, "text/html", url)
-            status, _ = rice.update_internal(root, date(2026, 11, 17), fetcher, rates)
+            # No BCRA file exists in the project root; the internal MAGyP publication stands alone.
+            with patch.object(rice, "ROOT", project_root):
+                status, record = rice.update_internal(root, date(2026, 11, 17), fetcher)
+            self.assertEqual(status, "UPDATED")
+            observations = [row for row in rice.read_bundle(output) if row["row_kind"] == "observation"]
+            self.assertEqual({row["moneda"] for row in observations}, {"ARS"})
+            self.assertEqual({row["unidad"] for row in observations}, {"QQ", "KG"})
+            self.assertTrue(all(not row["fx_a3500_monthly_avg"] for row in observations))
+            initial = output.read_bytes()
+
+            # An invalid A3500 document also has no bearing on the internal source.
+            invalid_bcra = project_root / "data" / "carnes" / "dashboard" / "bcra_a3500.json"
+            invalid_bcra.parent.mkdir(parents=True)
+            invalid_bcra.write_text("not-json", encoding="utf-8")
+            revised_html = internal_html().replace(b"13.500,00*", b"16.500,00*")
+            revised_fetcher = lambda url: rice.Download(revised_html, 200, "text/html", url)
+            with patch.object(rice, "ROOT", project_root):
+                status, revised_state = rice.update_internal(root, date(2026, 11, 17), revised_fetcher)
+            self.assertEqual(status, "UPDATED")
+            self.assertEqual(revised_state["historical_revisions_recorded"], 1)
+            ledger_path = root / "reports" / "RICE_INTERNAL_REVISIONS.json"
+            ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+            self.assertEqual(ledger["schema_version"], rice.REVISION_LEDGER_VERSION)
+            self.assertEqual(len(ledger["revisions"]), 1)
+            revision = ledger["revisions"][0]
+            self.assertEqual(revision["periodo_ym"], "2026-06")
+            self.assertEqual(revision["rice_variety_raw"], "LARGO FINO")
+            self.assertEqual(revision["previous"]["price_ars_qq"], "13500.00")
+            self.assertEqual(revision["current"]["price_ars_qq"], "16500.00")
+            self.assertNotEqual(revision["previous"]["raw_sha256"], revision["current"]["raw_sha256"])
+            self.assertNotEqual(revision["previous"]["capture_id"], revision["current"]["capture_id"])
+            self.assertTrue(revision["previous"]["raw_artifact"].endswith("/response.html"))
+            rice._validate_revision_ledger(ledger)
+
+            # Identical republication is a no-op and keeps the revision history append-only.
+            status, _ = rice.update_internal(root, date(2026, 11, 17), revised_fetcher)
             self.assertEqual(status, "NO_PUBLICATION")
-            self.assertEqual(output.read_bytes(), packed)
+            self.assertEqual(len(json.loads(ledger_path.read_text(encoding="utf-8"))["revisions"]), 1)
+
+            # If the audit ledger cannot be persisted, roll the bundle back to its last valid version.
+            stable_bundle = output.read_bytes()
+            second_revision = internal_html().replace(b"13.500,00*", b"17.500,00*")
+            second_fetcher = lambda url: rice.Download(second_revision, 200, "text/html", url)
+            atomic_write = rice.atomic_write
+            def fail_revision_ledger(path, payload):
+                if Path(path) == ledger_path:
+                    raise OSError("simulated ledger write failure")
+                return atomic_write(path, payload)
+            with patch.object(rice, "atomic_write", side_effect=fail_revision_ledger), \
+                    patch.object(rice.traceback, "print_exc"):
+                status, failed_state = rice.update_internal(root, date(2026, 11, 17), second_fetcher)
+            self.assertEqual(status, "PIPELINE_ERROR")
+            self.assertIn("simulated ledger write failure", failed_state["diagnostic_note"])
+            self.assertEqual(output.read_bytes(), stable_bundle)
+            self.assertEqual(len(json.loads(ledger_path.read_text(encoding="utf-8"))["revisions"]), 1)
 
             def unavailable(_url):
                 raise rice.SourceUnavailable("test outage")
 
-            status, record = rice.update_internal(root, date(2026, 11, 17), unavailable, rates)
+            packed = output.read_bytes()
+            status, record = rice.update_internal(root, date(2026, 11, 17), unavailable)
             self.assertEqual(status, "SOURCE_UNAVAILABLE")
             self.assertEqual(record["last_valid_date"], "2026-07-01")
             self.assertEqual(output.read_bytes(), packed)
+            self.assertNotEqual(initial, packed)
 
     def test_fob_no_publication_and_source_outage_preserve_last_valid_bundle(self):
         current = fob_html(2026, options=True)

@@ -23,7 +23,7 @@ import unicodedata
 import uuid
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import Decimal, InvalidOperation
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -44,14 +44,12 @@ FOB_URL = (
     "_archivos/000020_Precios%20Internacionales/000052_Arroz/"
     "000001_Arroz%20Mensual%20U%24S%20x%20Ton%20FOB.php"
 )
-BCRA_LANDING = "https://www.bcra.gob.ar/tipo-cambio-referencia-comunicacion-a-3500-tcnpm/"
-BCRA_URL = "https://www.bcra.gob.ar/archivos/Pdfs/PublicacionesEstadisticas/com3500.xls"
 VERSION = "magyp-references-v1"
 STATUS_VERSION = "magyp-rice-prices-status-v1"
+REVISION_LEDGER_VERSION = "magyp-rice-internal-revisions-v1"
 PARSER_VERSION = "magyp-rice-prices-v1"
 INTERNAL_BASE_TYPE = "Precio interno arroz cáscara"
 INTERNAL_KG_TYPE = "Precio interno arroz cáscara · conversión de unidad"
-INTERNAL_USD_TYPE = "Precio interno arroz cáscara · equivalencia USD/A3500"
 FOB_TYPE = "Referencia internacional FOB arroz"
 MONTHS = {"ENE": 1, "FEB": 2, "MAR": 3, "ABR": 4, "MAY": 5, "JUN": 6,
           "JUL": 7, "AGO": 8, "SEP": 9, "OCT": 10, "NOV": 11, "DIC": 12}
@@ -408,55 +406,6 @@ def parse_fob_page(payload: bytes, expected_year: int | None = None):
     return year, values, history_options, labels
 
 
-def monthly_a3500(path: Path, as_of: date) -> tuple[dict, dict]:
-    try:
-        document = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        raise RiceError("Serie BCRA A3500 local no disponible o inválida") from None
-    if (document.get("schema_version") != "bcra-a3500-v1"
-            or document.get("source_url") != BCRA_URL
-            or not re.fullmatch(r"[a-f0-9]{64}", str(document.get("raw_sha256", "")))
-            or not isinstance(document.get("rates"), list) or not document["rates"]):
-        raise RiceError("Contrato de la serie BCRA A3500 cambió")
-    rates = {}
-    previous = None
-    for row in document["rates"]:
-        if not isinstance(row, list) or len(row) != 2:
-            raise RiceError("Fila de la serie BCRA A3500 inválida")
-        try:
-            day = date.fromisoformat(row[0])
-            value = Decimal(str(row[1]))
-        except (ValueError, TypeError, InvalidOperation):
-            raise RiceError("Fecha/cotización BCRA inválida") from None
-        if (day.isoformat() != row[0] or day > as_of or (previous and day <= previous)
-                or not value.is_finite() or value <= 0):
-            raise RiceError("Orden/valor de la serie BCRA A3500 inválido")
-        previous = day
-        rates.setdefault(day.strftime("%Y-%m"), []).append((day, value))
-    months = sorted(rates)
-    if len(months) < 2:
-        raise RiceError("Cobertura mensual BCRA A3500 insuficiente")
-    first_month, latest_month = months[0], months[-1]
-    averages = {}
-    for month in months:
-        # First month is partial because the bundled A3500 starts on 2022-05-17;
-        # last month may still be in progress. Neither is treated as a monthly rate.
-        if month <= first_month or month >= latest_month:
-            continue
-        items = rates[month]
-        average = sum((item[1] for item in items), Decimal(0)) / Decimal(len(items))
-        averages[month] = {
-            "average": average.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP),
-            "count": len(items), "first_date": items[0][0].isoformat(),
-            "last_date": items[-1][0].isoformat(),
-        }
-    return averages, {
-        "sha256": str(document["raw_sha256"]), "url": document["source_url"],
-        "landing": document.get("source"), "first_month": first_month,
-        "latest_month": latest_month, "latest_date": previous.isoformat(),
-    }
-
-
 def _base_row(family: str, day: str, commodity: str, market: str, kind: str,
               currency: str, unit: str, raw: str, price: str, value_status: str,
               source_url: str, capture: dict, locator: str, condition: str = "",
@@ -483,11 +432,10 @@ def _base_row(family: str, day: str, commodity: str, market: str, kind: str,
     return row
 
 
-def _internal_rows(cells: list[dict], capture: dict, fx_months: dict,
-                   fx_meta: dict) -> list[dict]:
+def _internal_rows(cells: list[dict], capture: dict) -> list[dict]:
     result = []
     for cell in cells:
-        day, period = cell["fecha"], cell["periodo_ym"]
+        day = cell["fecha"]
         for variety, raw, source_price, source_status in cell["values"]:
             commodity = f"Arroz cáscara — {variety.lower()}"
             extra = {
@@ -496,8 +444,6 @@ def _internal_rows(cells: list[dict], capture: dict, fx_months: dict,
                 "source_locator": cell["source_locator"],
                 "duplicate_source_rows": "|".join(cell.get("duplicate_source_rows", [])),
                 "source_marker": "*" if raw.strip().endswith("*") else "",
-                "fx_a3500_raw_sha256": fx_meta["sha256"],
-                "fx_a3500_source_url": fx_meta["url"],
             }
             base = _base_row("rice_internal", day, commodity,
                 "Mercado interno · plaza no informada", INTERNAL_BASE_TYPE,
@@ -524,28 +470,6 @@ def _internal_rows(cells: list[dict], capture: dict, fx_months: dict,
                 })
             kg["coverage_note"] = "Conversión de unidad aritmética de la observación original en ARS/QQ; 1 quintal métrico = 100 kg."
             result.append(kg)
-            fx = fx_months.get(period)
-            if fx:
-                fx_value = format(fx["average"], "f")
-                usd_value = format((price / fx["average"]).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP), "f")
-                usd = _base_row("rice_internal", day, commodity,
-                    "Mercado interno · plaza no informada", INTERNAL_USD_TYPE,
-                    "USD", "QQ", usd_value, usd_value, "positive", INTERNAL_URL,
-                    capture, cell["source_locator"], variety, {
-                        **extra, "fx_a3500_monthly_avg": fx_value,
-                        "fx_a3500_observations": fx["count"],
-                        "fx_a3500_first_date": fx["first_date"],
-                        "fx_a3500_last_date": fx["last_date"],
-                        "conversion_method": (
-                            "USD/QQ = ARS/QQ ÷ media aritmética de cotizaciones diarias BCRA A3500 "
-                            "publicadas en el mismo mes calendario; sin conversión para meses parciales"
-                        ),
-                    })
-                usd["coverage_note"] = (
-                    "Equivalencia calculada con promedio mensual simple de cotizaciones diarias A3500 del mismo mes; "
-                    "no es precio USD publicado por MAGyP ni promedio mensual oficial del BCRA."
-                )
-                result.append(usd)
     return result
 
 
@@ -712,7 +636,7 @@ def _value_signature(rows: list[dict]) -> str:
         if row["row_kind"] != "observation":
             continue
         values.append((row["series_id"], row["fecha"], row["price"], row["value_status"],
-                       row["price_raw_source"], row["fx_a3500_monthly_avg"]))
+                       row["price_raw_source"]))
     return stable_id(sorted(values))
 
 
@@ -738,8 +662,8 @@ def _current_state(path: Path, family: str, requested: date, attempted: str,
     }
     if family == "rice_internal":
         record.update(source_url=INTERNAL_URL, market="Mercado interno · plaza no informada",
-                      currency=["ARS", "USD"], unit=["QQ", "KG"],
-                      notes="Arroz cáscara largo fino y largo ancho; USD es equivalencia A3500 derivada.")
+                      currency=["ARS"], unit=["QQ", "KG"],
+                      notes="Arroz cáscara largo fino y largo ancho; ARS/KG es conversión simple de ARS/QQ (1 QQ = 100 KG).")
     else:
         record.update(source_url=FOB_URL, market="Mercado internacional FOB",
                       currency=["USD"], unit=["TN"],
@@ -750,11 +674,116 @@ def _current_state(path: Path, family: str, requested: date, attempted: str,
     return record
 
 
-def update_internal(data_root: Path, as_of: date, fetcher=download,
-                    bcra_path: Path | None = None) -> tuple[str, dict]:
+def _internal_revision_rows(previous: list[dict], incoming: list[dict], detected_at: str) -> list[dict]:
+    def keyed(rows):
+        return {
+            (row["periodo_ym"], row["rice_variety_raw"]): row
+            for row in rows
+            if row["row_kind"] == "observation" and row["tipo_precio"] == INTERNAL_BASE_TYPE
+        }
+
+    old, new = keyed(previous), keyed(incoming)
+    revisions = []
+    for (period, variety) in sorted(old.keys() & new.keys()):
+        before, after = old[(period, variety)], new[(period, variety)]
+        if (before["value_status"] != "positive" or after["value_status"] != "positive"
+                or (Decimal(before["price"]) == Decimal(after["price"])
+                    and before["price_raw_source"] == after["price_raw_source"])):
+            continue
+
+        def version(row):
+            return {
+                "price_ars_qq": row["price"],
+                "price_raw_source": row["price_raw_source"],
+                "raw_sha256": row["raw_sha256"],
+                "capture_id": row["capture_id"],
+                "source_url": row["source_url"],
+                "source_locator": row["source_locator"],
+                "record_id": row["record_id"],
+                "observed_at_utc": row["updated_at_utc"],
+                "raw_artifact": f"raw/rice_prices/rice_internal/{row['capture_id']}/response.html",
+            }
+
+        old_version, new_version = version(before), version(after)
+        revision = {
+            "periodo_ym": period,
+            "rice_variety_raw": variety,
+            "detected_at_utc": detected_at,
+            "previous": old_version,
+            "current": new_version,
+        }
+        revision["revision_id"] = stable_id([
+            revision["periodo_ym"], revision["rice_variety_raw"],
+            old_version["record_id"], new_version["record_id"],
+        ])
+        revisions.append(revision)
+    return revisions
+
+
+def _load_revision_ledger(path: Path) -> dict:
+    if not path.exists():
+        return {"schema_version": REVISION_LEDGER_VERSION, "revisions": []}
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        raise RiceError("Registro de revisiones históricas ilegible; última salida válida preservada") from None
+    _validate_revision_ledger(document)
+    return document
+
+
+def _validate_revision_ledger(document: dict) -> None:
+    if (not isinstance(document, dict)
+            or document.get("schema_version") != REVISION_LEDGER_VERSION
+            or not isinstance(document.get("revisions"), list)):
+        raise RiceError("Registro de revisiones históricas inválido")
+    seen = set()
+    for revision in document["revisions"]:
+        if not isinstance(revision, dict):
+            raise RiceError("Revisión histórica inválida")
+        revision_id = revision.get("revision_id", "")
+        if not re.fullmatch(r"[a-f0-9]{64}", str(revision_id)) or revision_id in seen:
+            raise RiceError("Identidad de revisión histórica inválida/duplicada")
+        seen.add(revision_id)
+        if (not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", str(revision.get("periodo_ym", "")))
+                or revision.get("rice_variety_raw") not in {"LARGO FINO", "LARGO ANCHO"}):
+            raise RiceError("Período/variedad de revisión histórica inválidos")
+        try:
+            datetime.fromisoformat(str(revision["detected_at_utc"]).replace("Z", "+00:00"))
+        except (KeyError, ValueError):
+            raise RiceError("Fecha de detección de revisión histórica inválida") from None
+        record_ids = []
+        for version_key in ("previous", "current"):
+            version = revision.get(version_key)
+            try:
+                amount = Decimal(version["price_ars_qq"])
+            except (TypeError, KeyError, InvalidOperation):
+                raise RiceError("Valor de revisión histórica inválido") from None
+            try:
+                datetime.fromisoformat(str(version["observed_at_utc"]).replace("Z", "+00:00"))
+            except (TypeError, KeyError, ValueError):
+                raise RiceError("Fecha de captura de revisión histórica inválida") from None
+            capture_id = str(version.get("capture_id", ""))
+            record_id = str(version.get("record_id", ""))
+            if (not amount.is_finite() or amount <= 0
+                    or not re.fullmatch(r"[a-f0-9]{64}", str(version.get("raw_sha256", "")))
+                    or not re.fullmatch(r"\d{8}T\d{6}Z_[a-f0-9]{12}", capture_id)
+                    or not re.fullmatch(r"[a-f0-9]{64}", record_id)
+                    or version.get("source_url") != INTERNAL_URL
+                    or not version.get("source_locator")
+                    or not version.get("price_raw_source")
+                    or version.get("raw_artifact") != f"raw/rice_prices/rice_internal/{capture_id}/response.html"):
+                raise RiceError("Evidencia de revisión histórica incompleta")
+            record_ids.append(record_id)
+        if (record_ids[0] == record_ids[1]
+                or revision_id != stable_id([revision["periodo_ym"], revision["rice_variety_raw"], *record_ids])):
+            raise RiceError("Identidad de versiones de revisión histórica inválida")
+
+
+def update_internal(data_root: Path, as_of: date, fetcher=download) -> tuple[str, dict]:
     data_root = Path(data_root)
     dashboard = data_root / "dashboard" / "commodities" / "rice_internal.csv.gz"
     status_path = data_root / "reports" / "RICE_PRICES_STATUS.json"
+    revisions_path = data_root / "reports" / "RICE_INTERNAL_REVISIONS.json"
     previous = read_bundle(dashboard)
     old_status = json.loads(status_path.read_text("utf-8")) if status_path.exists() else {}
     previous_state = old_status.get("sources", {}).get("rice_internal", {})
@@ -770,24 +799,40 @@ def update_internal(data_root: Path, as_of: date, fetcher=download,
         cells = parse_internal(response.body, as_of)
         duplicate_rows = sum(len(cell.get("duplicate_source_rows", [])) for cell in cells)
         capture["identical_duplicate_source_rows"] = duplicate_rows
-        fx_path = bcra_path or ROOT / "data" / "carnes" / "dashboard" / "bcra_a3500.json"
-        fx_months, fx_meta = monthly_a3500(fx_path, as_of)
-        observations = _internal_rows(cells, capture, fx_months, fx_meta)
+        observations = _internal_rows(cells, capture)
         _check_history(previous, observations, "rice_internal")
         new_payload = build_bundle(observations)
         new_rows = validate_bundle(new_payload)
+        revision_document = _load_revision_ledger(revisions_path)
+        known_revisions = {row["revision_id"] for row in revision_document["revisions"]}
+        new_revisions = [row for row in _internal_revision_rows(previous, new_rows, attempted)
+                         if row["revision_id"] not in known_revisions]
+        revision_document["revisions"].extend(new_revisions)
+        _validate_revision_ledger(revision_document)
+        revision_payload = json_bytes(revision_document)
         if previous and _value_signature(previous) == _value_signature(new_rows):
             status = "NO_PUBLICATION"
             finish_capture(capture, status, len(cells))
             rows = previous
+            atomic_write(revisions_path, revision_payload)
         else:
             status = "UPDATED"
             finish_capture(capture, status, len(cells))
+            old_dashboard_payload = dashboard.read_bytes() if dashboard.exists() else None
             atomic_write(dashboard, gzip_bundle(new_payload))
+            try:
+                atomic_write(revisions_path, revision_payload)
+            except Exception:
+                if old_dashboard_payload is None:
+                    dashboard.unlink(missing_ok=True)
+                else:
+                    atomic_write(dashboard, old_dashboard_payload)
+                raise
             rows = new_rows
         record = _current_state(dashboard, "rice_internal", as_of, attempted,
                                 previous_state, status, "", evidence, rows)
         record["identical_duplicate_source_rows"] = duplicate_rows
+        record["historical_revisions_recorded"] = len(new_revisions)
         if duplicate_rows:
             record["notes"] += f" La tabla fuente contenía {duplicate_rows} fila(s) mensual(es) repetida(s) con valores idénticos; se deduplican y quedan localizables en RAW/CSV."
         return status, record
@@ -903,11 +948,20 @@ def validate_publication(data_root: Path) -> dict:
                         if row["row_kind"] == "observation" and row["tipo_precio"].startswith(expected)]
         if not observations or any(not row["source_url"] or not row["raw_sha256"] for row in observations):
             raise RiceError("Observaciones publicadas de arroz sin trazabilidad")
+        if key == "rice_internal":
+            for row in observations:
+                if (row["moneda"] != "ARS" or row["unidad"] not in {"QQ", "KG"}
+                        or row["tipo_precio"] not in {INTERNAL_BASE_TYPE, INTERNAL_KG_TYPE}
+                        or any(row[field] for field in ("fx_a3500_monthly_avg", "fx_a3500_observations",
+                            "fx_a3500_first_date", "fx_a3500_last_date", "fx_a3500_raw_sha256",
+                            "fx_a3500_source_url"))):
+                    raise RiceError("La serie interna de arroz debe contener sólo ARS/QQ y conversión ARS/KG")
+    _validate_revision_ledger(_load_revision_ledger(data_root / "reports" / "RICE_INTERNAL_REVISIONS.json"))
     return status
 
 
 def update(data_root: Path, as_of: date, fetcher=download,
-           bcra_path: Path | None = None, sources=None) -> dict:
+           sources=None) -> dict:
     data_root = Path(data_root)
     status_path = data_root / "reports" / "RICE_PRICES_STATUS.json"
     try:
@@ -923,7 +977,7 @@ def update(data_root: Path, as_of: date, fetcher=download,
         key = f"rice_{source}"
         try:
             if source == "internal":
-                result, record = update_internal(data_root, as_of, fetcher, bcra_path)
+                result, record = update_internal(data_root, as_of, fetcher)
             else:
                 result, record = update_fob(data_root, as_of, fetcher)
         except Exception as error:
@@ -959,7 +1013,6 @@ def main(argv=None) -> int:
     # local CLI usable on Windows without requiring an external IANA tzdata package.
     parser.add_argument("--as-of", type=date.fromisoformat, default=date.today())
     parser.add_argument("--data-root", type=Path, default=ROOT / "data" / "magyp")
-    parser.add_argument("--bcra-file", type=Path, default=ROOT / "data" / "carnes" / "dashboard" / "bcra_a3500.json")
     parser.add_argument("--source", choices=["all", "internal", "fob"], default="all")
     parser.add_argument("--validate", action="store_true", help="Valida ambos bundles y el estado sin red")
     args = parser.parse_args(argv)
@@ -970,7 +1023,7 @@ def main(argv=None) -> int:
     if not args.allow_web:
         parser.error("Use --allow-web para consultar páginas oficiales MAGyP")
     selected = None if args.source == "all" else [args.source]
-    state = update(args.data_root, args.as_of, download, args.bcra_file, selected)
+    state = update(args.data_root, args.as_of, download, selected)
     required = [args.data_root / "dashboard" / "commodities" / name
                 for name in ("rice_internal.csv.gz", "rice_fob.csv.gz")]
     if all(path.exists() for path in required):

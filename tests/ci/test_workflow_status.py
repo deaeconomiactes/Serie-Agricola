@@ -2,6 +2,16 @@ import unittest,subprocess,os,shutil,tempfile,textwrap,sys,json
 from pathlib import Path
 from scripts.ci.workflow_status import requires_deploy
 class WorkflowStatusTests(unittest.TestCase):
+    def test_rice_update_workflow_queries_and_publishes_only_internal_prices(self):
+        root=Path(__file__).resolve().parents[2]
+        workflow=(root/'.github/workflows/update-magyp-rice-prices.yml').read_text(encoding='utf-8')
+        self.assertIn('rice_prices.py --allow-web --source internal --as-of',workflow)
+        publication=workflow.split('- name: Publicar CSV y estado en main',1)[1].split('- name: Desplegar estado',1)[0]
+        self.assertIn('rice_internal.csv.gz',publication)
+        self.assertIn('RICE_INTERNAL_REVISIONS.json',publication)
+        self.assertNotIn('rice_fob.csv.gz',publication)
+        self.assertIn('rice_fob.csv.gz',workflow.split('- name: Conservar evidencia RAW y salidas de la consulta',1)[1])
+
     def test_branch_guard_blocks_before_any_git_operation(self):
         bash=shutil.which('bash') or 'C:/Program Files/Git/bin/bash.exe'
         result=subprocess.run([bash,str(Path(__file__).resolve().parents[2]/'scripts/ci/push_data_main.sh')],env={**os.environ,'GITHUB_ACTIONS':'true','GITHUB_REF':'refs/heads/review'},capture_output=True,text=True)
