@@ -2,7 +2,8 @@ import io, json, tempfile, unittest
 from datetime import datetime
 from pathlib import Path
 import re
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
+from unittest.mock import patch
 from openpyxl import Workbook
 from scripts.carnes import exportaciones_magyp as e
 
@@ -13,6 +14,27 @@ def fixture():
     out=io.BytesIO();w.save(out);return out.getvalue()
 
 class ExportsTests(unittest.TestCase):
+    def test_retry_then_success_and_exhaustion_preserves_bundle(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d); payload=fixture(); e.update(root,lambda:payload)
+            out=root/'dashboard/exportaciones_magyp.json'; before=out.read_bytes()
+            class Response:
+                def __enter__(self): return self
+                def __exit__(self,*args): pass
+                def read(self,limit):
+                    assert limit==5000001
+                    return payload
+            with patch.object(e,'urlopen',side_effect=[URLError('timeout'),Response()]) as opening, patch.object(e.time,'sleep') as sleeping:
+                self.assertEqual(e.update(root)['status'],'NO_PUBLICATION')
+                self.assertEqual(opening.call_count,2); sleeping.assert_called_once_with(3)
+            with patch.object(e,'urlopen',side_effect=URLError('timeout')) as opening, patch.object(e.time,'sleep') as sleeping:
+                self.assertEqual(e.update(root)['status'],'SOURCE_UNAVAILABLE')
+                self.assertEqual(opening.call_count,3); self.assertEqual(sleeping.call_count,2)
+            self.assertEqual(out.read_bytes(),before)
+            with patch.object(e,'urlopen',side_effect=HTTPError(e.URL,404,'missing',{},None)) as opening, patch.object(e.time,'sleep') as sleeping:
+                self.assertEqual(e.update(root)['status'],'SOURCE_UNAVAILABLE')
+                self.assertEqual(opening.call_count,1); sleeping.assert_not_called()
+
     def test_workflow_gate_blocks_failed_capture_after_successful_checks(self):
         workflow=Path(__file__).resolve().parents[2]/'.github/workflows/update-carnes-exportaciones.yml'
         text=workflow.read_text('utf8')

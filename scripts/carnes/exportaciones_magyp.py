@@ -1,15 +1,32 @@
 """Captura conservadora de la planilla oficial mensual de indicadores bovinos."""
 from __future__ import annotations
-import hashlib, io, json, math, os, tempfile, uuid
+import hashlib, io, json, math, os, tempfile, time, uuid
+from http.client import IncompleteRead
 from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.request import Request, urlopen
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[2] / 'data/carnes'
 URL = 'https://www.magyp.gob.ar/sitio/areas/ss_ganaderia/archivos/Planilla_indicadores_bovinos_desde_1990_MENSUAL.xlsx'
 REPORT = 'https://www.magyp.gob.ar/sitio/areas/bovinos/informacion_sectorial/_archivos/000030_Indicadores/000001-%20Indicadores%20bovinos.pdf'
+
+def fetch_official():
+    """Retry transient connection failures, preserving the existing size limit."""
+    for attempt in range(3):
+        try:
+            request=Request(URL,headers={'User-Agent':'Mozilla/5.0 (compatible; SerieAgricola/1.0)'})
+            with urlopen(request,timeout=45) as response:
+                return response.read(5000001)
+        except HTTPError as exc:
+            if exc.code not in (429,500,502,503,504): raise
+            error=exc
+        except (OSError, URLError, IncompleteRead) as exc:
+            error=exc
+        print(f'[FETCH] intento {attempt+1}/3: {type(error).__name__}: {error}',flush=True)
+        if attempt<2: time.sleep((3,9)[attempt])
+    raise URLError(f'No se pudo descargar tras 3 intentos: {error}')
 
 def parse(payload):
     if not payload.startswith(b'PK') or len(payload)>5000000: raise ValueError('XLSX inválido')
@@ -44,10 +61,7 @@ def atomic(path, obj):
 def update(root=ROOT,fetch=None):
     root=Path(root);now=datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00','Z');out=root/'dashboard/exportaciones_magyp.json';status=root/'reports/EXPORTACIONES_MAGYP_STATUS.json'
     try:
-        if fetch is None:
-            def fetch():
-                with urlopen(Request(URL,headers={'User-Agent':'Mozilla/5.0 (compatible; SerieAgricola/1.0)'}),timeout=45) as response:return response.read(5000001)
-        payload=fetch()
+        payload=(fetch or fetch_official)()
     except (OSError,URLError,TimeoutError) as e:
         result={'status':'SOURCE_UNAVAILABLE','checked_at':now,'message':str(e)};atomic(status,result);return result
     sha=hashlib.sha256(payload).hexdigest();capture=now.replace(':','').replace('-','')+'_'+uuid.uuid4().hex[:12];raw=root/'raw/exportaciones_magyp'/capture;raw.mkdir(parents=True)
