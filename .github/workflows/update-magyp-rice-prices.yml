@@ -1,0 +1,124 @@
+name: Actualizar precios MAGyP de arroz
+on:
+  schedule:
+    # Consulta semanal en horario laboral de Argentina; Actions puede iniciarla con demora.
+    - cron: '21 14 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: serie-agricola-data-writer
+  queue: max
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - name: Resolver fecha de control en Argentina
+        run: |
+          python - <<'PY'
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          day = datetime.now(ZoneInfo('America/Argentina/Buenos_Aires')).date().isoformat()
+          with open(__import__('os').environ['GITHUB_ENV'], 'a', encoding='utf-8') as output:
+              output.write(f'RICE_AS_OF={day}\n')
+          print(f'[RICE] Fecha de control: {day}')
+          PY
+      - name: Pruebas de extracción, estado e interfaz
+        run: |
+          python -m unittest tests.magyp_common.test_rice_prices tests.ci.test_workflow_status -v
+          node --test tests/magyp_frontend/commodities.test.cjs tests/magyp_frontend/regression.test.cjs tests/magyp_frontend/mcba.test.cjs
+      - name: Consultar, validar y preparar precios oficiales
+        id: update
+        continue-on-error: true
+        run: python scripts/magyp/rice_prices.py --allow-web --as-of "$RICE_AS_OF"
+      - name: Validar bundles de precios y estados publicados
+        run: |
+          python scripts/magyp/rice_prices.py --validate
+          git diff --check
+      - name: Publicar CSV y estado en main
+        id: publication
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -- data/magyp/dashboard/commodities/rice_internal.csv.gz \
+            data/magyp/dashboard/commodities/rice_fob.csv.gz \
+            data/magyp/reports/RICE_PRICES_STATUS.json
+          python scripts/magyp/rice_prices.py --validate
+          git diff --cached --check
+          python scripts/ci/workflow_status.py plan
+          if git diff --cached --quiet; then
+            echo '[PUBLISH] Sin cambios publicados de arroz.'
+          else
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'chore: actualizar precios MAGyP de arroz'
+            bash scripts/ci/push_data_main.sh
+          fi
+      - name: Desplegar estado o datos de arroz validados
+        if: github.ref == 'refs/heads/main' && steps.publication.outputs.deploy_required == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main
+      - name: Conservar evidencia RAW y salidas de la consulta
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: magyp-rice-prices-${{ github.run_id }}
+          retention-days: 90
+          path: |
+            data/magyp/raw/rice_prices/
+            data/magyp/dashboard/commodities/rice_internal.csv.gz
+            data/magyp/dashboard/commodities/rice_fob.csv.gz
+            data/magyp/reports/RICE_PRICES_STATUS.json
+      - name: Registrar resultado y hacer visibles errores técnicos
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+          from scripts.ci.workflow_status import summary
+          path = Path('data/magyp/reports/RICE_PRICES_STATUS.json')
+          if not path.exists():
+              summary('MAGyP_RICE', 'PIPELINE_ERROR', os.getenv('RICE_AS_OF'), None, 'false', 'false')
+              raise SystemExit('PIPELINE_ERROR: falta RICE_PRICES_STATUS.json')
+          report = json.loads(path.read_text(encoding='utf-8'))
+          records = report.get('sources', {})
+          if set(records) != {'rice_internal', 'rice_fob'}:
+              raise SystemExit('PIPELINE_ERROR: falta el estado de una fuente de arroz')
+          technical = False
+          for family, record in sorted(records.items()):
+              state = record.get('status', 'PIPELINE_ERROR')
+              summary('MAGyP_' + family.upper(), state, record.get('requested_date'),
+                      record.get('last_observation_date'), os.getenv('CHANGED', 'false'),
+                      os.getenv('DEPLOY', 'false'))
+              if state == 'SOURCE_UNAVAILABLE':
+                  print(f"::warning title=Fuente MAGyP no disponible::{family}; se conservó la última salida válida")
+              if state == 'PIPELINE_ERROR':
+                  print(f"::error title=Error técnico en precios de arroz::{family}: {record.get('diagnostic_note') or 'ver logs'}")
+                  technical = True
+          if technical:
+              raise SystemExit('PIPELINE_ERROR: última salida válida preservada; revisar los diagnósticos')
+          PY
+        env:
+          CHANGED: ${{ steps.publication.outputs.changed || 'false' }}
+          DEPLOY: ${{ steps.publication.outputs.deploy_required || 'false' }}

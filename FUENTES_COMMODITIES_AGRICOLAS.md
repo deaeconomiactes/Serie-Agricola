@@ -1,8 +1,8 @@
 # Evaluación de fuentes para commodities agrícolas
 
-**Estado:** evaluación exploratoria de BCR/Cámara Arbitral. **No hay integración de precios BCR en el dashboard.** El módulo Commodities SIO es una línea independiente y no se mezcla con este piloto.
+**Alcance de este documento:** evaluación exploratoria de BCR/Cámara Arbitral. **No hay integración de precios BCR en el dashboard.** El módulo Commodities MAGyP (incluido arroz) y Commodities SIO son familias independientes; la incorporación de arroz está documentada en [Precios MAGyP de arroz](docs/MAGYP_PRECIOS_ARROZ.md).
 
-Este documento evalúa fuentes potenciales para una incorporación futura. En esta etapa no se integran commodities al dashboard ni se realizan llamadas automáticas de red. Sí se deja preparada documentación, estructura técnica exploratoria y scripts de apoyo para futuras pruebas controladas.
+El análisis que sigue evalúa fuentes potenciales para una futura incorporación BCR/Cámara. No describe la familia MAGyP ya integrada ni modifica las reglas de separación del módulo SIO.
 
 Los scripts disponibles preparan integración, auditoría y descarga controlada, pero no publican información en el dashboard.
 

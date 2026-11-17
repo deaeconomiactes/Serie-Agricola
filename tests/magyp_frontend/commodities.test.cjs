@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const zlib = require('node:zlib');
 const vm = require('node:vm');
 const {execFileSync} = require('node:child_process');
 const current = fs.readFileSync('app.js','utf8');
@@ -23,6 +24,53 @@ test('FOB comprimido carga el bundle íntegro y rechaza corrupción',async()=>{
     await assert.rejects(vm.runInContext("loadCommoditySource('magyp_fob')",ctx));
 });
 
+test('los bundles de arroz cargan como familias independientes con estado de fuente',async()=>{
+    const ctx=context();
+    Object.assign(ctx,{Blob,Response,DecompressionStream});
+    const state=fs.readFileSync('data/magyp/reports/RICE_PRICES_STATUS.json');
+    ctx.fetch=async url=>{
+        if(url.endsWith('/RICE_PRICES_STATUS.json'))return new Response(state);
+        const name=url.includes('rice_internal.csv')?'rice_internal':'rice_fob';
+        return new Response(fs.readFileSync(`data/magyp/dashboard/commodities/${name}.csv.gz`));
+    };
+    for(const family of ['magyp_rice_internal','magyp_rice_fob']) {
+        const result=await vm.runInContext(`loadCommoditySource('${family}')`,ctx);
+        assert.ok(result.mensual.length);assert.ok(result.ultimos.length);assert.ok(result.semaforo.length);
+        assert.equal(result.resumen.length,1);
+        assert.ok(vm.runInContext(`priceFreshnessBySource['${family}'].last_valid_date`,ctx));
+        assert.equal(vm.runInContext(`priceFreshnessBySource['${family}'].status`,ctx),'NO_PUBLICATION');
+        assert.equal(vm.runInContext(`Boolean(commodityHistoryMetadata['${family}'])`,ctx),false);
+    }
+    const internal=zlib.gunzipSync(fs.readFileSync('data/magyp/dashboard/commodities/rice_internal.csv.gz')).toString('utf8');
+    const fob=zlib.gunzipSync(fs.readFileSync('data/magyp/dashboard/commodities/rice_fob.csv.gz')).toString('utf8');
+    ctx.internal=internal;ctx.fob=fob;
+    assert.ok(vm.runInContext("parseReferenceCommodityBundle(internal,'magyp_rice_internal').mensual.every(row=>row.tipo_precio.startsWith('Precio interno arroz cáscara'))",ctx));
+    assert.ok(vm.runInContext("parseReferenceCommodityBundle(fob,'magyp_rice_fob').mensual.every(row=>row.tipo_precio.startsWith('Referencia internacional FOB arroz'))",ctx));
+    assert.throws(()=>vm.runInContext("parseReferenceCommodityBundle(fob,'magyp_rice_internal')",ctx));
+});
+
+test('rice date bounds apply to chart rows and latest values without filling gaps',()=>{
+    const ctx=context();
+    ctx.rice=zlib.gunzipSync(fs.readFileSync('data/magyp/dashboard/commodities/rice_internal.csv.gz')).toString('utf8');
+    const result=JSON.parse(vm.runInContext(`commoditySource='magyp_rice_internal';commodityFrequency='mensual';
+        commodityData=parseReferenceCommodityBundle(rice,'magyp_rice_internal');
+        commodityDateRangeApplied={from:'2026-01',to:'2026-05'};
+        JSON.stringify({rows:getCommodityFilteredRows().map(row=>row.periodo_ym),latest:getCommodityLatestRows().map(row=>row.periodo_ultimo)})`,ctx));
+    assert.ok(result.rows.length>0);
+    assert.ok(result.rows.every(period=>period>='2026-01'&&period<='2026-05'));
+    assert.ok(result.latest.every(period=>period==='2026-05'));
+});
+
+test('rice range CSV quotes source fields and retains trace hashes',()=>{
+    const ctx=context();
+    ctx.rows=[{periodo_ym:'2026-10',rice_variety_raw:'LARGO FINO',price:'40000.00',raw_sha256:'a'.repeat(64),note:'valor; "original"'}];
+    const csv=vm.runInContext('commodityRiceRowsToCsv(rows)',ctx);
+    assert.ok(csv.startsWith('\uFEFF'));
+    assert.match(csv,/"raw_sha256"/);
+    assert.match(csv,/"a{64}"/);
+    assert.match(csv,/"valor; ""original"""/);
+});
+
 test('initial MAGyP internal source and source switches set frequency and KPI semantics',()=>{
     const ctx=context();
     assert.equal(vm.runInContext('commoditySource',ctx),'magyp_internal');
@@ -34,7 +82,7 @@ test('initial MAGyP internal source and source switches set frequency and KPI se
     }};
     vm.runInContext('initCommodityFilters=()=>{};updateCommoditySourceStatus=()=>{};updateCommodityDashboard=()=>{};',ctx);
     const frequencies={magyp_internal:'mensual',magyp_board:'diaria',magyp_fas:'diaria',
-        magyp_fob:'diaria',magyp_futures:'diaria',sio:'mensual'};
+        magyp_fob:'diaria',magyp_futures:'diaria',magyp_rice_internal:'mensual',magyp_rice_fob:'mensual',sio:'mensual'};
     for(const [source,frequency] of Object.entries(frequencies)) {
         vm.runInContext(`setCommoditySource('${source}')`,ctx);
         assert.equal(vm.runInContext('commodityFrequency',ctx),frequency);

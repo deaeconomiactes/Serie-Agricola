@@ -497,6 +497,7 @@
             <span id="commodityDataStatus" class="commodity-data-status" role="status" aria-live="polite">Cargando datos…</span>
         </div>
         <p id="commodityMethodNote" class="method-note methodology-note commodity-method-note">Precios internos mensuales publicados por MAGyP, en ARS/TN por plaza, con histórico oficial desde 1996.</p>
+        <p id="commoditySourceCitation" class="commodity-source-citation" hidden><span>Fuente oficial:</span> <a id="commoditySourceLink" target="_blank" rel="noopener noreferrer"></a></p>
         <p id="commodityPriceScope" class="commodity-price-scope">Precios mensuales en la moneda y unidad seleccionadas · referencias por serie</p>
 
         <div class="commodity-filters filters-card filters-grid" aria-label="Filtros de commodities agrícolas">
@@ -554,6 +555,21 @@
                 <p class="commodity-filter-hint">Mensual: historia completa. Diaria: detalle por año.</p>
             </div>
         </div>
+
+        <section id="commodityRiceDateFilters" class="commodity-rice-date-filters" aria-label="Período y descarga de precios mensuales de arroz" hidden>
+            <div class="commodity-rice-date-inputs">
+                <div class="filter-group"><label class="filter-label" for="commodityDateRangeFrom">Desde</label><input id="commodityDateRangeFrom" type="month"></div>
+                <div class="filter-group"><label class="filter-label" for="commodityDateRangeTo">Hasta</label><input id="commodityDateRangeTo" type="month"></div>
+            </div>
+            <div class="commodity-rice-date-actions" aria-label="Períodos rápidos">
+                <button type="button" data-rice-range="12m">Últimos 12 meses</button>
+                <button type="button" data-rice-range="5y">Últimos 5 años</button>
+                <button type="button" data-rice-range="all">Todo el período</button>
+            </div>
+            <button type="button" id="commodityRiceDownload">Descargar CSV del período</button>
+            <p id="commodityRiceDateStatus" class="commodity-rice-date-status" role="status" aria-live="polite"></p>
+        </section>
+        <p id="commodityPublicationStatus" class="commodity-publication-status" role="status" aria-live="polite" hidden></p>
 
         <div class="commodity-kpi-grid">
             <div class="kpi-card commodity-kpi-update"><div class="kpi-icon">◷</div><div class="kpi-content"><span class="kpi-label">Último período disponible</span><span class="kpi-value" id="commodityKpiUpdate">–</span><span class="kpi-unit" id="commodityKpiRange">Rango sin datos</span></div></div>

@@ -10,6 +10,20 @@ def stable(value):
     return value
 def requires_deploy(path,before,after):
     # Audit reports and acquisition indexes are not browser payloads.
+    if path.endswith('/RICE_PRICES_STATUS.json'):
+        try:
+            def rice_public_state(payload):
+                report=json.loads(payload or b'{}')
+                sources=report.get('sources',{})
+                fields={'status','publication_status','last_observation_date','last_valid_date'}
+                result={}
+                for family,record in sources.items():
+                    result[family]={key:record.get(key) for key in fields}
+                    if record.get('status') in {'SOURCE_UNAVAILABLE','PIPELINE_ERROR'}:
+                        result[family]['diagnostic_note']=record.get('diagnostic_note')
+                return {'schema_version':report.get('schema_version'),'sources':result}
+            return rice_public_state(before)!=rice_public_state(after)
+        except (ValueError,UnicodeError,AttributeError):return before!=after
     if '/reports/' in path and not path.endswith('/PRICE_FRESHNESS_STATUS.json'):return False
     if path.endswith('/SOURCE_INDEX.json'):return False
     if path.endswith('.json'):

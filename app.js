@@ -33,7 +33,13 @@ const MAGYP_REFERENCE_CONFIG = {
     magyp_fob: { label: 'FOB oficial — MAGyP', file: 'fob.csv.gz',
         note: 'API MAGyP: posición textual, circular y embarque; moneda/unidad sin identificar. Histórico SSPM: series descriptivas en USD/TN con índice calendario, que no confirma fecha de publicación MAGyP. Son referencias separadas, sin equivalencias entre posiciones y productos.' },
     magyp_futures: { label: 'Futuros externos — MAGyP', file: 'futures.csv',
-        note: 'Chicago y Kansas en USD/TN por producto y vencimiento. Las matrices históricas publicadas se distinguen de los cierres actuales mediante Tipo de precio. La fecha de cotización es la observación; Vencimiento / Posición identifica el contrato. No hay serie continua ni roll automático.' }
+        note: 'Chicago y Kansas en USD/TN por producto y vencimiento. Las matrices históricas publicadas se distinguen de los cierres actuales mediante Tipo de precio. La fecha de cotización es la observación; Vencimiento / Posición identifica el contrato. No hay serie continua ni roll automático.' },
+    magyp_rice_internal: { label: 'Arroz cáscara interno — MAGyP', file: 'rice_internal.csv.gz', monthlyOnly: true, embeddedHistory: true, hideTypeFilter: true,
+        statusFamily: 'rice_internal', statusFile: 'RICE_PRICES_STATUS.json', sourceUrl: 'https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/regionales/_archivos/000010_Precios%20Locales/000020_Arroz/000001_Precios%20de%20Arroz%20C%C3%A1scara%20Internos.php?accion=imp',
+        note: 'Referencia mensual de arroz cáscara del mercado interno, en ARS/QQ. Largo fino y largo ancho son series separadas. 1 quintal métrico = 100 kg; ARS/kg se calcula dividiendo ARS/QQ por 100. USD/QQ es una equivalencia derivada: ARS/QQ dividido por la media aritmética simple de las cotizaciones diarias A3500 publicadas en el mismo mes calendario completo. No es un precio USD publicado por MAGyP ni un promedio mensual oficial del BCRA; no se usa el tipo de cambio vigente para convertir historia. No es arroz elaborado ni necesariamente una cotización específica de productores correntinos.' },
+    magyp_rice_fob: { label: 'Arroz internacional FOB — MAGyP', file: 'rice_fob.csv.gz', monthlyOnly: true, embeddedHistory: true,
+        statusFamily: 'rice_fob', statusFile: 'RICE_PRICES_STATUS.json', sourceUrl: 'https://www.magyp.gob.ar/sitio/areas/ss_mercados_agropecuarios/areas/regionales/_archivos/000020_Precios%20Internacionales/000052_Arroz/000001_Arroz%20Mensual%20U%24S%20x%20Ton%20FOB.php',
+        note: 'Referencias internacionales mensuales FOB en USD/TN, separadas por las etiquetas originales de origen/calidad que publica MAGyP (fuente indicada: Osiriz/InfoArro). Son distintas del precio interno de arroz cáscara y no deben combinarse.' }
 };
 Object.entries(MAGYP_REFERENCE_CONFIG).forEach(([key, config]) => {
     COMMODITY_SOURCE_CONFIG[key] = { ...config, subtitle: config.label, reference: true,
@@ -363,6 +369,8 @@ let commodityData = { diario: [], mensual: [], ultimos: [], resumen: [], semafor
 let commoditySelectedValues = [];
 const commodityCurrentData = {};
 const commodityHistoryMetadata = {};
+const ricePublicationStates = {};
+let commodityDateRangeApplied = { from: '', to: '' };
 let commodityHistoryYear = 'TODOS';
 let commodityHistoryRequest = 0;
 const commodityCharts = { trend: null, ranking: null, volume: null };
@@ -2339,6 +2347,11 @@ async function loadCommoditySource(sourceKey) {
             current = parseReferenceCommodityBundle(text, sourceKey);
         } catch (error) { currentError = error; }
         commodityCurrentData[sourceKey] = current;
+        if (config.statusFamily) await loadRicePublicationStatus(sourceKey, config, current);
+        if (config.embeddedHistory) {
+            if (currentError) throw currentError;
+            return current;
+        }
         const family = sourceKey.replace('magyp_', '');
         if (typeof CommodityHistory !== 'undefined') {
             try {
@@ -2360,12 +2373,40 @@ async function loadCommoditySource(sourceKey) {
     return Object.fromEntries(entries);
 }
 
+async function loadRicePublicationStatus(sourceKey, config, current) {
+    try {
+        const response = await fetch(`data/magyp/reports/${config.statusFile}`, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`Estado MAGyP arroz: HTTP ${response.status}`);
+        const report = await response.json();
+        const state = report?.schema_version === 'magyp-rice-prices-status-v1' ? report.sources?.[config.statusFamily] : null;
+        if (!state || !['UPDATED', 'NO_OP_ALREADY_CURRENT', 'NO_PUBLICATION', 'SOURCE_UNAVAILABLE', 'PIPELINE_ERROR'].includes(state.status)) {
+            throw new Error('Estado MAGyP arroz ausente o con schema inválido');
+        }
+        ricePublicationStates[sourceKey] = state;
+        priceFreshnessBySource[sourceKey] = {
+            ...state,
+            status: state.publication_status === 'NO_PUBLICATION' ? 'NO_PUBLICATION' : state.status,
+            last_observation_date: state.last_observation_date || state.last_valid_date,
+            last_valid_date: state.last_valid_date || state.last_observation_date
+        };
+        if (current.resumen[0]) {
+            current.resumen[0].requested_date = state.requested_date;
+            current.resumen[0].last_successful_update = state.last_successful_update;
+            current.resumen[0].status = state.status;
+        }
+    } catch (error) {
+        console.error(`Estado de publicación ${sourceKey}:`, error);
+        ricePublicationStates[sourceKey] = { status: 'PIPELINE_ERROR', diagnostic_note: error.message };
+        priceFreshnessBySource[sourceKey] = { status: 'PIPELINE_ERROR', diagnostic_note: error.message };
+    }
+}
+
 function parseReferenceCommodityBundle(text, sourceKey) {
     const rows = parseCommodityCSV(text);
     const result = emptyCommodityData();
     const summary = rows.filter(row => row.row_kind === 'resumen');
     const observations = rows.filter(row => row.row_kind === 'observation');
-    const expectedType = { magyp_internal: 'Precio interno mensual', magyp_board: 'Pizarra provisional', magyp_fas: 'FAS teórico', magyp_fob: 'FOB oficial', magyp_futures: 'Futuro / cierre' }[sourceKey];
+    const expectedType = { magyp_internal: 'Precio interno mensual', magyp_board: 'Pizarra provisional', magyp_fas: 'FAS teórico', magyp_fob: 'FOB oficial', magyp_futures: 'Futuro / cierre', magyp_rice_internal: 'Precio interno arroz cáscara', magyp_rice_fob: 'Referencia internacional FOB arroz' }[sourceKey];
     if (expectedType && observations.some(row => !row.tipo_precio.startsWith(expectedType))) throw new Error('Familia económica distinta de la fuente seleccionada');
     const allowed = new Set(['observation', 'diario', 'mensual', 'ultimos', 'resumen', 'semaforo']);
     if (!observations.length || summary.length !== 1 || rows.some(row => row.schema_version !== 'magyp-references-v1' || !allowed.has(row.row_kind))) {
@@ -2413,8 +2454,8 @@ function updateCommoditySourcePresentation() {
     if (conditionHeader) conditionHeader.hidden = !hasConditions;
     const futures = commoditySource === 'magyp_futures';
     const conditionLabel = document.getElementById('commodityConditionLabel');
-    if (conditionLabel) conditionLabel.textContent = futures ? 'Vencimiento / Posición' : commoditySource === 'sio' ? 'Condiciones de la operación' : 'Condición / posición';
-    if (conditionHeader) conditionHeader.textContent = futures ? 'Vencimiento / Posición' : commoditySource === 'sio' ? 'Condiciones / detalle de eventos' : 'Condición / fuente';
+    if (conditionLabel) conditionLabel.textContent = futures ? 'Vencimiento / Posición' : commoditySource === 'sio' ? 'Condiciones de la operación' : commoditySource === 'magyp_rice_internal' ? 'Variedad' : commoditySource === 'magyp_rice_fob' ? 'Origen / calidad' : 'Condición / posición';
+    if (conditionHeader) conditionHeader.textContent = futures ? 'Vencimiento / Posición' : commoditySource === 'sio' ? 'Condiciones / detalle de eventos' : commoditySource === 'magyp_rice_internal' ? 'Variedad' : commoditySource === 'magyp_rice_fob' ? 'Origen / calidad' : 'Condición / fuente';
     const marketLabel = document.getElementById('commodityMarketLabel');
     const marketHeader = document.getElementById('commodityLatestMarketHeader');
     if (marketLabel) marketLabel.textContent = commoditySource === 'sio' ? 'Lugar de entrega' : 'Mercado / plaza';
@@ -2425,6 +2466,14 @@ function updateCommoditySourcePresentation() {
     if (periodHeader) periodHeader.textContent = futures ? 'Cotización' : 'Período';
     if (note) note.textContent = commoditySource === 'sio'
         ? 'SIO Granos: eventos informados, no contratos vigentes ni precio spot de plaza. Diario y mensual preservan lugar de entrega, procedencia y condiciones informadas. Mensual: agregación derivada de operaciones SIO, no precio mensual oficial. Condición/pago históricos no registrados permanecen desconocidos. Ceros excluidos; monedas y unidades separadas.' : config.note;
+    const citation = document.getElementById('commoditySourceCitation');
+    const citationLink = document.getElementById('commoditySourceLink');
+    if (citation && citationLink) {
+        citation.hidden = !config.sourceUrl;
+        if (config.sourceUrl) { citationLink.href = config.sourceUrl; citationLink.textContent = config.label; }
+    }
+    const riceDateFilters = document.getElementById('commodityRiceDateFilters');
+    if (riceDateFilters) riceDateFilters.hidden = !['magyp_rice_internal', 'magyp_rice_fob'].includes(commoditySource);
     const historyCoverage = document.getElementById('commodityHistoryCoverage');
     if (historyCoverage) {
         const summary = commodityData.resumen[0] || {};
@@ -2440,7 +2489,7 @@ function updateCommoditySourcePresentation() {
         commodityKpiMedianLabel: config.reference ? (daily ? 'Última cotización por serie' : 'Precio mensual por serie') : 'Mediana de eventos por serie',
         commodityKpiMonthlyLabel: daily ? 'Variación a 7 días' : 'Variación mensual',
         commodityKpiYoYLabel: daily ? 'Variación a 30 días' : 'Variación interanual',
-        commodityKpiProductsLabel: commoditySource === 'magyp_fob' ? 'Posiciones disponibles' : 'Commodities disponibles',
+        commodityKpiProductsLabel: ['magyp_fob', 'magyp_rice_fob'].includes(commoditySource) ? 'Posiciones disponibles' : 'Commodities disponibles',
         commodityLatestCountHeader: commoditySource === 'sio' ? 'Operaciones' : 'Observaciones',
         commodityLatestPriceHeader: config.reference ? 'Precio de referencia' : 'Precio mediano'
     };
@@ -2448,6 +2497,9 @@ function updateCommoditySourcePresentation() {
         const element = document.getElementById(id);
         if (element) element.textContent = text;
     });
+    const ricePriceLabel = document.getElementById('commodityKpiMedianLabel');
+    if (ricePriceLabel && commoditySource === 'magyp_rice_internal') ricePriceLabel.textContent = 'Precio interno publicado';
+    if (ricePriceLabel && commoditySource === 'magyp_rice_fob') ricePriceLabel.textContent = 'Precio FOB publicado';
     const latestVariationShort = document.getElementById('commodityLatestVariationShort');
     const latestVariationLong = document.getElementById('commodityLatestVariationLong');
     if (latestVariationShort) latestVariationShort.textContent = daily ? 'Var. 7 días' : 'Var. mensual';
@@ -2500,6 +2552,19 @@ function updateCommoditySourceStatus() {
         const maxDate = formatCommodityCapture(summary.fecha_max_operacion_sio || summary.fecha_max);
         operationRange.textContent = visible ? `Rango de operaciones: ${minDate} — ${maxDate}` : '';
     }
+    const publication = document.getElementById('commodityPublicationStatus');
+    const riceState = ricePublicationStates[commoditySource];
+    if (publication) {
+        publication.hidden = !['magyp_rice_internal', 'magyp_rice_fob'].includes(commoditySource);
+        if (!publication.hidden) {
+            const latest = riceState?.last_valid_date || riceState?.last_observation_date || summary.fecha_max;
+            const checked = riceState?.requested_date ? formatCommodityCapture(riceState.requested_date) : 'fecha de consulta no informada';
+            if (riceState?.status === 'SOURCE_UNAVAILABLE') publication.textContent = `MAGyP no estuvo disponible en la consulta del ${checked}; se conservan los últimos datos validados hasta ${formatCommodityCapture(latest)}.`;
+            else if (riceState?.status === 'PIPELINE_ERROR') publication.textContent = `Error técnico al verificar la publicación de MAGyP. Se conservan los datos cargados hasta ${formatCommodityCapture(latest)}. Revisar el estado de actualización.`;
+            else if (riceState?.publication_status === 'NO_PUBLICATION') publication.textContent = `Consulta MAGyP: ${checked}. No se informó una observación posterior a ${formatCommodityCapture(latest)}.`;
+            else publication.textContent = `Última observación disponible de MAGyP: ${formatCommodityCapture(latest)}.`;
+        }
+    }
 }
 
 function commodityUpdateMetadata(summary) {
@@ -2521,10 +2586,19 @@ function formatCommodityCapture(value) {
 }
 
 function setCommoditySource(sourceKey) {
+    const previousSource = commoditySource;
     commoditySource = COMMODITY_SOURCE_CONFIG[sourceKey] ? sourceKey : 'magyp_internal';
     commodityData = commodityDataBySource[commoditySource] || emptyCommodityData();
     commoditySelectedValues = [];
     commodityFrequency = COMMODITY_SOURCE_CONFIG[commoditySource].defaultFrequency || 'mensual';
+    const riceSources = ['magyp_rice_internal', 'magyp_rice_fob'];
+    if (riceSources.includes(previousSource) && !riceSources.includes(commoditySource)) {
+        commodityDateRangeApplied = { from: '', to: '' };
+        const from = document.getElementById('commodityDateRangeFrom');
+        const to = document.getElementById('commodityDateRangeTo');
+        if (from) from.value = '';
+        if (to) to.value = '';
+    }
     ['commodityFilterCommodity', 'commodityFilterMarket', 'commodityFilterCurrency', 'commodityFilterUnit', 'commodityFilterType', 'commodityFilterCondition', 'commodityFilterOrigin'].forEach(id => {
         const control = document.getElementById(id);
         if (control) control.dataset.initialized = 'false';
@@ -2533,6 +2607,8 @@ function setCommoditySource(sourceKey) {
     if (select) select.value = commoditySource;
     updateCommoditySourcePresentation();
     initCommodityFilters();
+    initCommodityRiceDateFilters();
+    updateCommoditySourcePresentation();
     updateCommoditySourceStatus();
     updateCommodityDashboard();
 }
@@ -2890,7 +2966,7 @@ function initCommodityFilters() {
     populateCommoditySelect('commodityFilterType', typeValues, 'Todos', typeDefault);
     const typeControl = document.getElementById('commodityFilterType');
     const typeGroup = document.getElementById('commodityTypeGroup');
-    const typeApplicable = commoditySource === 'sio' || typeValues.length > 1;
+    const typeApplicable = commoditySource === 'sio' || (!sourceConfig.hideTypeFilter && typeValues.length > 1);
     if (typeControl) {
         typeControl.disabled = !typeApplicable;
         if (!typeApplicable) typeControl.value = 'TODOS';
@@ -2929,10 +3005,84 @@ function initCommodityFilters() {
     }
 }
 
+function commodityRiceRowsToCsv(rows) {
+    const columns = [...new Set(rows.flatMap(row => Object.keys(row)))];
+    const quote = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    return '\uFEFF' + [columns.map(quote).join(';'), ...rows.map(row => columns.map(column => quote(row[column])).join(';'))].join('\r\n');
+}
+
+function initCommodityRiceDateFilters() {
+    const from = document.getElementById('commodityDateRangeFrom');
+    const to = document.getElementById('commodityDateRangeTo');
+    const status = document.getElementById('commodityRiceDateStatus');
+    const apply = () => {
+        const proposed = { from: from?.value || '', to: to?.value || '' };
+        if (proposed.from && proposed.to && proposed.from > proposed.to) {
+            if (status) status.textContent = 'La fecha Desde debe ser anterior o igual a Hasta. Se mantiene el rango aplicado anteriormente.';
+            return false;
+        }
+        commodityDateRangeApplied = proposed;
+        if (status) status.textContent = proposed.from || proposed.to
+            ? `Período aplicado: ${proposed.from || 'inicio de la serie'} — ${proposed.to || 'último dato disponible'}.`
+            : 'Se muestra todo el período disponible.';
+        updateCommodityDashboard();
+        return true;
+    };
+    for (const input of [from, to]) {
+        if (input && typeof input.addEventListener === 'function' && !input.dataset.commodityBound) {
+            input.addEventListener('change', apply);
+            input.dataset.commodityBound = 'true';
+        }
+    }
+    (document.querySelectorAll?.('[data-rice-range]') || []).forEach(button => {
+        if (button.dataset.commodityBound) return;
+        button.addEventListener('click', () => {
+            const periods = commodityData.mensual.map(row => String(row.periodo_ym || '')).filter(value => /^\d{4}-\d{2}$/.test(value)).sort();
+            const maxPeriod = periods.at(-1) || '';
+            if (button.dataset.riceRange === 'all' || !maxPeriod) {
+                if (from) from.value = '';
+                if (to) to.value = '';
+                apply();
+                return;
+            }
+            const [year, month] = maxPeriod.split('-').map(Number);
+            const monthsBack = button.dataset.riceRange === '12m' ? 11 : 59;
+            const start = new Date(Date.UTC(year, month - 1 - monthsBack, 1));
+            if (from) from.value = `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, '0')}`;
+            if (to) to.value = maxPeriod;
+            apply();
+        });
+        button.dataset.commodityBound = 'true';
+    });
+    const download = document.getElementById('commodityRiceDownload');
+    if (download && typeof download.addEventListener === 'function' && !download.dataset.commodityBound) {
+        download.addEventListener('click', () => {
+            const rows = getCommodityFilteredRows();
+            if (!rows.length) {
+                if (status) status.textContent = 'No hay observaciones en el período y los filtros seleccionados para descargar.';
+                return;
+            }
+            const csv = commodityRiceRowsToCsv(rows);
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+            link.download = `${commoditySource}-${commodityDateRangeApplied.from || 'inicio'}-${commodityDateRangeApplied.to || 'ultimo-dato'}.csv`;
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+            if (status) status.textContent = `CSV descargado con ${rows.length} observaciones y campos de trazabilidad.`;
+        });
+        download.dataset.commodityBound = 'true';
+    }
+}
+
 function commodityRowMatches(row) {
     if (commoditySource === 'sio') {
         const origin = document.getElementById('commodityFilterOrigin')?.value || 'TODOS';
         if (!commodityIsAll(origin) && origin !== (row.procedencia || 'Procedencia no informada')) return false;
+    }
+    if (['magyp_rice_internal', 'magyp_rice_fob'].includes(commoditySource)) {
+        const period = String(row.periodo_ym || row.fecha || '').slice(0, 7);
+        if ((commodityDateRangeApplied.from && period < commodityDateRangeApplied.from) ||
+            (commodityDateRangeApplied.to && period > commodityDateRangeApplied.to)) return false;
     }
     return commodityHistoryYearMatches(row) && [['commodityFilterCommodity', 'commodity'], ['commodityFilterMarket', 'mercado'], ['commodityFilterCurrency', 'moneda'], ['commodityFilterUnit', 'unidad'], ['commodityFilterType', 'tipo_precio'], ['commodityFilterCondition', 'condicion_comercial']].every(([filterId, field]) => {
         if (filterId === 'commodityFilterCondition' && !COMMODITY_SOURCE_CONFIG[commoditySource]?.reference && commoditySource !== 'sio') return true;
@@ -2961,6 +3111,14 @@ function getCommodityLatestRows() {
             const detail = commodityFrequency === 'diaria' ? commodityData.ultimos.find(item => item.series_id === row.series_id && item.fecha_ultima === row.fecha) || {} : {estado:(commodityData.semaforo || []).find(item => item.series_id === row.series_id && item.periodo_ym === row.periodo_ym)?.estado || 'Sin dato'};
             return {...row, ...detail, periodo_ultimo:commodityPeriodValue(row), precio_mediana_ultimo_periodo:row.precio_mediana, operaciones_ultimo_periodo:row.operaciones};
         });
+    }
+    if (['magyp_rice_internal', 'magyp_rice_fob'].includes(commoditySource)) {
+        const latest = new Map();
+        getCommodityFilteredRows().forEach(row => {
+            if (!latest.has(row.series_id) || latest.get(row.series_id).periodo_ym < row.periodo_ym) latest.set(row.series_id, row);
+        });
+        return [...latest.values()].map(row => ({ ...row, periodo_ultimo: row.periodo_ym, fecha_ultima: row.fecha,
+            precio_mediana_ultimo_periodo: row.precio_mediana, operaciones_ultimo_periodo: row.operaciones }));
     }
     if (commodityHistoryMetadata[commoditySource] && commodityFrequency === 'mensual') {
         const latest = new Map();
@@ -3363,6 +3521,28 @@ function updateCommodityChartHeadings() {
         if (volumeTitle) volumeTitle.textContent = 'Observaciones por referencia';
         if (volumeDesc) volumeDesc.textContent = 'Cantidad de cotizaciones positivas publicadas';
         if (rankingDesc) rankingDesc.textContent = 'Última referencia por serie y condición; verificar fecha de cada fila';
+    }
+    if (commoditySource === 'magyp_rice_internal') {
+        if (trendTitle) trendTitle.textContent = 'Evolución mensual del precio de arroz cáscara';
+        if (trendDesc) trendDesc.textContent = `MAGyP · ${document.getElementById('commodityFilterCurrency')?.value || 'ARS'} / ${document.getElementById('commodityFilterUnit')?.value || 'QQ'} · largo fino y largo ancho en series separadas.`;
+        if (rankingTitle) rankingTitle.textContent = 'Últimos precios internos por variedad';
+        if (rankingDesc) rankingDesc.textContent = 'Última observación disponible de cada variedad dentro del rango y filtros.';
+        if (latestTitle) latestTitle.textContent = 'Últimos precios internos de arroz cáscara';
+        if (latestDesc) latestDesc.textContent = 'Fuente, variedad, unidad y período efectivo de cada referencia publicada por MAGyP.';
+        const scope = document.getElementById('commodityPriceScope');
+        if (scope) scope.textContent = 'Arroz cáscara · ARS/QQ como unidad fuente; también ARS/KG derivado y USD/QQ equivalente A3500 · largo fino y largo ancho separados.';
+    } else if (commoditySource === 'magyp_rice_fob') {
+        if (trendTitle) trendTitle.textContent = 'Evolución mensual de referencias FOB de arroz';
+        if (trendDesc) trendDesc.textContent = 'MAGyP · USD / TN · cada etiqueta de origen/calidad conserva su serie propia.';
+        if (rankingTitle) rankingTitle.textContent = 'Última referencia FOB por origen/calidad';
+        if (rankingDesc) rankingDesc.textContent = 'Última observación disponible de cada etiqueta original dentro del rango.';
+        if (latestTitle) latestTitle.textContent = 'Últimas referencias internacionales FOB de arroz';
+        if (latestDesc) latestDesc.textContent = 'Valores en USD/TN, separados por origen/calidad y período efectivo.';
+        const scope = document.getElementById('commodityPriceScope');
+        if (scope) scope.textContent = 'Referencia internacional FOB · USD/TN · origen/calidad y período mensual conservados por separado.';
+    } else {
+        const scope = document.getElementById('commodityPriceScope');
+        if (scope) scope.textContent = 'Precios mensuales en la moneda y unidad seleccionadas · referencias por serie';
     }
     if (sourceConfig.monthlyOnly) {
         if (latestTitle) latestTitle.textContent = 'Últimos precios mensuales por serie';

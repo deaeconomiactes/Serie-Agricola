@@ -43,6 +43,16 @@ body:has(#commodityView.is-active) .commodities-footer{display:block}
 #commodityView #commodityUpdateStatus{margin:0;font-size:11px;max-width:100%;justify-self:start}
 #commodityView .source-update-status__dates{font-size:11px}
 #commodityView .commodity-filters{display:grid;grid-template-columns:minmax(150px,1.35fr) minmax(120px,1.15fr) minmax(85px,.7fr) minmax(90px,.8fr) minmax(90px,.75fr) auto;gap:10px;align-items:start;background:#111e2a;border:1px solid #ffffff0a;border-radius:6px;padding:12px;margin:0 0 5px;box-shadow:none;overflow:visible}
+#commodityView .commodity-rice-date-filters:not([hidden]){display:grid;grid-template-columns:minmax(210px,1fr) auto auto;gap:10px;align-items:end;margin:8px 0;padding:12px;background:#111e2a;border:1px solid #ffffff0a;border-radius:6px}
+#commodityView .commodity-rice-date-inputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#commodityView .commodity-rice-date-inputs input{width:100%;height:34px;min-height:34px;box-sizing:border-box;padding:5px 9px;background:#132332;border:1px solid #293a4b;border-radius:4px;color:#eef3f7;font:inherit;font-size:12px}
+#commodityView .commodity-rice-date-actions{display:flex;flex-wrap:wrap;gap:6px}
+#commodityView .commodity-rice-date-actions button,#commodityView #commodityRiceDownload{min-height:34px;padding:7px 10px;border:1px solid #365d6b;border-radius:4px;background:#132332;color:#b7d7df;font:inherit;font-size:11px;cursor:pointer}
+#commodityView #commodityRiceDownload{background:#193b3d;color:#b1e7d5}
+#commodityView .commodity-rice-date-status{grid-column:1/-1;min-height:1em;margin:0;color:#a7b8c9;font-size:10px;line-height:1.5}
+#commodityView .commodity-publication-status,#commodityView .commodity-source-citation{font-size:11px;line-height:1.7;color:#a7b8c9;overflow-wrap:anywhere}
+#commodityView .commodity-source-citation{margin:0;padding:0 16px 16px}
+#commodityView .commodity-source-citation a{color:#91bdee}
 #commodityView .filter-group{min-width:0;margin:0;gap:5px}
 #commodityView .filter-label{font-size:11px;text-transform:none;letter-spacing:0;color:#a7b8c9;font-weight:500}
 #commodityView .filter-select,#commodityView .commodity-multi-trigger{height:34px;min-height:34px;padding:5px 9px;background:#132332;border:1px solid #293a4b;border-radius:4px;color:#eef3f7;font-size:12px}
@@ -127,6 +137,8 @@ body:has(#commodityView.is-active) .commodities-footer{display:block}
  body:has(#commodityView.is-active) .module-nav{left:210px;gap:8px}
  #commodityView .commodities-section{grid-template-columns:150px minmax(0,1fr);gap:16px}
  #commodityView .commodity-filters{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #commodityView .commodity-rice-date-filters:not([hidden]){grid-template-columns:minmax(0,1fr) auto}
+ #commodityView .commodity-rice-date-inputs{grid-column:1/-1}
  #commodityView .co-more{margin-top:20px}
  #commodityView .commodity-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
  #commodityView .commodity-charts-grid{grid-template-columns:minmax(0,1fr)}
@@ -147,6 +159,10 @@ body:has(#commodityView.is-active) .commodities-footer{display:block}
  #commodityView .co-rail-note{margin-bottom:0}
  #commodityView #commoditySourceSubtitle{font-size:22px}
  #commodityView .commodity-filters{grid-template-columns:repeat(2,minmax(0,1fr));padding:10px;gap:10px}
+ #commodityView .commodity-rice-date-filters:not([hidden]){grid-template-columns:minmax(0,1fr);padding:10px}
+ #commodityView .commodity-rice-date-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+ #commodityView .commodity-rice-date-actions button{min-width:0;padding:7px 5px}
+ #commodityView #commodityRiceDownload{width:100%}
  #commodityView .co-more{grid-column:1/-1;margin:0}
  #commodityView .co-extra-filters{position:static;max-width:none;width:auto;grid-template-columns:1fr;margin-top:8px;padding:12px;box-shadow:none}
  #commodityView .kpi-card{padding:12px;gap:8px}

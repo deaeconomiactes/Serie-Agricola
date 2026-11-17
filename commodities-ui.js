@@ -7,7 +7,8 @@
     const section = $('commoditiesSection');
     const families = [
         ['magyp_internal','Precio interno MAGyP'], ['magyp_board','Pizarra / Cámara'],
-        ['magyp_fas','FAS'], ['magyp_fob','FOB'], ['magyp_futures','Futuros externos'], ['sio','SIO Granos']
+        ['magyp_fas','FAS'], ['magyp_fob','FOB'], ['magyp_futures','Futuros externos'],
+        ['magyp_rice_internal','Arroz cáscara interno'], ['magyp_rice_fob','Arroz FOB'], ['sio','SIO Granos']
     ];
     const rail = document.createElement('details');
     rail.className = 'co-rail'; rail.open = true;
@@ -25,7 +26,7 @@
     const sourceDetails = document.createElement('details'); sourceDetails.id = 'commoditySources'; sourceDetails.className = 'co-disclosure';
     sourceDetails.innerHTML = '<summary>Fuentes, cobertura y actualización</summary><div class="co-source-content"></div>';
     const sourceContent = sourceDetails.lastElementChild;
-    ['commodityDataFreshness','commodityDataLastOperation','commodityDataOperationRange','commodityHistoryCoverage'].forEach(id => sourceContent.append($(id)));
+    ['commodityDataFreshness','commodityDataLastOperation','commodityDataOperationRange','commodityHistoryCoverage','commodityPublicationStatus'].forEach(id => sourceContent.append($(id)));
     heading.append($('commodityUpdateStatus'));
     heading.append($('commodityDataStatus'));
     const filters = main.querySelector('.commodity-filters');
@@ -35,9 +36,11 @@
     filters.append(more);
     const hint = $('commodityFilterCommodityHint'); filters.after(hint);
     const scope = $('commodityPriceScope'); hint.after(scope);
+    const riceDates = $('commodityRiceDateFilters'); filters.after(riceDates);
+    riceDates.after(hint);
     const method = document.createElement('details'); method.id = 'commodityMethodology'; method.className = 'co-disclosure';
     method.innerHTML = '<summary>Metodología y límites de comparación</summary>';
-    method.append($('commodityMethodNote'));
+    method.append($('commodityMethodNote'), $('commoditySourceCitation'));
     const kpis = main.querySelector('.commodity-kpi-grid');
     const coverage = document.createElement('div'); coverage.className = 'co-coverage';
     coverage.append(main.querySelector('.commodity-kpi-products'),main.querySelector('.commodity-kpi-currency'));
@@ -242,8 +245,8 @@
         if(!sio && operations.parentElement!==coverage)coverage.append(operations);
         main.querySelector('.commodity-kpi-monthly').classList.toggle('co-secondary-kpi',sio);
         main.querySelector('.commodity-kpi-yoy').classList.toggle('co-secondary-kpi',sio);
-        context.hidden=!['sio','magyp_fob','magyp_futures'].includes(family);
-        context.textContent=sio?'SIO · operaciones/eventos informados. Lugar de entrega, procedencia y condiciones permanecen separados; no es precio spot ni precio de plaza.':family==='magyp_fob'?'FOB · Histórico SSPM y publicación API corriente son contextos separados. Tipo de precio, moneda y unidad identifican el contexto activo; no se construye continuidad entre metodologías.':family==='magyp_futures'?'Futuros · La fecha del gráfico es la observación. El vencimiento identifica el contrato y se consulta en Más filtros y en el detalle. No se crea un roll continuo.':'';
+        context.hidden=!['sio','magyp_fob','magyp_futures','magyp_rice_internal','magyp_rice_fob'].includes(family);
+        context.textContent=sio?'SIO · operaciones/eventos informados. Lugar de entrega, procedencia y condiciones permanecen separados; no es precio spot ni precio de plaza.':family==='magyp_fob'?'FOB · Histórico SSPM y publicación API corriente son contextos separados. Tipo de precio, moneda y unidad identifican el contexto activo; no se construye continuidad entre metodologías.':family==='magyp_futures'?'Futuros · La fecha del gráfico es la observación. El vencimiento identifica el contrato y se consulta en Más filtros y en el detalle. No se crea un roll continuo.':family==='magyp_rice_internal'?'Arroz cáscara interno · referencias mensuales MAGyP en ARS/QQ. Largo fino y largo ancho se mantienen separados; no son precios minoristas ni necesariamente cotizaciones de productores correntinos.':family==='magyp_rice_fob'?'Arroz FOB · referencias internacionales en USD/TN con origen/calidad de MAGyP. Se analizan por separado del arroz cáscara del mercado interno.':'';
         if(observations.querySelector('.co-technical').open)observations.querySelector('.co-technical').open=false;
         styleRanking();compactMatrixLabels();drawLabelKey();syncCurve();
     }
