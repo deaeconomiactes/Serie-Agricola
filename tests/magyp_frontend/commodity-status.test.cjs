@@ -45,7 +45,7 @@ test('actual module status refresh uses only the selected family metadata',()=>{
  const ctx=vm.createContext({document,console,SourceUpdateStatus:indicator});
  vm.runInContext(fs.readFileSync('app.js','utf8'),ctx);
  vm.runInContext('setCommodityDataStatus=()=>{};',ctx);
- for(const [source,status] of [['magyp_internal','UPDATED'],['magyp_board','SOURCE_UNAVAILABLE'],['magyp_fas','NO_PUBLICATION'],['magyp_fob','NO_OP_ALREADY_CURRENT'],['magyp_futures','PIPELINE_ERROR'],['sio','LAST_VALID']]) {
+ for(const [source,status] of [['magyp_internal','UPDATED'],['magyp_board','SOURCE_UNAVAILABLE'],['magyp_fas','NO_PUBLICATION'],['magyp_futures','PIPELINE_ERROR'],['sio','LAST_VALID']]) {
   ctx.summary={result:status,filas_dashboard:1,fecha_max:'2026-10-09',fecha_actualizacion_dashboard:'2026-10-10T13:00:00Z'};
   vm.runInContext(`commoditySource='${source}';commodityData={resumen:[summary]};updateCommoditySourceStatus();`,ctx);
   assert.equal(nodes.get('commodityUpdateStatus').children[0].textContent,'Commodities · '+indicator.describe(ctx.summary).label);

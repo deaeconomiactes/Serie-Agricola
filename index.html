@@ -556,18 +556,18 @@
             </div>
         </div>
 
-        <section id="commodityRiceDateFilters" class="commodity-rice-date-filters" aria-label="Período y descarga de precios mensuales de arroz" hidden>
-            <div class="commodity-rice-date-inputs">
+        <section id="commodityDateRangeFilters" class="commodity-date-range-filters" aria-label="Período y descarga de commodities">
+            <div class="commodity-date-range-inputs">
                 <div class="filter-group"><label class="filter-label" for="commodityDateRangeFrom">Desde</label><input id="commodityDateRangeFrom" type="month"></div>
                 <div class="filter-group"><label class="filter-label" for="commodityDateRangeTo">Hasta</label><input id="commodityDateRangeTo" type="month"></div>
             </div>
-            <div class="commodity-rice-date-actions" aria-label="Períodos rápidos">
-                <button type="button" data-rice-range="12m">Últimos 12 meses</button>
-                <button type="button" data-rice-range="5y">Últimos 5 años</button>
-                <button type="button" data-rice-range="all">Todo el período</button>
+            <div class="commodity-date-range-actions" aria-label="Períodos rápidos">
+                <button type="button" data-commodity-range="12m">Últimos 12 meses</button>
+                <button type="button" data-commodity-range="5y">Últimos 5 años</button>
+                <button type="button" data-commodity-range="all">Todo el período</button>
             </div>
-            <button type="button" id="commodityRiceDownload">Descargar CSV del período</button>
-            <p id="commodityRiceDateStatus" class="commodity-rice-date-status" role="status" aria-live="polite"></p>
+            <button type="button" id="commodityDateRangeDownload">Descargar CSV del período</button>
+            <p id="commodityDateRangeStatus" class="commodity-date-range-status" role="status" aria-live="polite"></p>
         </section>
         <p id="commodityPublicationStatus" class="commodity-publication-status" role="status" aria-live="polite" hidden></p>
 
