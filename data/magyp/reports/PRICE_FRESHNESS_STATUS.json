@@ -13,7 +13,7 @@
       ],
       "frequency": "mensual",
       "last_observation_date": "2026-10-01",
-      "last_successful_update": "2026-11-14T02:53:38.053257Z",
+      "last_successful_update": "2026-11-17T04:56:53.897398Z",
       "status": "UPDATED",
       "automatic_update": true,
       "workflow": "magyp-commodities-review.yml",
@@ -24,8 +24,8 @@
       "unit": [
         "TN"
       ],
-      "requested_date": "2026-11-13",
-      "attempted_at": "2026-11-14T02:53:38.084777+00:00",
+      "requested_date": "2026-11-17",
+      "attempted_at": "2026-11-17T04:56:53.925926+00:00",
       "diagnostic_note": null,
       "evidence": null,
       "historical_coverage": {
@@ -65,7 +65,7 @@
       ],
       "history_automation": "Reproducible CLI; periodic current-family workflow remains independent",
       "effective_data_last_observation_date": "2026-10-01",
-      "effective_data_last_capture": "2026-11-14T02:53:38.053257Z"
+      "effective_data_last_capture": "2026-11-17T04:56:53.897398Z"
     },
     {
       "source_family": "magyp_board",
@@ -78,8 +78,8 @@
         "ROSARIO"
       ],
       "frequency": "diaria",
-      "last_observation_date": "2026-11-12",
-      "last_successful_update": "2026-11-14T02:53:40.203194Z",
+      "last_observation_date": "2026-11-13",
+      "last_successful_update": "2026-11-17T04:56:56.127568Z",
       "status": "UPDATED",
       "automatic_update": true,
       "workflow": "magyp-commodities-review.yml",
@@ -90,8 +90,8 @@
       "unit": [
         "TN"
       ],
-      "requested_date": "2026-11-13",
-      "attempted_at": "2026-11-14T02:53:40.228067+00:00",
+      "requested_date": "2026-11-17",
+      "attempted_at": "2026-11-17T04:56:56.150313+00:00",
       "diagnostic_note": null,
       "evidence": null,
       "historical_coverage": {
@@ -129,8 +129,8 @@
         "MAGyP current publication"
       ],
       "history_automation": "Reproducible CLI; periodic current-family workflow remains independent",
-      "effective_data_last_observation_date": "2026-11-12",
-      "effective_data_last_capture": "2026-11-14T02:53:40.203194Z"
+      "effective_data_last_observation_date": "2026-11-13",
+      "effective_data_last_capture": "2026-11-17T04:56:56.127568Z"
     },
     {
       "source_family": "magyp_fas",
@@ -139,8 +139,8 @@
         "Argentina / paridad teórica"
       ],
       "frequency": "diaria cuando publica",
-      "last_observation_date": "2026-11-13",
-      "last_successful_update": "2026-11-14T02:53:43.591610Z",
+      "last_observation_date": "2026-11-16",
+      "last_successful_update": "2026-11-17T04:56:59.756630Z",
       "status": "UPDATED",
       "automatic_update": true,
       "workflow": "magyp-commodities-review.yml",
@@ -153,8 +153,8 @@
         "Sin identificar",
         "TN"
       ],
-      "requested_date": "2026-11-13",
-      "attempted_at": "2026-11-14T02:53:43.648148+00:00",
+      "requested_date": "2026-11-17",
+      "attempted_at": "2026-11-17T04:56:59.840051+00:00",
       "diagnostic_note": null,
       "evidence": null,
       "historical_coverage": {
@@ -193,8 +193,8 @@
         "MAGyP current publication"
       ],
       "history_automation": "Reproducible CLI; periodic current-family workflow remains independent",
-      "effective_data_last_observation_date": "2026-11-13",
-      "effective_data_last_capture": "2026-11-14T02:53:43.591610Z"
+      "effective_data_last_observation_date": "2026-11-16",
+      "effective_data_last_capture": "2026-11-17T04:56:59.756630Z"
     },
     {
       "source_family": "magyp_fob",
@@ -205,7 +205,7 @@
       "frequency": "diaria cuando publica",
       "last_observation_date": "2026-11-13",
       "last_successful_update": "2026-11-14T02:53:45.794952Z",
-      "status": "UPDATED",
+      "status": "NO_PUBLICATION",
       "automatic_update": true,
       "workflow": "magyp-commodities-review.yml",
       "notes": "Familia independiente; sin interpolación.",
@@ -215,8 +215,8 @@
       "unit": [
         "Sin identificar"
       ],
-      "requested_date": "2026-11-13",
-      "attempted_at": "2026-11-14T02:53:46.295746+00:00",
+      "requested_date": "2026-11-17",
+      "attempted_at": "2026-11-17T04:57:02.066516+00:00",
       "diagnostic_note": null,
       "evidence": null,
       "historical_coverage": {
@@ -312,8 +312,8 @@
         "KANSAS"
       ],
       "frequency": "diaria cuando publica",
-      "last_observation_date": "2026-11-13",
-      "last_successful_update": "2026-11-14T02:53:48.277264Z",
+      "last_observation_date": "2026-11-16",
+      "last_successful_update": "2026-11-17T04:57:04.099610Z",
       "status": "UPDATED",
       "automatic_update": true,
       "workflow": "magyp-commodities-review.yml",
@@ -324,8 +324,8 @@
       "unit": [
         "TN"
       ],
-      "requested_date": "2026-11-13",
-      "attempted_at": "2026-11-14T02:53:48.455263+00:00",
+      "requested_date": "2026-11-17",
+      "attempted_at": "2026-11-17T04:57:04.482267+00:00",
       "diagnostic_note": null,
       "evidence": null,
       "historical_coverage": {
@@ -361,8 +361,8 @@
         "MAGyP current publication"
       ],
       "history_automation": "Reproducible CLI; periodic current-family workflow remains independent",
-      "effective_data_last_observation_date": "2026-11-13",
-      "effective_data_last_capture": "2026-11-14T02:53:48.277264Z"
+      "effective_data_last_observation_date": "2026-11-16",
+      "effective_data_last_capture": "2026-11-17T04:57:04.099610Z"
     },
     {
       "source_family": "mcba",
