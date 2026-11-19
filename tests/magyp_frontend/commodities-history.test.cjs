@@ -173,6 +173,72 @@ test('historical year scopes observations, never contract maturity, and does not
     assert.equal(vm.runInContext("commodityHistoryYearMatches({fecha:'2026-10-21'})",ctx),true);
 });
 
+test('internal rice supplement remains selectable across year, range, source and frequency changes',async()=>{
+    const {ctx,requests}=context();
+    const names=['Arroz cáscara — largo fino','Arroz cáscara — largo ancho'];
+    const run=expression=>vm.runInContext(expression,ctx);
+    const riceRows=()=>run("commodityData.mensual.filter(row=>row.periodo_ym.startsWith('2025') && row.commodity.startsWith('Arroz cáscara'))");
+    const riceNames=rows=>[...new Set(rows.map(row=>row.commodity))].sort();
+    const assertRice2025=()=>{
+        const options=run('getCommodityFilterOptionRows()');
+        const results=run('getCommodityFilteredRows()');
+        assert.deepEqual(riceNames(options.filter(row=>row.periodo_ym.startsWith('2025') && row.commodity.startsWith('Arroz cáscara'))),names.slice().sort());
+        assert.deepEqual(riceNames(results.filter(row=>row.commodity.startsWith('Arroz cáscara'))),names.slice().sort());
+        const keys=results.map(row=>`${row.series_id}|${row.periodo_ym}`);
+        assert.equal(new Set(keys).size,keys.length,'results must not duplicate a series/month after reassembly');
+        assert.ok(run('getCommodityLatestRows()').some(row=>row.commodity===names[0]));
+        const csv=run(`commodityRowsToCsv(getCommodityFilteredRows())`);
+        assert.match(csv,/Arroz cáscara/);
+        assert.doesNotMatch(csv,/U\$S|FOB/);
+    };
+
+    let data=await run("loadCommoditySource('magyp_internal')");ctx.testData=data;
+    run("commoditySource='magyp_internal';commodityDataBySource.magyp_internal=testData;commodityData=testData;commodityFrequency='mensual';commodityHistoryYear='2025';");
+    await run("loadCommodityHistoryYear('magyp_internal','2025')");
+    run('commodityData=commodityDataBySource.magyp_internal;initCommodityFilters()');
+    assertRice2025();
+
+    run("commodityHistoryYear='TODOS';commodityDateRangeApplied={from:'',to:''}");
+    await run("loadCommodityHistoryYear('magyp_internal','TODOS')");
+    run('commodityData=commodityDataBySource.magyp_internal');
+    assert.deepEqual(riceNames(riceRows()),names.slice().sort());
+    assert.equal(new Set(run('commodityData.mensual').map(row=>`${row.series_id}|${row.periodo_ym}`)).size,run('commodityData.mensual.length'));
+
+    run("commodityDateRangeApplied={from:'2025-01',to:'2025-12'};initCommodityFilters()");
+    assertRice2025();
+    run("commodityDateRangeApplied={from:'',to:''};commodityHistoryYear='2025'");
+    await run("loadCommodityHistoryYear('magyp_internal','2025')");
+    run('commodityData=commodityDataBySource.magyp_internal;initCommodityFilters()');
+    assertRice2025();
+
+    const dateControls={commodityDateRangeFrom:{value:'',dataset:{},addEventListener(){}},commodityDateRangeTo:{value:'',dataset:{},addEventListener(){}}};
+    const quickButton={dataset:{commodityRange:'12m'},addEventListener(_event,handler){this.activate=handler;}};
+    ctx.dateControls=dateControls;ctx.quickButton=quickButton;
+    run("document.getElementById=id=>dateControls[id]||null;document.querySelectorAll=()=>[quickButton];commodityDateRangeApplied={from:'2020-01',to:'2020-12'};updateCommodityDashboard=()=>{};initCommodityDateRangeFilters()");
+    quickButton.activate();
+    assert.deepEqual({...run('commodityDateRangeApplied')},{from:'2025-01',to:'2025-12'},'quick ranges should use the selected year, not a stale manual range');
+    assertRice2025();
+
+    const board=await run("loadCommoditySource('magyp_board')");ctx.testBoard=board;
+    run("commoditySource='magyp_board';commodityDataBySource.magyp_board=testBoard;commodityData=testBoard;commodityFrequency='diaria';commodityHistoryYear='2025'");
+    await run("loadCommodityHistoryYear('magyp_board','2025')");
+    run('commodityData=commodityDataBySource.magyp_board');
+    assert.ok(run('getCommodityFilterOptionRows().length')>0);
+    assert.equal(run("getCommodityFilterOptionRows().some(row=>row.commodity.startsWith('Arroz cáscara'))"),false);
+    run("commodityFrequency='mensual'");
+    assert.ok(run('getCommodityFilterOptionRows().length')>0);
+    run("commodityFrequency='diaria'");
+    await run("loadCommodityHistoryYear('magyp_board','2025')");
+    run('commodityData=commodityDataBySource.magyp_board');
+    assert.equal(run("new Set(commodityData.diario.map(row=>`${row.series_id}|${row.fecha}`)).size"),run('commodityData.diario.length'));
+
+    run("commoditySource='magyp_internal';commodityData=commodityDataBySource.magyp_internal;commodityFrequency='mensual';commodityHistoryYear='2025';commodityDateRangeApplied={from:'',to:''};initCommodityFilters()");
+    await run("loadCommodityHistoryYear('magyp_internal','2025')");
+    run('commodityData=commodityDataBySource.magyp_internal');
+    assertRice2025();
+    assert.equal(requests.filter(url=>url.endsWith('rice_internal.csv.gz')).length,1,'the supplement should be fetched once despite switching views');
+});
+
 test('history indicator shows effective last data without hiding current workflow error',()=>{
     const {ctx}=context();ctx.SourceUpdateStatus={render(node,metadata){ctx.shown=metadata;}};
     vm.runInContext(`commoditySource='magyp_fob';commodityHistoryMetadata.magyp_fob={};
