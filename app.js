@@ -364,6 +364,8 @@ let commoditySelectedValues = [];
 const commodityCurrentData = {};
 const commodityHistoryMetadata = {};
 const ricePublicationStates = {};
+const commoditySupplementPromises = {};
+const ricePublicationStatusLoaded = new Set();
 let commodityDateRangeApplied = { from: '', to: '' };
 let commodityHistoryYear = 'TODOS';
 let commodityHistoryRequest = 0;
@@ -2350,12 +2352,12 @@ async function loadCommoditySource(sourceKey) {
         if (typeof CommodityHistory !== 'undefined') {
             try {
                 const entry = await CommodityHistory.metadata(family);
-                result = await CommodityHistory.assemble(family, current, null, parseCommodityCSV);
                 commodityHistoryMetadata[sourceKey] = entry;
+                result = await assembleCommoditySourceData(sourceKey, current, null);
             } catch (error) { delete commodityHistoryMetadata[sourceKey];console.error(`Histórico ${family}:`, error); }
         }
         if (currentError && result === current) throw currentError;
-        if (config.riceSupplement) result = await appendRiceInternalSupplement(sourceKey, config.riceSupplement, result);
+        if (config.riceSupplement && result === current) result = await appendRiceInternalSupplement(sourceKey, config.riceSupplement, result);
         return result;
     }
     const entries = await Promise.all(Object.entries(config.files).map(async ([key, file]) => {
@@ -2369,33 +2371,56 @@ async function loadCommoditySource(sourceKey) {
 
 async function appendRiceInternalSupplement(sourceKey, config, base) {
     const statusKey = `${sourceKey}_rice`;
-    let rice = emptyCommodityData();
-    let bundleError;
-    try {
-        const response = await fetch(`data/magyp/dashboard/commodities/${config.file}`);
-        if (!response.ok) throw new Error(`Referencia MAGyP arroz: HTTP ${response.status}`);
-        const text = await new Response(new Blob([await response.arrayBuffer()]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
-        rice = parseReferenceCommodityBundle(text, 'magyp_rice_internal');
-        for (const key of ['diario', 'mensual', 'ultimos', 'semaforo']) {
-            rice[key] = rice[key].filter(row => row.moneda === 'ARS' && ['QQ', 'KG'].includes(row.unidad)).map(row => {
-                const visible = { ...row };
-                Object.keys(visible).filter(field => field.startsWith('fx_a3500_')).forEach(field => delete visible[field]);
-                return visible;
-            });
-        }
-        if (!rice.mensual.length || !rice.ultimos.length || !rice.semaforo.length) throw new Error('La serie interna de arroz no contiene vistas ARS/QQ y ARS/KG');
-        for (const key of ['diario', 'mensual', 'ultimos', 'semaforo']) base[key].push(...rice[key]);
-    } catch (error) {
-        bundleError = error;
-        console.error('Referencia interna de arroz no disponible:', error);
+    if (!commoditySupplementPromises[sourceKey]) {
+        commoditySupplementPromises[sourceKey] = (async () => {
+            let rice = emptyCommodityData();
+            let error = null;
+            try {
+                const response = await fetch(`data/magyp/dashboard/commodities/${config.file}`);
+                if (!response.ok) throw new Error(`Referencia MAGyP arroz: HTTP ${response.status}`);
+                const text = await new Response(new Blob([await response.arrayBuffer()]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+                rice = parseReferenceCommodityBundle(text, 'magyp_rice_internal');
+                for (const key of ['diario', 'mensual', 'ultimos', 'semaforo']) {
+                    rice[key] = rice[key].filter(row => row.moneda === 'ARS' && ['QQ', 'KG'].includes(row.unidad)).map(row => {
+                        const visible = { ...row };
+                        Object.keys(visible).filter(field => field.startsWith('fx_a3500_')).forEach(field => delete visible[field]);
+                        return visible;
+                    });
+                }
+                if (!rice.mensual.length || !rice.ultimos.length || !rice.semaforo.length) throw new Error('La serie interna de arroz no contiene vistas ARS/QQ y ARS/KG');
+            } catch (caught) {
+                error = caught;
+                console.error('Referencia interna de arroz no disponible:', caught);
+            }
+            return { rice, error };
+        })();
     }
-    await loadRicePublicationStatus(statusKey, config, rice);
+    const { rice, error: bundleError } = await commoditySupplementPromises[sourceKey];
+    if (!ricePublicationStatusLoaded.has(statusKey)) {
+        ricePublicationStatusLoaded.add(statusKey);
+        await loadRicePublicationStatus(statusKey, config, rice);
+    }
     if (bundleError) {
         const errorState = { ...ricePublicationStates[statusKey], status: 'PIPELINE_ERROR', diagnostic_note: bundleError.message };
         ricePublicationStates[statusKey] = errorState;
         priceFreshnessBySource[statusKey] = errorState;
     }
-    return base;
+    const combined = { ...base };
+    for (const key of ['diario', 'mensual', 'ultimos', 'semaforo']) {
+        combined[key] = [...(base[key] || []), ...(rice[key] || [])];
+    }
+    return combined;
+}
+
+async function assembleCommoditySourceData(sourceKey, current, year = null) {
+    const family = sourceKey.replace('magyp_', '');
+    let result = current;
+    if (commodityHistoryMetadata[sourceKey] && typeof CommodityHistory !== 'undefined') {
+        result = await CommodityHistory.assemble(family, current, year, parseCommodityCSV);
+    }
+    const supplement = COMMODITY_SOURCE_CONFIG[sourceKey]?.riceSupplement;
+    if (supplement) result = await appendRiceInternalSupplement(sourceKey, supplement, result);
+    return result;
 }
 
 async function loadRicePublicationStatus(sourceKey, config, current) {
@@ -2675,10 +2700,9 @@ async function selectCommoditySource(sourceKey) {
 async function loadCommodityHistoryYear(sourceKey, year) {
     const entry = commodityHistoryMetadata[sourceKey];
     if (!entry || typeof CommodityHistory === 'undefined') return;
-    const family = sourceKey.replace('magyp_', '');
     try {
         const current = commodityCurrentData[sourceKey] || emptyCommodityData();
-        commodityDataBySource[sourceKey] = await CommodityHistory.assemble(family, current, year, parseCommodityCSV);
+        commodityDataBySource[sourceKey] = await assembleCommoditySourceData(sourceKey, current, year);
     } catch (error) {
         console.error('Histórico conservado; carga no válida:', error);
         throw error;
@@ -2717,8 +2741,27 @@ function initCommodityHistoryYear() {
 }
 
 function commodityHistoryYearMatches(row) {
-    return !commodityHistoryMetadata[commoditySource] || commodityHistoryYear === 'TODOS' ||
-        String(row.fecha || row.periodo_ym || '').slice(0,4) === commodityHistoryYear;
+    if (!commodityHistoryMetadata[commoditySource] || commodityHistoryYear === 'TODOS') return true;
+    return commodityRowMonth(row).slice(0, 4) === commodityHistoryYear;
+}
+
+function commodityRowMonth(row) {
+    return String(row?.periodo_ym || row?.periodo_ultimo || row?.fecha || row?.fecha_ultima || '').slice(0, 7);
+}
+
+function commodityRowWithinSelectedPeriod(row) {
+    const period = commodityRowMonth(row);
+    if (!commodityHistoryYearMatches(row)) return false;
+    if (!commodityDateRangeApplied.from && !commodityDateRangeApplied.to) return true;
+    if (!/^\d{4}-\d{2}$/.test(period)) return false;
+    if (commodityDateRangeApplied.from && period < commodityDateRangeApplied.from) return false;
+    if (commodityDateRangeApplied.to && period > commodityDateRangeApplied.to) return false;
+    return true;
+}
+
+function getCommodityFilterOptionRows() {
+    const rows = commodityFrequency === 'diaria' ? commodityData.diario : commodityData.mensual;
+    return rows.filter(commodityRowWithinSelectedPeriod);
 }
 
 function parseCommodityCSV(text) {
@@ -3009,8 +3052,7 @@ function populateCommoditySelect(id, values, allLabel, defaultValue) {
 }
 
 function initCommodityFilters() {
-    const primaryRows = commodityFrequency === 'diaria' ? commodityData.diario : commodityData.mensual;
-    const optionRows = [...primaryRows, ...commodityData.ultimos].filter(commodityHistoryYearMatches);
+    const optionRows = getCommodityFilterOptionRows();
     const currencies = [...new Set(optionRows.map(row => row.moneda).filter(Boolean))];
     const units = [...new Set(optionRows.map(row => row.unidad).filter(Boolean))];
     const markets = [...new Set(optionRows.map(commodityMarketValue).filter(Boolean))];
@@ -3090,6 +3132,7 @@ function initCommodityDateRangeFilters() {
         if (status) status.textContent = proposed.from || proposed.to
             ? `Período aplicado: ${proposed.from || 'inicio de la serie'} — ${proposed.to || 'último dato disponible'}.`
             : 'Se muestra todo el período disponible.';
+        initCommodityFilters();
         updateCommodityDashboard();
         return true;
     };
@@ -3102,7 +3145,8 @@ function initCommodityDateRangeFilters() {
     (document.querySelectorAll?.('[data-commodity-range]') || []).forEach(button => {
         if (button.dataset.commodityBound) return;
         button.addEventListener('click', () => {
-            const periods = commodityData.mensual.map(row => String(row.periodo_ym || '')).filter(value => /^\d{4}-\d{2}$/.test(value)).sort();
+            const periods = commodityData.mensual.filter(commodityHistoryYearMatches)
+                .map(row => commodityRowMonth(row)).filter(value => /^\d{4}-\d{2}$/.test(value)).sort();
             const maxPeriod = periods.at(-1) || '';
             if (button.dataset.commodityRange === 'all' || !maxPeriod) {
                 if (from) from.value = '';
@@ -3144,10 +3188,7 @@ function commodityRowMatches(row) {
         const origin = document.getElementById('commodityFilterOrigin')?.value || 'TODOS';
         if (!commodityIsAll(origin) && origin !== (row.procedencia || 'Procedencia no informada')) return false;
     }
-    const period = String(row.periodo_ym || row.fecha || '').slice(0, 7);
-    if ((commodityDateRangeApplied.from && period < commodityDateRangeApplied.from) ||
-        (commodityDateRangeApplied.to && period > commodityDateRangeApplied.to)) return false;
-    return commodityHistoryYearMatches(row) && [['commodityFilterCommodity', 'commodity'], ['commodityFilterMarket', 'mercado'], ['commodityFilterCurrency', 'moneda'], ['commodityFilterUnit', 'unidad'], ['commodityFilterType', 'tipo_precio'], ['commodityFilterCondition', 'condicion_comercial']].every(([filterId, field]) => {
+    return commodityRowWithinSelectedPeriod(row) && [['commodityFilterCommodity', 'commodity'], ['commodityFilterMarket', 'mercado'], ['commodityFilterCurrency', 'moneda'], ['commodityFilterUnit', 'unidad'], ['commodityFilterType', 'tipo_precio'], ['commodityFilterCondition', 'condicion_comercial']].every(([filterId, field]) => {
         if (filterId === 'commodityFilterCondition' && !COMMODITY_SOURCE_CONFIG[commoditySource]?.reference && commoditySource !== 'sio') return true;
         const selected = commodityFilterValues(filterId);
         const rowValue = field === 'mercado' ? commodityMarketValue(row) : filterId === 'commodityFilterCondition' && commoditySource === 'sio' ? String(row.condicion_serie || '') : String(row[field] || '');
