@@ -1,8 +1,8 @@
 {
   "schema_version": "sio-transactions-v2",
-  "input_sha256": "89b6edb807ff435227ed0165dbb0d1439bb72be964446cc30f256980500d662a",
-  "input_rows": 982,
-  "eligible_events": 982,
+  "input_sha256": "5fecc11de39aaddabcbea55feae4623eb38181fb7ffc286808eb32b249f5ad29",
+  "input_rows": 997,
+  "eligible_events": 997,
   "exact_repeated_events_omitted": 0,
   "rejected": {},
   "dimensions": [
@@ -25,7 +25,7 @@
   "profile": {
     "fecha": {
       "missing": 0,
-      "distinct_nonmissing": 68
+      "distinct_nonmissing": 69
     },
     "commodity": {
       "missing": 0,
@@ -44,7 +44,7 @@
       "distinct_nonmissing": 1
     },
     "condicion_comercial": {
-      "missing": 982,
+      "missing": 997,
       "distinct_nonmissing": 0
     },
     "lugar_entrega": {
@@ -52,12 +52,12 @@
       "distinct_nonmissing": 41
     },
     "precio_puesto_en": {
-      "missing": 982,
+      "missing": 997,
       "distinct_nonmissing": 0
     },
     "procedencia": {
       "missing": 0,
-      "distinct_nonmissing": 442
+      "distinct_nonmissing": 449
     },
     "condicion_pago": {
       "missing": 559,
@@ -77,7 +77,7 @@
     },
     "fecha_entrega": {
       "missing": 590,
-      "distinct_nonmissing": 118
+      "distinct_nonmissing": 121
     },
     "fuera_de_termino": {
       "missing": 590,
@@ -89,7 +89,7 @@
     },
     "volumen": {
       "missing": 0,
-      "distinct_nonmissing": 370
+      "distinct_nonmissing": 374
     },
     "volumen_unidad": {
       "missing": 0,
@@ -97,15 +97,15 @@
     },
     "precio": {
       "missing": 0,
-      "distinct_nonmissing": 356
+      "distinct_nonmissing": 357
     },
     "id_operacion_sio": {
       "missing": 0,
-      "distinct_nonmissing": 982
+      "distinct_nonmissing": 997
     },
     "fecha_descarga_snapshot": {
       "missing": 0,
-      "distinct_nonmissing": 73
+      "distinct_nonmissing": 74
     }
   },
   "baseline_public": {
@@ -126,12 +126,12 @@
       "rows_multiple_delivery": 103
     }
   },
-  "homogeneous_series": 850,
+  "homogeneous_series": 865,
   "rows_by_output": {
-    "diario": 884,
-    "mensual": 868,
-    "ultimos": 850,
-    "semaforo": 868,
+    "diario": 899,
+    "mensual": 883,
+    "ultimos": 865,
+    "semaforo": 883,
     "resumen": 1
   },
   "multi_delivery_groups_after": 0,
