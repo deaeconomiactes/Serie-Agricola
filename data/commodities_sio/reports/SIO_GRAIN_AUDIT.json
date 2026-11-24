@@ -1,8 +1,8 @@
 {
   "schema_version": "sio-transactions-v2",
-  "input_sha256": "df7331e0bd6df2af156a7bef4ca7f8da6a631f93e5eb510aec9357f7a39fbb05",
-  "input_rows": 979,
-  "eligible_events": 979,
+  "input_sha256": "89b6edb807ff435227ed0165dbb0d1439bb72be964446cc30f256980500d662a",
+  "input_rows": 982,
+  "eligible_events": 982,
   "exact_repeated_events_omitted": 0,
   "rejected": {},
   "dimensions": [
@@ -25,7 +25,7 @@
   "profile": {
     "fecha": {
       "missing": 0,
-      "distinct_nonmissing": 67
+      "distinct_nonmissing": 68
     },
     "commodity": {
       "missing": 0,
@@ -44,7 +44,7 @@
       "distinct_nonmissing": 1
     },
     "condicion_comercial": {
-      "missing": 979,
+      "missing": 982,
       "distinct_nonmissing": 0
     },
     "lugar_entrega": {
@@ -52,12 +52,12 @@
       "distinct_nonmissing": 41
     },
     "precio_puesto_en": {
-      "missing": 979,
+      "missing": 982,
       "distinct_nonmissing": 0
     },
     "procedencia": {
       "missing": 0,
-      "distinct_nonmissing": 441
+      "distinct_nonmissing": 442
     },
     "condicion_pago": {
       "missing": 559,
@@ -77,7 +77,7 @@
     },
     "fecha_entrega": {
       "missing": 590,
-      "distinct_nonmissing": 115
+      "distinct_nonmissing": 118
     },
     "fuera_de_termino": {
       "missing": 590,
@@ -97,15 +97,15 @@
     },
     "precio": {
       "missing": 0,
-      "distinct_nonmissing": 354
+      "distinct_nonmissing": 356
     },
     "id_operacion_sio": {
       "missing": 0,
-      "distinct_nonmissing": 979
+      "distinct_nonmissing": 982
     },
     "fecha_descarga_snapshot": {
       "missing": 0,
-      "distinct_nonmissing": 72
+      "distinct_nonmissing": 73
     }
   },
   "baseline_public": {
@@ -126,12 +126,12 @@
       "rows_multiple_delivery": 103
     }
   },
-  "homogeneous_series": 847,
+  "homogeneous_series": 850,
   "rows_by_output": {
-    "diario": 881,
-    "mensual": 865,
-    "ultimos": 847,
-    "semaforo": 865,
+    "diario": 884,
+    "mensual": 868,
+    "ultimos": 850,
+    "semaforo": 868,
     "resumen": 1
   },
   "multi_delivery_groups_after": 0,
