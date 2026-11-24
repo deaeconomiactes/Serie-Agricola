@@ -1,8 +1,8 @@
 {
   "source": "Mercado Central de Buenos Aires",
-  "requested_date": "2026-11-20",
-  "attempted_at": "2026-11-20T22:15:58.715996Z",
-  "status": "UPDATED",
+  "requested_date": "2026-11-23",
+  "attempted_at": "2026-11-24T02:13:07.733244Z",
+  "status": "NO_OP_ALREADY_CURRENT",
   "last_observation_date": "2026-11-20",
   "last_successful_update": "2026-11-20T22:16:33.234773Z",
   "row_count": 4103,
